@@ -275,10 +275,10 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (authLoading) return; // Wait for authentication to complete
 
-    if (user && user.email) {
-      const adminCheck = isAdmin(user.email);
-      setIsAdminUser(adminCheck);
-      if (!adminCheck) {
+    if (user) {
+      // Use user.isAdmin from auth context for consistency with sidebar
+      setIsAdminUser(user.isAdmin === true);
+      if (!user.isAdmin) {
         console.log('❌ [Admin Dashboard] User is not admin, redirecting to home');
         router.push('/');
       } else {
@@ -298,7 +298,7 @@ export default function AdminDashboardPage() {
   }, [dashboardLoading]);
 
   // Show loading while checking auth
-  if (authLoading || !user || !user.email || !isAdmin(user.email)) {
+  if (authLoading || !user || !user.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="loader"></div>

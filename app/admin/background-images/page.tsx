@@ -31,10 +31,10 @@ export default function AdminBackgroundImagesPage() {
   const [uploading, setUploading] = useState(false);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
-  // Check admin access
+  // Check admin access - use user.isAdmin from auth context for consistency
   useEffect(() => {
     if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push('/');
       }
     } else if (!authLoading && !user) {
@@ -70,7 +70,7 @@ export default function AdminBackgroundImagesPage() {
   };
 
   useEffect(() => {
-    if (user && isAdmin(user.email)) {
+    if (user && user.isAdmin) {
       fetchImages();
     }
   }, [user]);
@@ -293,7 +293,7 @@ export default function AdminBackgroundImagesPage() {
     );
   }
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">

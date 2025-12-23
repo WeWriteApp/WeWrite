@@ -5,7 +5,6 @@ import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import Link from 'next/link';
-import { isAdmin } from '../../utils/isAdmin';
 import { DESIGN_SYSTEM_SECTIONS, DESIGN_SYSTEM_NAV } from './sections';
 import { cn } from '../../lib/utils';
 
@@ -64,7 +63,8 @@ export default function DesignSystemPage() {
     );
   }
 
-  if (!isAdmin(user.email)) {
+  // Check if user is admin - use user.isAdmin from auth context for consistency
+  if (!user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">

@@ -48,10 +48,10 @@ export default function AdminBroadcastPage() {
   const [history, setHistory] = useState<BroadcastHistory[]>([]);
   const [confirmSend, setConfirmSend] = useState(false);
 
-  // Check admin access
+  // Check admin access - use user.isAdmin from auth context for consistency
   useEffect(() => {
     if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push('/');
       } else {
         setTestEmail(user.email || '');
@@ -80,7 +80,7 @@ export default function AdminBroadcastPage() {
   }, []);
 
   useEffect(() => {
-    if (user && isAdmin(user.email)) {
+    if (user && user.isAdmin) {
       loadData();
     }
   }, [user, loadData]);
@@ -260,7 +260,7 @@ export default function AdminBroadcastPage() {
     );
   }
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !user.isAdmin) {
     return null;
   }
 

@@ -229,12 +229,12 @@ export default function MonthlyFinancialsPage() {
   const [selectedUserData, setSelectedUserData] = useState<any>(null);
   const [loadingUserData, setLoadingUserData] = useState(false);
 
-  // Check if user is admin
+  // Check if user is admin - use user.isAdmin from auth context for consistency
   useEffect(() => {
     if (authLoading) return;
 
-    if (user && user.email) {
-      if (!isAdmin(user.email)) {
+    if (user) {
+      if (!user.isAdmin) {
         router.push('/');
       }
     } else {
@@ -299,7 +299,7 @@ export default function MonthlyFinancialsPage() {
   };
 
   useEffect(() => {
-    if (user && !authLoading && isHydrated && isAdmin(user.email || '')) {
+    if (user && !authLoading && isHydrated && user.isAdmin) {
       fetchData();
     }
   }, [user, authLoading, isHydrated, dataSource]);
@@ -312,7 +312,7 @@ export default function MonthlyFinancialsPage() {
   };
 
   // Show loading while checking auth
-  if (authLoading || !user || !user.email || !isAdmin(user.email)) {
+  if (authLoading || !user || !user.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Icon name="Loader" className="text-foreground" />

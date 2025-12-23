@@ -37,7 +37,7 @@ export default function OnboardingTutorialAdmin() {
     );
   }
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !user.isAdmin) {
     router.push('/');
     return null;
   }

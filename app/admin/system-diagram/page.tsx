@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import Link from 'next/link';
-import { isAdmin } from '../../utils/isAdmin';
 import { Button } from '../../components/ui/button';
 
 // Dynamically import React Flow to avoid SSR issues
@@ -37,7 +36,8 @@ export default function SystemDiagramPage() {
     );
   }
 
-  if (!isAdmin(user.email)) {
+  // Check if user is admin - use user.isAdmin from auth context for consistency
+  if (!user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">

@@ -93,10 +93,10 @@ function AdminEmailsPageContent() {
   const [adminToggleLoading, setAdminToggleLoading] = useState(false);
   const [verificationEmailLoading, setVerificationEmailLoading] = useState(false);
 
-  // Check admin access
+  // Check admin access - use user.isAdmin from auth context for consistency
   useEffect(() => {
     if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push('/');
       }
     } else if (!authLoading && !user) {
@@ -501,7 +501,7 @@ function AdminEmailsPageContent() {
     );
   }
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <p className="text-muted-foreground">Access denied</p>

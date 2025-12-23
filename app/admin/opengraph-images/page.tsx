@@ -242,10 +242,10 @@ export default function OpenGraphImagesPage() {
   const [lookupPageData, setLookupPageData] = useState<any | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
 
-  // Check if user is admin
+  // Check if user is admin - use user.isAdmin from auth context for consistency
   React.useEffect(() => {
     if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push('/');
       }
     } else if (!authLoading && !user) {
@@ -354,7 +354,7 @@ export default function OpenGraphImagesPage() {
     );
   }
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">

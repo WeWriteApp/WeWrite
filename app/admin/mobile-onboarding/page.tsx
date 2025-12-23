@@ -12,10 +12,10 @@ export default function MobileOnboardingPreviewPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Check if user is admin
+  // Check if user is admin - use user.isAdmin from auth context for consistency
   useEffect(() => {
     if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push('/');
       }
     } else if (!authLoading && !user) {
@@ -34,7 +34,7 @@ export default function MobileOnboardingPreviewPage() {
     );
   }
 
-  if (!user || !isAdmin(user.email)) {
+  if (!user || !user.isAdmin) {
     return null;
   }
 

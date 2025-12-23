@@ -38,7 +38,7 @@ export default function FeatureFlagsPage() {
         router.push("/auth/login?redirect=/admin/feature-flags");
         return;
       }
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push("/");
         return;
       }
@@ -120,7 +120,7 @@ export default function FeatureFlagsPage() {
     );
   }
 
-  if (!isAdmin(user.email)) {
+  if (!user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <p className="text-muted-foreground">Access denied.</p>

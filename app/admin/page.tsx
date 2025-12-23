@@ -19,7 +19,6 @@ import { usePWA } from '../providers/PWAProvider';
 import Link from 'next/link';
 // UserManagement import removed - users tab deleted
 
-import { isAdmin } from '../utils/isAdmin';
 import { useAdminData } from '../providers/AdminDataProvider';
 
 interface User {
@@ -163,10 +162,11 @@ export default function AdminPage() {
 
   // Filter state management removed - simplified admin interface
 
-  // Check if user is admin
+  // Check if user is admin - use user.isAdmin from auth context for consistency
+  // This ensures the same admin check logic as the sidebar button visibility
   useEffect(() => {
     if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+      if (!user.isAdmin) {
         router.push('/');
       }
     } else if (!authLoading && !user) {
@@ -240,7 +240,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin(user.email)) {
+  if (!user.isAdmin) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
