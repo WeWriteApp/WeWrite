@@ -101,7 +101,9 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsScroll, setNeedsScroll] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -145,30 +147,52 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
     return formatRelativeTime(dateString);
   }, [stats?.createdAt, initialCreatedAt]);
 
-  // JS-based infinite scroll animation (matches ContentCarousel pattern)
+  // Check if content overflows and needs scrolling
   useEffect(() => {
-    if (isLoading || error || !stats || !scrollRef.current) return;
+    if (isLoading || error || !stats || !scrollRef.current || !contentRef.current) return;
+
+    const checkOverflow = () => {
+      const container = scrollRef.current;
+      const content = contentRef.current;
+      if (!container || !content) return;
+
+      // Check if content is wider than container
+      const contentWidth = content.scrollWidth;
+      const containerWidth = container.clientWidth;
+      setNeedsScroll(contentWidth > containerWidth);
+    };
+
+    // Check initially and on resize
+    checkOverflow();
+    const resizeObserver = new ResizeObserver(checkOverflow);
+    resizeObserver.observe(scrollRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [isLoading, error, stats]);
+
+  // JS-based infinite scroll animation - only runs when needsScroll is true
+  useEffect(() => {
+    if (isLoading || error || !stats || !scrollRef.current || !needsScroll) return;
 
     const scrollContainer = scrollRef.current;
     let animationId: number;
     let isPausedLocal = false;
 
-    // Check if there's enough content to scroll
-    const hasScrollableContent = scrollContainer.scrollWidth > scrollContainer.clientWidth;
-    if (!hasScrollableContent) {
-      return;
-    }
+    // Get the width of just the original content (first set of items)
+    // We need to measure the actual content width, not scrollWidth which includes duplicates
+    const contentElement = contentRef.current;
+    if (!contentElement) return;
 
-    // For seamless infinite scrolling, track the original content width
-    const originalContentWidth = scrollContainer.scrollWidth / 2;
+    const originalContentWidth = contentElement.scrollWidth;
     const scrollSpeed = 0.3;
 
     const scroll = () => {
       if (scrollContainer && !isPausedLocal) {
         scrollContainer.scrollLeft += scrollSpeed;
 
-        // Seamless infinite loop - reset when we've scrolled through one full set
-        if (scrollContainer.scrollLeft >= originalContentWidth) {
+        // Seamless infinite loop - reset when we've scrolled past the original content
+        // Add a small buffer to prevent visual glitch
+        if (scrollContainer.scrollLeft >= originalContentWidth + 8) { // 8px = gap-2
           scrollContainer.scrollLeft = 0;
         }
       }
@@ -195,7 +219,7 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
       scrollContainer.removeEventListener('mouseenter', handlePause);
       scrollContainer.removeEventListener('touchstart', handlePause);
     };
-  }, [isLoading, error, stats]);
+  }, [isLoading, error, stats, needsScroll]);
 
   if (isLoading) {
     return (
@@ -247,30 +271,36 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
     <div className="mt-4 overflow-hidden rounded-xl">
       <div
         ref={scrollRef}
-        className="flex gap-2 overflow-x-auto"
+        className={`flex gap-2 overflow-x-auto ${!needsScroll ? 'justify-center' : ''}`}
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}
       >
-        {/* Original content */}
-        {statItems.map((stat) => (
-          <StatItem
-            key={stat.label}
-            label={stat.label}
-            value={stat.value}
-            sparkline={stat.sparkline}
-          />
-        ))}
-        {/* Duplicate for seamless infinite scrolling */}
-        {statItems.map((stat) => (
-          <StatItem
-            key={`${stat.label}-dup`}
-            label={stat.label}
-            value={stat.value}
-            sparkline={stat.sparkline}
-          />
-        ))}
+        {/* Original content - wrapped in ref for measurement */}
+        <div ref={contentRef} className="flex gap-2 flex-shrink-0">
+          {statItems.map((stat) => (
+            <StatItem
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              sparkline={stat.sparkline}
+            />
+          ))}
+        </div>
+        {/* Duplicate for seamless infinite scrolling - only rendered when needed */}
+        {needsScroll && (
+          <div className="flex gap-2 flex-shrink-0">
+            {statItems.map((stat) => (
+              <StatItem
+                key={`${stat.label}-dup`}
+                label={stat.label}
+                value={stat.value}
+                sparkline={stat.sparkline}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
