@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface ContentCarouselProps {
   children: React.ReactNode;
@@ -42,14 +42,7 @@ export default function ContentCarousel({
 
     // Check if there's enough content to scroll
     const hasScrollableContent = scrollContainer.scrollWidth > scrollContainer.clientWidth;
-    console.log('ContentCarousel: Scroll check:', {
-      scrollWidth: scrollContainer.scrollWidth,
-      clientWidth: scrollContainer.clientWidth,
-      hasScrollableContent,
-      childrenCount: Array.isArray(children) ? children.length : 'not array'
-    });
     if (!hasScrollableContent) {
-      console.log('ContentCarousel: Not enough content to scroll');
       return;
     }
 
@@ -103,7 +96,7 @@ export default function ContentCarousel({
         className="flex items-center justify-center"
         style={{ height: `${height}px` }}
       >
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Icon name="Loader" className="text-muted-foreground" />
       </div>
     );
   }
