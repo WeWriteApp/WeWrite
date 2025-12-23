@@ -207,6 +207,7 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [verifyUser, setVerifyUser] = useState<User | null>(null);
+  const [toggleAdminUser, setToggleAdminUser] = useState<User | null>(null);
   const [userActivities, setUserActivities] = useState<Activity[]>([]);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -338,12 +339,20 @@ export default function AdminUsersPage() {
       label: "Admin",
       sortable: true,
       minWidth: 100,
-      render: (u) =>
-        u.isAdmin ? (
-          <Badge variant="success-secondary">Admin</Badge>
-        ) : (
-          <Badge variant="outline-static">Not admin</Badge>
-        )
+      render: (u) => (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs gap-1"
+          onClick={() => setToggleAdminUser(u)}
+        >
+          {u.isAdmin ? (
+            <Badge variant="success-secondary">Admin</Badge>
+          ) : (
+            <Badge variant="outline-static">Not admin</Badge>
+          )}
+        </Button>
+      )
     },
     {
       id: "referredBy",
@@ -844,6 +853,37 @@ export default function AdminUsersPage() {
       setStatus({ type: "error", message: err.message || "Failed to send reminder" });
     } finally {
       setLoadingAction(null);
+    }
+  };
+
+  const handleToggleAdminStatus = async (user: User) => {
+    setStatus(null);
+    setLoadingAction('admin');
+    const newAdminStatus = !user.isAdmin;
+    try {
+      const res = await adminFetch('/api/admin/users/admin-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, isAdmin: newAdminStatus })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to update admin status');
+
+      // Update local state
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.uid === user.uid ? { ...u, isAdmin: newAdminStatus } : u
+        )
+      );
+      setStatus({
+        type: 'success',
+        message: `Admin access ${newAdminStatus ? 'granted to' : 'revoked from'} ${user.email}`
+      });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || 'Failed to update admin status' });
+    } finally {
+      setLoadingAction(null);
+      setToggleAdminUser(null);
     }
   };
 
@@ -1440,6 +1480,41 @@ export default function AdminUsersPage() {
               disabled={loadingAction !== null}
             >
               {loadingAction === 'verify' ? <Icon name="Loader" /> : 'Send verification'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin toggle confirmation dialog */}
+      <Dialog open={!!toggleAdminUser} onOpenChange={(open) => !open && setToggleAdminUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {toggleAdminUser?.isAdmin ? 'Revoke admin access' : 'Grant admin access'}
+            </DialogTitle>
+            <DialogDescription>
+              {toggleAdminUser?.isAdmin
+                ? `Remove admin privileges from ${toggleAdminUser?.email}? They will lose access to the admin dashboard.`
+                : `Grant admin access to ${toggleAdminUser?.email}? They will be able to access the admin dashboard and manage users.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setToggleAdminUser(null)}
+              disabled={loadingAction !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={toggleAdminUser?.isAdmin ? 'destructive' : 'default'}
+              onClick={() => toggleAdminUser && handleToggleAdminStatus(toggleAdminUser)}
+              disabled={loadingAction !== null}
+            >
+              {loadingAction === 'admin' ? (
+                <Icon name="Loader" className="mr-1" />
+              ) : null}
+              {toggleAdminUser?.isAdmin ? 'Revoke access' : 'Grant access'}
             </Button>
           </DialogFooter>
         </DialogContent>

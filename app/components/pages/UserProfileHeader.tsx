@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
 import { Logo } from "../ui/Logo";
-import { useSidebarContext } from "../layout/UnifiedSidebar";
+import { useSidebarContext } from "../layout/DesktopSidebar";
 import { toast } from "../ui/use-toast";
 
 export interface UserProfileHeaderProps {

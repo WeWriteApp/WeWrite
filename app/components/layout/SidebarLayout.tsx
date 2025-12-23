@@ -3,7 +3,7 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
-import { useSidebarContext } from './UnifiedSidebar';
+import { useSidebarContext } from './DesktopSidebar';
 import SiteFooter from './SiteFooter';
 import { SITE_CONTENT_CONTAINER_CLASSES } from '../../constants/layout';
 

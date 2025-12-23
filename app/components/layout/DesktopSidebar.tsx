@@ -471,19 +471,18 @@ function SidebarContent({
                   {sanitizeUsername(user.username, 'Loading...', 'User')}
                 </div>
               )}
-              <button
+              <Button
                 onClick={handleLogoutClick}
+                variant="destructive-ghost"
                 className={cn(
-                  "h-10 flex items-center rounded-lg",
-                  "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
-                  "transition-colors cursor-pointer border-0 bg-transparent",
-                  showContent ? "w-full px-3" : "w-10 justify-center"
+                  "h-10",
+                  showContent ? "w-full justify-start" : "w-10 p-0"
                 )}
-                title={!showContent ? "Logout" : undefined}
+                title={!showContent ? "Log out" : undefined}
               >
                 <Icon name="LogOut" size={20} />
-                {showContent && <span className="ml-3 text-sm font-medium">Logout</span>}
-              </button>
+                {showContent && <span className="ml-1">Log out</span>}
+              </Button>
             </div>
           )}
         </div>

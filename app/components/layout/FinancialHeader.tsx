@@ -14,7 +14,7 @@ import { useSubscription } from "../../contexts/SubscriptionContext";
 import { useDemoBalance, useShouldUseDemoBalance } from "../../contexts/DemoBalanceContext";
 import { formatUsdCents } from "../../utils/formatCurrency";
 import { FinancialDropdown, SpendBreakdown, EarningsBreakdown } from "../ui/FinancialDropdown";
-import { useSidebarContext } from './UnifiedSidebar';
+import { useSidebarContext } from './DesktopSidebar';
 import { cn } from "../../lib/utils";
 import { shouldShowNavigation } from "../../constants/layout";
 import { useBanner } from "../../providers/BannerProvider";

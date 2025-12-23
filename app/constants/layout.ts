@@ -9,7 +9,7 @@
  * Components that need to show/hide based on route type use `shouldShowNavigation()`:
  *
  * - FinancialHeader.tsx    - Uses shouldShowNavigation() + additional saveBanner logic
- * - MobileBottomNavUnified.tsx - Uses shouldShowNavigation() via isContentPageRoute()
+ * - MobileBottomNav.tsx - Uses shouldShowNavigation() via isContentPageRoute()
  * - EmailVerificationTopBanner.tsx - Always renders (has own visibility logic)
  *
  * The BannerProvider (providers/BannerProvider.tsx) manages banner STATE and offset
@@ -59,6 +59,65 @@ export const MAX_WIDTH_PIXELS = {
   '6xl': '1152px',
   full: '100%'
 } as const;
+
+// ============================================================================
+// HEADER HEIGHTS
+// ============================================================================
+
+/**
+ * Header height constants for the banner-header-body layout system.
+ *
+ * LAYOUT SYSTEM:
+ * - Banners stack at top, managed by BannerProvider (--banner-stack-height CSS var)
+ * - Headers are fixed, positioned at top: var(--banner-stack-height, 0px)
+ * - Body content has top padding = banner height + header height + content gap
+ *
+ * The formula for body padding-top is:
+ *   calc(var(--banner-stack-height, 0px) + HEADER_HEIGHT + CONTENT_GAP)
+ *
+ * Use getHeaderPaddingTop() helper to generate this CSS value.
+ */
+export const HEADER_HEIGHTS = {
+  /** UserProfileHeader: py-2 (8px*2) + h-10 button (40px) = 56px */
+  userProfile: 56,
+  /** FinancialHeader: py-3 (12px*2) + content = ~48px inner, but needs 96px clearance */
+  financial: 96,
+  /** ContentPageHeader: similar to userProfile */
+  contentPage: 56,
+} as const;
+
+/**
+ * Standard gap between header and body content.
+ * Set to match horizontal padding (px-4 = 16px) for visual consistency.
+ */
+export const HEADER_BODY_GAP = 16;
+
+/**
+ * Tab bar height for sticky tabs.
+ * TabsList with py-3 (12px*2) + icon (16px) + text = ~44px, plus border
+ */
+export const TAB_BAR_HEIGHT = 48;
+
+/**
+ * Get the total header clearance (header height + gap).
+ * Use this when setting headerHeight prop on NavPageLayout.
+ */
+export function getHeaderClearance(headerType: keyof typeof HEADER_HEIGHTS): number {
+  return HEADER_HEIGHTS[headerType] + HEADER_BODY_GAP;
+}
+
+/**
+ * Generate CSS padding-top value that accounts for banners + header + gap.
+ *
+ * @example
+ * // In a component:
+ * style={{ paddingTop: getHeaderPaddingTop('userProfile') }}
+ * // Returns: "calc(var(--banner-stack-height, 0px) + 72px)"
+ */
+export function getHeaderPaddingTop(headerType: keyof typeof HEADER_HEIGHTS): string {
+  const totalHeight = getHeaderClearance(headerType);
+  return `calc(var(--banner-stack-height, 0px) + ${totalHeight}px)`;
+}
 
 // ============================================================================
 // RESPONSIVE PADDING

@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { cn } from '../../lib/utils';
-import { useSidebarContext } from '../layout/UnifiedSidebar';
+import { useSidebarContext } from '../layout/DesktopSidebar';
 
 interface StickySectionProps {
   children: React.ReactNode;

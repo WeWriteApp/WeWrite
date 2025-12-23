@@ -916,6 +916,50 @@ export const reactivationTemplate: EmailTemplate = {
   `, { emailSettingsToken, emailType: 'reactivation' }),
 };
 
+export const firstPageActivationTemplate: EmailTemplate = {
+  id: 'first-page-activation',
+  name: 'Write Your First Page',
+  description: 'Sent to new users who haven\'t written a page yet to encourage them to start',
+  category: 'engagement',
+  subject: 'Ready to write your first page on WeWrite?',
+  sampleData: {
+    username: 'JohnDoe',
+    emailSettingsToken: 'sample-token-123',
+  },
+  generateHtml: ({ username, emailSettingsToken }) => wrapEmail('Write Your First Page', `
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Ready to start writing, ${username || 'there'}?</h2>
+      <p class="dark-text">You've just joined WeWrite—welcome! Now comes the fun part: writing your first page.</p>
+
+      <p class="dark-text">On WeWrite, you can write about literally anything. A thought you had this morning. A recipe you love. Something you're learning. A memory. An opinion. There are no rules—just start typing.</p>
+
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 24px 0;">
+        <p class="dark-text" style="margin: 0 0 12px 0; font-size: 15px; color: #333;">
+          <strong>Ideas to get you started:</strong>
+        </p>
+        <ul class="dark-text-muted" style="padding-left: 18px; margin: 0; color: #555;">
+          <li style="margin-bottom: 8px;">Introduce yourself—who are you and what do you care about?</li>
+          <li style="margin-bottom: 8px;">Share something you learned recently</li>
+          <li style="margin-bottom: 8px;">Write about a place, person, or thing that matters to you</li>
+          <li style="margin-bottom: 8px;">Just start with a single sentence and see where it goes</li>
+        </ul>
+      </div>
+
+      <p class="dark-text">The best part? <strong>Every page you write can earn you real money</strong> when subscribers allocate their monthly budget to support your work. But that only happens if you write something first.</p>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="https://getwewrite.app/new" style="${emailStyles.button}">
+          Write Your First Page
+        </a>
+      </div>
+
+      <p class="dark-text-muted" style="${emailStyles.muted}; text-align: center;">
+        It only takes a minute to get started. We can't wait to read what you write.
+      </p>
+    </div>
+  `, { emailSettingsToken, emailType: 'first-page-activation' }),
+};
+
 // ============================================================================
 // Broadcast Template (for newsletters and product updates)
 // ============================================================================
@@ -984,6 +1028,7 @@ export const emailTemplates: EmailTemplate[] = [
   pageLinkedTemplate,
   chooseUsernameTemplate,
   reactivationTemplate,
+  firstPageActivationTemplate,
   broadcastEmailTemplate,
   // System
   genericNotificationTemplate,

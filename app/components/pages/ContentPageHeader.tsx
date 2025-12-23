@@ -18,7 +18,7 @@ import { useDateFormat } from '../../contexts/DateFormatContext';
 import { useBanner } from '../../providers/BannerProvider';
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
 
-import { useSidebarContext } from "../layout/UnifiedSidebar";
+import { useSidebarContext } from "../layout/DesktopSidebar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

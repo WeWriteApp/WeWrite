@@ -9,7 +9,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import FixedPortal from "../utils/FixedPortal";
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
-import { useEditorContext } from './UnifiedSidebar';
+import { useEditorContext } from './DesktopSidebar';
 import { cn } from '../../lib/utils';
 import { useUnifiedMobileNav, TOOLBAR_SIZE } from '../../contexts/UnifiedMobileNavContext';
 import UnifiedNavButton from './UnifiedNavButton';
@@ -46,14 +46,14 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
 };
 
 /**
- * MobileBottomNavUnified Component
+ * MobileBottomNav Component
  * 
  * Simplified mobile navigation with a SINGLE unified drag zone.
  * - First 3 items are always visible in the toolbar
  * - Rest appear in the overflow menu when expanded
  * - Items can be dragged anywhere - moving across the toolbar/overflow boundary is seamless
  */
-export default function MobileBottomNavUnified() {
+export default function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
