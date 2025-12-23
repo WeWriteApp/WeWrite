@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Bell } from 'lucide-react';
 import { usePWANotificationsMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -53,7 +53,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
             <p className="text-sm text-gray-600 mb-1">{label}</p>
             <p className="text-sm font-semibold text-gray-900">
               <span className="inline-flex items-center">
-                <Bell className="w-3 h-3 mr-1" />
+                <Icon name="Bell" size={12} className="mr-1" />
                 {value} notification{value !== 1 ? 's' : ''} sent
               </span>
             </p>
@@ -71,7 +71,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
       <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Bell className="w-5 h-5 text-primary mr-2" />
+            <Icon name="Bell" size={20} className="text-primary mr-2" />
             <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
           </div>
         </div>
@@ -89,7 +89,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
       <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Bell className="w-5 h-5 text-red-600 mr-2" />
+            <Icon name="Bell" size={20} className="text-red-600 mr-2" />
             <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
           </div>
         </div>
@@ -105,7 +105,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
     <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
-          <Bell className="w-5 h-5 text-primary mr-2" />
+          <Icon name="Bell" size={20} className="text-primary mr-2" />
           <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
         </div>
         {hasData && (
@@ -118,7 +118,7 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
 
       {!hasData ? (
         <div className="text-center py-8">
-          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <Icon name="Bell" size={48} className="text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 mb-2">No notification data available</p>
           <p className="text-sm text-gray-400">Notifications will appear here once sent</p>
         </div>

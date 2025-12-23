@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { Button } from '../components/ui/button';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Copy, Check, ExternalLink, Users, DollarSign, Lock, TrendingUp, PenLine, Newspaper, GraduationCap, Megaphone, FlaskConical, Globe, ChevronDown, Film, UtensilsCrossed } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { LANDING_VERTICALS, getVerticalSlugs } from '../constants/landing-verticals';
 
@@ -114,16 +114,16 @@ export default function InviteFriendsPage() {
   // Get icon for each vertical
   const getVerticalIcon = (slug: string) => {
     const icons: Record<string, React.ReactNode> = {
-      general: <Globe className="h-5 w-5" />,
-      writers: <PenLine className="h-5 w-5" />,
-      journalists: <Newspaper className="h-5 w-5" />,
-      homeschoolers: <GraduationCap className="h-5 w-5" />,
-      debaters: <Megaphone className="h-5 w-5" />,
-      researchers: <FlaskConical className="h-5 w-5" />,
-      'film-critics': <Film className="h-5 w-5" />,
-      'food-critics': <UtensilsCrossed className="h-5 w-5" />,
+      general: <Icon name="Globe" size={20} />,
+      writers: <Icon name="PenLine" size={20} />,
+      journalists: <Icon name="Newspaper" size={20} />,
+      homeschoolers: <Icon name="GraduationCap" size={20} />,
+      debaters: <Icon name="Megaphone" size={20} />,
+      researchers: <Icon name="FlaskConical" size={20} />,
+      'film-critics': <Icon name="Film" size={20} />,
+      'food-critics': <Icon name="UtensilsCrossed" size={20} />,
     };
-    return icons[slug] || <Globe className="h-5 w-5" />;
+    return icons[slug] || <Icon name="Globe" size={20} />;
   };
 
   const formatCurrency = (cents: number) => {
@@ -168,7 +168,7 @@ export default function InviteFriendsPage() {
       <NavPageLayout>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-            <Lock className="h-8 w-8 text-primary" />
+            <Icon name="Lock" size={32} className="text-primary" />
           </div>
           <h1 className="text-2xl font-bold mb-4">Sign In Required</h1>
           <p className="text-muted-foreground mb-6 max-w-md">
@@ -275,7 +275,7 @@ export default function InviteFriendsPage() {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-5 w-5 text-green-500" />
+                    <Icon name="DollarSign" size={20} className="text-green-500" />
                   </div>
                   <div>
                     <span className="font-medium">{detail.username}</span>
@@ -302,7 +302,7 @@ export default function InviteFriendsPage() {
       {!loading && totalReferrals === 0 && (
         <div className="text-center py-12 bg-muted/30 rounded-2xl border border-border">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <UserPlus className="h-8 w-8 text-primary" />
+            <Icon name="UserPlus" size={32} className="text-primary" />
           </div>
           <h3 className="text-lg font-semibold mb-2">No Referrals Yet</h3>
           <p className="text-muted-foreground max-w-md mx-auto">
@@ -332,12 +332,10 @@ export default function InviteFriendsPage() {
               <p className="font-medium">General</p>
               <p className="text-xs text-muted-foreground">/welcome</p>
             </div>
-            <ChevronDown
-              className={cn(
-                "h-5 w-5 text-muted-foreground transition-transform duration-200",
+            <Icon name="ChevronDown" size={20} className={cn(
+                "text-muted-foreground transition-transform duration-200",
                 expandedCard === 'general' && "rotate-180"
-              )}
-            />
+              )} />
           </div>
           {/* Expanded actions */}
           <div
@@ -357,7 +355,7 @@ export default function InviteFriendsPage() {
                     router.push('/welcome');
                   }}
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <Icon name="ExternalLink" size={16} className="mr-2" />
                   Preview
                 </Button>
                 <Button
@@ -371,12 +369,12 @@ export default function InviteFriendsPage() {
                 >
                   {copiedVertical === 'general' ? (
                     <>
-                      <Check className="h-4 w-4 mr-2" />
+                      <Icon name="Check" size={16} className="mr-2" />
                       Copied!
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4 mr-2" />
+                      <Icon name="Copy" size={16} className="mr-2" />
                       Copy Link
                     </>
                   )}
@@ -416,12 +414,10 @@ export default function InviteFriendsPage() {
                   <p className="font-medium">{vertical.name}</p>
                   <p className="text-xs text-muted-foreground">/welcome/{slug}</p>
                 </div>
-                <ChevronDown
-                  className={cn(
-                    "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                <Icon name="ChevronDown" size={20} className={cn(
+                    "text-muted-foreground transition-transform duration-200",
                     expandedCard === slug && "rotate-180"
-                  )}
-                />
+                  )} />
               </div>
               {/* Expanded actions */}
               <div
@@ -441,7 +437,7 @@ export default function InviteFriendsPage() {
                         router.push(`/welcome/${slug}`);
                       }}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
+                      <Icon name="ExternalLink" size={16} className="mr-2" />
                       Preview
                     </Button>
                     <Button
@@ -455,12 +451,12 @@ export default function InviteFriendsPage() {
                     >
                       {copiedVertical === slug ? (
                         <>
-                          <Check className="h-4 w-4 mr-2" />
+                          <Icon name="Check" size={16} className="mr-2" />
                           Copied!
                         </>
                       ) : (
                         <>
-                          <Copy className="h-4 w-4 mr-2" />
+                          <Icon name="Copy" size={16} className="mr-2" />
                           Copy Link
                         </>
                       )}
@@ -476,7 +472,7 @@ export default function InviteFriendsPage() {
       {/* Info Section */}
       <div className="mt-12 p-6 border border-border rounded-2xl bg-card">
         <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-primary" />
+          <Icon name="UserPlus" size={20} className="text-primary" />
           How Referral Earnings Work
         </h2>
         <div className="space-y-3 text-muted-foreground">

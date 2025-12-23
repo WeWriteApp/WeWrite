@@ -55,11 +55,9 @@ export const ActivityFilterProvider = ({ children }: ActivityFilterProviderProps
       try {
         const savedViewMode = localStorage.getItem('activityViewMode') as ActivityViewMode | null;
         if (savedViewMode && (savedViewMode === 'all' || savedViewMode === 'following' || savedViewMode === 'mine')) {
-          console.log('Loading saved view mode from localStorage:', savedViewMode);
           setViewMode(savedViewMode);
         } else {
           // If invalid or missing value, set default and save it
-          console.log('No valid saved view mode found, defaulting to "all"');
           localStorage.setItem('activityViewMode', 'all');
         }
       } catch (error) {
@@ -72,7 +70,6 @@ export const ActivityFilterProvider = ({ children }: ActivityFilterProviderProps
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        console.log('Saving view mode to localStorage:', viewMode);
         localStorage.setItem('activityViewMode', viewMode);
       } catch (error) {
         console.error('Error saving view mode to localStorage:', error);
@@ -80,20 +77,10 @@ export const ActivityFilterProvider = ({ children }: ActivityFilterProviderProps
     }
   }, [viewMode]);
 
-  /**
-   * Wrap setViewMode to add logging
-   *
-   * @param newMode - The new view mode to set
-   */
-  const setViewModeWithLogging = (newMode: ActivityViewMode): void => {
-    console.log(`ActivityFilterContext: Changing viewMode from "${viewMode}" to "${newMode}"`);
-    setViewMode(newMode);
-  };
-
   // Value to be provided by the context
   const value: ActivityFilterContextType = {
     viewMode,
-    setViewMode: setViewModeWithLogging};
+    setViewMode};
 
   return (
     <ActivityFilterContext.Provider value={value}>

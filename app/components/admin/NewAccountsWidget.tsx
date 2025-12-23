@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useAccountsMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -122,7 +122,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Users className="h-5 w-5 text-destructive" />
+          <Icon name="Users" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">New Accounts Created</h3>
         </div>
         <div className="h-48 flex items-center justify-center text-destructive">
@@ -137,7 +137,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
+          <Icon name="Users" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">New Accounts Created</h3>
         </div>
         
@@ -161,9 +161,9 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
       {!loading && processedData.length > 1 && (
         <div className="flex items-center gap-2 mb-4 text-sm">
           {isPositiveTrend ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <Icon name="TrendingUp" size={16} className="text-green-500" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-500" />
+            <Icon name="TrendingDown" size={16} className="text-red-500" />
           )}
           <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
             {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useAuth } from '../../providers/AuthProvider';
-import { Loader2, Lock, LogIn, Eye } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
 // Constants for free graph views
@@ -217,7 +217,7 @@ export default function SubscriptionGate({
       <div className={`relative ${className}`}>
         <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Icon name="Loader" />
             <span className="text-sm">Checking subscription...</span>
           </div>
         </div>
@@ -258,7 +258,7 @@ export default function SubscriptionGate({
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] z-10">
           <div className="text-center max-w-sm mx-auto p-6">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              <Eye className="h-8 w-8 text-primary" />
+              <Icon name="Eye" size={32} className="text-primary" />
             </div>
             {hasViewsLeft ? (
               <>
@@ -273,7 +273,7 @@ export default function SubscriptionGate({
                   className="w-full"
                   size="lg"
                 >
-                  <Eye className="h-4 w-4 mr-2" />
+                  <Icon name="Eye" size={16} className="mr-2" />
                   View graph
                 </Button>
               </>
@@ -324,7 +324,7 @@ export default function SubscriptionGate({
               variant="secondary"
               className="px-3 py-1.5 shadow-lg bg-background/95 backdrop-blur-sm border border-border"
             >
-              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              <Icon name="Eye" size={24} className="h-3.5 w-3.5 mr-1.5" />
               <span className="text-xs font-medium">
                 {freeViewsRemaining} free graph view{freeViewsRemaining !== 1 ? 's' : ''} remaining today
               </span>
@@ -368,7 +368,7 @@ export default function SubscriptionGate({
         <div className="text-center max-w-sm mx-auto p-6">
           <div className="mb-4">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-              {user?.uid ? <Lock className="h-8 w-8 text-primary" /> : <Eye className="h-8 w-8 text-primary" />}
+              {user?.uid ? <Icon name="Lock" size={32} className="text-primary" /> : <Icon name="Eye" size={32} className="text-primary" />}
             </div>
             <h3 className="text-lg font-semibold mb-2">
               {!user?.uid

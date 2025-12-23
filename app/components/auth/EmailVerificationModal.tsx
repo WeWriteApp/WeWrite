@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from "../../providers/AuthProvider";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { auth } from "../../firebase/config";
-import { Mail, Loader2, RefreshCw, CheckCircle, LogOut, Clock, X, Pencil } from "lucide-react";
 import { LandingBlobs } from "../landing/LandingBlobs";
 
 // Cooldown durations in seconds: 60s, 2min, 5min, 10min
@@ -213,14 +213,14 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 className="absolute top-4 right-4 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 aria-label="Close"
               >
-                <X className="h-5 w-5" />
+                <Icon name="X" size={20} />
               </button>
             )}
 
             <div className="flex flex-col items-center gap-6 py-2">
               {/* Email icon */}
               <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <Mail className="h-10 w-10 text-primary" />
+                <Icon name="Mail" size={40} className="text-primary" />
               </div>
 
               {/* Title and message */}
@@ -260,7 +260,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                       >
                         {isUpdatingEmail ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Icon name="Loader" />
                             Updating...
                           </>
                         ) : (
@@ -279,7 +279,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                       className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                       aria-label="Edit email"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Icon name="Pencil" size={16} />
                     </button>
                   </div>
                 )}
@@ -292,7 +292,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
               {/* Success message */}
               {resendSuccess && (
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-4 py-2 rounded-lg">
-                  <CheckCircle className="h-4 w-4" />
+                  <Icon name="CheckCircle" size={16} />
                   <span className="text-sm">Verification email sent!</span>
                 </div>
               )}
@@ -307,12 +307,12 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 >
                   {isCheckingVerification ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Icon name="Loader" />
                       Checking...
                     </>
                   ) : (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
+                      <Icon name="RefreshCw" size={16} className="mr-2" />
                       Refresh
                     </>
                   )}
@@ -327,12 +327,12 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 >
                   {isResending ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Icon name="Loader" />
                       Sending...
                     </>
                   ) : (
                     <>
-                      <Mail className="h-4 w-4 mr-2" />
+                      <Icon name="Mail" size={16} className="mr-2" />
                       Resend verification email
                     </>
                   )}
@@ -352,7 +352,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                     onClick={handleDismiss}
                     className="w-full"
                   >
-                    <Clock className="h-4 w-4 mr-2" />
+                    <Icon name="Clock" size={16} className="mr-2" />
                     Do this later
                   </Button>
                 )}
@@ -371,7 +371,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 onClick={handleSignOut}
                 className="w-full text-destructive hover:text-destructive mt-4"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <Icon name="LogOut" size={16} className="mr-2" />
                 Sign out
               </Button>
             </div>

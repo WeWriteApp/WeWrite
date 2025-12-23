@@ -29,18 +29,23 @@ export function useNavigationPreloader() {
   // Preload user profile data with deduplication
   const preloadUserProfile = useCallback(async (userId: string) => {
     try {
-      // OPTIMIZATION: Use unified API client to prevent duplicate requests
-      const { apiClient } = await import('../utils/unifiedApiClient');
-
-      // Preload user profile API with extended cache
-      apiClient.get(`/api/users/profile?id=${encodeURIComponent(userId)}`, {
-        cacheTTL: 30 * 60 * 1000 // 30 minutes cache
+      // Fire and forget preload - catch any errors to prevent unhandled rejections
+      fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`, {
+        headers: {
+          'Cache-Control': 'max-age=1800', // 30 minutes browser cache
+        },
+      }).catch(() => {
+        // Silent error handling
       });
 
       // Only preload user's pages if it's the current user (to reduce reads)
       if (userId === user?.uid) {
-        apiClient.get(`/api/users/${userId}/pages?limit=10`, {
-          cacheTTL: 15 * 60 * 1000, // 15 minutes cache
+        fetch(`/api/users/${userId}/pages?limit=10`, {
+          headers: {
+            'Cache-Control': 'max-age=900', // 15 minutes browser cache
+          },
+        }).catch(() => {
+          // Silent error handling
         });
       }
 

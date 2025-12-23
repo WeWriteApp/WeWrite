@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../firebase/auth";
@@ -10,7 +11,6 @@ import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
 import NavPageLayout from "../../components/layout/NavPageLayout";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { AlertCircle, CheckCircle } from "lucide-react";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");
@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
         {success ? (
           <div className="space-y-4">
             <Alert className="bg-green-500/20 text-green-600 dark:text-green-200">
-              <CheckCircle className="h-4 w-4" />
+              <Icon name="CheckCircle" size={16} />
               <AlertTitle>Email Sent Successfully</AlertTitle>
               <AlertDescription>
                 Check your email for instructions to reset your password. The reset link will expire in 1 hour.
@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
 
             {error && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
+                <Icon name="AlertCircle" size={16} />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>

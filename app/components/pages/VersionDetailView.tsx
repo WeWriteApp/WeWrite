@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import ContentPageHeader from './ContentPageHeader';
 import UnifiedLoader from '../ui/unified-loader';
@@ -306,7 +306,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                     onClick={goBackToVersions}
                     className="flex items-center justify-center gap-2 flex-1"
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <Icon name="ArrowLeft" size={16} />
                     Back to Versions
                   </Button>
 
@@ -332,7 +332,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                     disabled={currentIndex >= versions.length - 1}
                     className="flex items-center justify-center gap-2 flex-1"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <Icon name="ChevronLeft" size={16} />
                     Older
                   </Button>
 
@@ -344,7 +344,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                     className="flex items-center justify-center gap-2 flex-1"
                   >
                     Newer
-                    <ChevronRight className="h-4 w-4" />
+                    <Icon name="ChevronRight" size={16} />
                   </Button>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                     onClick={goBackToVersions}
                     className="flex items-center gap-2"
                   >
-                    <ArrowLeft className="h-4 w-4" />
+                    <Icon name="ArrowLeft" size={16} />
                     Back to Versions
                   </Button>
 
@@ -384,7 +384,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                     disabled={currentIndex >= versions.length - 1}
                     className="flex items-center gap-2"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <Icon name="ChevronLeft" size={16} />
                     Older
                   </Button>
 
@@ -396,7 +396,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
                     className="flex items-center gap-2"
                   >
                     Newer
-                    <ChevronRight className="h-4 w-4" />
+                    <Icon name="ChevronRight" size={16} />
                   </Button>
                 </div>
               </div>

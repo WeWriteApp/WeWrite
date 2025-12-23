@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation"
-import { LogOut, User, Settings } from "lucide-react"
 // REMOVED: Direct Firebase imports - now using API endpoints for cost optimization
 import { userProfileApi } from '../../utils/apiClient';
 import { useAuth } from '../../providers/AuthProvider';
@@ -37,16 +37,16 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 px-0">
-          <User className="h-4 w-4" />
+          <Icon name="User" size={16} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => router.push('/settings')}>
-          <Settings className="mr-2 h-4 w-4" />
+          <Icon name="Settings" size={16} className="mr-2" />
           <span>Settings</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
+          <Icon name="LogOut" size={16} className="mr-2" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

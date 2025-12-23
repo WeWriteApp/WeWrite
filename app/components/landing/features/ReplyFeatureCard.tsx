@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -47,7 +47,7 @@ export default function ReplyFeatureCard() {
   const replyTypes = [
     {
       type: 'agree',
-      icon: ThumbsUp,
+      iconName: 'ThumbsUp' as const,
       label: 'Agree',
       chipBg: 'bg-green-500/15',
       chipText: 'text-green-600 dark:text-green-400',
@@ -58,7 +58,7 @@ export default function ReplyFeatureCard() {
     },
     {
       type: 'disagree',
-      icon: ThumbsDown,
+      iconName: 'ThumbsDown' as const,
       label: 'Disagree',
       chipBg: 'bg-red-500/15',
       chipText: 'text-red-600 dark:text-red-400',
@@ -69,7 +69,7 @@ export default function ReplyFeatureCard() {
     },
     {
       type: 'neutral',
-      icon: Minus,
+      iconName: 'Minus' as const,
       label: 'Neutral',
       chipBg: 'bg-gray-500/15',
       chipText: 'text-gray-600 dark:text-gray-400',
@@ -83,7 +83,6 @@ export default function ReplyFeatureCard() {
   return (
     <div className="flex flex-col gap-2 py-2">
       {replyTypes.map((replyType) => {
-        const Icon = replyType.icon;
         return (
           <div
             key={replyType.type}
@@ -95,7 +94,7 @@ export default function ReplyFeatureCard() {
               replyType.chipBg,
               replyType.chipText
             )}>
-              <Icon className="w-3 h-3" />
+              <Icon name={replyType.iconName} size={12} />
               <span>{replyType.label}</span>
               <span className={cn(
                 "px-1.5 py-0.5 rounded-full text-[10px]",

@@ -21,16 +21,7 @@ import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Info, 
-  X, 
-  Check, 
-  Trash2, 
-  LogOut 
-} from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 type ModalVariant = 'alert' | 'confirm' | 'prompt' | 'action';
 type ModalType = 'success' | 'error' | 'warning' | 'info' | 'default' | 'destructive';
@@ -101,19 +92,19 @@ export function UnifiedModal(props: UnifiedModalProps) {
     const iconType = props.icon;
     switch (iconType) {
       case 'success':
-        return <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />;
+        return <Icon name="Success" size={24} className="text-green-600 dark:text-green-400" />;
       case 'error':
-        return <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />;
+        return <Icon name="Error" size={24} className="text-red-600 dark:text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />;
+        return <Icon name="Warning" size={24} className="text-amber-600 dark:text-amber-400" />;
       case 'info':
-        return <Info className="h-6 w-6 text-primary dark:text-muted-foreground" />;
+        return <Icon name="Info" size={24} className="text-primary dark:text-muted-foreground" />;
       case 'delete':
-        return <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />;
+        return <Icon name="Trash" size={24} className="text-red-600 dark:text-red-400" />;
       case 'logout':
-        return <LogOut className="h-6 w-6 text-primary dark:text-muted-foreground" />;
+        return <Icon name="User" size={24} className="text-primary dark:text-muted-foreground" />;
       case 'check':
-        return <Check className="h-6 w-6 text-green-600 dark:text-green-400" />;
+        return <Icon name="Check" size={24} className="text-green-600 dark:text-green-400" />;
       default:
         return null;
     }
@@ -215,7 +206,7 @@ export function UnifiedModal(props: UnifiedModalProps) {
               onClick={props.onClose}
               className="min-w-[100px]"
             >
-              <X className="h-4 w-4 mr-2" />
+              <Icon name="Close" size={16} className="mr-2" />
               {props.buttonText || 'OK'}
             </Button>
           )}
@@ -228,7 +219,7 @@ export function UnifiedModal(props: UnifiedModalProps) {
                 disabled={props.isLoading}
                 className="flex-1"
               >
-                <X className="h-4 w-4 mr-2" />
+                <Icon name="Close" size={16} className="mr-2" />
                 {props.cancelText || 'Cancel'}
               </Button>
               <Button
@@ -238,9 +229,9 @@ export function UnifiedModal(props: UnifiedModalProps) {
                 className="flex-1"
               >
                 {props.isLoading ? (
-                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <Icon name="Loader" size={16} className="mr-2" />
                 ) : (
-                  <Check className="h-4 w-4 mr-2" />
+                  <Icon name="Check" size={16} className="mr-2" />
                 )}
                 {props.isLoading ? 'Processing...' : (props.confirmText || 'Confirm')}
               </Button>

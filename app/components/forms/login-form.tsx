@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
@@ -8,7 +9,6 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { InlineError } from '../ui/InlineError';
-import { AlertCircle, Eye, EyeOff, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getEnvironmentType } from '../../utils/environmentConfig';
 
@@ -203,7 +203,7 @@ export function LoginForm() {
       {/* Countdown Timer Alert */}
       {isLockedOut && countdown !== null && (
         <Alert className="bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
-          <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <Icon name="Clock" size={16} className="text-orange-600 dark:text-orange-400" />
           <AlertDescription className="text-orange-700 dark:text-orange-300">
             <div className="flex flex-col gap-2">
               <span>Account temporarily locked due to too many failed attempts.</span>
@@ -222,7 +222,7 @@ export function LoginForm() {
       {/* Warning Alert (approaching lockout) */}
       {warning && !isLockedOut && (
         <Alert className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
-          <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <Icon name="AlertCircle" size={16} className="text-yellow-600 dark:text-yellow-400" />
           <AlertDescription className="text-yellow-700 dark:text-yellow-300">
             {warning}
           </AlertDescription>
@@ -291,9 +291,9 @@ export function LoginForm() {
               disabled={isLoading || isLockedOut}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <Icon name="EyeOff" size={16} />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Icon name="Eye" size={16} />
               )}
             </Button>
           </div>

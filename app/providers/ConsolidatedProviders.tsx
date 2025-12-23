@@ -24,6 +24,9 @@ import { NavigationOrderProvider } from '../contexts/NavigationOrderContext';
 import { UnifiedMobileNavProvider } from '../contexts/UnifiedMobileNavContext';
 import { AppBackgroundProvider } from '../contexts/AppBackgroundContext';
 
+// Onboarding/Tutorial Providers
+import { TutorialProvider } from '../contexts/TutorialContext';
+
 /**
  * UIProviders - Theme and display-related contexts
  * These don't depend on auth state and can render immediately
@@ -80,7 +83,9 @@ export function NavigationProviders({ children }: { children: React.ReactNode })
     <RecentPagesProvider>
       <NavigationOrderProvider>
         <UnifiedMobileNavProvider>
-          {children}
+          <TutorialProvider>
+            {children}
+          </TutorialProvider>
         </UnifiedMobileNavProvider>
       </NavigationOrderProvider>
     </RecentPagesProvider>

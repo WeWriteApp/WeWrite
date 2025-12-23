@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronDown } from "lucide-react"
+import { Icon } from '@/components/ui/Icon';
 import { cn } from "../../lib/utils"
 
 // SIMPLE select - no Radix UI, just basic dropdown
@@ -69,7 +69,7 @@ const SelectTrigger = React.forwardRef<
       {...props}
     >
       {children}
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <Icon name="ChevronDown" size={16} className="opacity-50" />
     </button>
   );
 });
@@ -127,7 +127,7 @@ const SelectItem = React.forwardRef<
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-        {isSelected && <Check className="h-4 w-4" />}
+        {isSelected && <Icon name="Check" size={16} />}
       </span>
       {children}
     </div>

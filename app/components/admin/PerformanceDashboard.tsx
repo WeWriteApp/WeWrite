@@ -1,22 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
-  Activity, 
-  Zap, 
-  Globe, 
-  Image, 
-  Database, 
-  Clock,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  XCircle
-} from 'lucide-react';
 
 interface PerformanceMetric {
   name: string;
@@ -117,10 +106,10 @@ export function PerformanceDashboard() {
 
   const getRatingIcon = (rating: string) => {
     switch (rating) {
-      case 'good': return <CheckCircle className="h-4 w-4" />;
-      case 'needs-improvement': return <AlertTriangle className="h-4 w-4" />;
-      case 'poor': return <XCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
+      case 'good': return <Icon name="CheckCircle" size={16} />;
+      case 'needs-improvement': return <Icon name="AlertTriangle" size={16} />;
+      case 'poor': return <Icon name="XCircle" size={16} />;
+      default: return <Icon name="Clock" size={16} />;
     }
   };
 
@@ -197,7 +186,7 @@ export function PerformanceDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Globe className="h-5 w-5" />
+                <Icon name="Globe" size={20} />
                 <span>Network Performance Breakdown</span>
               </CardTitle>
             </CardHeader>
@@ -223,7 +212,7 @@ export function PerformanceDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Activity className="h-5 w-5" />
+                <Icon name="Activity" size={20} />
                 <span>Slow Loading Resources</span>
               </CardTitle>
             </CardHeader>
@@ -260,7 +249,7 @@ export function PerformanceDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5" />
+                <Icon name="TrendingUp" size={20} />
                 <span>Performance Recommendations</span>
               </CardTitle>
             </CardHeader>

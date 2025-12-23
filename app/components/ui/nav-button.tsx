@@ -3,11 +3,11 @@
 import React from 'react';
 import { Button } from './button';
 import { cn } from '../../lib/utils';
-import { LucideIcon } from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 
 interface NavButtonProps {
   id: string;
-  icon: LucideIcon | React.ComponentType<{ className?: string }>;
+  icon: IconName | React.ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
   onHover?: () => void;
@@ -28,7 +28,7 @@ interface NavButtonProps {
  */
 export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
   id,
-  icon: Icon,
+  icon: iconProp,
   label,
   onClick,
   onHover,
@@ -43,7 +43,7 @@ export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
   className,
   ...props
 }, ref) => {
-  
+
   // Base styles shared across all variants
   const baseStyles = [
     "relative group",
@@ -79,11 +79,18 @@ export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
     ]
   };
 
+  // Icon sizes based on variant
+  const iconSizes = {
+    'desktop-sidebar': 20,
+    'desktop-sidebar-collapsed': 20,
+    'mobile-toolbar': 28
+  };
+
   // Icon styles based on variant and active state
   const iconStyles = {
-    'desktop-sidebar': `h-5 w-5 mr-3 flex-shrink-0 ${isActive ? 'text-accent' : ''}`,
-    'desktop-sidebar-collapsed': `h-5 w-5 flex-shrink-0 ${isActive ? 'text-accent' : ''}`,
-    'mobile-toolbar': `h-7 w-7 flex-shrink-0 ${isActive ? 'text-accent' : ''}`
+    'desktop-sidebar': `mr-3 flex-shrink-0 ${isActive ? 'text-accent' : ''}`,
+    'desktop-sidebar-collapsed': `flex-shrink-0 ${isActive ? 'text-accent' : ''}`,
+    'mobile-toolbar': `flex-shrink-0 ${isActive ? 'text-accent' : ''}`
   };
 
   // Label styles based on variant and active state
@@ -95,6 +102,9 @@ export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
 
   // Show label based on variant - never show label in collapsed desktop sidebar
   const showLabel = variant !== 'desktop-sidebar-collapsed';
+
+  // Check if icon is IconName (string) or component
+  const isIconName = typeof iconProp === 'string';
 
   return (
     <button
@@ -115,11 +125,25 @@ export const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(({
       {...props}
     >
       {/* Icon */}
-      {Icon && (
-        <Icon className={cn(
-          "transition-colors duration-200",
-          iconStyles[variant]
-        )} />
+      {iconProp && (
+        isIconName ? (
+          <Icon
+            name={iconProp as IconName}
+            size={iconSizes[variant]}
+            className={cn(
+              "transition-colors duration-200",
+              iconStyles[variant]
+            )}
+          />
+        ) : (
+          React.createElement(iconProp as React.ComponentType<{ className?: string }>, {
+            className: cn(
+              "transition-colors duration-200",
+              iconStyles[variant],
+              variant === 'desktop-sidebar' ? 'h-5 w-5' : variant === 'desktop-sidebar-collapsed' ? 'h-5 w-5' : 'h-7 w-7'
+            )
+          })
+        )
       )}
 
       {/* Label */}

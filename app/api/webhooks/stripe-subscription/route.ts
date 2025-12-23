@@ -16,6 +16,7 @@ import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
 import { sendSubscriptionConfirmation } from '../../../services/emailService';
+import { getOrCreateEmailSettingsToken } from '../../../services/emailSettingsTokenService';
 
 // Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
@@ -438,18 +439,22 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         const price = subscription.items.data[0].price;
         const amount = price.unit_amount ? price.unit_amount / 100 : 0;
         const nextBillingDate = new Date(subscription.current_period_end * 1000);
-        
+
+        // Get or create email settings token for no-login unsubscribe
+        const emailSettingsToken = await getOrCreateEmailSettingsToken(userId);
+
         sendSubscriptionConfirmation({
           to: userData.email,
           username: userData.username || 'there',
           planName: `$${amount}/month`,
           amount: `$${amount.toFixed(2)}/month`,
-          nextBillingDate: nextBillingDate.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+          nextBillingDate: nextBillingDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           }),
-          userId
+          userId,
+          emailSettingsToken
         }).catch(() => {
           // Email send failed - non-fatal
         });

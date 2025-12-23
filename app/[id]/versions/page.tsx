@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 // Removed old Firebase import - using API route directly for consistency
 import { getPageVersions } from '../../services/versionService';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { formatDistanceToNow, format } from 'date-fns';
 import UnifiedLoader from '../../components/ui/unified-loader';
 import { InlineError } from '../../components/ui/InlineError';

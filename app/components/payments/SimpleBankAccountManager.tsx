@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface BankAccountStatus {
   isConnected: boolean;
@@ -187,7 +187,7 @@ export const SimpleBankAccountManager: React.FC<SimpleBankAccountManagerProps> =
       {/* Loading State */}
       {initialLoading ? (
         <div className="flex items-center gap-3 p-4 bg-muted/30 dark:bg-muted/20 rounded-lg border border-border/50">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <Icon name="Loader" className="text-muted-foreground" />
           <div className="text-sm text-muted-foreground">Loading bank account status...</div>
         </div>
       ) : (
@@ -261,7 +261,7 @@ export const SimpleBankAccountManager: React.FC<SimpleBankAccountManagerProps> =
         >
           {loading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Icon name="Loader" />
               {getLoadingText(bankStatus)}
             </>
           ) : (

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent } from '../ui/card';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Feature card components
 import ReplyFeatureCard from './features/ReplyFeatureCard';
@@ -186,14 +186,14 @@ export default function FeaturesCarousel() {
               className="absolute left-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-full bg-background/90 backdrop-blur-sm border border-border shadow-md hover:bg-muted transition-colors"
               aria-label="Previous feature"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <Icon name="ChevronLeft" size={16} />
             </button>
             <button
               onClick={() => navigateFeature('next')}
               className="absolute right-1 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-7 h-7 rounded-full bg-background/90 backdrop-blur-sm border border-border shadow-md hover:bg-muted transition-colors"
               aria-label="Next feature"
             >
-              <ChevronRight className="h-4 w-4" />
+              <Icon name="ChevronRight" size={16} />
             </button>
 
             {/* Cards Container - centered with visible neighbors */}

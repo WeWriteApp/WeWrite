@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import {
   Drawer,
@@ -11,7 +12,6 @@ import {
 } from '../ui/drawer';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Link, X, Check } from 'lucide-react';
 import { PageProvider } from '../../contexts/PageContext';
 import ContentDisplay from '../content/ContentDisplay';
 import { WritingIdeasBanner } from '../writing/WritingIdeasBanner';
@@ -139,7 +139,7 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
             className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-muted transition-colors"
             aria-label="Close"
           >
-            <X className="h-5 w-5" />
+            <Icon name="X" size={20} />
           </button>
         </DrawerHeader>
 
@@ -188,7 +188,7 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
                 }
               }}
             >
-              <Link className="h-5 w-5" />
+              <Icon name="Link" size={20} />
               <span>Insert Link</span>
             </Button>
           </div>
@@ -209,7 +209,7 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
             onClick={handleClose}
             className="flex-1"
           >
-            <X className="h-4 w-4 mr-2" />
+            <Icon name="X" size={16} className="mr-2" />
             Cancel
           </Button>
           <Button
@@ -218,7 +218,7 @@ export default function LoggedOutNoteDrawer({ isOpen, onClose }: LoggedOutNoteDr
             disabled={isSaving || !hasContent}
             className="flex-1"
           >
-            <Check className="h-4 w-4 mr-2" />
+            <Icon name="Check" size={16} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save & Sign Up'}
           </Button>
         </DrawerFooter>

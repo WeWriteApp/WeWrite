@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
-import { CreditCard, Plus, Trash2, Check, AlertTriangle, Copy } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { loadStripe } from '@stripe/stripe-js';
@@ -130,7 +130,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <Icon name="AlertTriangle" size={16} />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             {error}
@@ -143,7 +143,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
                 toast.success('Error message copied to clipboard');
               }}
             >
-              <Copy className="h-3 w-3 mr-1" />
+              <Icon name="Copy" size={12} className="mr-1" />
               Copy
             </Button>
           </AlertDescription>
@@ -321,7 +321,7 @@ export function PaymentMethodsManager() {
 
   // Get card brand icon
   const getCardBrandIcon = (brand: string) => {
-    return <CreditCard className="h-5 w-5" />;
+    return <Icon name="CreditCard" size={20} />;
   };
 
   return (
@@ -333,7 +333,7 @@ export function PaymentMethodsManager() {
       <CardContent>
         {error && (
           <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
+            <Icon name="AlertTriangle" size={16} />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
               {error}
@@ -346,7 +346,7 @@ export function PaymentMethodsManager() {
                   toast.success('Error message copied to clipboard');
                 }}
               >
-                <Copy className="h-3 w-3 mr-1" />
+                <Icon name="Copy" size={12} className="mr-1" />
                 Copy
               </Button>
             </AlertDescription>
@@ -355,7 +355,7 @@ export function PaymentMethodsManager() {
 
         {loading && paymentMethods.length === 0 ? (
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={32} />
           </div>
         ) : (
           <div className="space-y-4">
@@ -401,7 +401,7 @@ export function PaymentMethodsManager() {
                         className="text-destructive hover:text-destructive"
                         onClick={() => setIsConfirmingDelete(method.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Icon name="Trash2" size={16} />
                       </Button>
                     </div>
                   </div>
@@ -420,7 +420,7 @@ export function PaymentMethodsManager() {
           disabled={loading || paymentMethods.length >= 3}
           className="flex items-center gap-2"
         >
-          <Plus className="h-4 w-4" />
+          <Icon name="Plus" size={16} />
           Add Payment Method
         </Button>
       </CardFooter>

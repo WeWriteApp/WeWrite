@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
-import { ChevronLeft, Share } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Logo } from "../ui/Logo";
 import { useSidebarContext } from "../layout/UnifiedSidebar";
@@ -95,7 +95,7 @@ export default function UserProfileHeader({ username }: UserProfileHeaderProps) 
                   onClick={handleBackClick}
                   title="Go back"
                 >
-                  <ChevronLeft className="h-5 w-5" />
+                  <Icon name="ChevronLeft" size={20} />
                 </Button>
               </div>
 
@@ -118,7 +118,7 @@ export default function UserProfileHeader({ username }: UserProfileHeaderProps) 
                   title="Share profile"
                   onClick={handleShareClick}
                 >
-                  <Share className="h-5 w-5" />
+                  <Icon name="Share" size={20} />
                 </Button>
               </div>
             </div>

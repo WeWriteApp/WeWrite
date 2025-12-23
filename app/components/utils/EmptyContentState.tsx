@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useContext } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { MobileContext } from '../../providers/MobileProvider';
 import { cn, wewriteCard } from '../../lib/utils';
-import { Edit } from 'lucide-react';
 
 interface EmptyContentStateProps {
   onActivate?: () => void;
@@ -49,7 +49,7 @@ export default function EmptyContentState({
       <div className="flex flex-col items-center justify-center text-center space-y-2 py-4">
         {isOwner && (
           <div className="w-8 h-8 rounded-full bg-muted-foreground/10 flex items-center justify-center mb-1">
-            <Edit className="h-4 w-4 text-muted-foreground/70" />
+            <Icon name="Edit" size={16} className="text-muted-foreground/70" />
           </div>
         )}
 

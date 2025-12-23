@@ -18,12 +18,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
-import { DollarSign, Clock, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 // Use API calls instead of complex services
 import { SimpleBankAccountManager } from './SimpleBankAccountManager';
 import { Progress } from '../ui/progress';
@@ -201,11 +201,11 @@ export default function SimpleEarningsDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Completed</Badge>;
+        return <Badge className="bg-green-100 text-green-800"><Icon name="CheckCircle" size={12} className="mr-1" />Completed</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800"><Icon name="Clock" size={12} className="mr-1" />Pending</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />Failed</Badge>;
+        return <Badge className="bg-red-100 text-red-800"><Icon name="AlertCircle" size={12} className="mr-1" />Failed</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -287,7 +287,7 @@ export default function SimpleEarningsDashboard() {
                 disabled={!stripeAccountId}
                 aria-label="Copy account ID"
               >
-                {copiedId ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copiedId ? <Icon name="CheckCircle" size={16} /> : <Icon name="Copy" size={16} />}
               </Button>
             </div>
           </div>
@@ -313,7 +313,7 @@ export default function SimpleEarningsDashboard() {
                 </p>
               </div>
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-100">
-                <CheckCircle className="w-3 h-3 mr-1" />Connected
+                <Icon name="CheckCircle" size={12} className="mr-1" />Connected
               </Badge>
             </div>
           )}
@@ -360,7 +360,7 @@ export default function SimpleEarningsDashboard() {
         <Card>
           <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center">
-              <DollarSign className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <Icon name="DollarSign" size={12} className="md:w-4 md:h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Available Balance</span>
               <span className="sm:hidden">Available</span>
             </CardTitle>
@@ -376,7 +376,7 @@ export default function SimpleEarningsDashboard() {
         <Card>
           <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center">
-              <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <Icon name="Clock" size={12} className="md:w-4 md:h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Pending Balance</span>
               <span className="sm:hidden">Pending</span>
             </CardTitle>
@@ -392,7 +392,7 @@ export default function SimpleEarningsDashboard() {
         <Card>
           <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center">
-              <CheckCircle className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              <Icon name="CheckCircle" size={12} className="md:w-4 md:h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Total Earned</span>
               <span className="sm:hidden">Total</span>
             </CardTitle>
@@ -452,7 +452,7 @@ export default function SimpleEarningsDashboard() {
       {!earnings?.totalEarnings && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
-            <DollarSign className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <Icon name="DollarSign" size={48} className="mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Earnings Yet</h3>
             <p className="text-muted-foreground">
               Start creating content to earn from supporters!

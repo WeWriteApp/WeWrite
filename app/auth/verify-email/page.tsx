@@ -8,11 +8,11 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { auth } from '../../firebase/config';
 import { useAuth } from '../../providers/AuthProvider';
 import { ModernAuthLayout } from '../../components/layout/modern-auth-layout';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 function VerifyEmailContent() {
@@ -123,14 +123,14 @@ function VerifyEmailContent() {
       <div className="text-center flex flex-col items-center gap-6">
         {status === 'loading' && (
           <>
-            <Loader2 className="w-16 h-16 text-foreground/50 animate-spin mx-auto mb-4" />
+            <Icon name="Loader" className="mx-auto mb-4" />
             <p className="text-foreground/70">Verifying your email address...</p>
           </>
         )}
 
         {status === 'success' && (
           <>
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <Icon name="CheckCircle" size={64} className="text-green-500 mx-auto mb-4" />
             <p className="text-foreground font-medium mb-2">{message}</p>
             <p className="text-foreground/70 text-sm">Redirecting you to the home page...</p>
           </>
@@ -138,7 +138,7 @@ function VerifyEmailContent() {
 
         {status === 'error' && (
           <>
-            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <Icon name="XCircle" size={64} className="text-red-500 mx-auto mb-4" />
             <p className="text-foreground font-medium mb-4">{message}</p>
             <Link
               href="/"
@@ -151,7 +151,7 @@ function VerifyEmailContent() {
 
         {status === 'expired' && (
           <>
-            <XCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            <Icon name="XCircle" size={64} className="text-yellow-500 mx-auto mb-4" />
             <p className="text-foreground font-medium mb-4">{message}</p>
             {user ? (
               <button
@@ -184,7 +184,7 @@ export default function VerifyEmailPage() {
           description="Please wait while we verify your email address"
         >
           <div className="flex flex-col items-center gap-6">
-            <Loader2 className="w-16 h-16 text-foreground/50 animate-spin mx-auto" />
+            <Icon name="Loader" className="mx-auto" />
             <p className="text-foreground/70">Loading...</p>
           </div>
         </ModernAuthLayout>

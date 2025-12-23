@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import NavPageLayout from '../../../components/layout/NavPageLayout';
 import { Button } from '../../../components/ui/button';
-import { CheckCircle, Home, CreditCard, Clock } from 'lucide-react';
 import Confetti from 'react-confetti';
 
 export default function FundAccountSuccessPage() {
@@ -93,15 +93,15 @@ export default function FundAccountSuccessPage() {
           <div className="flex justify-center">
             {isCheckingStatus ? (
               <div className="p-4 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                <Clock className="h-16 w-16 text-blue-600 dark:text-blue-400 animate-pulse" />
+                <Icon name="Clock" size={64} className="text-blue-600 dark:text-blue-400 animate-pulse" />
               </div>
             ) : subscriptionStatus === 'active' ? (
               <div className="p-4 bg-green-100 dark:bg-green-900/20 rounded-full">
-                <CheckCircle className="h-16 w-16 text-green-600 dark:text-green-400" />
+                <Icon name="CheckCircle" size={64} className="text-green-600 dark:text-green-400" />
               </div>
             ) : (
               <div className="p-4 bg-yellow-100 dark:bg-yellow-900/20 rounded-full">
-                <Clock className="h-16 w-16 text-yellow-600 dark:text-yellow-400" />
+                <Icon name="Clock" size={64} className="text-yellow-600 dark:text-yellow-400" />
               </div>
             )}
           </div>
@@ -145,7 +145,7 @@ export default function FundAccountSuccessPage() {
               size="lg"
               className="w-full max-w-xs mx-auto"
             >
-              <Home className="h-5 w-5 mr-2" />
+              <Icon name="Home" size={20} className="mr-2" />
               Go Home
             </Button>
 
@@ -155,7 +155,7 @@ export default function FundAccountSuccessPage() {
               size="lg"
               className="w-full max-w-xs mx-auto"
             >
-              <CreditCard className="h-5 w-5 mr-2" />
+              <Icon name="CreditCard" size={20} className="mr-2" />
               View Subscription
             </Button>
           </div>

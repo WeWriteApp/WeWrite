@@ -8,7 +8,7 @@ import RandomPagesTable from '../components/pages/RandomPagesTable';
 import EmptyState from '../components/ui/EmptyState';
 import { InlineError } from '../components/ui/InlineError';
 import { getRecentlyViewedPageIds } from '../utils/recentSearches';
-import { Clock } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 /**
  * Recently Viewed Page Component
@@ -133,7 +133,7 @@ export default function RecentsPage() {
           ) : recentPages.length === 0 ? (
             // Empty state
             <EmptyState
-              icon={Clock}
+              icon="Clock"
               title="No recently viewed pages"
               description="Pages you visit will appear here for quick access"
             />

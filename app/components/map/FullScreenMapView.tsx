@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import MapPicker from './MapPicker';
 
@@ -55,12 +55,12 @@ export default function FullScreenMapView({
           }}
           className="flex items-center gap-2"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon name="ArrowLeft" size={16} />
           Back
         </Button>
         
         <div className="flex items-center gap-2 flex-1">
-          <MapPin className="h-5 w-5 text-primary" />
+          <Icon name="MapPin" size={20} className="text-primary" />
           <div>
             <h1 className="text-lg font-semibold">
               {pageTitle ? `${pageTitle} - Location` : 'Page Location'}

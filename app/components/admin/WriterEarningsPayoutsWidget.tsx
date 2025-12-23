@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Loader2, DollarSign, TrendingUp, Users } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatCurrency';
 import type { DateRange } from '../admin/DateRangeFilter';
 import type { GlobalAnalyticsFilters } from '../admin/GlobalAnalyticsFilters';
@@ -45,8 +45,8 @@ function useWriterEarnings(dateRange: DateRange, cumulative: boolean) {
         setError(null);
 
         const params = new URLSearchParams({
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
+          startDate: dateRange.startDate.toISOString(),
+          endDate: dateRange.endDate.toISOString(),
           cumulative: cumulative.toString()
         });
 
@@ -96,8 +96,8 @@ function useWriterPayouts(dateRange: DateRange, cumulative: boolean) {
         setError(null);
 
         const params = new URLSearchParams({
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate,
+          startDate: dateRange.startDate.toISOString(),
+          endDate: dateRange.endDate.toISOString(),
           cumulative: cumulative.toString()
         });
 
@@ -143,13 +143,13 @@ export function WriterEarningsWidget({ dateRange, globalFilters, className = '' 
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <Icon name="DollarSign" size={20} />
             Writer Earnings
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Icon name="Loader" />
           </div>
         </CardContent>
       </Card>
@@ -161,7 +161,7 @@ export function WriterEarningsWidget({ dateRange, globalFilters, className = '' 
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <Icon name="DollarSign" size={20} />
             Writer Earnings
           </CardTitle>
         </CardHeader>
@@ -178,7 +178,7 @@ export function WriterEarningsWidget({ dateRange, globalFilters, className = '' 
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
+          <Icon name="DollarSign" size={20} />
           Writer Earnings
         </CardTitle>
         <CardDescription>
@@ -225,13 +225,13 @@ export function WriterPayoutsWidget({ dateRange, globalFilters, className = '' }
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <Icon name="TrendingUp" size={20} />
             Writer Payouts
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Icon name="Loader" />
           </div>
         </CardContent>
       </Card>
@@ -243,7 +243,7 @@ export function WriterPayoutsWidget({ dateRange, globalFilters, className = '' }
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <Icon name="TrendingUp" size={20} />
             Writer Payouts
           </CardTitle>
         </CardHeader>
@@ -260,7 +260,7 @@ export function WriterPayoutsWidget({ dateRange, globalFilters, className = '' }
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
+          <Icon name="TrendingUp" size={20} />
           Writer Payouts
         </CardTitle>
         <CardDescription>

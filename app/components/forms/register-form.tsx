@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Icon } from '@/components/ui/Icon';
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { cn } from "../../lib/utils"
@@ -12,7 +13,6 @@ import { useState, useEffect, useCallback } from "react"
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../firebase/config'
 import { createEmailVerificationNotification } from '../../services/notificationsApi'
-import { Check, Loader2, X, Copy, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { InlineError } from "../ui/InlineError"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
@@ -424,15 +424,15 @@ export function RegisterForm({
             />
             {isChecking && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Icon name="Loader" className="text-muted-foreground" />
               </div>
             )}
             {!isChecking && username && username.length >= 3 && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {isAvailable ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Icon name="Check" size={16} className="text-green-500" />
                 ) : (
-                  <X className="h-4 w-4 text-destructive" />
+                  <Icon name="X" size={16} className="text-destructive" />
                 )}
               </div>
             )}
@@ -512,9 +512,9 @@ export function RegisterForm({
               tabIndex={-1}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                <Icon name="EyeOff" size={16} className="text-muted-foreground" />
               ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
+                <Icon name="Eye" size={16} className="text-muted-foreground" />
               )}
             </Button>
           </div>
@@ -545,7 +545,7 @@ export function RegisterForm({
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Icon name="Loader" />
               Creating account...
             </>
           ) : (

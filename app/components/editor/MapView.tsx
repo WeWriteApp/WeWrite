@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { MapPin } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 import MapPicker from '../map/MapPicker';
 
@@ -37,7 +37,7 @@ function MapView({ location, readOnly, onChange, height = '200px', expandable, s
         style={{ height }}
       >
         <div className="text-center space-y-2 p-4">
-          <MapPin className="h-8 w-8 mx-auto text-muted-foreground" />
+          <Icon name="MapPin" size={32} className="mx-auto text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Map feature not available</p>
           <p className="text-xs text-muted-foreground">Feature flag disabled</p>
           {location && (

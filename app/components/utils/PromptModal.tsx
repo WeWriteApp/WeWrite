@@ -5,7 +5,7 @@ import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { X, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface PromptModalProps {
   isOpen: boolean;
@@ -106,7 +106,7 @@ export function PromptModal({
             disabled={isLoading}
             className="flex-1"
           >
-            <X className="h-4 w-4 mr-2" />
+            <Icon name="Close" size={16} className="mr-2" />
             {cancelText}
           </Button>
           <Button
@@ -116,9 +116,9 @@ export function PromptModal({
             className="flex-1"
           >
             {isLoading ? (
-              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <Icon name="Loader" size={16} className="mr-2" />
             ) : (
-              <Check className="h-4 w-4 mr-2" />
+              <Icon name="Check" size={16} className="mr-2" />
             )}
             {isLoading ? 'Processing...' : confirmText}
           </Button>

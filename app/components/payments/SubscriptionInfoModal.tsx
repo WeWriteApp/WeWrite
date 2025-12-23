@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import {
   Dialog,
   DialogClose,
@@ -9,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger} from "../ui/dialog";
-import { X } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
@@ -65,7 +65,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogClose asChild>
           <Button variant="secondary" size="icon" className="absolute right-4 top-4">
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
             <span className="sr-only">Close</span>
           </Button>
         </DialogClose>

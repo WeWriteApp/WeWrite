@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
-import { Check, Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../providers/AuthProvider';
 import {
@@ -177,10 +177,10 @@ export default function FollowButton({
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 15 }}
                 >
-                  <Check className={size === "lg" ? "h-5 w-5 text-green-500" : "h-4 w-4 text-green-500"} />
+                  <Icon name="Check" size={size === "lg" ? 20 : 16} className="text-green-500" />
                 </motion.div>
               ) : (
-                <Check className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
+                <Icon name="Check" size={size === "lg" ? 20 : 16} />
               )}
               Following
             </motion.div>
@@ -192,7 +192,7 @@ export default function FollowButton({
               exit={{ opacity: 0, y: 5 }}
               className="flex items-center gap-1"
             >
-              <Plus className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
+              <Icon name="Plus" size={size === "lg" ? 20 : 16} />
               Follow
             </motion.div>
           )}

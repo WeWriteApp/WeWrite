@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Line } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Users, CreditCard, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useSubscriptionRevenue, usePlatformFeeMetrics, useWriterPayouts } from '../../hooks/usePaymentAnalytics';
@@ -75,7 +75,7 @@ export function UsdPaymentsOverviewWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <Icon name="DollarSign" size={20} className="text-green-600" />
             USD Payments Overview
           </CardTitle>
           <CardDescription>Complete financial overview of the USD payment system</CardDescription>
@@ -115,7 +115,7 @@ export function UsdPaymentsOverviewWidget({
     <Card className={`wewrite-card ${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-green-600" />
+          <Icon name="DollarSign" size={20} className="text-green-600" />
           USD Payments Overview
         </CardTitle>
         <CardDescription>
@@ -128,7 +128,7 @@ export function UsdPaymentsOverviewWidget({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-muted/50 dark:bg-muted/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <CreditCard className="h-4 w-4 text-primary" />
+                <Icon name="CreditCard" size={16} className="text-primary" />
                 <Badge variant="secondary" className="text-xs">Revenue</Badge>
               </div>
               <div className="text-lg font-bold text-foreground dark:text-muted-foreground">
@@ -139,7 +139,7 @@ export function UsdPaymentsOverviewWidget({
 
             <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <DollarSign className="h-4 w-4 text-green-600" />
+                <Icon name="DollarSign" size={16} className="text-green-600" />
                 <Badge variant="secondary" className="text-xs">Fees</Badge>
               </div>
               <div className="text-lg font-bold text-green-800 dark:text-green-400">
@@ -150,7 +150,7 @@ export function UsdPaymentsOverviewWidget({
 
             <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Wallet className="h-4 w-4 text-purple-600" />
+                <Icon name="Wallet" size={16} className="text-purple-600" />
                 <Badge variant="secondary" className="text-xs">Payouts</Badge>
               </div>
               <div className="text-lg font-bold text-purple-800 dark:text-purple-400">
@@ -161,7 +161,7 @@ export function UsdPaymentsOverviewWidget({
 
             <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <TrendingUp className="h-4 w-4 text-amber-600" />
+                <Icon name="TrendingUp" size={16} className="text-amber-600" />
                 <Badge variant="secondary" className="text-xs">Net</Badge>
               </div>
               <div className="text-lg font-bold text-amber-800 dark:text-amber-400">
@@ -242,7 +242,7 @@ export function UsdPaymentsOverviewWidget({
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 <div className="text-center">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <Icon name="DollarSign" size={48} className="mx-auto mb-4 opacity-50" />
                   <p>No payment data available for the selected period</p>
                   <p className="text-sm">Try selecting a different date range</p>
                 </div>

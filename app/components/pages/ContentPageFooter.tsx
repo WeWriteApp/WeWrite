@@ -9,7 +9,7 @@ import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
-import { Reply, Save, RotateCcw, Trash2, Check, Link } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import { useToast } from "../ui/use-toast";
 import type { Page } from '../../types/database';
 
@@ -229,6 +229,7 @@ export default function ContentPageFooter({
             <SameTitlePages
               pageId={page.id}
               pageTitle={page.title}
+              isOwner={isOwner}
             />
           )}
         </>

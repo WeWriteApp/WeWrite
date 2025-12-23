@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Badge } from "../ui/badge";
-import { DollarSign, Loader2 } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import { useEffect, useState } from "react";
 import { WeWriteLogo } from "../ui/WeWriteLogo";
 import { useAuth } from '../../providers/AuthProvider';
@@ -120,7 +120,7 @@ export default function FinancialHeader({
           onClick={() => router.push('/settings/earnings')}
           title="Loading earnings..."
         >
-          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          <Icon name="Loader" className="mr-1" />
           <span className="text-xs">Loading</span>
         </Badge>
       );
@@ -201,7 +201,7 @@ export default function FinancialHeader({
           onClick={() => router.push('/settings/spend')}
           title="Loading balance..."
         >
-          <Loader2 className="h-3 w-3 animate-spin mr-1 flex-shrink-0" />
+          <Icon name="Loader" className="mr-1 flex-shrink-0" />
           <span className="flex items-center">Loading</span>
         </Badge>
       );
@@ -220,7 +220,7 @@ export default function FinancialHeader({
           onClick={() => router.push('/settings/fund-account')}
           title="Click to add funds"
         >
-          <DollarSign className="h-3 w-3 mr-1 flex-shrink-0" />
+          <Icon name="DollarSign" size={12} className="mr-1 flex-shrink-0" />
           <span className="flex items-center">Add Funds</span>
         </Badge>
       );

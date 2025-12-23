@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
-import { ChevronLeft, X } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import React from "react";
 
 interface Props {
@@ -20,14 +20,14 @@ export function AdminSubpageHeader({ title, description }: Props) {
           className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => router.push("/admin")}
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
+          <Icon name="ChevronLeft" size={16} className="mr-1" />
           Back to Admin
         </button>
         <h1 className="text-2xl font-semibold leading-tight">{title}</h1>
         {description && <p className="text-muted-foreground mt-1">{description}</p>}
       </div>
       <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.push("/")}>
-        <X className="h-5 w-5" />
+        <Icon name="X" size={20} />
       </Button>
     </header>
   );

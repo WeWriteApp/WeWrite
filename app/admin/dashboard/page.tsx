@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import './dashboard.css';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Filter, GripVertical } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -34,7 +34,7 @@ import { DesktopOptimizedDashboard } from "../../components/admin/DesktopOptimiz
 import {
   WriterEarningsWidget
 } from "../../components/admin/WriterEarningsPayoutsWidget";
-import { PlatformFeeRevenueWidget } from "../../components/admin/PlatformFeeRevenueWidget";
+import { PlatformRevenueWidget } from "../../components/admin/PlatformRevenueWidget";
 import { UsdPaymentsOverviewWidget } from "../../components/admin/UsdPaymentsOverviewWidget";
 import { UsdAllocationsWidget } from "../../components/admin/UsdAllocationsWidget";
 import { WritingIdeasManager } from "../../components/admin/WritingIdeasManager";
@@ -99,7 +99,7 @@ const DraggableWidget = ({ id, index, moveWidget, children }: any) => {
     >
       <div ref={ref} className="relative">
         <div className="absolute top-2 right-2 cursor-grab">
-          <GripVertical className="h-5 w-5 text-muted-foreground" />
+          <Icon name="GripVertical" size={20} className="text-muted-foreground" />
         </div>
         {children}
       </div>
@@ -126,7 +126,7 @@ const initialWidgets = [
   // Payment Analytics Widgets
   { id: 'usd-payments-overview', component: UsdPaymentsOverviewWidget },
   { id: 'usd-allocations', component: UsdAllocationsWidget },
-  { id: 'platform-fee-revenue', component: PlatformFeeRevenueWidget },
+  { id: 'platform-revenue', component: PlatformRevenueWidget },
 
   // Writer Analytics Widgets
   { id: 'writer-earnings', component: WriterEarningsWidget },
@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
                 size="sm"
                 onClick={() => router.push('/admin#tools')}
               >
-                <ChevronLeft className="h-4 w-4 mr-2" />
+                <Icon name="ChevronLeft" size={16} className="mr-2" />
                 Back
               </Button>
 
@@ -333,7 +333,7 @@ export default function AdminDashboardPage() {
                     onClick={handleToggleOptionsBar}
                     className="gap-2"
                   >
-                    <Filter className="h-4 w-4" />
+                    <Icon name="Filter" size={16} />
                     Options
                   </Button>
                 </div>

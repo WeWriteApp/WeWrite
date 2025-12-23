@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
-import { Check, RotateCcw, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 /**
@@ -129,7 +129,7 @@ export function SaveButtonGroup({
         onClick={onRevert}
         disabled={disabled || isSaving}
       >
-        <RotateCcw className="h-4 w-4" />
+        <Icon name="RotateCcw" size={16} />
         {revertText}
       </Button>
       
@@ -146,9 +146,9 @@ export function SaveButtonGroup({
         disabled={disabled || isSaving}
       >
         {isSaving ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Icon name="Loader" />
         ) : (
-          <Check className="h-4 w-4" />
+          <Icon name="Check" size={16} />
         )}
         {isSaving ? savingText : saveText}
       </Button>

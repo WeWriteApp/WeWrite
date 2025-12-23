@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { AlertTriangle, AlertCircle, Info, Copy, Check, RefreshCw, ChevronDown } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
 import { cn } from '../../lib/utils';
 
@@ -106,8 +106,12 @@ export function InlineError({
   const styles = variantStyles[variant];
   const sizes = sizeStyles[size];
 
-  // Icon selection based on variant
-  const IconComponent = variant === 'error' ? AlertTriangle : variant === 'warning' ? AlertCircle : Info;
+  // Icon name selection based on variant
+  const iconName = (variant === 'error' ? 'AlertTriangle' : variant === 'warning' ? 'AlertCircle' : 'Info') as const;
+
+  // Get icon size in pixels based on size variant
+  const iconSizeMap = { sm: 12, md: 16, lg: 20 };
+  const iconSize = iconSizeMap[size];
 
   // Copy error details to clipboard
   const handleCopy = async () => {
@@ -131,7 +135,7 @@ export function InlineError({
         sizes.gap,
         className
       )}>
-        <IconComponent className={cn(sizes.icon, styles.icon)} />
+        <Icon name={iconName} size={iconSize} className={styles.icon} />
         <span className={styles.text}>{message}</span>
         {showCopy && errorDetails && (
           <button
@@ -139,7 +143,7 @@ export function InlineError({
             onClick={handleCopy}
             className="ml-auto flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
           >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Icon name="Check" size={12} /> : <Icon name="Copy" size={12} />}
           </button>
         )}
       </div>
@@ -156,7 +160,7 @@ export function InlineError({
         className
       )}>
         <div className={cn('flex items-start', sizes.gap)}>
-          <IconComponent className={cn(sizes.icon, styles.icon, 'mt-0.5 shrink-0')} />
+          <Icon name={iconName} size={iconSize} className={cn(styles.icon, 'mt-0.5 shrink-0')} />
           <div className="flex-1 min-w-0">
             {title && <div className={cn('font-medium mb-1', styles.text)}>{title}</div>}
             <div className={styles.text}>{message}</div>
@@ -173,7 +177,7 @@ export function InlineError({
                     onClick={onRetry}
                     className="h-7 text-xs gap-1"
                   >
-                    <RefreshCw className="h-3 w-3" />
+                    <Icon name="RefreshCw" size={12} />
                     {retryLabel}
                   </Button>
                 )}
@@ -185,12 +189,12 @@ export function InlineError({
                   >
                     {copied ? (
                       <>
-                        <Check className="h-3 w-3 text-green-500" />
+                        <Icon name="Check" size={12} className="text-green-500" />
                         Copied!
                       </>
                     ) : (
                       <>
-                        <Copy className="h-3 w-3" />
+                        <Icon name="Copy" size={12} />
                         Copy Error
                       </>
                     )}
@@ -214,7 +218,7 @@ export function InlineError({
     )}>
       <div className={cn('flex items-start', sizes.gap)}>
         <div className={cn('p-1.5 rounded-full shrink-0', styles.iconBg)}>
-          <IconComponent className={cn(sizes.icon, styles.icon)} />
+          <Icon name={iconName} size={iconSize} className={styles.icon} />
         </div>
         <div className="flex-1 min-w-0">
           {title && <h3 className={cn('font-semibold mb-1', styles.text)}>{title}</h3>}
@@ -231,7 +235,7 @@ export function InlineError({
                 onClick={onRetry}
                 className="h-8 text-xs gap-1.5"
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                <Icon name="RefreshCw" size={24} className="h-3.5 w-3.5" />
                 {retryLabel}
               </Button>
             )}
@@ -245,12 +249,12 @@ export function InlineError({
               >
                 {copied ? (
                   <>
-                    <Check className="h-3.5 w-3.5 text-green-500" />
+                    <Icon name="Check" size={24} className="h-3.5 w-3.5 text-green-500" />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3.5 w-3.5" />
+                    <Icon name="Copy" size={24} className="h-3.5 w-3.5" />
                     Copy Error
                   </>
                 )}
@@ -266,7 +270,7 @@ export function InlineError({
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                <ChevronDown className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-180')} />
+                <Icon name="ChevronDown" size={12} className={cn('transition-transform', isExpanded && 'rotate-180')} />
                 Error Details
               </button>
               {isExpanded && (

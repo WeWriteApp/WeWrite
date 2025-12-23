@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { WriterTokenEarnings } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -76,11 +76,11 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
   const getTrendIcon = () => {
     switch (trend) {
       case 'up':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
+        return <Icon name="TrendingUp" size={16} className="text-green-600" />;
       case 'down':
-        return <TrendingDown className="h-4 w-4 text-red-600" />;
+        return <Icon name="TrendingDown" size={16} className="text-red-600" />;
       default:
-        return <Minus className="h-4 w-4 text-muted-foreground" />;
+        return <Icon name="Minus" size={16} className="text-muted-foreground" />;
     }
   };
 
@@ -100,7 +100,7 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <Icon name="TrendingUp" size={20} />
             Earnings Over Time
           </CardTitle>
           <CardDescription>
@@ -122,7 +122,7 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+              <Icon name="TrendingUp" size={20} />
               Earnings Over Time
             </CardTitle>
             <CardDescription>

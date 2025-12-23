@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
-import { ChevronLeft, Trophy, Loader, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import PillLink from '../components/utils/PillLink';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
@@ -192,12 +192,12 @@ export default function UsersPageClient() {
             }
           }}
         >
-          <ChevronLeft className="h-4 w-4 mr-2" />
+          <Icon name="ChevronLeft" size={16} className="mr-2" />
           Back
         </Button>
 
         <h1 className="text-2xl font-bold flex items-center absolute left-1/2 transform -translate-x-1/2">
-          <Trophy className="mr-2 h-5 w-5" />
+          <Icon name="Trophy" size={20} className="mr-2" />
           Top Users
         </h1>
 
@@ -208,14 +208,14 @@ export default function UsersPageClient() {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="flex flex-col items-center">
-            <Loader className="h-8 w-8 animate-pulse text-primary mb-4" />
+            <Icon name="Loader" size={32} className="animate-pulse text-primary mb-4" />
             <p className="text-muted-foreground">Loading users...</p>
           </div>
         </div>
       ) : error ? (
         <div className="p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
           <div className="flex gap-2 items-start">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <Icon name="AlertTriangle" size={16} className="flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">There was a problem loading the users</p>
               {errorDetails && <p className="mt-1 text-xs opacity-80">{errorDetails}</p>}
@@ -236,9 +236,9 @@ export default function UsersPageClient() {
                   <div className="flex items-center justify-end gap-1">
                     Pages
                     {sortDirection === "desc" ? (
-                      <ChevronDown className="h-4 w-4" />
+                      <Icon name="ChevronDown" size={16} />
                     ) : (
-                      <ChevronUp className="h-4 w-4" />
+                      <Icon name="ChevronUp" size={16} />
                     )}
                   </div>
                 </TableHead>

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Clock, FileText, Users } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { formatCurrency } from '../../utils/formatCurrency';
 import PillLink from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
@@ -153,7 +153,7 @@ export default function RecentAllocationsCard({ allocations, className = "" }: R
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+          <Icon name="Clock" size={20} />
           Recent Allocations
         </CardTitle>
         <CardDescription>

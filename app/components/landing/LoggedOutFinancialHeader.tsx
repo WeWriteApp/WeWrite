@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Badge } from '../ui/badge';
-import { DollarSign, Loader2 } from 'lucide-react';
 import { useDemoBalance } from '../../contexts/DemoBalanceContext';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { RemainingFundsDisplay, OverspendWarningDisplay } from '../ui/RemainingUsdCounter';
@@ -31,7 +31,7 @@ export function LoggedOutFinancialHeader() {
           onClick={() => router.push('/auth/register')}
           title="Sign up to start allocating!"
         >
-          <Loader2 className="h-3 w-3 animate-spin mr-1 flex-shrink-0" />
+          <Icon name="Loader" className="mr-1 flex-shrink-0" />
           <span className="flex items-center">Loading</span>
         </Badge>
       );

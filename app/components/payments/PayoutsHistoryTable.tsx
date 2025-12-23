@@ -1,25 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import {
-  Download,
-  Calendar,
-  DollarSign,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  FileText,
-  Filter,
-  ExternalLink
-} from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -208,7 +195,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
   if (!user) {
     return (
       <Alert>
-        <AlertTriangle className="h-4 w-4" />
+        <Icon name="AlertTriangle" size={16} />
         <AlertTitle>Authentication Required</AlertTitle>
         <AlertDescription>
           Please log in to view your payout history.
@@ -221,7 +208,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
     <div className="space-y-6">
       {error && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <Icon name="AlertTriangle" size={16} />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -232,7 +219,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
         <Card>
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center gap-1 md:gap-2">
-              <FileText className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
+              <Icon name="FileText" size={12} className="md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
               <div className="min-w-0">
                 <div className="text-base md:text-2xl font-bold">{summaryStats.totalPayouts}</div>
                 <div className="text-xs md:text-sm text-muted-foreground truncate">Total</div>
@@ -244,7 +231,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
         <Card>
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center gap-1 md:gap-2">
-              <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
+              <Icon name="DollarSign" size={12} className="md:h-4 md:w-4 text-muted-foreground flex-shrink-0" />
               <div className="min-w-0">
                 <div className="text-base md:text-2xl font-bold truncate">{formatCurrency(summaryStats.totalAmount)}</div>
                 <div className="text-xs md:text-sm text-muted-foreground truncate">Amount</div>
@@ -256,7 +243,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
         <Card>
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center gap-1 md:gap-2">
-              <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-600 flex-shrink-0" />
+              <Icon name="CheckCircle" size={12} className="md:h-4 md:w-4 text-green-600 flex-shrink-0" />
               <div className="min-w-0">
                 <div className="text-base md:text-2xl font-bold">{summaryStats.completedPayouts}</div>
                 <div className="text-xs md:text-sm text-muted-foreground truncate">Completed</div>
@@ -268,7 +255,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
         <Card>
           <CardContent className="p-2 md:p-4">
             <div className="flex items-center gap-1 md:gap-2">
-              <Clock className="h-3 w-3 md:h-4 md:w-4 text-yellow-600 flex-shrink-0" />
+              <Icon name="Clock" size={12} className="md:h-4 md:w-4 text-yellow-600 flex-shrink-0" />
               <div className="min-w-0">
                 <div className="text-base md:text-2xl font-bold">{summaryStats.pendingPayouts}</div>
                 <div className="text-xs md:text-sm text-muted-foreground truncate">Pending</div>
@@ -282,7 +269,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
+            <Icon name="Filter" size={16} />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Filter by status" />
@@ -310,9 +297,9 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
             size="sm"
           >
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Icon name="Loader" className="mr-2" />
             ) : (
-              <Calendar className="h-4 w-4 mr-2" />
+              <Icon name="Calendar" size={16} className="mr-2" />
             )}
             Refresh
           </Button>
@@ -324,9 +311,9 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
             size="sm"
           >
             {downloadingCsv ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Icon name="Loader" className="mr-2" />
             ) : (
-              <Download className="h-4 w-4 mr-2" />
+              <Icon name="Download" size={16} className="mr-2" />
             )}
             Download CSV
           </Button>
@@ -336,13 +323,13 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
       {/* Payouts Table/Cards */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Icon name="Loader" />
           <span className="ml-2">Loading payout history...</span>
         </div>
       ) : filteredPayouts.length === 0 ? (
         <Card className="border-theme-strong border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-8">
-            <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
+            <Icon name="TrendingUp" size={48} className="text-muted-foreground mb-4" />
             <h4 className="text-lg font-medium mb-2">No Payouts Found</h4>
             <p className="text-muted-foreground text-center">
               {statusFilter === 'all'
@@ -475,7 +462,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
 
                     {/* Date and Time */}
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
+                      <Icon name="Calendar" size={16} />
                       <span>
                         {new Date(payout.createdAt).toLocaleDateString()} at{' '}
                         {new Date(payout.createdAt).toLocaleTimeString([], {
@@ -488,7 +475,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                     {/* Bank Account */}
                     {payout.bankAccount && (
                       <div className="flex items-center gap-2 text-sm">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <Icon name="DollarSign" size={16} className="text-muted-foreground" />
                         <div>
                           <span className="font-medium">{payout.bankAccount.bankName}</span>
                           <span className="text-muted-foreground ml-2">
@@ -501,7 +488,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                     {/* Arrival/Completion Info */}
                     {(payout.estimatedArrival || payout.completedAt) && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <Icon name="Clock" size={16} className="text-muted-foreground" />
                         {payout.estimatedArrival ? (
                           <span className="text-muted-foreground">
                             Expected: {new Date(payout.estimatedArrival).toLocaleDateString()}
@@ -517,7 +504,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
                     {/* Failure Reason */}
                     {payout.failureReason && (
                       <div className="flex items-start gap-2 text-sm">
-                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                        <Icon name="AlertTriangle" size={16} className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
                         <span className="text-red-600 dark:text-red-400">{payout.failureReason}</span>
                       </div>
                     )}
@@ -556,7 +543,7 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
             }}
             className="flex items-center gap-2"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Icon name="ExternalLink" size={16} />
             <span className="hidden sm:inline">View payouts dashboard on Stripe</span>
             <span className="sm:hidden">Stripe Dashboard</span>
           </Button>

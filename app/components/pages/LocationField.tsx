@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MapPin, ExternalLink, Trash2, Pencil } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 
 import { useAccentColor } from '../../contexts/AccentColorContext';
@@ -177,7 +177,7 @@ export default function LocationField({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-muted-foreground" />
+            <Icon name="MapPin" size={20} className="text-muted-foreground" />
             <span className="text-sm font-medium">Location</span>
           </div>
 
@@ -201,7 +201,7 @@ export default function LocationField({
                     handleLocationClick();
                   }}
                 >
-                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                  <Icon name="Pencil" size={24} className="h-3.5 w-3.5 mr-1" />
                   Edit
                 </Button>
                 <Button
@@ -214,7 +214,7 @@ export default function LocationField({
                   }}
                   disabled={isDeleting}
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  <Icon name="Trash2" size={24} className="h-3.5 w-3.5 mr-1" />
                   {isDeleting ? 'Removing...' : 'Remove'}
                 </Button>
               </>

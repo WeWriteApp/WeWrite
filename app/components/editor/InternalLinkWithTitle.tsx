@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Icon } from '@/components/ui/Icon';
 import PillLink from "../utils/PillLink";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { getPageById } from "../../utils/apiClient";
@@ -222,7 +223,7 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
   else if (isLoading) {
     textToDisplay = (
       <>
-        <span className="inline-block w-3 h-3 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1"></span>
+        <Icon name="Loader" size={12} className="inline-block mr-1" />
         <span className="text-xs">Loading</span>
       </>
     );

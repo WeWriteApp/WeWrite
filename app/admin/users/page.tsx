@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { AdminSubpageHeader } from "../../components/admin/AdminSubpageHeader";
 import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
-import { CreditCard, Banknote, Bell, Filter } from "lucide-react";
-import { Loader2, ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Copy, CheckCircle2, AlertTriangle } from "lucide-react";
 import { adminFetch } from "../../utils/adminFetch";
 import {
   Dialog,
@@ -165,7 +164,7 @@ function UpcomingNotifications({ user }: { user: User }) {
   }, [user]);
 
   if (loading) {
-    return <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Checking...</div>;
+    return <div className="flex items-center gap-2"><Icon name="Loader" /> Checking...</div>;
   }
 
   const eligibleNotifications = notifications.filter(n => n.eligible);
@@ -864,9 +863,9 @@ export default function AdminUsersPage() {
 
   const getActivityIcon = (type: ActivityType) => {
     switch (type) {
-      case 'subscription': return <CreditCard className="h-4 w-4" />;
-      case 'payout': return <Banknote className="h-4 w-4" />;
-      case 'notification': return <Bell className="h-4 w-4" />;
+      case 'subscription': return <Icon name="CreditCard" size={16} />;
+      case 'payout': return <Icon name="Banknote" size={16} />;
+      case 'notification': return <Icon name="Bell" size={16} />;
     }
   };
 
@@ -1076,7 +1075,7 @@ export default function AdminUsersPage() {
                           />
                           {col.label}
                         </label>
-                        <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
+                        <Icon name="GripVertical" size={12} className="text-muted-foreground cursor-grab" />
                       </div>
                     );
                   })}
@@ -1112,7 +1111,7 @@ export default function AdminUsersPage() {
 
           {loading && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Icon name="Loader" />
               Loading users...
             </div>
           )}
@@ -1121,7 +1120,7 @@ export default function AdminUsersPage() {
             <Card className="border-orange-500/30 bg-orange-500/10">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                  <Icon name="AlertTriangle" size={20} className="text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
                   <div className="flex-1 space-y-2">
                     <div className="text-sm font-medium text-orange-700 dark:text-orange-400">{error}</div>
                     {errorDetails && (
@@ -1141,12 +1140,12 @@ export default function AdminUsersPage() {
                         >
                           {copiedError ? (
                             <>
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              <Icon name="CheckCircle2" size={12} className="mr-1" />
                               Copied!
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3 w-3 mr-1" />
+                              <Icon name="Copy" size={12} className="mr-1" />
                               Copy Error
                             </>
                           )}
@@ -1183,12 +1182,12 @@ export default function AdminUsersPage() {
                             {col.sortable && (
                               sortBy?.id === col.id ? (
                                 sortBy.dir === "asc" ? (
-                                  <ArrowUp className="h-3 w-3 text-muted-foreground" />
+                                  <Icon name="ArrowUp" size={12} className="text-muted-foreground" />
                                 ) : (
-                                  <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                  <Icon name="ArrowDown" size={12} className="text-muted-foreground" />
                                 )
                               ) : (
-                                <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
+                                <Icon name="ArrowUpDown" size={12} className="text-muted-foreground" />
                               )
                             )}
                           </div>
@@ -1358,7 +1357,7 @@ export default function AdminUsersPage() {
               onClick={() => deleteUserId && handleDelete(deleteUserId.uid)}
               disabled={loadingAction !== null}
             >
-              {loadingAction === 'delete' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+              {loadingAction === 'delete' ? <Icon name="Loader" /> : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1380,7 +1379,7 @@ export default function AdminUsersPage() {
               onClick={() => resetUserId && handleResetPassword(resetUserId)}
               disabled={loadingAction !== null}
             >
-              {loadingAction === 'reset' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset'}
+              {loadingAction === 'reset' ? <Icon name="Loader" /> : 'Send reset'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1414,7 +1413,7 @@ export default function AdminUsersPage() {
               onClick={handleUsernameSave}
               disabled={loadingAction !== null || newUsername.trim().length < 3}
             >
-              {loadingAction === 'username' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+              {loadingAction === 'username' ? <Icon name="Loader" /> : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1440,7 +1439,7 @@ export default function AdminUsersPage() {
               onClick={() => verifyUser && handleSendEmailVerification(verifyUser)}
               disabled={loadingAction !== null}
             >
-              {loadingAction === 'verify' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send verification'}
+              {loadingAction === 'verify' ? <Icon name="Loader" /> : 'Send verification'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1491,7 +1490,7 @@ export default function AdminUsersPage() {
                             disabled={loadingAction === 'verify'}
                           >
                             {loadingAction === 'verify' ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              <Icon name="Loader" className="mr-1" />
                             ) : null}
                             Send reminder
                           </Button>
@@ -1519,7 +1518,7 @@ export default function AdminUsersPage() {
 
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="h-4 w-4 text-blue-400" />
+                    <Icon name="CreditCard" size={16} className="text-blue-400" />
                     <span className="font-medium">Subscription</span>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
@@ -1534,7 +1533,7 @@ export default function AdminUsersPage() {
 
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Banknote className="h-4 w-4 text-emerald-400" />
+                    <Icon name="Banknote" size={16} className="text-emerald-400" />
                     <span className="font-medium">Payouts</span>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
@@ -1558,7 +1557,7 @@ export default function AdminUsersPage() {
                         disabled={loadingAction !== null}
                         onClick={() => handleSendPayoutReminder(selectedUser)}
                       >
-                        {loadingAction === "notify" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send payout reminder"}
+                        {loadingAction === "notify" ? <Icon name="Loader" /> : "Send payout reminder"}
                       </Button>
                       <span className="text-xs text-muted-foreground">
                         Sends a notification reminding them to add a bank for payouts.
@@ -1571,7 +1570,7 @@ export default function AdminUsersPage() {
                 <div className="rounded-lg border border-border bg-card">
                   <div className="flex items-center justify-between border-b border-border px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Bell className="h-4 w-4 text-amber-400" />
+                      <Icon name="Bell" size={16} className="text-amber-400" />
                       <span className="font-medium">Upcoming Notifications</span>
                     </div>
                   </div>
@@ -1584,9 +1583,9 @@ export default function AdminUsersPage() {
                 <div className="rounded-lg border border-border bg-card">
                   <div className="flex items-center justify-between border-b border-border px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <Icon name="Filter" size={16} className="text-muted-foreground" />
                       <span className="font-medium">Activity Feed</span>
-                      {loadingActivities && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                      {loadingActivities && <Icon name="Loader" className="text-muted-foreground" />}
                     </div>
                     <div className="flex gap-1">
                       {(['all', 'subscription', 'payout', 'notification'] as const).map((filter) => (
@@ -1598,9 +1597,9 @@ export default function AdminUsersPage() {
                           onClick={() => setActivityFilter(filter)}
                         >
                           {filter === 'all' && 'All'}
-                          {filter === 'subscription' && <><CreditCard className="h-3 w-3 mr-1" />Subs</>}
-                          {filter === 'payout' && <><Banknote className="h-3 w-3 mr-1" />Payouts</>}
-                          {filter === 'notification' && <><Bell className="h-3 w-3 mr-1" />Notifs</>}
+                          {filter === 'subscription' && <><Icon name="CreditCard" size={12} className="mr-1" />Subs</>}
+                          {filter === 'payout' && <><Icon name="Banknote" size={12} className="mr-1" />Payouts</>}
+                          {filter === 'notification' && <><Icon name="Bell" size={12} className="mr-1" />Notifs</>}
                         </Button>
                       ))}
                     </div>

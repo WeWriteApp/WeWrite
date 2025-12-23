@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import dynamic from 'next/dynamic';
 import { useProgressiveLoading } from '../ui/progressive-loader';
-import { BarChart3, TrendingUp, PieChart as PieChartIcon, Activity } from 'lucide-react';
 import { InlineError } from '../ui/InlineError';
 
 interface ChartData {
@@ -43,11 +43,11 @@ interface DynamicChartProps {
 function ChartSkeleton({ type, height = 300 }: { type: string; height?: number }) {
   const getIcon = () => {
     switch (type) {
-      case 'line': return <TrendingUp className="h-8 w-8" />;
-      case 'bar': return <BarChart3 className="h-8 w-8" />;
-      case 'pie': return <PieChartIcon className="h-8 w-8" />;
-      case 'area': return <Activity className="h-8 w-8" />;
-      default: return <BarChart3 className="h-8 w-8" />;
+      case 'line': return <Icon name="TrendingUp" size={32} />;
+      case 'bar': return <Icon name="BarChart3" size={32} />;
+      case 'pie': return <Icon name="BarChart3" size={32} />;
+      case 'area': return <Icon name="Activity" size={32} />;
+      default: return <Icon name="BarChart3" size={32} />;
     }
   };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Eye, TrendingUp, TrendingDown } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { usePageViewsMetrics } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart } from '../../utils/chartUtils';
@@ -74,7 +74,7 @@ export function PageViewsAnalyticsWidget({ dateRange, granularity, className = "
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Eye className="h-5 w-5 text-primary" />
+            <Icon name="Eye" size={20} className="text-primary" />
             <h3 className="text-lg font-semibold">Page Views</h3>
           </div>
           <div className="text-right">
@@ -90,7 +90,7 @@ export function PageViewsAnalyticsWidget({ dateRange, granularity, className = "
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Eye className="h-5 w-5 text-destructive" />
+          <Icon name="Eye" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">Page Views</h3>
         </div>
         <div className="text-center py-8">
@@ -106,7 +106,7 @@ export function PageViewsAnalyticsWidget({ dateRange, granularity, className = "
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Eye className="h-5 w-5 text-primary" />
+          <Icon name="Eye" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Page Views</h3>
         </div>
         
@@ -135,7 +135,7 @@ export function PageViewsAnalyticsWidget({ dateRange, granularity, className = "
         </div>
         <div className="text-center">
           <div className={`text-lg font-semibold flex items-center justify-center gap-1 ${isPositiveTrend ? 'text-green-600' : 'text-red-600'}`}>
-            {isPositiveTrend ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+            {isPositiveTrend ? <Icon name="TrendingUp" size={16} /> : <Icon name="TrendingDown" size={16} />}
             {Math.abs(trendPercentage).toFixed(1)}%
           </div>
           <div className="text-xs text-muted-foreground">Trend</div>
@@ -198,7 +198,7 @@ export function PageViewsAnalyticsWidget({ dateRange, granularity, className = "
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
-              <Eye className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <Icon name="Eye" size={48} className="mx-auto mb-2 opacity-50" />
               <p>No page view data available</p>
               <p className="text-sm">Data will appear once pages start receiving views</p>
             </div>

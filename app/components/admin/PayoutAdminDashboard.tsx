@@ -1,20 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  XCircle, 
-  RefreshCw,
-  Search,
-  Filter,
-  Download,
-  AlertCircle
-} from 'lucide-react';
 
 interface PayoutAdminData {
   payouts: any[];
@@ -194,7 +184,7 @@ export default function PayoutAdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin" />
+        <Icon name="RefreshCw" size={32} className="animate-spin" />
       </div>
     );
   }
@@ -206,11 +196,11 @@ export default function PayoutAdminDashboard() {
         <h1 className="text-3xl font-bold">Payout Administration</h1>
         <div className="flex gap-2">
           <Button onClick={loadMonitoringData} variant="secondary" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <Icon name="RefreshCw" size={16} className="mr-2" />
             Refresh
           </Button>
           <Button variant="secondary" size="sm">
-            <Download className="h-4 w-4 mr-2" />
+            <Icon name="Download" size={16} className="mr-2" />
             Export
           </Button>
         </div>
@@ -226,13 +216,13 @@ export default function PayoutAdminDashboard() {
             <CardContent>
               <div className="flex items-center gap-2">
                 {monitoringData.health.status === 'healthy' && (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <Icon name="CheckCircle" size={20} className="text-green-600" />
                 )}
                 {monitoringData.health.status === 'warning' && (
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                  <Icon name="AlertTriangle" size={20} className="text-yellow-600" />
                 )}
                 {monitoringData.health.status === 'critical' && (
-                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <Icon name="AlertCircle" size={20} className="text-red-600" />
                 )}
                 <span className="capitalize font-medium">
                   {monitoringData.health.status}

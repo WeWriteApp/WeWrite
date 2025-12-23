@@ -10,6 +10,7 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
 import UserProfileHeader from './UserProfileHeader';
+import UserProfileStats from '../utils/UserProfileStats';
 
 interface Profile {
   uid: string;
@@ -17,6 +18,7 @@ interface Profile {
   tier?: string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
+  createdAt?: string;
 }
 
 interface SingleProfileViewProps {
@@ -40,10 +42,10 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
       {/* Fixed header with back/logo/share */}
       <UserProfileHeader username={profile.username} />
 
-      {/* Content area - add top padding for fixed header */}
-      <div className="space-y-6 pt-14">
+      {/* Content area */}
+      <div className="space-y-4">
         {/* Profile header - separate card */}
-        <div className="wewrite-card">
+        <div className="wewrite-card pb-4">
           {/* Username row */}
           <div className="flex flex-col items-center">
           <div className="flex items-center justify-center gap-2 mb-3">
@@ -73,7 +75,8 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
             </div>
           </div>
 
-
+          {/* Profile Stats with sparklines */}
+          <UserProfileStats userId={profile.uid} createdAt={profile.createdAt} />
         </div>
 
 

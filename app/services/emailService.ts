@@ -435,6 +435,7 @@ export const sendSubscriptionConfirmation = async (options: {
   amount: string;
   nextBillingDate: string;
   userId?: string;
+  emailSettingsToken?: string;
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
@@ -489,6 +490,7 @@ export const sendNewFollowerEmail = async (options: {
   followerUsername: string;
   followerBio?: string;
   userId?: string;
+  emailSettingsToken?: string;
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
@@ -544,6 +546,7 @@ export const sendPageLinkedEmail = async (options: {
   linkerUsername: string;
   linkerPageTitle: string;
   userId?: string;
+  emailSettingsToken?: string;
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {

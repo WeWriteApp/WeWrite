@@ -161,13 +161,13 @@ export async function GET(request: NextRequest) {
             .orderBy('createdAt', 'desc')
             .limit(5)
             .get();
-          
+
           topLevelSubs.docs.forEach(doc => {
             const data = doc.data();
-            const createdAt = data.createdAt?._seconds 
+            const createdAt = data.createdAt?._seconds
               ? new Date(data.createdAt._seconds * 1000).toISOString()
               : new Date().toISOString();
-            
+
             activities.push({
               id: `sub-history-${doc.id}`,
               type: 'subscription',
@@ -179,6 +179,46 @@ export async function GET(request: NextRequest) {
               metadata: {
                 tier: data.tier,
                 stripeSubscriptionId: data.stripeSubscriptionId
+              }
+            });
+          });
+
+          // Fetch subscription audit trail events (upgrades, downgrades, cancellations, reactivations, payment failures)
+          const auditEvents = await db
+            .collection(getCollectionName('auditTrail'))
+            .where('userId', '==', uid)
+            .where('entityType', '==', 'subscription')
+            .orderBy('timestamp', 'desc')
+            .limit(20)
+            .get();
+
+          auditEvents.docs.forEach(doc => {
+            const data = doc.data();
+            const createdAt = data.timestamp?._seconds
+              ? new Date(data.timestamp._seconds * 1000).toISOString()
+              : new Date().toISOString();
+
+            activities.push({
+              id: `audit-${doc.id}`,
+              type: 'subscription',
+              title: getAuditEventTitle(data.eventType),
+              description: data.description || getAuditEventTitle(data.eventType),
+              amount: data.metadata?.amount || data.metadata?.newAmount,
+              status: mapAuditEventToStatus(data.eventType),
+              createdAt,
+              metadata: {
+                eventType: data.eventType,
+                source: data.source,
+                severity: data.severity,
+                oldAmount: data.metadata?.oldAmount,
+                newAmount: data.metadata?.newAmount,
+                oldStatus: data.metadata?.oldStatus,
+                newStatus: data.metadata?.newStatus,
+                failureReason: data.metadata?.failureReason,
+                failureCount: data.metadata?.failureCount,
+                cancelReason: data.metadata?.cancelReason,
+                ...data.beforeState && { beforeState: data.beforeState },
+                ...data.afterState && { afterState: data.afterState }
               }
             });
           });
@@ -369,9 +409,37 @@ function getSubscriptionTitle(status: string): string {
 function getSubscriptionDescription(data: any): string {
   const amount = data.amount ? `$${data.amount.toFixed(2)}/mo` : '';
   const tier = data.tier ? `${data.tier} tier` : '';
-  
+
   if (amount && tier) return `${tier} - ${amount}`;
   if (amount) return amount;
   if (tier) return tier;
   return 'Subscription';
+}
+
+function getAuditEventTitle(eventType: string): string {
+  switch (eventType) {
+    case 'subscription_created': return 'Subscription created';
+    case 'subscription_updated': return 'Subscription updated';
+    case 'subscription_cancelled': return 'Subscription cancelled';
+    case 'subscription_reactivated': return 'Subscription reactivated';
+    case 'plan_changed': return 'Plan changed';
+    case 'payment_method_updated': return 'Payment method updated';
+    case 'payment_failed': return 'Payment failed';
+    case 'payment_recovered': return 'Payment recovered';
+    default: return eventType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+}
+
+function mapAuditEventToStatus(eventType: string): string {
+  switch (eventType) {
+    case 'subscription_created': return 'created';
+    case 'subscription_updated': return 'updated';
+    case 'subscription_cancelled': return 'cancelled';
+    case 'subscription_reactivated': return 'reactivated';
+    case 'plan_changed': return 'changed';
+    case 'payment_method_updated': return 'updated';
+    case 'payment_failed': return 'failed';
+    case 'payment_recovered': return 'recovered';
+    default: return eventType;
+  }
 }

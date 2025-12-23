@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { MoreHorizontal, UserX, Filter } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
 import { Switch } from './switch';
 import { Input } from './input';
@@ -72,7 +72,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
             aria-label="Random page filter options"
             onClick={(e) => e.stopPropagation()}
           >
-            <MoreHorizontal className={iconSize} />
+            <Icon name="MoreHorizontal" className={iconSize} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -86,7 +86,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
               setIsFilterModalOpen(true);
             }}
           >
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Icon name="Filter" size={16} className="text-muted-foreground" />
             <span className="text-sm font-medium">Filters</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -101,7 +101,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
               <div className="flex items-center gap-2">
-                <UserX className="h-4 w-4 text-muted-foreground" />
+                <Icon name="UserX" size={16} className="text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium">Not mine</div>
                   <div className="text-xs text-muted-foreground">Exclude pages you authored</div>

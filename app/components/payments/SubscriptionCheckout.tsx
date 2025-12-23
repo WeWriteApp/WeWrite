@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -12,7 +13,6 @@ import { formatUsdCents, USD_UI_TEXT } from '../../utils/formatCurrency';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { CheckCircle, ArrowLeft, CreditCard, Shield, Zap } from 'lucide-react';
 import { PricingDisplay } from './PricingDisplay';
 import { PaymentStep } from './checkout-steps/PaymentStep';
 import { ConfirmationStep } from './checkout-steps/ConfirmationStep';
@@ -318,7 +318,7 @@ export function SubscriptionCheckout({
             onClick={handleBack}
             className="flex items-center gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon name="ArrowLeft" size={16} />
             Back
           </Button>
         )}

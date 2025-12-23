@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from './button';
-import { ChevronLeft } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface BackToSettingsButtonProps {
@@ -44,7 +44,7 @@ export function BackToSettingsButton({
       )}
       aria-label="Back to Settings"
     >
-      <ChevronLeft className="h-4 w-4" />
+      <Icon name="ChevronLeft" size={16} />
       <span className="text-sm font-medium">Back to Settings</span>
     </Button>
   );

@@ -3,6 +3,8 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import { Icon } from '@/components/ui/Icon';
+import { Shield, DollarSign, UserCheck, UserX, Settings, Send, CheckCircle, Bell, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../providers/AuthProvider';
@@ -18,40 +20,6 @@ import {
   SideDrawerTitle,
   SideDrawerDescription,
 } from '../../components/ui/side-drawer';
-import {
-  ArrowLeft,
-  Mail,
-  Search,
-  Loader,
-  Shield,
-  DollarSign,
-  Bell,
-  Settings,
-  Sparkles,
-  ExternalLink,
-  Code,
-  Copy,
-  Check,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  History,
-  ChevronDown,
-  ChevronUp,
-  Smartphone,
-  Calendar,
-  X,
-  Users,
-  User,
-  UserCheck,
-  UserX,
-  Eye,
-  CreditCard,
-  Banknote,
-  Loader2,
-  Filter
-} from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { useToast } from '../../components/ui/use-toast';
 import { adminFetch } from '../../utils/adminFetch';
@@ -382,7 +350,7 @@ function PushNotificationPreview({ templateId }: { templateId: string }) {
   if (!modes.push) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <Smartphone className="h-12 w-12 mx-auto mb-3 opacity-50" />
+        <Icon name="Smartphone" size={48} className="mx-auto mb-3 opacity-50" />
         <p className="text-sm">This notification does not support push delivery</p>
       </div>
     );
@@ -562,7 +530,7 @@ function NotificationPreview({ templateId }: { templateId: string }) {
   if (!modes.inApp) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
+        <Icon name="Bell" size={48} className="mx-auto mb-3 opacity-50" />
         <p className="text-sm">This notification does not support in-app delivery</p>
       </div>
     );
@@ -659,22 +627,25 @@ function NotificationPreview({ templateId }: { templateId: string }) {
 }
 
 // Cron job schedule info for the Events tab
+// Jobs marked as isSystemJob: true are backend processing jobs that don't send user-facing emails
 const cronSchedules = [
   {
     id: 'process-writer-earnings',
     name: 'Process Writer Earnings',
     path: '/api/usd/process-writer-earnings',
     schedule: '0 8 1 * *',
-    description: 'Processes writer earnings on the 1st of each month at 8am UTC',
+    description: 'Backend job: Processes writer earnings on the 1st of each month at 8am UTC',
     nextRun: getNextCronRun('0 8 1 * *'),
+    isSystemJob: true, // Backend processing - no user-facing emails
   },
   {
     id: 'automated-payouts',
     name: 'Automated Payouts',
     path: '/api/cron/automated-payouts',
     schedule: '0 9 1 * *',
-    description: 'Processes automated payouts on the 1st of each month at 9am UTC',
+    description: 'Backend job: Processes automated payouts on the 1st of each month at 9am UTC',
     nextRun: getNextCronRun('0 9 1 * *'),
+    isSystemJob: true, // Backend processing - sends payout confirmation after processing
   },
   {
     id: 'weekly-digest',
@@ -683,6 +654,7 @@ const cronSchedules = [
     schedule: '0 10 * * 1',
     description: 'Sends weekly digest emails every Monday at 10am UTC',
     nextRun: getNextCronRun('0 10 * * 1'),
+    isSystemJob: false,
   },
   {
     id: 'username-reminder',
@@ -691,6 +663,7 @@ const cronSchedules = [
     schedule: '0 14 * * *',
     description: 'Reminds users to set usernames daily at 2pm UTC',
     nextRun: getNextCronRun('0 14 * * *'),
+    isSystemJob: false,
   },
   {
     id: 'payout-setup-reminder',
@@ -699,6 +672,7 @@ const cronSchedules = [
     schedule: '0 15 * * *',
     description: 'Reminds users to set up payouts daily at 3pm UTC',
     nextRun: getNextCronRun('0 15 * * *'),
+    isSystemJob: false,
   },
   {
     id: 'email-verification-reminder',
@@ -707,6 +681,7 @@ const cronSchedules = [
     schedule: '0 16 * * *',
     description: 'Reminds unverified users to verify email daily at 4pm UTC',
     nextRun: getNextCronRun('0 16 * * *'),
+    isSystemJob: false,
   },
   {
     id: 'reactivation',
@@ -715,6 +690,7 @@ const cronSchedules = [
     schedule: '0 16 * * 1',
     description: 'Sends re-activation emails weekly on Mondays at 4pm UTC to users inactive 30-90 days',
     nextRun: getNextCronRun('0 16 * * 1'),
+    isSystemJob: false,
   },
 ];
 
@@ -845,6 +821,8 @@ function AdminEmailsPageContent() {
   const [userDetailsOpen, setUserDetailsOpen] = useState(false);
   const [userDetailsLoading, setUserDetailsLoading] = useState(false);
   const [selectedUserDetails, setSelectedUserDetails] = useState<UserDetails | null>(null);
+  const [adminToggleLoading, setAdminToggleLoading] = useState(false);
+  const [verificationEmailLoading, setVerificationEmailLoading] = useState(false);
 
   // Check admin access
   useEffect(() => {
@@ -920,9 +898,13 @@ function AdminEmailsPageContent() {
   }, [activeTab, user, authLoading, toast]);
 
   // Load all cron recipients when Events tab is active
+  // Skip system jobs (backend processing jobs that don't send user-facing emails)
   useEffect(() => {
     const loadAllCronRecipients = async () => {
       for (const cron of cronSchedules) {
+        // Skip loading recipients for system jobs - they don't send user-facing emails
+        if (cron.isSystemJob) continue;
+
         if (!cronRecipients[cron.id]) {
           setCronRecipients(prev => ({ ...prev, [cron.id]: { loading: true, recipients: [] } }));
           try {
@@ -1101,6 +1083,93 @@ function AdminEmailsPageContent() {
     }
   };
 
+  // Toggle admin status for a user
+  const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    if (!selectedUserDetails) return;
+
+    setAdminToggleLoading(true);
+    try {
+      const response = await adminFetch('/api/admin/set-admin-claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId: userId,
+          isAdmin: !currentIsAdmin,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state to reflect the change
+        setSelectedUserDetails({
+          ...selectedUserDetails,
+          isAdmin: !currentIsAdmin,
+        });
+        toast({
+          title: 'Admin status updated',
+          description: `${selectedUserDetails.username || selectedUserDetails.email} is ${!currentIsAdmin ? 'now an admin' : 'no longer an admin'}`,
+        });
+      } else {
+        toast({
+          title: 'Failed to update admin status',
+          description: data.error || 'Unknown error',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to toggle admin status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update admin status',
+        variant: 'destructive',
+      });
+    } finally {
+      setAdminToggleLoading(false);
+    }
+  };
+
+  // Send verification email to a user
+  const handleSendVerificationEmail = async (userId: string, email: string, username?: string) => {
+    setVerificationEmailLoading(true);
+    try {
+      const response = await adminFetch('/api/email/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email,
+          username,
+          idToken: 'admin-bypass',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: 'Verification email sent',
+          description: `Sent to ${email}`,
+        });
+      } else {
+        toast({
+          title: 'Failed to send verification email',
+          description: data.error || 'Unknown error',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send verification email',
+        variant: 'destructive',
+      });
+    } finally {
+      setVerificationEmailLoading(false);
+    }
+  };
+
   // Helper function to format date/time
   const formatUserDateTime = (dateValue: any): string => {
     if (!dateValue) return '—';
@@ -1156,7 +1225,7 @@ function AdminEmailsPageContent() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <Loader className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <Icon name="Loader" className="text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -1173,10 +1242,16 @@ function AdminEmailsPageContent() {
 
   // Render Events tab content
   const renderEventsTab = () => {
-    // Sort crons by next run time
-    const sortedCrons = [...cronSchedules].sort((a, b) => a.nextRun.getTime() - b.nextRun.getTime());
+    // Separate email-sending crons from system (backend) jobs
+    const emailCrons = cronSchedules.filter(c => !c.isSystemJob);
+    const systemCrons = cronSchedules.filter(c => c.isSystemJob);
+
+    // Sort email crons by next run time
+    const sortedEmailCrons = [...emailCrons].sort((a, b) => a.nextRun.getTime() - b.nextRun.getTime());
+    const sortedSystemCrons = [...systemCrons].sort((a, b) => a.nextRun.getTime() - b.nextRun.getTime());
 
     // Build a flat list of all upcoming notifications with their scheduled time
+    // Only include email-sending crons (not system jobs)
     const buildUpcomingNotificationsList = () => {
       const notifications: Array<{
         cronId: string;
@@ -1185,7 +1260,7 @@ function AdminEmailsPageContent() {
         recipient: any;
       }> = [];
 
-      for (const cron of sortedCrons) {
+      for (const cron of sortedEmailCrons) {
         const data = cronRecipients[cron.id];
         if (data && !data.loading && data.recipients.length > 0) {
           for (const recipient of data.recipients) {
@@ -1206,14 +1281,14 @@ function AdminEmailsPageContent() {
     };
 
     const upcomingNotifications = buildUpcomingNotificationsList();
-    const isLoadingRecipients = sortedCrons.some(cron => cronRecipients[cron.id]?.loading);
+    const isLoadingRecipients = sortedEmailCrons.some(cron => cronRecipients[cron.id]?.loading);
 
     return (
       <div className="space-y-6">
         {/* Upcoming Scheduled Notifications */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Calendar className="h-4 w-4 text-primary" />
+            <Icon name="Calendar" size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">Upcoming Scheduled Notifications</h3>
             {!isLoadingRecipients && (
               <Badge variant="secondary" className="text-xs">
@@ -1224,12 +1299,12 @@ function AdminEmailsPageContent() {
 
           {isLoadingRecipients ? (
             <div className="flex items-center justify-center py-8">
-              <Loader className="h-6 w-6 animate-spin text-primary mr-2" />
+              <Icon name="Loader" className="text-primary mr-2" />
               <span className="text-sm text-muted-foreground">Loading upcoming notifications...</span>
             </div>
           ) : upcomingNotifications.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
-              <Calendar className="h-10 w-10 mx-auto mb-2 opacity-50" />
+              <Icon name="Calendar" size={40} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No upcoming notifications found</p>
             </div>
           ) : (
@@ -1252,18 +1327,18 @@ function AdminEmailsPageContent() {
                           className="text-xs py-0 cursor-pointer hover:bg-primary/20 transition-colors"
                           onClick={() => openEmailPreview(notif.cronId, notif.cronName, notif.recipient.userId, notif.recipient.username)}
                         >
-                          <Eye className="h-3 w-3 mr-1" />
+                          <Icon name="Eye" size={12} className="mr-1" />
                           {notif.cronName}
                         </Badge>
                       </td>
                       <td className="px-3 py-2">
                         {notif.recipient.username ? (
-                          <Link
-                            href={`/u/${notif.recipient.username}`}
-                            className="text-primary hover:underline"
+                          <button
+                            onClick={() => openUserDetails(notif.recipient.userId, notif.recipient.username)}
+                            className="text-primary hover:underline cursor-pointer"
                           >
                             @{notif.recipient.username}
-                          </Link>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -1290,7 +1365,7 @@ function AdminEmailsPageContent() {
         {/* Recent Notification Events */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <History className="h-4 w-4 text-primary" />
+            <Icon name="History" size={16} className="text-primary" />
             <h3 className="text-sm font-semibold">Recent Notification Events</h3>
             <Badge variant="secondary" className="text-xs">
               {allEmailLogs.length}
@@ -1299,7 +1374,7 @@ function AdminEmailsPageContent() {
 
           {allEmailLogs.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
-              <Mail className="h-10 w-10 mx-auto mb-2 opacity-50" />
+              <Icon name="Mail" size={40} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No notification events found</p>
             </div>
           ) : (
@@ -1319,16 +1394,16 @@ function AdminEmailsPageContent() {
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1.5">
                           {log.status === 'sent' || log.status === 'delivered' ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                            <Icon name="CheckCircle2" size={24} className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
                           ) : (
-                            <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                            <Icon name="XCircle" size={24} className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
                           )}
                           <Badge
                             variant="secondary"
                             className="text-xs py-0 cursor-pointer hover:bg-primary/20 transition-colors"
                             onClick={() => openEmailPreview(log.templateId, log.templateName || log.templateId, log.recipientUserId, log.recipientUsername)}
                           >
-                            <Eye className="h-3 w-3 mr-1" />
+                            <Icon name="Eye" size={12} className="mr-1" />
                             {log.templateName || log.templateId}
                           </Badge>
                         </div>
@@ -1358,6 +1433,51 @@ function AdminEmailsPageContent() {
             </div>
           )}
         </div>
+
+        {/* System Jobs Section (backend processing, no user emails) */}
+        {sortedSystemCrons.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Icon name="Settings" size={16} className="text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-muted-foreground">System Jobs</h3>
+              <Badge variant="outline" className="text-xs">
+                Backend Only
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              These are backend processing jobs that don't send user-facing emails directly.
+            </p>
+            <div className="wewrite-card p-0 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Job</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Description</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Next Run</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sortedSystemCrons.map((cron) => (
+                    <tr key={cron.id} className="hover:bg-muted/20">
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Icon name="Settings" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium">{cron.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs max-w-[300px]">
+                        {cron.description}
+                      </td>
+                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
+                        {formatTimeUntil(cron.nextRun)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1372,11 +1492,11 @@ function AdminEmailsPageContent() {
               className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => router.push('/admin')}
             >
-              <ArrowLeft className="h-4 w-4 mr-1" />
+              <Icon name="ArrowLeft" size={16} className="mr-1" />
               Back to Admin
             </button>
             <h1 className="text-2xl font-semibold leading-tight flex items-center gap-2">
-              <Bell className="h-6 w-6" />
+              <Icon name="Bell" size={24} />
               Notifications
             </h1>
             <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2">
@@ -1393,11 +1513,11 @@ function AdminEmailsPageContent() {
               rel="noopener noreferrer"
               className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ExternalLink className="h-4 w-4" />
+              <Icon name="ExternalLink" size={16} />
               Resend Dashboard
             </a>
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.push('/')}>
-              <X className="h-5 w-5" />
+              <Icon name="X" size={20} />
             </Button>
           </div>
         </header>
@@ -1412,7 +1532,7 @@ function AdminEmailsPageContent() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Mail className="h-4 w-4 inline-block mr-2" />
+            <Icon name="Mail" size={16} className="inline-block mr-2" />
             Templates
           </button>
           <button
@@ -1423,7 +1543,7 @@ function AdminEmailsPageContent() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <History className="h-4 w-4 inline-block mr-2" />
+            <Icon name="History" size={16} className="inline-block mr-2" />
             Events
           </button>
         </div>
@@ -1441,7 +1561,7 @@ function AdminEmailsPageContent() {
                 placeholder="Search templates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                leftIcon={<Search className="h-4 w-4" />}
+                leftIcon={<Icon name="Search" size={16} />}
               />
 
               {/* Template Categories */}
@@ -1484,16 +1604,16 @@ function AdminEmailsPageContent() {
                                   <div className="flex items-center gap-2">
                                     <p className="font-medium truncate">{template.name}</p>
                                     {status?.status === 'active' && (
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                                      <Icon name="CheckCircle2" size={24} className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
                                     )}
                                     {status?.status === 'partial' && (
-                                      <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
+                                      <Icon name="AlertCircle" size={24} className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
                                     )}
                                     {status?.status === 'not-implemented' && (
-                                      <XCircle className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
+                                      <Icon name="XCircle" size={24} className="h-3.5 w-3.5 text-red-400 flex-shrink-0" />
                                     )}
                                     {status?.status === 'disabled' && (
-                                      <XCircle className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                      <Icon name="XCircle" size={24} className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                                     )}
                                   </div>
                                   <p className="text-xs text-muted-foreground truncate mt-0.5">
@@ -1501,9 +1621,9 @@ function AdminEmailsPageContent() {
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                  <Mail className={`h-3.5 w-3.5 ${modes.email ? 'text-blue-500' : 'text-gray-300 dark:text-gray-600'}`} title={modes.email ? 'Email enabled' : 'Email disabled'} />
-                                  <Bell className={`h-3.5 w-3.5 ${modes.inApp ? 'text-orange-500' : 'text-gray-300 dark:text-gray-600'}`} title={modes.inApp ? 'In-app enabled' : 'In-app disabled'} />
-                                  <Smartphone className={`h-3.5 w-3.5 ${modes.push ? 'text-purple-500' : 'text-gray-300 dark:text-gray-600'}`} title={modes.push ? 'Push enabled' : 'Push disabled'} />
+                                  <Icon name="Mail" size={14} className={`${modes.email ? 'text-blue-500' : 'text-gray-300 dark:text-gray-600'}`} />
+                                  <Icon name="Bell" size={14} className={`${modes.inApp ? 'text-orange-500' : 'text-gray-300 dark:text-gray-600'}`} />
+                                  <Icon name="Smartphone" size={14} className={`${modes.push ? 'text-purple-500' : 'text-gray-300 dark:text-gray-600'}`} />
                                 </div>
                               </div>
                             </button>
@@ -1517,7 +1637,7 @@ function AdminEmailsPageContent() {
 
               {filteredTemplates.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <Icon name="Mail" size={48} className="mx-auto mb-3 opacity-50" />
                   <p>No templates found</p>
                 </div>
               )}
@@ -1548,19 +1668,19 @@ function AdminEmailsPageContent() {
                           <span className="text-xs text-muted-foreground">Delivery:</span>
                           {notificationModes[selectedTemplate]?.email && (
                             <Badge variant="secondary" className="gap-1 text-xs">
-                              <Mail className="h-3 w-3 text-blue-500" />
+                              <Icon name="Mail" size={12} className="text-blue-500" />
                               Email
                             </Badge>
                           )}
                           {notificationModes[selectedTemplate]?.inApp && (
                             <Badge variant="secondary" className="gap-1 text-xs">
-                              <Bell className="h-3 w-3 text-orange-500" />
+                              <Icon name="Bell" size={12} className="text-orange-500" />
                               In-App
                             </Badge>
                           )}
                           {notificationModes[selectedTemplate]?.push && (
                             <Badge variant="secondary" className="gap-1 text-xs">
-                              <Smartphone className="h-3 w-3 text-purple-500" />
+                              <Icon name="Smartphone" size={12} className="text-purple-500" />
                               Push
                             </Badge>
                           )}
@@ -1573,7 +1693,7 @@ function AdminEmailsPageContent() {
                           onClick={() => setShowCode(!showCode)}
                           className="gap-1"
                         >
-                          <Code className="h-4 w-4" />
+                          <Icon name="Code" size={16} />
                           {showCode ? 'Preview' : 'HTML'}
                         </Button>
                         {showCode && (
@@ -1583,7 +1703,7 @@ function AdminEmailsPageContent() {
                             onClick={copyHtml}
                             className="gap-1"
                           >
-                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            {copied ? <Icon name="Check" size={16} /> : <Icon name="Copy" size={16} />}
                             {copied ? 'Copied' : 'Copy'}
                           </Button>
                         )}
@@ -1601,13 +1721,13 @@ function AdminEmailsPageContent() {
                       }`}>
                         <div className="flex items-start gap-2">
                           {selectedTriggerStatus.status === 'active' && (
-                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                            <Icon name="CheckCircle2" size={20} className="text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                           )}
                           {selectedTriggerStatus.status === 'partial' && (
-                            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                            <Icon name="AlertCircle" size={20} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                           )}
                           {selectedTriggerStatus.status === 'not-implemented' && (
-                            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            <Icon name="XCircle" size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                           )}
                           <div>
                             <p className={`font-medium text-sm ${
@@ -1640,13 +1760,13 @@ function AdminEmailsPageContent() {
                   <div className="wewrite-card p-0 overflow-hidden">
                     <div className="p-4 border-b border-border bg-muted/30">
                       <h3 className="font-semibold flex items-center gap-2">
-                        <Mail className="h-5 w-5 text-muted-foreground" />
+                        <Icon name="Mail" size={20} className="text-muted-foreground" />
                         Email Preview
                       </h3>
                     </div>
                     {previewLoading ? (
                       <div className="flex items-center justify-center h-96">
-                        <Loader className="h-8 w-8 animate-spin text-primary" />
+                        <Icon name="Loader" className="text-primary" />
                       </div>
                     ) : showCode ? (
                       <pre className="p-4 overflow-auto max-h-[600px] text-xs bg-muted/30">
@@ -1670,7 +1790,7 @@ function AdminEmailsPageContent() {
                     <div className="wewrite-card">
                       <div className="mb-4">
                         <h3 className="font-semibold flex items-center gap-2">
-                          <Bell className="h-5 w-5 text-muted-foreground" />
+                          <Icon name="Bell" size={20} className="text-muted-foreground" />
                           In-App Notification Preview
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -1690,7 +1810,7 @@ function AdminEmailsPageContent() {
                     <div className="wewrite-card">
                       <div className="mb-4">
                         <h3 className="font-semibold flex items-center gap-2">
-                          <Smartphone className="h-5 w-5 text-muted-foreground" />
+                          <Icon name="Smartphone" size={20} className="text-muted-foreground" />
                           Push Notification Preview
                         </h3>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -1710,16 +1830,16 @@ function AdminEmailsPageContent() {
                       className="w-full flex items-center justify-between"
                     >
                       <div className="flex items-center gap-2">
-                        <History className="h-5 w-5 text-muted-foreground" />
+                        <Icon name="History" size={20} className="text-muted-foreground" />
                         <h3 className="font-semibold">Send History</h3>
                         <Badge variant="secondary" className="ml-2">
                           {emailLogs.length} {emailLogs.length === 1 ? 'email' : 'emails'}
                         </Badge>
                       </div>
                       {showLogs ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                        <Icon name="ChevronUp" size={20} className="text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        <Icon name="ChevronDown" size={20} className="text-muted-foreground" />
                       )}
                     </button>
                     
@@ -1727,7 +1847,7 @@ function AdminEmailsPageContent() {
                       <div className="mt-4">
                         {emailLogs.length === 0 ? (
                           <div className="text-center py-6 text-muted-foreground">
-                            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <Icon name="Clock" size={32} className="mx-auto mb-2 opacity-50" />
                             <p className="text-sm">No emails sent with this template yet</p>
                           </div>
                         ) : (
@@ -1739,9 +1859,9 @@ function AdminEmailsPageContent() {
                               >
                                 <div className="flex items-center gap-3 min-w-0">
                                   {log.status === 'sent' || log.status === 'delivered' ? (
-                                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                    <Icon name="CheckCircle2" size={16} className="text-green-500 flex-shrink-0" />
                                   ) : (
-                                    <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                                    <Icon name="XCircle" size={16} className="text-red-500 flex-shrink-0" />
                                   )}
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2">
@@ -1800,7 +1920,7 @@ function AdminEmailsPageContent() {
                 </div>
               ) : (
                 <div className="wewrite-card flex flex-col items-center justify-center h-96 text-center">
-                  <Mail className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                  <Icon name="Mail" size={64} className="text-muted-foreground/30 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Select a Template</h3>
                   <p className="text-muted-foreground text-sm max-w-sm">
                     Choose an email template from the list to preview its design and see the send history.
@@ -1811,15 +1931,15 @@ function AdminEmailsPageContent() {
                     <div className="text-xs font-semibold text-muted-foreground">Status Indicators</div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                        <Icon name="CheckCircle2" size={24} className="h-3.5 w-3.5 text-green-500" />
                         <span>Active</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
+                        <Icon name="AlertCircle" size={24} className="h-3.5 w-3.5 text-yellow-500" />
                         <span>Partial</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <XCircle className="h-3.5 w-3.5 text-red-400" />
+                        <Icon name="XCircle" size={24} className="h-3.5 w-3.5 text-red-400" />
                         <span>Not Implemented</span>
                       </div>
                     </div>
@@ -1827,15 +1947,15 @@ function AdminEmailsPageContent() {
                     <div className="text-xs font-semibold text-muted-foreground mt-4">Notification Modes</div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1">
-                        <Mail className="h-3.5 w-3.5 text-blue-500" />
+                        <Icon name="Mail" size={24} className="h-3.5 w-3.5 text-blue-500" />
                         <span>Email</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Bell className="h-3.5 w-3.5 text-orange-500" />
+                        <Icon name="Bell" size={24} className="h-3.5 w-3.5 text-orange-500" />
                         <span>In-App</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Smartphone className="h-3.5 w-3.5 text-purple-500" />
+                        <Icon name="Smartphone" size={24} className="h-3.5 w-3.5 text-purple-500" />
                         <span>Push</span>
                       </div>
                     </div>
@@ -1848,7 +1968,7 @@ function AdminEmailsPageContent() {
           {/* Email Unsubscribe System Documentation */}
           <div className="mt-8 wewrite-card">
             <div className="flex items-center gap-2 mb-4">
-              <Settings className="h-5 w-5 text-primary" />
+              <Icon name="Settings" size={20} className="text-primary" />
               <h3 className="text-lg font-semibold">Email Unsubscribe System</h3>
             </div>
             <p className="text-muted-foreground text-sm mb-4">
@@ -1947,7 +2067,7 @@ function AdminEmailsPageContent() {
         <SideDrawerContent side="right" size="xl">
           <SideDrawerHeader sticky showClose>
             <SideDrawerTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+              <Icon name="Mail" size={20} />
               Email Preview
               {emailPreviewIsPersonalized && (
                 <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">
@@ -1968,7 +2088,7 @@ function AdminEmailsPageContent() {
           <SideDrawerBody>
             {emailPreviewLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader className="h-8 w-8 animate-spin text-primary" />
+                <Icon name="Loader" className="text-primary" />
               </div>
             ) : emailPreviewHtml ? (
               <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg">
@@ -1983,7 +2103,7 @@ function AdminEmailsPageContent() {
             ) : emailPreviewError ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-5 w-5" />
+                  <Icon name="AlertCircle" size={20} />
                   <span className="font-medium">Failed to load email preview</span>
                 </div>
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
@@ -2001,7 +2121,7 @@ function AdminEmailsPageContent() {
                         });
                       }}
                     >
-                      <Copy className="h-3 w-3 mr-1" />
+                      <Icon name="Copy" size={12} className="mr-1" />
                       Copy Error
                     </Button>
                   </div>
@@ -2012,7 +2132,7 @@ function AdminEmailsPageContent() {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <Icon name="Mail" size={48} className="mx-auto mb-3 opacity-50" />
                 <p>No preview available</p>
               </div>
             )}
@@ -2035,7 +2155,7 @@ function AdminEmailsPageContent() {
                   }
                 }}
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <Icon name="ExternalLink" size={16} className="mr-2" />
                 View Full Details
               </Button>
             </div>
@@ -2055,7 +2175,7 @@ function AdminEmailsPageContent() {
           <SideDrawerBody>
             {userDetailsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Icon name="Loader" className="text-muted-foreground" />
               </div>
             ) : selectedUserDetails ? (
               <div className="space-y-4 text-sm">
@@ -2070,11 +2190,28 @@ function AdminEmailsPageContent() {
                   </div>
                   <div>
                     <div className="text-muted-foreground">Admin</div>
-                    {selectedUserDetails.isAdmin ? (
-                      <Badge variant="success-secondary">Admin</Badge>
-                    ) : (
-                      <Badge variant="outline-static">Not admin</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {selectedUserDetails.isAdmin ? (
+                        <Badge variant="success-secondary">Admin</Badge>
+                      ) : (
+                        <Badge variant="outline-static">Not admin</Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => handleToggleAdmin(selectedUserDetails.uid, selectedUserDetails.isAdmin || false)}
+                        disabled={adminToggleLoading}
+                      >
+                        {adminToggleLoading ? (
+                          <Icon name="Loader" />
+                        ) : selectedUserDetails.isAdmin ? (
+                          'Revoke'
+                        ) : (
+                          'Grant'
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Email verified</div>
@@ -2082,7 +2219,29 @@ function AdminEmailsPageContent() {
                       {selectedUserDetails.emailVerified ? (
                         <Badge variant="success-secondary">Verified</Badge>
                       ) : (
-                        <Badge variant="destructive-secondary">Unverified</Badge>
+                        <>
+                          <Badge variant="destructive-secondary">Unverified</Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleSendVerificationEmail(
+                              selectedUserDetails.uid,
+                              selectedUserDetails.email,
+                              selectedUserDetails.username
+                            )}
+                            disabled={verificationEmailLoading}
+                          >
+                            {verificationEmailLoading ? (
+                              <Icon name="Loader" />
+                            ) : (
+                              <>
+                                <Icon name="Mail" size={12} className="mr-1" />
+                                Send
+                              </>
+                            )}
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2106,7 +2265,7 @@ function AdminEmailsPageContent() {
 
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="h-4 w-4 text-blue-400" />
+                    <Icon name="CreditCard" size={16} className="text-blue-400" />
                     <span className="font-medium">Subscription</span>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
@@ -2121,7 +2280,7 @@ function AdminEmailsPageContent() {
 
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Banknote className="h-4 w-4 text-emerald-400" />
+                    <Icon name="Banknote" size={16} className="text-emerald-400" />
                     <span className="font-medium">Payouts</span>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
@@ -2142,7 +2301,7 @@ function AdminEmailsPageContent() {
                 {selectedUserDetails.referredBy && (
                   <div className="rounded-lg border border-border bg-card p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Users className="h-4 w-4 text-purple-400" />
+                      <Icon name="Users" size={16} className="text-purple-400" />
                       <span className="font-medium">Referral</span>
                     </div>
                     <div className="text-sm">
@@ -2168,7 +2327,7 @@ function AdminEmailsPageContent() {
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <Icon name="User" size={48} className="mx-auto mb-3 opacity-50" />
                 <p>No user selected</p>
               </div>
             )}
@@ -2183,7 +2342,7 @@ function AdminEmailsPageContent() {
                   variant="secondary"
                   onClick={() => window.open(`/u/${selectedUserDetails.username}`, '_blank')}
                 >
-                  <ExternalLink className="h-4 w-4 mr-2" />
+                  <Icon name="ExternalLink" size={16} className="mr-2" />
                   View Public Profile
                 </Button>
               )}
@@ -2197,7 +2356,7 @@ function AdminEmailsPageContent() {
 
 export default function AdminEmailsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Icon name="Loader" className="text-muted-foreground" /></div>}>
       <AdminEmailsPageContent />
     </Suspense>
   );

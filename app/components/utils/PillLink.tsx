@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, forwardRef, useEffect, useMemo } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
-import { ExternalLink, Users, Trash2 } from "lucide-react";
 import { Element, Node as SlateNode, Transforms } from 'slate';
 import { ReactEditor } from 'slate-react';
 import { ShimmerEffect } from "../ui/skeleton";
@@ -323,7 +323,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         onClick={handleDeletedClick}
         title="This page has been deleted. Click to see more options."
       >
-        <Trash2 size={12} className="mr-1.5 flex-shrink-0" />
+        <Icon name="Trash2" size={12} className="mr-1.5 flex-shrink-0" />
         <span className="pill-text truncate max-w-[300px]">{children || "deleted page"}</span>
       </span>
     );
@@ -416,7 +416,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           tabIndex={0}
         >
           <span className={pillTextClasses}>{formattedDisplayTitle}</span>
-          <ExternalLink size={14} className="flex-shrink-0" />
+          <Icon name="ExternalLink" size={14} className="flex-shrink-0" />
           {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
 
@@ -515,7 +515,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           }
         }}
       >
-        {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
+        {isGroupLinkType && <Icon name="Users" size={14} className="flex-shrink-0" />}
         <span className={pillTextClasses}>{formattedDisplayTitle}</span>
         {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
       </a>

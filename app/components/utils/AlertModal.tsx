@@ -3,7 +3,7 @@
 import React from 'react';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
-import { AlertTriangle, CheckCircle, XCircle, Info, X } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface AlertModalProps {
   isOpen: boolean;
@@ -37,13 +37,13 @@ export function AlertModal({
   const getIcon = () => {
     switch (icon) {
       case 'success':
-        return <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />;
+        return <Icon name="Success" size={24} className="text-green-600 dark:text-green-400" />;
       case 'error':
-        return <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />;
+        return <Icon name="Error" size={24} className="text-red-600 dark:text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />;
+        return <Icon name="Warning" size={24} className="text-amber-600 dark:text-amber-400" />;
       case 'info':
-        return <Info className="h-6 w-6 text-primary" />;
+        return <Icon name="Info" size={24} className="text-primary" />;
       default:
         return null;
     }
@@ -102,7 +102,7 @@ export function AlertModal({
             onClick={onClose}
             className="min-w-[100px]"
           >
-            <X className="h-4 w-4 mr-2" />
+            <Icon name="Close" size={16} className="mr-2" />
             {buttonText}
           </Button>
         </div>

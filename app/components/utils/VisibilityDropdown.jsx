@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Globe, Lock, Check } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,9 +36,9 @@ export default function VisibilityDropdown({
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border-theme-medium hover-border-medium transition-colors ${className}`}
         >
           {isPublic ? (
-            <Globe className="h-4 w-4 text-green-500" />
+            <Icon name="Globe" size={16} className="text-green-500" />
           ) : (
-            <Lock className="h-4 w-4 text-amber-500" />
+            <Icon name="Lock" size={16} className="text-amber-500" />
           )}
           <span className="text-sm font-medium">
             {isPublic ? "Public Group" : "Private Group"}
@@ -51,7 +51,7 @@ export default function VisibilityDropdown({
           className="flex items-center gap-2 py-2"
         >
           <div className="flex items-center gap-2 flex-1">
-            <Globe className="h-4 w-4 text-green-500 flex-shrink-0" />
+            <Icon name="Globe" size={16} className="text-green-500 flex-shrink-0" />
             <div className="flex flex-col">
               <span className="font-medium">Public</span>
               <span className="text-xs text-muted-foreground">
@@ -59,14 +59,14 @@ export default function VisibilityDropdown({
               </span>
             </div>
           </div>
-          {isPublic && <Check className="h-4 w-4 ml-2" />}
+          {isPublic && <Icon name="Check" size={16} className="ml-2" />}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onVisibilityChange(false)}
           className="flex items-center gap-2 py-2"
         >
           <div className="flex items-center gap-2 flex-1">
-            <Lock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            <Icon name="Lock" size={16} className="text-amber-500 flex-shrink-0" />
             <div className="flex flex-col">
               <span className="font-medium">Private</span>
               <span className="text-xs text-muted-foreground">
@@ -74,7 +74,7 @@ export default function VisibilityDropdown({
               </span>
             </div>
           </div>
-          {!isPublic && <Check className="h-4 w-4 ml-2" />}
+          {!isPublic && <Icon name="Check" size={16} className="ml-2" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

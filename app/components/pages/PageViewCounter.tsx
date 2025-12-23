@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews";
-import { Eye } from 'lucide-react';
 
 interface PageViewCounterProps {
   pageId: string;
@@ -93,7 +93,7 @@ export default function PageViewCounter({ pageId }: PageViewCounterProps) {
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Eye className="h-4 w-4" />
+      <Icon name="Eye" size={16} />
       <span>{isLoading ? '...' : viewData.total} views</span>
 
       {/* Sparkline */}

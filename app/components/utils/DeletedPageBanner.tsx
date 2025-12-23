@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Button } from '../ui/button'
-import { AlertTriangle, RotateCcw, Trash2, X } from 'lucide-react'
+import { Icon } from '@/components/ui/Icon'
 import { useRouter } from 'next/navigation'
 
 interface DeletedPageBannerProps {
@@ -96,7 +96,7 @@ export default function DeletedPageBanner({
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           {/* Warning info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <Icon name="Warning" size={20} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                 <span className="font-semibold">You're viewing a deleted page</span>
@@ -124,9 +124,9 @@ export default function DeletedPageBanner({
               className="bg-destructive-foreground text-destructive border-destructive-foreground hover:bg-destructive-foreground/90 flex-1 sm:flex-none"
             >
               {isRestoring ? (
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-destructive mr-2"></div>
+                <Icon name="Loader" size={12} className="mr-2" />
               ) : (
-                <RotateCcw className="h-3 w-3 mr-2" />
+                <Icon name="Refresh" size={12} className="mr-2" />
               )}
               Restore
             </Button>
@@ -139,9 +139,9 @@ export default function DeletedPageBanner({
               className="bg-transparent text-destructive-foreground border-destructive-foreground/50 hover:bg-destructive-foreground/10 flex-1 sm:flex-none"
             >
               {isPermanentlyDeleting ? (
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-destructive-foreground mr-2"></div>
+                <Icon name="Loader" size={12} className="mr-2" />
               ) : (
-                <Trash2 className="h-3 w-3 mr-2" />
+                <Icon name="Trash" size={12} className="mr-2" />
               )}
               Delete Forever
             </Button>
@@ -153,7 +153,7 @@ export default function DeletedPageBanner({
               disabled={isRestoring || isPermanentlyDeleting}
               className="text-destructive-foreground hover:bg-destructive-foreground/10 p-1 sm:flex-none self-end sm:self-auto"
             >
-              <X className="h-4 w-4" />
+              <Icon name="Close" size={16} />
             </Button>
           </div>
         </div>

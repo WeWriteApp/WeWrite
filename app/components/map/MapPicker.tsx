@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Crosshair, RotateCcw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { useTheme } from 'next-themes';
 import { createTileLayer, getDefaultMapView, logMapError } from '../../utils/mapConfig';
@@ -377,7 +377,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         <div className={`relative ${className}`} style={{ height }}>
           <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center">
             <div className="text-center space-y-2 p-4">
-              <MapPin className="h-8 w-8 mx-auto text-muted-foreground" />
+              <Icon name="MapPin" size={32} className="mx-auto text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{error}</p>
             </div>
           </div>
@@ -408,7 +408,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         {isLoading && (
           <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center" style={{ zIndex: 2 }}>
             <div className="text-center space-y-2">
-              <div className="h-8 w-8 mx-auto animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <Icon name="Loader" size={32} className="mx-auto" />
               <p className="text-sm text-muted-foreground">Loading map...</p>
             </div>
           </div>
@@ -424,7 +424,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
                 onClick={handleCenterOnLocation}
                 className="h-8 w-8 p-0"
               >
-                <Crosshair className="h-4 w-4" />
+                <Icon name="Crosshair" size={16} />
               </Button>
             )}
             {location && onChange && (
@@ -434,7 +434,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
                 onClick={handleClearLocation}
                 className="h-8 w-8 p-0"
               >
-                <RotateCcw className="h-4 w-4" />
+                <Icon name="RotateCcw" size={16} />
               </Button>
             )}
           </div>
@@ -456,7 +456,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
       <div className={`relative ${className}`} style={{ height }}>
         <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center">
           <div className="text-center space-y-2 p-4">
-            <MapPin className="h-8 w-8 mx-auto text-muted-foreground" />
+            <Icon name="MapPin" size={32} className="mx-auto text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Map render error</p>
           </div>
         </div>

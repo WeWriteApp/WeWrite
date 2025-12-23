@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import { Button } from "./button";
 import { cn } from "../../lib/utils";
 import {
@@ -208,7 +208,7 @@ export function Modal({
                         title ? `Close ${title} dialog` : undefined
                       )}
                     >
-                      <X className="h-4 w-4" {...getAccessibleIconProps()} />
+                      <Icon name="X" size={16} />
                     </Button>
                   )}
                 </div>

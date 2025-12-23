@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
-import { MessageSquare, Eye, PenLine } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 
 interface FeedbackModalProps {
@@ -103,7 +103,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-center gap-2">
-            <MessageSquare className="h-5 w-5" />
+            <Icon name="MessageSquare" size={20} />
             Feedback
           </DialogTitle>
         </DialogHeader>
@@ -113,7 +113,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             className="flex items-center gap-3 w-full h-auto py-4 px-4 text-left border border-border rounded-lg hover:bg-alpha-5 active:bg-alpha-10 transition-all"
             onClick={handleReadFeedback}
           >
-            <Eye className="h-5 w-5 text-muted-foreground shrink-0" />
+            <Icon name="Eye" size={20} className="text-muted-foreground shrink-0" />
             <div>
               <div className="font-medium">Read others' feedback</div>
               <div className="text-sm text-muted-foreground">See what others are saying about WeWrite</div>
@@ -124,7 +124,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             className="flex items-center gap-3 w-full h-auto py-4 px-4 text-left border border-border rounded-lg hover:bg-alpha-5 active:bg-alpha-10 transition-all"
             onClick={handleSendFeedback}
           >
-            <PenLine className="h-5 w-5 text-muted-foreground shrink-0" />
+            <Icon name="PenLine" size={20} className="text-muted-foreground shrink-0" />
             <div>
               <div className="font-medium">Send my own feedback</div>
               <div className="text-sm text-muted-foreground">Share your thoughts, ideas, or report issues</div>

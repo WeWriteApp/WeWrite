@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Loader, Clock, User, AlertTriangle, Info } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 
 interface UsernameHistoryProps {
   userId: string;
@@ -64,7 +64,7 @@ export default function UsernameHistory({ userId }: UsernameHistoryProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader className="h-6 w-6 animate-spin text-primary" />
+        <Icon name="Loader" className="text-primary" />
       </div>
     );
   }
@@ -73,12 +73,12 @@ export default function UsernameHistory({ userId }: UsernameHistoryProps) {
     return (
       <div className="text-center py-8 border border-red-200 rounded-lg bg-red-50 p-4">
         <div className="flex items-center justify-center mb-2">
-          <AlertTriangle className="h-6 w-6 text-red-500 mr-2" />
+          <Icon name="AlertTriangle" size={24} className="text-red-500 mr-2" />
           <h3 className="font-medium text-red-700">{error}</h3>
         </div>
         <details className="mt-4 text-left">
           <summary className="cursor-pointer text-sm font-medium text-red-700 flex items-center">
-            <Info className="h-4 w-4 mr-1" /> Debug Information
+            <Icon name="Info" size={16} className="mr-1" /> Debug Information
           </summary>
           <div className="mt-2 text-xs text-left bg-white p-3 rounded border border-red-200 overflow-auto max-h-60">
             <ul className="list-disc pl-5 space-y-1">
@@ -95,12 +95,12 @@ export default function UsernameHistory({ userId }: UsernameHistoryProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <User className="h-5 w-5 text-primary" />
+        <Icon name="User" size={20} className="text-primary" />
         <h3 className="font-medium">Current Username: <span className="text-primary">{currentUsername}</span></h3>
       </div>
       <details className="mt-4 text-left">
         <summary className="cursor-pointer text-sm font-medium text-muted-foreground flex items-center">
-          <Info className="h-4 w-4 mr-1" /> Debug Information
+          <Icon name="Info" size={16} className="mr-1" /> Debug Information
         </summary>
         <div className="mt-2 text-xs text-left bg-background p-3 rounded border border-border overflow-auto max-h-60">
           <ul className="list-disc pl-5 space-y-1">

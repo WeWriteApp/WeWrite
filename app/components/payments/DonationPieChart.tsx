@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
-import { DollarSign } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface DonationPieChartProps {
   pledges: {
@@ -68,7 +68,7 @@ const DonationPieChart: React.FC<DonationPieChartProps> = ({
         
         {/* Center circle with total amount */}
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-background rounded-full m-8">
-          <DollarSign className="h-5 w-5 text-muted-foreground mb-1" />
+          <Icon name="DollarSign" size={20} className="text-muted-foreground mb-1" />
           <div className="text-lg font-bold">${totalAmount.toFixed(2)}</div>
           <div className="text-xs text-muted-foreground">of ${maxAmount.toFixed(2)}</div>
         </div>

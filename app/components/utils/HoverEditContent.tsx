@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Edit2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import TextView from '../editor/TextView';
 
 interface HoverEditContentProps {
@@ -62,10 +62,12 @@ const HoverEditContent: React.FC<HoverEditContentProps> = ({
         {/* Hover-reveal edit icon - positioned similar to regular wiki pages */}
         {canEdit && isHovering && (
           <div className="absolute top-2 right-2 z-10">
-            <Edit2
-              className="h-4 w-4 text-muted-foreground cursor-pointer transition-opacity duration-200 opacity-60 hover:opacity-100 bg-background/80 rounded p-0.5 shadow-sm"
+            <Icon
+              name="Edit"
+              size={16}
+              className="text-muted-foreground cursor-pointer transition-opacity duration-200 opacity-60 hover:opacity-100 bg-background/80 rounded p-0.5 shadow-sm"
               onClick={handleEditClick}
-              title="Click to edit"
+              trigger="hover"
             />
           </div>
         )}

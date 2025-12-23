@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
-import { CheckCircle, Home, Settings } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CancellationSuccessPage() {
@@ -24,7 +24,7 @@ export default function CancellationSuccessPage() {
         <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
           <CardContent className="p-8 text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="w-16 h-16 text-green-600" />
+              <Icon name="CheckCircle" size={64} className="text-green-600" />
             </div>
             
             <h2 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
@@ -41,7 +41,7 @@ export default function CancellationSuccessPage() {
                 className="w-full" 
                 size="lg"
               >
-                <Home className="w-4 h-4 mr-2" />
+                <Icon name="Home" size={16} className="mr-2" />
                 Go Home
               </Button>
               
@@ -51,7 +51,7 @@ export default function CancellationSuccessPage() {
                 className="w-full"
                 size="lg"
               >
-                <Settings className="w-4 h-4 mr-2" />
+                <Icon name="Settings" size={16} className="mr-2" />
                 Manage Account
               </Button>
             </div>

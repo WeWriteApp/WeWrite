@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Pin, X, Trash2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from "../../utils/savedSearches";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
@@ -85,7 +85,7 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
       <div className="mt-6 mb-8 min-h-[60px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-muted-foreground flex items-center">
-            <Pin className="h-4 w-4 mr-2" />
+            <Icon name="Pin" size={16} className="mr-2" />
             Saved Searches
           </h3>
         </div>
@@ -100,7 +100,7 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
     <div className="mt-6 mb-8 min-h-[60px]">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center">
-          <Pin className="h-4 w-4 mr-2" />
+          <Icon name="Pin" size={16} className="mr-2" />
           Saved Searches
         </h3>
         {savedSearches.length > 0 && (
@@ -110,7 +110,7 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
             onClick={handleClearAll}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
-            <Trash2 className="h-3 w-3 mr-1" />
+            <Icon name="Trash2" size={12} className="mr-1" />
             Clear All
           </Button>
         )}

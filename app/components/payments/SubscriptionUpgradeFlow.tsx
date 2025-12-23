@@ -1,21 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { 
-  CreditCard, 
-  Check, 
-  ChevronDown, 
-  ChevronUp, 
-  Plus, 
-  Loader2,
-  Shield,
-  AlertCircle
-} from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
 
@@ -178,7 +169,7 @@ export function SubscriptionUpgradeFlow({
     if (method.type === 'card') {
       return (
         <div className="flex items-center space-x-3">
-          <CreditCard className="h-5 w-5 text-muted-foreground" />
+          <Icon name="CreditCard" size={20} className="text-muted-foreground" />
           <div>
             <div className="font-medium">
               {method.brand?.toUpperCase()} •••• {method.last4}
@@ -196,7 +187,7 @@ export function SubscriptionUpgradeFlow({
 
     return (
       <div className="flex items-center space-x-3">
-        <CreditCard className="h-5 w-5 text-muted-foreground" />
+        <Icon name="CreditCard" size={20} className="text-muted-foreground" />
         <div>
           <div className="font-medium">Payment Method</div>
           <div className="text-sm text-muted-foreground">•••• {method.last4}</div>
@@ -213,7 +204,7 @@ export function SubscriptionUpgradeFlow({
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center space-x-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Icon name="Loader" />
             <span>Loading payment methods...</span>
           </div>
         </CardContent>
@@ -229,7 +220,7 @@ export function SubscriptionUpgradeFlow({
         </CardHeader>
         <CardContent>
           <Alert>
-            <AlertCircle className="h-4 w-4" />
+            <Icon name="AlertCircle" size={16} />
             <AlertDescription>
               You need to add a payment method before upgrading your subscription.
             </AlertDescription>
@@ -297,12 +288,12 @@ export function SubscriptionUpgradeFlow({
             >
               {showPaymentMethodSelector ? (
                 <>
-                  <ChevronUp className="h-4 w-4 mr-1" />
+                  <Icon name="ChevronUp" size={16} className="mr-1" />
                   Hide Options
                 </>
               ) : (
                 <>
-                  <ChevronDown className="h-4 w-4 mr-1" />
+                  <Icon name="ChevronDown" size={16} className="mr-1" />
                   Change Method
                 </>
               )}
@@ -336,7 +327,7 @@ export function SubscriptionUpgradeFlow({
                   <div className="flex items-center justify-between">
                     {getPaymentMethodDisplay(method)}
                     {selectedPaymentMethod === method.id && (
-                      <Check className="h-5 w-5 text-primary" />
+                      <Icon name="Check" size={20} className="text-primary" />
                     )}
                   </div>
                 </div>
@@ -349,7 +340,7 @@ export function SubscriptionUpgradeFlow({
       {/* Error Display */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <Icon name="AlertCircle" size={16} />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -366,12 +357,12 @@ export function SubscriptionUpgradeFlow({
         >
           {isProcessing ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Icon name="Loader" />
               Processing...
             </>
           ) : (
             <>
-              <Shield className="h-4 w-4 mr-2" />
+              <Icon name="Shield" size={16} className="mr-2" />
               Upgrade Subscription
             </>
           )}

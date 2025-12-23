@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
+import { Icon } from '@/components/ui/Icon';
 import { usePillStyle, UI_STYLES, type UIStyle } from "../../contexts/PillStyleContext";
 import { cn } from "../../lib/utils";
-import { Sparkles, Square, Check } from "lucide-react";
 
 /**
  * UIStyleToggle - Toggle between Shiny and Flat UI styles
@@ -19,13 +19,13 @@ export default function UIStyleToggle() {
       style: UI_STYLES.SHINY,
       label: 'Shiny',
       description: 'Shimmer effects and glows on buttons and chips',
-      icon: <Sparkles className="h-5 w-5" />
+      icon: <Icon name="Sparkles" size={20} />
     },
     {
       style: UI_STYLES.FLAT,
       label: 'Flat',
       description: 'Clean, minimal UI without extra effects',
-      icon: <Square className="h-5 w-5" />
+      icon: <Icon name="Square" size={20} />
     }
   ];
 

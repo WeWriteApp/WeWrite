@@ -13,18 +13,7 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  User,
-  DollarSign,
-  Settings as SettingsIcon,
-  Trash2,
-  Coins,
-  Palette,
-  Wallet,
-  Loader2,
-  Bell,
-  Mail
-} from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 import { StatusIcon } from '../components/ui/status-icon';
 import { useBankSetupStatus } from './useBankSetupStatus';
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
@@ -33,6 +22,25 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { useNextPayoutCountdown, formatPayoutCountdown } from './useNextPayoutCountdown';
 import { useUsernameStatus } from './useUsernameStatus';
 import { useEmailVerificationStatus } from './useEmailVerificationStatus';
+
+// Icon wrapper components for settings sections
+const createIconComponent = (name: IconName) => {
+  const IconComponent = ({ className }: { className?: string }) => (
+    <Icon name={name} size={20} className={className} />
+  );
+  IconComponent.displayName = `${name}Icon`;
+  return IconComponent;
+};
+
+const Wallet = createIconComponent('Wallet');
+const Coins = createIconComponent('DollarSign'); // Using DollarSign as Coins equivalent
+const DollarSign = createIconComponent('DollarSign');
+const User = createIconComponent('User');
+const Palette = createIconComponent('Palette');
+const Bell = createIconComponent('Bell');
+const Mail = createIconComponent('Mail');
+const Trash2 = createIconComponent('Trash2');
+const SettingsIcon = createIconComponent('Settings');
 
 // Payout threshold in cents ($25)
 const PAYOUT_THRESHOLD_CENTS = 2500;
@@ -192,7 +200,7 @@ export function useSettingsSections(): {
         case 'fund-account': {
           // Show subscription amount
           statusIndicator = isLoadingSubscription ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Icon name="Loader" />
           ) : (
             <span className="text-xs text-muted-foreground font-medium">
               ${subscriptionAmount}/mo
@@ -229,7 +237,7 @@ export function useSettingsSections(): {
               );
             }
           } else {
-            statusIndicator = <Loader2 className="h-4 w-4 animate-spin" />;
+            statusIndicator = <Icon name="Loader" />;
           }
           break;
         }
@@ -240,7 +248,7 @@ export function useSettingsSections(): {
             if (bankSetupStatus.loading) {
               statusIndicator = (
                 <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full font-medium flex items-center gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Icon name="Loader" size={12} />
                   Loading...
                 </span>
               );

@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '../../providers/ThemeProvider';
 import { useAppBackground, type ImageBackground } from '../../contexts/AppBackgroundContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
 import { Button } from '../ui/button';
-import { Lock, Palette, Image as ImageIcon, Loader } from 'lucide-react';
 import OKLCHColorSlider from './OKLCHColorSlider';
 import ColorSlider from './ColorSlider';
 import { BackgroundImageUpload } from './BackgroundImageUpload';
@@ -193,11 +193,11 @@ export default function BackgroundOptionsCard() {
       <SegmentedControl value={activeTab} onValueChange={handleTabChange}>
         <SegmentedControlList>
           <SegmentedControlTrigger value="color" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
+            <Icon name="Palette" size={16} />
             Color
           </SegmentedControlTrigger>
           <SegmentedControlTrigger value="image" className="flex items-center gap-2">
-            <ImageIcon className="h-4 w-4" />
+            <Icon name="Image" size={16} className="" />
             Image
           </SegmentedControlTrigger>
         </SegmentedControlList>
@@ -229,12 +229,12 @@ export default function BackgroundOptionsCard() {
             <div className="mb-4">
               {imagesLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <Icon name="Loader" className="text-muted-foreground" />
                   <span className="ml-2 text-sm text-muted-foreground">Loading backgrounds...</span>
                 </div>
               ) : defaultImages.length === 0 ? (
                 <div className="text-center py-8">
-                  <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <Icon name="Image" size={32} className=" mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">No default backgrounds available</p>
                 </div>
               ) : (
@@ -311,7 +311,7 @@ export default function BackgroundOptionsCard() {
                   <div className="wewrite-card bg-muted/30 border-dashed border-2 border-muted-foreground/20">
                     <div className="p-6 text-center space-y-3">
                       <div className="text-muted-foreground">
-                        <Lock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <Icon name="Lock" size={48} className="mx-auto mb-3 opacity-50" />
                       </div>
                       <h3 className="font-medium text-foreground">Custom Background Images</h3>
                       <p className="text-sm text-muted-foreground">

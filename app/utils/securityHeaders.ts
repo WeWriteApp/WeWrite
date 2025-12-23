@@ -44,8 +44,8 @@ export const getContentSecurityPolicy = (isDevelopment: boolean = false) => {
       'https://api.stripe.com',
       'https://maps.googleapis.com',
       'https://www.google-analytics.com',
-      'https://www.googletagmanager.com'
-    ],
+      'https://www.googletagmanager.com',
+          ],
     'frame-src': [
       "'self'",
       'https://js.stripe.com',

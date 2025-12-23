@@ -60,7 +60,7 @@ import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
-import { ExternalLink, Edit2 } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import Modal from "../ui/modal";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
@@ -1109,8 +1109,10 @@ const SimpleParagraphNode = (props: {
 
       {/* Edit icon - positioned on the right side */}
       {canEdit && (
-        <Edit2
-          className={`h-4 w-4 text-muted-foreground absolute right-2 top-2 cursor-pointer transition-opacity duration-200 ${
+        <Icon
+          name="Edit2"
+          size={16}
+          className={`text-muted-foreground absolute right-2 top-2 cursor-pointer transition-opacity duration-200 ${
             // When in edit mode: show all edit buttons prominently
             // When not in edit mode: Desktop shows on hover, Mobile shows permanently on first line only
             isEditing
@@ -1123,7 +1125,6 @@ const SimpleParagraphNode = (props: {
             e.stopPropagation();
             handleClick();
           }}
-          title="Click to edit"
         />
       )}
     </div>

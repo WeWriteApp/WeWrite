@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X, Link, ThumbsUp, ThumbsDown, Lightbulb, Loader2 } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
@@ -407,7 +407,7 @@ export function ContentPageActions({
               onClick={onInsertLink}
               disabled={isSaving}
             >
-              <Link className="h-5 w-5" />
+              <Icon name="Link" size={20} />
               <span>Insert Link</span>
             </Button>
           )}
@@ -423,12 +423,12 @@ export function ContentPageActions({
             >
               {isLoadingSuggestions ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Icon name="Loader" />
                   <span>Loading Link Suggestions</span>
                 </>
               ) : (
                 <>
-                  <Lightbulb className="h-5 w-5" />
+                  <Icon name="Lightbulb" size={20} />
                   <span>Link Suggestions</span>
                 </>
               )}
@@ -447,7 +447,7 @@ export function ContentPageActions({
                 className="gap-2 w-full md:w-auto rounded-2xl font-medium"
                 onClick={() => setIsReplyPickerOpen(true)}
               >
-                <Reply className="h-5 w-5" />
+                <Icon name="Reply" size={20} />
                 <span>Reply</span>
               </Button>
 
@@ -462,7 +462,7 @@ export function ContentPageActions({
                       className="w-full justify-start gap-2"
                       onClick={() => handleReply('agree')}
                     >
-                      <ThumbsUp className="h-4 w-4" />
+                      <Icon name="ThumbsUp" size={16} />
                       Agree
                     </Button>
                     <Button
@@ -470,7 +470,7 @@ export function ContentPageActions({
                       className="w-full justify-start gap-2"
                       onClick={() => handleReply('disagree')}
                     >
-                      <ThumbsDown className="h-4 w-4" />
+                      <Icon name="ThumbsDown" size={16} />
                       Disagree
                     </Button>
                     <Button
@@ -478,7 +478,7 @@ export function ContentPageActions({
                       className="w-full justify-start gap-2"
                       onClick={() => handleReply(null)}
                     >
-                      <Reply className="h-4 w-4" />
+                      <Icon name="Reply" size={16} />
                       Just reply
                     </Button>
                   </div>

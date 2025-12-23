@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { UsernameBadge } from '../ui/UsernameBadge';
-import { X, Link as LinkIcon, ExternalLink, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
 
@@ -51,15 +51,15 @@ export function LinkSuggestionModal({
   const getMatchTypeIcon = (matchType: LinkSuggestion['matchType']) => {
     switch (matchType) {
       case 'exact':
-        return <LinkIcon className="h-4 w-4 text-green-500" />;
+        return <Icon name="Link" size={16} className="text-green-500" />;
       case 'partial':
-        return <LinkIcon className="h-4 w-4 text-primary" />;
+        return <Icon name="Link" size={16} className="text-primary" />;
       case 'keyword':
-        return <Sparkles className="h-4 w-4 text-purple-500" />;
+        return <Icon name="Sparkles" size={16} className="text-purple-500" />;
       case 'content':
-        return <ExternalLink className="h-4 w-4 text-orange-500" />;
+        return <Icon name="ExternalLink" size={16} className="text-orange-500" />;
       default:
-        return <LinkIcon className="h-4 w-4 text-gray-500" />;
+        return <Icon name="Link" size={16} className="text-gray-500" />;
     }
   };
 
@@ -90,7 +90,7 @@ export function LinkSuggestionModal({
       <DialogContent className="max-w-2xl w-[90vw] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader className="relative flex-shrink-0">
           <DialogTitle className="text-lg font-semibold pr-8 flex items-center gap-2">
-            <LinkIcon className="h-5 w-5 text-primary" />
+            <Icon name="Link" size={20} className="text-primary" />
             Link Suggestions for "{matchedText}"
           </DialogTitle>
           <Button
@@ -99,7 +99,7 @@ export function LinkSuggestionModal({
             className="absolute right-0 top-0 h-6 w-6 p-0"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
           </Button>
         </DialogHeader>
 
@@ -177,7 +177,7 @@ export function LinkSuggestionModal({
                             handleSelectPage(suggestion);
                           }}
                         >
-                          <LinkIcon className="h-3 w-3 mr-1" />
+                          <Icon name="Link" size={12} className="mr-1" />
                           Link
                         </Button>
                       </div>
@@ -191,7 +191,7 @@ export function LinkSuggestionModal({
           {/* No suggestions message */}
           {suggestions.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <LinkIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <Icon name="Link" size={48} className="mx-auto mb-3 opacity-50" />
               <p>No matching pages found for "{matchedText}"</p>
               <p className="text-sm mt-1">Try selecting different text to link.</p>
             </div>

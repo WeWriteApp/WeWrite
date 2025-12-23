@@ -1,15 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { Icon } from '@/components/ui/Icon';
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 // REMOVED: Direct Firebase RTDB imports - now using API endpoints
 import { rtdbApi } from "../../utils/apiClient";
 import dynamic from 'next/dynamic';
 
 import { UsernameBadge } from "../ui/UsernameBadge";
+import { Textarea } from "../ui/textarea";
 
 import ClickableByline from "../utils/ClickableByline";
 import { useAuth } from '../../providers/AuthProvider';
@@ -39,7 +40,6 @@ import {
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 import { Logo } from "../ui/Logo";
-import { Settings2 } from "lucide-react";
 
 // Dynamically import TitleSettingsModal to avoid SSR issues
 const TitleSettingsModal = dynamic(() => import('./TitleSettingsModal'), {
@@ -757,7 +757,7 @@ export default function ContentPageHeader({
                     onClick={handleBackClick}
                     title="Go back"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <Icon name="ChevronLeft" size={20} />
                   </Button>
                 </div>
 
@@ -812,7 +812,7 @@ export default function ContentPageHeader({
                     onClick={isNewPage ? undefined : handleShareClick}
                     disabled={isNewPage}
                   >
-                    <Share className="h-5 w-5" />
+                    <Icon name="Share" size={20} />
                   </Button>
                 </div>
               </div>
@@ -837,7 +837,7 @@ export default function ContentPageHeader({
                       disabled={isNavigating}
                       title={isEditing ? "Previous calendar day (creates new note)" : "Previous daily note (existing notes only)"}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <Icon name="ChevronLeft" size={16} />
                     </Button>
                   )}
 
@@ -845,7 +845,7 @@ export default function ContentPageHeader({
                     <h1 className="text-2xl font-semibold">
                       <div className="flex items-center justify-center relative">
                         {isEditing && canEdit && isEditingTitle && !(isExactDateFormat(title || "") && title !== "Daily note") ? (
-                          <textarea
+                          <Textarea
                             ref={titleInputRef}
                             value={editingTitle}
                             onChange={handleTitleChange}
@@ -853,13 +853,14 @@ export default function ContentPageHeader({
                             onBlur={handleTitleBlur}
                             onFocus={handleTitleFocus}
                             tabIndex={isNewPage ? 1 : undefined}
-                            className={`wewrite-input wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} ${titleError ? "border-destructive focus:border-destructive" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
+                            className={`wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
                             placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                             rows={1}
+                            warning={!!titleError}
                           />
                         ) : (
                           <div
-                            className={`${canEdit && isEditing ? "wewrite-input wewrite-title-input min-h-[64px]" : ""} ${titleError ? "border-destructive" : ""} w-full text-2xl font-semibold text-center ${canEdit ? "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2" : ""} transition-all duration-200`}
+                            className={`${canEdit && isEditing ? "wewrite-input wewrite-title-input min-h-[64px]" : ""} ${titleError ? "border-warning" : ""} w-full text-2xl font-semibold text-center ${canEdit ? "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2" : ""} transition-all duration-200`}
                             onClick={handleTitleClick}
                             title={
                               (isExactDateFormat(title || "") && title !== "Daily note")
@@ -899,7 +900,7 @@ export default function ContentPageHeader({
                       disabled={isNavigating}
                       title={isEditing ? "Next calendar day (creates new note)" : "Next daily note (existing notes only)"}
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <Icon name="ChevronRight" size={16} />
                     </Button>
                   )}
                 </div>
@@ -907,8 +908,8 @@ export default function ContentPageHeader({
                 {/* Title Error Message */}
                 {titleError && isEditing && canEdit && !isDailyNote && (
                   <div className="flex justify-center mt-2">
-                    <p className="text-sm text-destructive font-medium">
-                      Title is required
+                    <p className="text-sm text-warning font-medium">
+                      Pages must have a title
                     </p>
                   </div>
                 )}
@@ -933,7 +934,7 @@ export default function ContentPageHeader({
                         setIsTitleSettingsOpen(true);
                       }}
                     >
-                      <Settings2 className="h-3.5 w-3.5" />
+                      <Icon name="Settings2" size={24} className="h-3.5 w-3.5" />
                       Title settings
                     </Button>
                   </div>

@@ -1,9 +1,9 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 import { cn } from '@/lib/utils';
 
 interface SectionTitleProps {
-  icon?: LucideIcon;
+  icon?: IconName;
   title: string;
   description?: string;
   className?: string;
@@ -48,7 +48,7 @@ interface SectionTitleProps {
  * - Responsive Behavior: Padding adjustments work across all screen sizes
  * - Sticky Compatibility: Optimized for both normal and sticky states
  *
- * @param icon - Optional Lucide icon component
+ * @param icon - Optional icon name
  * @param title - The section title text
  * @param description - Optional description text
  * @param className - Optional additional class names for the container
@@ -59,7 +59,7 @@ interface SectionTitleProps {
  * @param rightContent - Legacy prop for backward compatibility (use children instead)
  */
 export function SectionTitle({
-  icon: Icon,
+  icon: iconName,
   title,
   description,
   className,
@@ -75,8 +75,8 @@ export function SectionTitle({
   return (
     <div className={cn("flex items-center justify-between gap-2 sm:gap-4 pt-2 mb-2", className)}>
       <div className="flex items-center gap-2 min-w-0">
-        {Icon && (
-          <Icon className={cn("h-5 w-5 text-muted-foreground flex-shrink-0", iconClassName)} />
+        {iconName && (
+          <Icon name={iconName} size={20} className={cn("text-muted-foreground flex-shrink-0", iconClassName)} />
         )}
         <div className="flex flex-col min-w-0">
           <h2 className={cn("text-lg font-semibold leading-tight hyphens-none", titleClassName)}>

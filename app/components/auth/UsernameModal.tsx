@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Check, X, Loader2 } from 'lucide-react'
+import { Icon } from '@/components/ui/Icon';
 import { debounce } from 'lodash'
 // Removed direct Firebase imports - now using API endpoints
 import { cn } from '../../lib/utils'
@@ -157,7 +157,7 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
         <DialogClose asChild>
           <Button variant="secondary" size="icon" className="absolute right-4 top-4">
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
             <span className="sr-only">Close</span>
           </Button>
         </DialogClose>
@@ -183,12 +183,12 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {isChecking ? (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Icon name="Loader" className="text-muted-foreground" />
               ) : username && username.length >= 3 ? (
                 isAvailable ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Icon name="Check" size={16} className="text-green-500" />
                 ) : (
-                  <X className="h-4 w-4 text-red-500" />
+                  <Icon name="X" size={16} className="text-red-500" />
                 )
               ) : null}
             </div>

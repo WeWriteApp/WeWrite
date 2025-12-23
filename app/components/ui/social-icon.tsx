@@ -1,21 +1,18 @@
-import { Youtube, Instagram, Twitter } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 
 interface SocialIconProps {
   platform: string;
   className?: string;
 }
 
-export function SocialIcon({ platform, className = "mr-2 size-4" }: SocialIconProps) {
-  // All icons will be white for better visibility against colored backgrounds
-  const iconClassName = `${className} text-white`;
-
+export function SocialIcon({ platform, className = "text-white" }: SocialIconProps) {
   switch (platform) {
     case 'twitter':
-      return <Twitter className={iconClassName} />;
+      return <Icon name="Twitter" size={16} className={className} />;
     case 'youtube':
-      return <Youtube className={iconClassName} />;
+      return <Icon name="Youtube" size={16} className={className} />;
     case 'instagram':
-      return <Instagram className={iconClassName} />;
+      return <Icon name="Instagram" size={16} className={className} />;
     default:
       return null;
   }

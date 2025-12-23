@@ -26,6 +26,7 @@ import {
 } from 'date-fns';
 import { db } from '../firebase/config';
 import { getCollectionName, COLLECTIONS } from '../utils/environmentConfig';
+import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 // Temporarily disable caching for server-side usage
 // import { getCacheItem, setCacheItem } from '../utils/cacheUtils';
 
@@ -184,16 +185,16 @@ export async function getPlatformFeeAnalytics(
         const dateKey = timeConfig.formatKey(intervalDate);
 
         // Calculate platform fee correctly:
-        // The payout amount is the net amount after platform fee (7%) and Stripe fees
+        // The payout amount is the net amount after platform fee (10%) and Stripe fees
         // To find the gross amount: gross = net / (1 - platform_fee_rate - stripe_fee_rate)
         const estimatedStripeFeeRate = 0.005; // 0.5% estimate for standard payouts
-        const platformFeeRate = 0.07; // 7%
+        const platformFeeRate = PLATFORM_FEE_CONFIG.PERCENTAGE; // 10%
         const totalFeeRate = platformFeeRate + estimatedStripeFeeRate;
 
         // Calculate gross amount from net payout
         const grossAmount = payoutAmount / (1 - totalFeeRate);
 
-        // Platform fee is 7% of gross amount
+        // Platform fee is 10% of gross amount
         const platformFee = grossAmount * platformFeeRate;
 
         const current = dataMap.get(dateKey);

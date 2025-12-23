@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Loader, Save, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
 import { subscribeFeeChanges, updateFeeStructure } from '../../services/feeService';
 import type { FeeStructure } from '../../services/feeService';
 
@@ -73,7 +73,7 @@ export default function FeeManagementSection() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader className="h-6 w-6 animate-spin mr-2" />
+        <Icon name="Loader" className="mr-2" />
         <span>Loading fee configuration...</span>
       </div>
     );
@@ -85,7 +85,7 @@ export default function FeeManagementSection() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
-            <DollarSign className="h-5 w-5 mr-2" />
+            <Icon name="DollarSign" size={20} className="mr-2" />
             Current Platform Fee
           </CardTitle>
           <CardDescription>
@@ -155,12 +155,12 @@ export default function FeeManagementSection() {
           >
             {isSaving ? (
               <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                <Icon name="Loader" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
+                <Icon name="Save" size={16} className="mr-2" />
                 Save Changes
               </>
             )}
@@ -181,11 +181,11 @@ export default function FeeManagementSection() {
         {message && (
           <Alert className={message.type === 'error' ? 'border-destructive' : message.type === 'success' ? 'border-green-500' : ''}>
             {message.type === 'error' ? (
-              <AlertCircle className="h-4 w-4" />
+              <Icon name="AlertCircle" size={16} />
             ) : message.type === 'success' ? (
-              <CheckCircle2 className="h-4 w-4" />
+              <Icon name="CheckCircle2" size={16} />
             ) : (
-              <AlertCircle className="h-4 w-4" />
+              <Icon name="AlertCircle" size={16} />
             )}
             <AlertDescription>{message.text}</AlertDescription>
           </Alert>
@@ -193,7 +193,7 @@ export default function FeeManagementSection() {
 
         {/* Warning */}
         <Alert>
-          <AlertCircle className="h-4 w-4" />
+          <Icon name="AlertCircle" size={16} />
           <AlertDescription>
             <strong>Important:</strong> Fee changes will only apply to future payouts. Existing pending payouts will use the fee rate that was active when they were initiated.
           </AlertDescription>

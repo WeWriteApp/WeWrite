@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
-import { CreditCard, AlertTriangle, EllipsisVertical, Trash2, CheckCircle2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -67,9 +67,9 @@ export function PaymentMethodsOverview() {
 
   const getCardBrandIcon = (type: string) => {
     if (type === 'us_bank_account' || type === 'sepa_debit') {
-      return <CreditCard className="h-4 w-4" />;
+      return <Icon name="CreditCard" size={16} />;
     }
-    return <CreditCard className="h-4 w-4" />;
+    return <Icon name="CreditCard" size={16} />;
   };
 
   const getDisplayLabel = (method: PaymentMethod) => {
@@ -142,7 +142,7 @@ export function PaymentMethodsOverview() {
     return (
       <div className="wewrite-card">
         <div className="flex justify-center items-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+          <Icon name="Loader" size={24} />
         </div>
       </div>
     );
@@ -152,7 +152,7 @@ export function PaymentMethodsOverview() {
     <div className="wewrite-card space-y-4">
         {error && (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <Icon name="AlertTriangle" size={16} />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -161,13 +161,13 @@ export function PaymentMethodsOverview() {
         {paymentMethods.length === 0 ? (
           <div className="wewrite-card border border-dashed border-border/70 p-4 text-center space-y-3 shadow-none">
             <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-              <AlertTriangle className="h-5 w-5" />
+              <Icon name="AlertTriangle" size={20} />
               <p className="font-medium text-foreground">Add a payment method</p>
               <p>Needed to fund your account and process subscriptions.</p>
             </div>
             <Button asChild>
               <Link href="/settings/subscription">
-                <Plus className="h-4 w-4 mr-2" />
+                <Icon name="Plus" size={16} className="mr-2" />
                 Add Payment Method
               </Link>
             </Button>
@@ -201,7 +201,7 @@ export function PaymentMethodsOverview() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <EllipsisVertical className="h-4 w-4" />
+                      <Icon name="EllipsisVertical" size={16} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -210,7 +210,7 @@ export function PaymentMethodsOverview() {
                       onClick={() => confirmAndDelete(primaryMethod.id)}
                       className="text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Icon name="Trash2" size={16} className="mr-2" />
                       Delete payment method
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -240,7 +240,7 @@ export function PaymentMethodsOverview() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <EllipsisVertical className="h-4 w-4" />
+                      <Icon name="EllipsisVertical" size={16} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -248,7 +248,7 @@ export function PaymentMethodsOverview() {
                       disabled={actionLoading === method.id}
                       onClick={() => makePrimary(method.id)}
                     >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      <Icon name="CheckCircle2" size={16} className="mr-2" />
                       Make primary
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -256,7 +256,7 @@ export function PaymentMethodsOverview() {
                       onClick={() => confirmAndDelete(method.id)}
                       className="text-destructive"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Icon name="Trash2" size={16} className="mr-2" />
                       Delete payment method
                     </DropdownMenuItem>
                   </DropdownMenuContent>

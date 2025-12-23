@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Platform } from '@/app/utils/capacitor';
-import { Check, Lightbulb, Bell, ArrowRight, ArrowLeft, Sparkles, Users } from 'lucide-react';
 import { App } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
 
@@ -26,25 +26,25 @@ const onboardingSteps: OnboardingStep[] = [
     id: 'welcome',
     title: 'Welcome to WeWrite',
     description: 'A platform for thought. Capture ideas, share perspectives, and discover what others are thinking.',
-    icon: <Sparkles className="h-12 w-12 text-primary" />,
+    icon: <Icon name="Sparkles" size={48} className="text-primary" />,
   },
   {
     id: 'features',
     title: 'Your Ideas, Connected',
     description: 'Create notes that link to other notes. Build a web of interconnected thoughts and explore how ideas relate.',
-    icon: <Lightbulb className="h-12 w-12 text-primary" />,
+    icon: <Icon name="Lightbulb" size={48} className="text-primary" />,
   },
   {
     id: 'social',
     title: 'Think Together',
     description: 'Follow people whose ideas inspire you. See what they\'re thinking and join the conversation.',
-    icon: <Users className="h-12 w-12 text-primary" />,
+    icon: <Icon name="Users" size={48} className="text-primary" />,
   },
   {
     id: 'notifications',
     title: 'Stay in the Loop',
     description: 'Get notified when someone links to your notes or follows you.',
-    icon: <Bell className="h-12 w-12 text-primary" />,
+    icon: <Icon name="Bell" size={48} className="text-primary" />,
   },
 ];
 
@@ -215,7 +215,7 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
             size="lg"
             className="w-full gap-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon name="ArrowLeft" size={16} />
             Back
           </Button>
         )}
@@ -229,7 +229,7 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
               className="w-full gap-2"
             >
               Enable Notifications
-              <Bell className="h-4 w-4" />
+              <Icon name="Bell" size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -249,12 +249,12 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
             {isLastStep ? (
               <>
                 Get Started
-                <Check className="h-4 w-4" />
+                <Icon name="Check" size={16} />
               </>
             ) : (
               <>
                 Continue
-                <ArrowRight className="h-4 w-4" />
+                <Icon name="ArrowRight" size={16} />
               </>
             )}
           </Button>

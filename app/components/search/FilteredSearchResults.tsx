@@ -4,7 +4,9 @@ import React, {
   useRef,
   useCallback,
   useEffect,
-  forwardRef} from "react";
+  forwardRef
+} from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { useAuth } from '../../providers/AuthProvider';
 // Removed unused Firebase imports - component already uses API endpoints
@@ -12,7 +14,6 @@ import { navigateToPage } from "../../utils/pagePermissions";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import debounce from "lodash.debounce";
-import { Search, Filter, Plus, Check } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { ClearableInput } from "../ui/clearable-input";
@@ -32,11 +33,11 @@ import searchPerformanceMonitor from '../../utils/searchPerformanceMonitor';
 import { shouldAllowRequest } from "../../utils/requestThrottle";
 import { cn, wewriteCard } from '../../lib/utils';
 
-// Simple Loader component
+// Simple Loader component - uses centralized GridLoader via Icon
 const Loader = () => {
   return (
     <div className="flex items-center justify-center p-4">
-      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      <Icon name="Loader" size={24} />
     </div>
   );
 };
@@ -505,7 +506,7 @@ const FilteredSearchResults = forwardRef(({
                   value={search}
                   onChange={handleSearchChange}
                   onClear={handleClear}
-                  leftIcon={<Search className="h-4 w-4" />}
+                  leftIcon={<Icon name="Search" size={16} />}
                   className="w-full"
                   autoComplete="off"
                 />
@@ -518,7 +519,7 @@ const FilteredSearchResults = forwardRef(({
                   onClick={() => setShowFilters(!showFilters)}
                   className={`h-9 w-9 p-0 flex-shrink-0 ${showFilters ? 'bg-muted' : ''}`}
                 >
-                  <Filter className="h-4 w-4" />
+                  <Icon name="Filter" size={16} />
                 </Button>
               )}
               {/* Additional right buttons outside the input container */}
@@ -541,7 +542,7 @@ const FilteredSearchResults = forwardRef(({
               />
               {/* Search Icon - only show for non-link editor mode */}
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <Search className="h-4 w-4 text-muted-foreground" />
+                <Icon name="Search" size={16} className="text-muted-foreground" />
               </div>
             </div>
           )}
@@ -586,7 +587,7 @@ const FilteredSearchResults = forwardRef(({
       }`}>
         {isSearching && (search.length >= characterCount || isLinkEditor) ? (
           <div className="flex flex-col items-center justify-center py-8 space-y-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={24} />
             <p className="text-xs text-muted-foreground">
               {search.length >= 2 ? `Searching for "${search}"...` : 'Loading pages...'}
             </p>
@@ -652,7 +653,7 @@ const FilteredSearchResults = forwardRef(({
                           {/* Checkmark for selected state */}
                           {selectedId === page.id && (
                             <div className="flex-shrink-0 ml-auto">
-                              <Check className="h-5 w-5 text-primary" />
+                              <Icon name="Check" size={20} className="text-primary" />
                             </div>
                           )}
                         </div>
@@ -700,7 +701,7 @@ const FilteredSearchResults = forwardRef(({
                         {/* Checkmark for selected state */}
                         {selectedId === userItem.id && (
                           <div className="flex-shrink-0">
-                            <Check className="h-5 w-5 text-primary" />
+                            <Icon name="Check" size={20} className="text-primary" />
                           </div>
                         )}
                       </div>
@@ -822,12 +823,12 @@ const FilteredSearchResults = forwardRef(({
             >
               {isCreatingPage ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                  <Icon name="Loader" size={16} className="mr-2" />
                   Creating...
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Icon name="Plus" size={16} className="mr-2" />
                   Create new page: "{search}"
                 </>
               )}

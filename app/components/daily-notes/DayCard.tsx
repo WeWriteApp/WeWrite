@@ -3,7 +3,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
-import { Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 // TODO: Migrate PillStyle to global store
 import { usePillStyle, PILL_STYLES } from '../../contexts/PillStyleContext';
@@ -104,8 +104,10 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
       {/* Checkmark icon for filled notes - positioned in top-right corner */}
       {hasNote && noteCount <= 1 && (
         <div className="absolute top-1.5 right-1.5 z-10">
-          <Check
-            className="h-3 w-3 drop-shadow-sm"
+          <Icon
+            name="Check"
+            size={12}
+            className="drop-shadow-sm"
             style={{
               color: (pillStyle === PILL_STYLES.TEXT_ONLY || pillStyle === PILL_STYLES.UNDERLINED || pillStyle === PILL_STYLES.OUTLINE)
                 ? accentColor

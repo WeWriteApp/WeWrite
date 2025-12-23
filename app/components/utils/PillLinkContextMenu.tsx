@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useLayoutEffect } from "react";
-import { ExternalLink, Edit2, Trash2 } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import { createPortal } from "react-dom";
 
 interface PillLinkContextMenuProps {
@@ -115,7 +115,7 @@ export default function PillLinkContextMenu({
             }}
             className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors first:rounded-t-md"
           >
-            <ExternalLink size={14} />
+            <Icon name="ExternalLink" size={14} />
             Go to link
           </button>
           
@@ -127,7 +127,7 @@ export default function PillLinkContextMenu({
               }}
               className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
             >
-              <Edit2 size={14} />
+              <Icon name="Edit2" size={14} />
               Edit link
             </button>
           )}
@@ -140,7 +140,7 @@ export default function PillLinkContextMenu({
           }}
           className="w-full px-3 py-2.5 text-left text-sm hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 transition-colors last:rounded-b-md"
         >
-          <Trash2 size={14} />
+          <Icon name="Trash2" size={14} />
           Delete link
         </button>
       )}

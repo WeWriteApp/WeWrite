@@ -27,17 +27,19 @@ import Stripe from 'stripe';
 import { getStripeSecretKeyAsync } from '../../../utils/stripeConfig';
 import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
 
-// Use the centralized platform fee config for allocation fee (7%)
-const PLATFORM_FEE_RATE = PLATFORM_FEE_CONFIG.ALLOCATION_FEE_PERCENTAGE;
+// Use the centralized platform fee config for payout fee (10%)
+// NOTE: This fee is only charged when writers request payouts, not at allocation time.
+// These calculations project future platform revenue from eventual payouts.
+const PLATFORM_FEE_RATE = PLATFORM_FEE_CONFIG.PERCENTAGE;
 
 interface MonthlyFinancialData {
   month: string;
   totalSubscriptionCents: number;
   totalAllocatedCents: number;
   totalUnallocatedCents: number;
-  platformFeeCents: number; // 7% of allocated
-  creatorPayoutsCents: number; // Allocated - platform fee
-  platformRevenueCents: number; // Unallocated + platform fee
+  platformFeeCents: number; // 10% payout fee (projected, charged at withdrawal)
+  creatorPayoutsCents: number; // Allocated - platform fee (projected net)
+  platformRevenueCents: number; // Unallocated + platform fee (projected)
   userCount: number;
   allocationRate: number; // Percentage allocated
   status: 'in_progress' | 'processed' | 'pending';
@@ -63,8 +65,8 @@ interface SubscriberDetail {
   overspentUnfundedCents: number;   // Max(0, allocated - subscription) - unfunded portion
   unallocatedCents: number;         // Max(0, subscription - allocated) - leftover subscription
   grossEarningsCents: number;       // Funded earnings before fees (= fundedAllocatedCents)
-  platformFeeCents: number;         // 7% of funded allocated
-  netCreatorPayoutCents: number;    // Funded allocated minus platform fee
+  platformFeeCents: number;         // 10% payout fee (projected, charged at withdrawal)
+  netCreatorPayoutCents: number;    // Funded allocated minus projected platform fee
   stripeCustomerId: string;
   status: string;
 }
@@ -73,8 +75,8 @@ interface WriterEarningsDetail {
   userId: string;
   email: string;
   name: string | null;
-  grossEarningsCents: number;       // Total earnings before platform fee
-  platformFeeCents: number;         // 7% fee taken from earnings
+  grossEarningsCents: number;       // Total earnings before payout fee
+  platformFeeCents: number;         // 10% payout fee (charged at withdrawal)
   netPayoutCents: number;           // Amount writer receives after fee
   pendingEarningsCents: number;     // Current month earnings (not yet available)
   availableEarningsCents: number;   // Previous months (available for payout)

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { followsApi } from "../../utils/apiClient";
 import { getPageById } from "../../utils/apiClient";
 import PillLink from "../utils/PillLink";
-import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from "../ui/button";
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from "../ui/use-toast";
@@ -181,7 +181,7 @@ export default function FollowedPages({
   if (loading) {
     return (
       <div className="flex justify-center py-4">
-        <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Icon name="Loader" className="text-muted-foreground" />
       </div>
     );
   }
@@ -204,7 +204,7 @@ export default function FollowedPages({
     return (
       <div className={`flex flex-col items-center justify-center py-8 px-4 text-center ${className}`}>
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-          <Heart className="h-5 w-5 text-primary" />
+          <Icon name="Heart" size={20} className="text-primary" />
         </div>
         <h3 className="text-lg font-medium mb-2">No followed pages yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
@@ -220,7 +220,7 @@ export default function FollowedPages({
     <div className={`space-y-3 ${className}`}>
       {showHeader && (
         <div className="flex items-center gap-2 mb-2">
-          <Heart className="h-4 w-4 text-primary" />
+          <Icon name="Heart" size={16} className="text-primary" />
           <h3 className="text-sm font-medium">Followed Pages</h3>
         </div>
       )}
@@ -249,9 +249,9 @@ export default function FollowedPages({
                 disabled={unfollowingId === page.id}
               >
                 {unfollowingId === page.id ? (
-                  <Loader className="h-4 w-4 animate-spin" />
+                  <Icon name="Loader" />
                 ) : (
-                  <X className="h-4 w-4" />
+                  <Icon name="X" size={16} />
                 )}
                 <span className="sr-only">Unfollow</span>
               </Button>
@@ -270,12 +270,12 @@ export default function FollowedPages({
           >
             {loadingMore ? (
               <>
-                <Loader className="h-4 w-4 animate-spin mr-2" />
+                <Icon name="Loader" className="mr-2" />
                 Loading more...
               </>
             ) : (
               <>
-                <Plus className="h-4 w-4 mr-2" />
+                <Icon name="Plus" size={16} className="mr-2" />
                 Load more
               </>
             )}

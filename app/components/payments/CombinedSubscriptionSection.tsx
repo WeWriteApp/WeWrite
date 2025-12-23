@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
@@ -8,18 +9,6 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 // Removed enhanced subscription error logging imports
-import { 
-  CreditCard, 
-  Plus, 
-  Settings, 
-  Heart, 
-  ExternalLink, 
-  DollarSign,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Clock
-} from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
 // REMOVED: Direct Firebase imports - now using API-first approach
@@ -209,7 +198,7 @@ function CombinedSubscriptionSectionInner() {
   };
 
   const getCardBrandIcon = (brand: string) => {
-    return <CreditCard className="h-4 w-4" />;
+    return <Icon name="CreditCard" size={16} />;
   };
 
   const primaryMethod = paymentMethods.find(method => method.isPrimary);
@@ -219,7 +208,7 @@ function CombinedSubscriptionSectionInner() {
     <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
+          <Icon name="CreditCard" size={20} />
           Subscription
         </CardTitle>
         <CardDescription>
@@ -239,17 +228,17 @@ function CombinedSubscriptionSectionInner() {
           <TabsContent value="overview" className="space-y-4">
             {subscriptionLoading ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                <Icon name="Loader" size={32} />
               </div>
             ) : subscriptionError ? (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{subscriptionError}</AlertDescription>
               </Alert>
             ) : !subscription ? (
               <div className="text-center py-6">
-                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <Icon name="CreditCard" size={48} className="mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No active subscription</h3>
                 <p className="text-muted-foreground mb-4">
                   Start a subscription to support pages and access premium features.
@@ -287,7 +276,7 @@ function CombinedSubscriptionSectionInner() {
                   </div>
                   <Button variant="secondary" asChild>
                     <Link href="/settings/subscription/manage">
-                      <Settings className="h-4 w-4 mr-2" />
+                      <Icon name="Settings" size={16} className="mr-2" />
                       Manage
                     </Link>
                   </Button>
@@ -297,14 +286,14 @@ function CombinedSubscriptionSectionInner() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 border-theme-strong rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
-                      <Heart className="h-4 w-4 text-red-500" />
+                      <Icon name="Heart" size={16} className="text-red-500" />
                       <span className="text-sm font-medium">Active Pledges</span>
                     </div>
                     <p className="text-xl font-bold">{pledges.length}</p>
                   </div>
                   <div className="p-3 border-theme-strong rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
-                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <Icon name="DollarSign" size={16} className="text-green-600" />
                       <span className="text-sm font-medium">Total Pledged</span>
                     </div>
                     <p className="text-xl font-bold">{formatCurrency(totalPledged)}</p>
@@ -317,11 +306,11 @@ function CombinedSubscriptionSectionInner() {
           <TabsContent value="payment-methods" className="space-y-4">
             {paymentMethodsLoading ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                <Icon name="Loader" size={32} />
               </div>
             ) : paymentMethodsError ? (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{paymentMethodsError}</AlertDescription>
               </Alert>
@@ -336,14 +325,14 @@ function CombinedSubscriptionSectionInner() {
                 </div>
               ) : (
                 <div className="text-center py-6">
-                  <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <Icon name="CreditCard" size={48} className="mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">No payment methods</h3>
                   <p className="text-muted-foreground mb-4">
                     Add a payment method to enable subscriptions and support pages.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button onClick={() => setShowPaymentMethodSetup(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Icon name="Plus" size={16} className="mr-2" />
                       Add Payment Method
                     </Button>
                     {!subscription && (
@@ -416,7 +405,7 @@ function CombinedSubscriptionSectionInner() {
                   className="w-full"
                   onClick={() => setShowPaymentMethodSetup(true)}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Icon name="Plus" size={16} className="mr-2" />
                   Add Payment Method
                 </Button>
               </div>
@@ -426,17 +415,17 @@ function CombinedSubscriptionSectionInner() {
           <TabsContent value="pledges" className="space-y-4">
             {pledgesLoading ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                <Icon name="Loader" size={32} />
               </div>
             ) : pledgesError ? (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{pledgesError}</AlertDescription>
               </Alert>
             ) : pledges.length === 0 ? (
               <div className="text-center py-6">
-                <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <Icon name="Heart" size={48} className="mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No active pledges</h3>
                 <p className="text-muted-foreground mb-4">
                   Start supporting your favorite pages and writers.
@@ -475,7 +464,7 @@ function CombinedSubscriptionSectionInner() {
                         >
                           {pledge.pageTitle}
                         </Link>
-                        <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <Icon name="ExternalLink" size={12} className="text-muted-foreground flex-shrink-0" />
                       </div>
                       {pledge.authorUsername && (
                         <p className="text-xs text-muted-foreground">
@@ -492,7 +481,7 @@ function CombinedSubscriptionSectionInner() {
 
                 <Button variant="secondary" className="w-full" asChild>
                   <Link href="/settings/subscription/manage">
-                    <Settings className="h-4 w-4 mr-2" />
+                    <Icon name="Settings" size={16} className="mr-2" />
                     Manage All Pledges
                   </Link>
                 </Button>
@@ -511,7 +500,7 @@ function CombinedSubscriptionSectionInner() {
               />
             ) : (
               <div className="text-center py-8">
-                <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <Icon name="Settings" size={48} className="mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Active Subscription</h3>
                 <p className="text-muted-foreground mb-4">
                   You need an active subscription to modify your plan.
@@ -529,7 +518,7 @@ function CombinedSubscriptionSectionInner() {
             <div className="space-y-3">
               <Button className="w-full" asChild>
                 <Link href="/settings/subscription/manage">
-                  <Settings className="h-4 w-4 mr-2" />
+                  <Icon name="Settings" size={16} className="mr-2" />
                   Full Subscription Management
                 </Link>
               </Button>

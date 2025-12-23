@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { RandomPagesSkeleton } from '../ui/skeleton-loaders';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
-import { Shuffle } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import RandomPagesTable from '../pages/RandomPagesTable';
 import { wewriteCard } from '../../lib/utils';

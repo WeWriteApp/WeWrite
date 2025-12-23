@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Ban, Star, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
@@ -40,7 +40,7 @@ export function SubscriptionTierBadge({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className={`inline-flex items-center ${className}`}>
-              <Loader2 size={sizeConfig[size].icon} className="text-muted-foreground animate-spin" />
+              <Icon name="Loader" />
             </span>
           </TooltipTrigger>
           <TooltipContent>
@@ -67,13 +67,13 @@ export function SubscriptionTierBadge({
     switch (finalTier) {
       case 'inactive':
         return {
-          icon: <Ban size={config.icon} className={getCancelIconColor()} />,
+          icon: <Icon name="Ban" size={config.icon} className={getCancelIconColor()} />,
           tooltip: 'No active subscription - $0/mo',
           color: getCancelIconColor()
         };
       case 'tier1':
         return {
-          icon: <Star size={config.icon} className="text-yellow-400/70 fill-yellow-400/70" />,
+          icon: <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-400/70" />,
           tooltip: 'Supporter - $10/mo',
           color: 'text-yellow-400/70'
         };
@@ -81,8 +81,8 @@ export function SubscriptionTierBadge({
         return {
           icon: (
             <div className={`flex ${config.gap}`}>
-              <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />
-              <Star size={config.icon} className="text-yellow-500 fill-yellow-500" />
+              <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-500" />
+              <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-500" />
             </div>
           ),
           tooltip: 'Advocate - $20/mo',
@@ -92,56 +92,71 @@ export function SubscriptionTierBadge({
         return {
           icon: (
             <div className={`flex ${config.gap} relative group cursor-pointer`}>
-              {/* Particles emitting from center */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                {/* Subtle floating particles */}
-                <span className="absolute w-0.5 h-0.5 bg-yellow-300/60 rounded-full animate-ping"
+              {/* Particles emitting outward from center */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
+                {/* Emitting particles - using scale animation to expand outward */}
+                <span className="absolute w-1 h-1 bg-yellow-300/70 rounded-full particle-emit"
                      style={{
+                       '--emit-x': '12px',
+                       '--emit-y': '-8px',
                        animationDelay: '0s',
+                       animationDuration: '2.5s',
+                     } as React.CSSProperties}></span>
+                <span className="absolute w-1 h-1 bg-yellow-300/60 rounded-full particle-emit"
+                     style={{
+                       '--emit-x': '-10px',
+                       '--emit-y': '6px',
+                       animationDelay: '0.8s',
                        animationDuration: '3s',
-                       transform: 'translate(8px, -6px)'
-                     }}></span>
-                <span className="absolute w-0.5 h-0.5 bg-yellow-300/40 rounded-full animate-pulse"
+                     } as React.CSSProperties}></span>
+                <span className="absolute w-1 h-1 bg-yellow-300/50 rounded-full particle-emit"
                      style={{
-                       animationDelay: '1s',
-                       animationDuration: '4s',
-                       transform: 'translate(-6px, 4px)'
-                     }}></span>
-                <span className="absolute w-0.5 h-0.5 bg-yellow-300/50 rounded-full animate-ping"
+                       '--emit-x': '14px',
+                       '--emit-y': '10px',
+                       animationDelay: '1.6s',
+                       animationDuration: '2.8s',
+                     } as React.CSSProperties}></span>
+                <span className="absolute w-0.5 h-0.5 bg-yellow-200/80 rounded-full particle-emit"
                      style={{
-                       animationDelay: '2s',
-                       animationDuration: '3.5s',
-                       transform: 'translate(10px, 8px)'
-                     }}></span>
-                <span className="absolute w-0.5 h-0.5 bg-yellow-300/30 rounded-full animate-pulse"
+                       '--emit-x': '-8px',
+                       '--emit-y': '-10px',
+                       animationDelay: '0.4s',
+                       animationDuration: '2.2s',
+                     } as React.CSSProperties}></span>
+                <span className="absolute w-0.5 h-0.5 bg-yellow-200/60 rounded-full particle-emit"
                      style={{
-                       animationDelay: '0.5s',
-                       animationDuration: '5s',
-                       transform: 'translate(-8px, -4px)'
-                     }}></span>
-
-                {/* Burst particles on hover/click */}
-                <span className="absolute w-0.5 h-0.5 bg-yellow-200 rounded-full opacity-0 group-hover:opacity-80 group-active:opacity-100 transition-opacity duration-200 animate-ping"
-                     style={{
-                       animationDuration: '1s',
-                       transform: 'translate(12px, -10px)'
-                     }}></span>
-                <span className="absolute w-0.5 h-0.5 bg-yellow-200 rounded-full opacity-0 group-hover:opacity-60 group-active:opacity-90 transition-opacity duration-200 animate-pulse"
-                     style={{
-                       animationDuration: '0.8s',
-                       transform: 'translate(-10px, 12px)'
-                     }}></span>
-                <span className="absolute w-0.5 h-0.5 bg-yellow-200 rounded-full opacity-0 group-hover:opacity-70 group-active:opacity-100 transition-opacity duration-200 animate-ping"
-                     style={{
-                       animationDuration: '1.2s',
-                       transform: 'translate(14px, 6px)'
-                     }}></span>
+                       '--emit-x': '6px',
+                       '--emit-y': '12px',
+                       animationDelay: '1.2s',
+                       animationDuration: '2.6s',
+                     } as React.CSSProperties}></span>
               </div>
 
               {/* Main stars with glow effect */}
-              <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" />
-              <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.2s' }} />
-              <Star size={config.icon} className="text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.4s' }} />
+              <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" />
+              <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.2s' }} />
+              <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" style={{ animationDelay: '0.4s' }} />
+
+              {/* CSS for particle emit animation */}
+              <style jsx>{`
+                .particle-emit {
+                  animation: emitOutward var(--duration, 2.5s) ease-out infinite;
+                }
+                @keyframes emitOutward {
+                  0% {
+                    transform: translate(0, 0) scale(0);
+                    opacity: 0;
+                  }
+                  10% {
+                    opacity: 1;
+                    transform: translate(0, 0) scale(1);
+                  }
+                  100% {
+                    transform: translate(var(--emit-x, 10px), var(--emit-y, -10px)) scale(0);
+                    opacity: 0;
+                  }
+                }
+              `}</style>
             </div>
           ),
           tooltip: 'Champion - $30+/mo',
@@ -149,7 +164,7 @@ export function SubscriptionTierBadge({
         };
       default:
         return {
-          icon: <Ban size={config.icon} className={getCancelIconColor()} />,
+          icon: <Icon name="Ban" size={config.icon} className={getCancelIconColor()} />,
           tooltip: 'No subscription',
           color: getCancelIconColor()
         };

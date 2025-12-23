@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-import { Mail } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { getAnalyticsService } from "../../utils/analytics-service";
@@ -70,7 +70,7 @@ export default function EmailVerificationTopBanner() {
         <div className="flex items-center gap-2 md:gap-4 max-w-4xl w-full justify-between">
           {/* Left: Icon + Message */}
           <div className="flex items-center gap-2 min-w-0">
-            <Mail className="h-4 w-4 flex-shrink-0" />
+            <Icon name="Mail" size={16} className="flex-shrink-0" />
             <span className="text-xs md:text-sm font-medium truncate">
               <span className="hidden sm:inline">Please verify your email address to unlock all features</span>
               <span className="sm:hidden">Verify your email</span>

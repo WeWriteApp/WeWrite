@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Search, Check } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import { Badge } from "./badge";
 import { Input } from "./input";
 
@@ -85,7 +85,7 @@ export function MultiSelect({
               }}
               className="rounded-full hover:bg-muted p-0.5"
             >
-              <X className="h-3 w-3" />
+              <Icon name="X" size={12} />
             </button>
           </Badge>
         ))}
@@ -120,7 +120,7 @@ export function MultiSelect({
                   }}
                 >
                   <span className="w-5 h-5 flex items-center justify-center">
-                    <Check className="h-4 w-4 opacity-0" />
+                    <Icon name="Check" size={16} className="opacity-0" />
                   </span>
                   {item.label}
                 </li>

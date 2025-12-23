@@ -19,8 +19,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
-import { Plus, Minus } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
@@ -349,7 +349,7 @@ export function EmbeddedAllocationBar({
           onMouseLeave={handleMouseLeave}
           disabled={isProcessing || allocationState.currentAllocationCents <= 0}
         >
-          <Minus className="h-4 w-4" />
+          <Icon name="Minus" size={16} />
         </Button>
 
         {/* Composition bar with centered dollar amount */}
@@ -415,7 +415,7 @@ export function EmbeddedAllocationBar({
           onMouseLeave={handleMouseLeave}
           disabled={isProcessing}
         >
-          <Plus className="h-4 w-4" />
+          <Icon name="Plus" size={16} />
         </Button>
       </div>
 

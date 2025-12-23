@@ -1,26 +1,18 @@
 "use client";
 
 import { motion, type Variants } from "framer-motion";
-import {
-  Bell,
-  Heart,
-  Plus,
-  Check,
-  Settings,
-  Home,
-  ThumbsUp,
-  ThumbsDown,
-  Star,
-  Bookmark,
-  Send,
-  RefreshCw,
-  type LucideProps,
-} from "lucide-react";
+import { Icon, IconName } from "@/components/ui/Icon";
 import { forwardRef } from "react";
 
 // Common animation variants
 const tapScale = { scale: 0.9 };
 const hoverScale = { scale: 1.1 };
+
+// Common props interface for animated icons
+interface AnimatedIconProps {
+  size?: number;
+  className?: string;
+}
 
 // ============================================
 // ANIMATED BELL - rings on hover/notification
@@ -43,15 +35,16 @@ const bellRingVariants: Variants = {
   },
 };
 
-interface AnimatedBellProps extends LucideProps {
+interface AnimatedBellProps extends AnimatedIconProps {
   isRinging?: boolean;
   hasNotification?: boolean;
 }
 
-export const AnimatedBell = forwardRef<SVGSVGElement, AnimatedBellProps>(
-  ({ isRinging = false, hasNotification = false, className, ...props }, ref) => {
+export const AnimatedBell = forwardRef<HTMLDivElement, AnimatedBellProps>(
+  ({ isRinging = false, hasNotification = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="relative inline-flex"
         variants={bellRingVariants}
         initial="initial"
@@ -59,7 +52,7 @@ export const AnimatedBell = forwardRef<SVGSVGElement, AnimatedBellProps>(
         whileHover="hover"
         whileTap={tapScale}
       >
-        <Bell ref={ref} className={className} {...props} />
+        <Icon name="Bell" size={size} className={className} />
         {hasNotification && (
           <motion.span
             className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"
@@ -92,15 +85,16 @@ const heartVariants: Variants = {
   },
 };
 
-interface AnimatedHeartProps extends LucideProps {
+interface AnimatedHeartProps extends AnimatedIconProps {
   isLiked?: boolean;
   onLike?: () => void;
 }
 
-export const AnimatedHeart = forwardRef<SVGSVGElement, AnimatedHeartProps>(
-  ({ isLiked = false, onLike, className, ...props }, ref) => {
+export const AnimatedHeart = forwardRef<HTMLDivElement, AnimatedHeartProps>(
+  ({ isLiked = false, onLike, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex cursor-pointer"
         variants={heartVariants}
         initial="initial"
@@ -109,12 +103,7 @@ export const AnimatedHeart = forwardRef<SVGSVGElement, AnimatedHeartProps>(
         whileTap={tapScale}
         onClick={onLike}
       >
-        <Heart
-          ref={ref}
-          className={className}
-          fill={isLiked ? "currentColor" : "none"}
-          {...props}
-        />
+        <Icon name="Heart" size={size} className={className} />
       </motion.div>
     );
   }
@@ -134,14 +123,15 @@ const plusVariants: Variants = {
   },
 };
 
-interface AnimatedPlusProps extends LucideProps {
+interface AnimatedPlusProps extends AnimatedIconProps {
   isActive?: boolean;
 }
 
-export const AnimatedPlus = forwardRef<SVGSVGElement, AnimatedPlusProps>(
-  ({ isActive = false, className, ...props }, ref) => {
+export const AnimatedPlus = forwardRef<HTMLDivElement, AnimatedPlusProps>(
+  ({ isActive = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex"
         variants={plusVariants}
         initial="initial"
@@ -150,7 +140,7 @@ export const AnimatedPlus = forwardRef<SVGSVGElement, AnimatedPlusProps>(
         whileTap={tapScale}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
       >
-        <Plus ref={ref} className={className} {...props} />
+        <Icon name="Plus" size={size} className={className} />
       </motion.div>
     );
   }
@@ -177,21 +167,22 @@ const checkVariants: Variants = {
   },
 };
 
-interface AnimatedCheckProps extends LucideProps {
+interface AnimatedCheckProps extends AnimatedIconProps {
   isVisible?: boolean;
   bounce?: boolean;
 }
 
-export const AnimatedCheck = forwardRef<SVGSVGElement, AnimatedCheckProps>(
-  ({ isVisible = true, bounce = false, className, ...props }, ref) => {
+export const AnimatedCheck = forwardRef<HTMLDivElement, AnimatedCheckProps>(
+  ({ isVisible = true, bounce = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex"
         variants={checkVariants}
         initial="initial"
         animate={bounce ? "bounce" : isVisible ? "visible" : "initial"}
       >
-        <Check ref={ref} className={className} {...props} />
+        <Icon name="Check" size={size} className={className} />
       </motion.div>
     );
   }
@@ -199,7 +190,7 @@ export const AnimatedCheck = forwardRef<SVGSVGElement, AnimatedCheckProps>(
 AnimatedCheck.displayName = "AnimatedCheck";
 
 // ============================================
-// ANIMATED SETTINGS - spins on hover
+// ANIMATED SETTINGS - rotates on hover
 // ============================================
 const settingsVariants: Variants = {
   initial: { rotate: 0 },
@@ -207,32 +198,24 @@ const settingsVariants: Variants = {
     rotate: 90,
     transition: { duration: 0.3, ease: "easeInOut" },
   },
-  spinning: {
-    rotate: 360,
-    transition: {
-      duration: 1,
-      ease: "linear",
-      repeat: Infinity,
-    },
-  },
 };
 
-interface AnimatedSettingsProps extends LucideProps {
-  isSpinning?: boolean;
+interface AnimatedSettingsProps extends AnimatedIconProps {
+  isActive?: boolean;
 }
 
-export const AnimatedSettings = forwardRef<SVGSVGElement, AnimatedSettingsProps>(
-  ({ isSpinning = false, className, ...props }, ref) => {
+export const AnimatedSettings = forwardRef<HTMLDivElement, AnimatedSettingsProps>(
+  ({ isActive = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex"
         variants={settingsVariants}
         initial="initial"
-        animate={isSpinning ? "spinning" : "initial"}
         whileHover="hover"
         whileTap={tapScale}
       >
-        <Settings ref={ref} className={className} {...props} />
+        <Icon name="Settings" size={size} className={className} />
       </motion.div>
     );
   }
@@ -252,14 +235,15 @@ const homeVariants: Variants = {
   },
 };
 
-interface AnimatedHomeProps extends LucideProps {
+interface AnimatedHomeProps extends AnimatedIconProps {
   isActive?: boolean;
 }
 
-export const AnimatedHome = forwardRef<SVGSVGElement, AnimatedHomeProps>(
-  ({ isActive = false, className, ...props }, ref) => {
+export const AnimatedHome = forwardRef<HTMLDivElement, AnimatedHomeProps>(
+  ({ isActive = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex"
         variants={homeVariants}
         initial="initial"
@@ -267,7 +251,7 @@ export const AnimatedHome = forwardRef<SVGSVGElement, AnimatedHomeProps>(
         whileHover="hover"
         whileTap="tap"
       >
-        <Home ref={ref} className={className} {...props} />
+        <Icon name="Home" size={size} className={className} />
       </motion.div>
     );
   }
@@ -287,16 +271,17 @@ const thumbsVariants: Variants = {
   hover: { scale: 1.15 },
 };
 
-interface AnimatedThumbsProps extends LucideProps {
+interface AnimatedThumbsProps extends AnimatedIconProps {
   isVoted?: boolean;
   direction: "up" | "down";
 }
 
-export const AnimatedThumbs = forwardRef<SVGSVGElement, AnimatedThumbsProps>(
-  ({ isVoted = false, direction, className, ...props }, ref) => {
-    const Icon = direction === "up" ? ThumbsUp : ThumbsDown;
+export const AnimatedThumbs = forwardRef<HTMLDivElement, AnimatedThumbsProps>(
+  ({ isVoted = false, direction, className, size = 24 }, ref) => {
+    const iconName: IconName = direction === "up" ? "ThumbsUp" : "ThumbsDown";
     return (
       <motion.div
+        ref={ref}
         className="inline-flex cursor-pointer"
         variants={thumbsVariants}
         initial="initial"
@@ -304,12 +289,7 @@ export const AnimatedThumbs = forwardRef<SVGSVGElement, AnimatedThumbsProps>(
         whileHover="hover"
         whileTap={tapScale}
       >
-        <Icon
-          ref={ref}
-          className={className}
-          fill={isVoted ? "currentColor" : "none"}
-          {...props}
-        />
+        <Icon name={iconName} size={size} className={className} />
       </motion.div>
     );
   }
@@ -329,14 +309,15 @@ const starVariants: Variants = {
   hover: { scale: 1.2, rotate: 15 },
 };
 
-interface AnimatedStarProps extends LucideProps {
+interface AnimatedStarProps extends AnimatedIconProps {
   isStarred?: boolean;
 }
 
-export const AnimatedStar = forwardRef<SVGSVGElement, AnimatedStarProps>(
-  ({ isStarred = false, className, ...props }, ref) => {
+export const AnimatedStar = forwardRef<HTMLDivElement, AnimatedStarProps>(
+  ({ isStarred = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex cursor-pointer"
         variants={starVariants}
         initial="initial"
@@ -344,12 +325,7 @@ export const AnimatedStar = forwardRef<SVGSVGElement, AnimatedStarProps>(
         whileHover="hover"
         whileTap={tapScale}
       >
-        <Star
-          ref={ref}
-          className={className}
-          fill={isStarred ? "currentColor" : "none"}
-          {...props}
-        />
+        <Icon name="Star" size={size} className={className} />
       </motion.div>
     );
   }
@@ -368,14 +344,15 @@ const bookmarkVariants: Variants = {
   hover: { y: -3 },
 };
 
-interface AnimatedBookmarkProps extends LucideProps {
+interface AnimatedBookmarkProps extends AnimatedIconProps {
   isSaved?: boolean;
 }
 
-export const AnimatedBookmark = forwardRef<SVGSVGElement, AnimatedBookmarkProps>(
-  ({ isSaved = false, className, ...props }, ref) => {
+export const AnimatedBookmark = forwardRef<HTMLDivElement, AnimatedBookmarkProps>(
+  ({ isSaved = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex cursor-pointer"
         variants={bookmarkVariants}
         initial="initial"
@@ -383,12 +360,7 @@ export const AnimatedBookmark = forwardRef<SVGSVGElement, AnimatedBookmarkProps>
         whileHover="hover"
         whileTap={tapScale}
       >
-        <Bookmark
-          ref={ref}
-          className={className}
-          fill={isSaved ? "currentColor" : "none"}
-          {...props}
-        />
+        <Icon name="Bookmark" size={size} className={className} />
       </motion.div>
     );
   }
@@ -409,14 +381,15 @@ const sendVariants: Variants = {
   hover: { x: 3, y: -2 },
 };
 
-interface AnimatedSendProps extends LucideProps {
+interface AnimatedSendProps extends AnimatedIconProps {
   isSending?: boolean;
 }
 
-export const AnimatedSend = forwardRef<SVGSVGElement, AnimatedSendProps>(
-  ({ isSending = false, className, ...props }, ref) => {
+export const AnimatedSend = forwardRef<HTMLDivElement, AnimatedSendProps>(
+  ({ isSending = false, className, size = 24 }, ref) => {
     return (
       <motion.div
+        ref={ref}
         className="inline-flex"
         variants={sendVariants}
         initial="initial"
@@ -424,7 +397,7 @@ export const AnimatedSend = forwardRef<SVGSVGElement, AnimatedSendProps>(
         whileHover="hover"
         whileTap={tapScale}
       >
-        <Send ref={ref} className={className} {...props} />
+        <Icon name="Send" size={size} className={className} />
       </motion.div>
     );
   }
@@ -432,49 +405,11 @@ export const AnimatedSend = forwardRef<SVGSVGElement, AnimatedSendProps>(
 AnimatedSend.displayName = "AnimatedSend";
 
 // ============================================
-// ANIMATED REFRESH - spins while loading
-// ============================================
-const refreshVariants: Variants = {
-  initial: { rotate: 0 },
-  spinning: {
-    rotate: 360,
-    transition: {
-      duration: 0.8,
-      ease: "linear",
-      repeat: Infinity,
-    },
-  },
-  hover: { rotate: 180, transition: { duration: 0.3 } },
-};
-
-interface AnimatedRefreshProps extends LucideProps {
-  isRefreshing?: boolean;
-}
-
-export const AnimatedRefresh = forwardRef<SVGSVGElement, AnimatedRefreshProps>(
-  ({ isRefreshing = false, className, ...props }, ref) => {
-    return (
-      <motion.div
-        className="inline-flex"
-        variants={refreshVariants}
-        initial="initial"
-        animate={isRefreshing ? "spinning" : "initial"}
-        whileHover={isRefreshing ? undefined : "hover"}
-        whileTap={tapScale}
-      >
-        <RefreshCw ref={ref} className={className} {...props} />
-      </motion.div>
-    );
-  }
-);
-AnimatedRefresh.displayName = "AnimatedRefresh";
-
-// ============================================
 // GENERIC ANIMATED ICON WRAPPER
 // ============================================
 interface AnimatedIconWrapperProps {
   children: React.ReactNode;
-  animate?: "bounce" | "pulse" | "shake" | "spin" | "none";
+  animate?: "bounce" | "pulse" | "shake" | "none";
   onHover?: "scale" | "rotate" | "bounce" | "none";
   onTap?: "scale" | "none";
   className?: string;
@@ -500,13 +435,6 @@ const wrapperAnimations: Record<string, Variants> = {
     animate: {
       x: [0, -3, 3, -3, 3, 0],
       transition: { duration: 0.5, repeat: Infinity, repeatDelay: 3 },
-    },
-  },
-  spin: {
-    initial: { rotate: 0 },
-    animate: {
-      rotate: 360,
-      transition: { duration: 2, ease: "linear", repeat: Infinity },
     },
   },
   none: {

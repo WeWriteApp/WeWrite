@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { AuthButton } from '../auth/AuthButton';
 import { Card, CardContent } from '../ui/card';
-import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../../providers/AuthProvider';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
@@ -192,7 +192,7 @@ export default function HeroCard({
                   <span className="font-semibold text-foreground">
                     {isLoading || writerCount === null ? (
                       <span className="inline-flex items-center gap-1">
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Icon name="Loader" />
                       </span>
                     ) : (
                       writerCount.toLocaleString()
@@ -202,7 +202,7 @@ export default function HeroCard({
                   <span className="font-semibold text-foreground">
                     {isLoading || pagesThisMonth === null ? (
                       <span className="inline-flex items-center gap-1">
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Icon name="Loader" />
                       </span>
                     ) : (
                       pagesThisMonth.toLocaleString()

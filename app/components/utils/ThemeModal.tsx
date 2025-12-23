@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useTheme } from "../../providers/ThemeProvider";
 // Removed @radix-ui/themes import - using simple radio buttons instead
-import { Moon, Sun, Laptop, User } from "lucide-react";
 import Link from "next/link";
 import Modal from "../ui/modal";
 
@@ -33,7 +33,7 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
             }}
           >
             <div className={`w-3 h-3 rounded-full border-2 ${theme === 'light' ? 'border-primary bg-primary' : 'border-muted-foreground'}`} />
-            <Sun className="h-4 w-4" />
+            <Icon name="Sun" size={16} />
             <span className="text-sm">Light</span>
           </button>
           <button
@@ -44,7 +44,7 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
             }}
           >
             <div className={`w-3 h-3 rounded-full border-2 ${theme === 'dark' ? 'border-primary bg-primary' : 'border-muted-foreground'}`} />
-            <Moon className="h-4 w-4" />
+            <Icon name="Moon" size={16} />
             <span className="text-sm">Dark</span>
           </button>
           <button
@@ -55,13 +55,13 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
             }}
           >
             <div className={`w-3 h-3 rounded-full border-2 ${theme === 'system' ? 'border-primary bg-primary' : 'border-muted-foreground'}`} />
-            <Laptop className="h-4 w-4" />
+            <Icon name="Laptop" size={16} />
             <span className="text-sm">System</span>
           </button>
         </div>
 
         <Link href="/settings" className="flex items-center space-x-3 cursor-pointer hover:bg-accent rounded-md p-1.5 mt-4">
-          <User className="h-4 w-4" />
+          <Icon name="User" size={16} />
           <span className="text-sm">Account Settings</span>
         </Link>
       </div>

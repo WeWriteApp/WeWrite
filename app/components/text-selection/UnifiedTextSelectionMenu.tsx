@@ -6,9 +6,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from '../ui/use-toast';
 import {
@@ -370,7 +370,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
           onClick={() => onClose()}
           aria-label="Close"
         >
-          <X className="h-4 w-4" />
+          <Icon name="X" size={16} />
         </Button>
 
         <div className="flex flex-col h-full min-h-0">
@@ -740,7 +740,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
               className="absolute left-0 z-10 h-full px-1 bg-gradient-to-r from-background to-transparent hover:from-muted/50 to-transparent transition-colors"
               aria-label="Scroll left"
             >
-              <ChevronLeft className="h-3 w-3 text-muted-foreground" />
+              <Icon name="ChevronLeft" size={12} className="text-muted-foreground" />
             </button>
           )}
 
@@ -763,7 +763,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
                 onClick={handleCopy}
                 className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
               >
-                <Copy className="h-3 w-3" />
+                <Icon name="Copy" size={12} />
                 Copy
               </Button>
             )}
@@ -775,7 +775,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
                 onClick={handleOpenLinkModal}
                 className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
               >
-                <Link className="h-3 w-3" />
+                <Icon name="Link" size={12} />
                 Link
               </Button>
             )}
@@ -787,7 +787,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
                 onClick={handleCreateLink}
                 className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
               >
-                <Link className="h-3 w-3" />
+                <Icon name="Link" size={12} />
                 Share
               </Button>
             )}
@@ -799,7 +799,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
                 onClick={handleAddToPage}
                 className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
               >
-                <Quote className="h-3 w-3" />
+                <Icon name="Quote" size={12} />
                 Add to Page
               </Button>
             )}
@@ -812,7 +812,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
               className="absolute right-0 z-10 h-full px-1 bg-gradient-to-l from-background to-transparent hover:from-muted/50 to-transparent transition-colors"
               aria-label="Scroll right"
             >
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              <Icon name="ChevronRight" size={12} className="text-muted-foreground" />
             </button>
           )}
         </div>

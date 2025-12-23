@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Clock, Calendar, List } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger } from '../ui/segmented-control';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
@@ -115,7 +115,7 @@ export default function TimelineSection({}: TimelineSectionProps) {
         sectionId="timeline"
         headerContent={
           <SectionTitle
-            icon={Clock}
+            icon="Clock"
             title="Timeline"
           >
             <Button
@@ -134,11 +134,11 @@ export default function TimelineSection({}: TimelineSectionProps) {
           <SegmentedControl value={viewMode} onValueChange={setViewMode}>
             <SegmentedControlList className="grid w-full grid-cols-2 max-w-sm">
               <SegmentedControlTrigger value="timeline" className="flex items-center gap-2">
-                <List className="h-4 w-4" />
+                <Icon name="List" size={16} />
                 Timeline
               </SegmentedControlTrigger>
               <SegmentedControlTrigger value="calendar" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+                <Icon name="Calendar" size={16} />
                 Calendar
               </SegmentedControlTrigger>
             </SegmentedControlList>

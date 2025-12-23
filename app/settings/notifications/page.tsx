@@ -1,30 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import NavPageLayout from '../../components/layout/NavPageLayout';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../components/ui/collapsible';
-import {
-  Bell,
-  Smartphone,
-  Monitor,
-  Mail,
-  Loader2,
-  ChevronDown,
-  UserPlus,
-  Link2,
-  AtSign,
-  FilePlus,
-  DollarSign,
-  AlertTriangle,
-  Clock,
-  ShieldCheck,
-  Settings,
-  Megaphone
-} from 'lucide-react';
 
 // Notification types that users can configure
 // Grouped by category for better organization
@@ -197,11 +180,9 @@ function NotificationTypeCard({
                   inApp={preferences.inApp}
                   email={preferences.email}
                 />
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                <Icon name="ChevronDown" size={16} className={`text-muted-foreground transition-transform duration-200 ${
                     isOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                  }`} />
               </div>
             </div>
           </button>
@@ -212,7 +193,7 @@ function NotificationTypeCard({
             {/* Push Notifications */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Smartphone className="h-4 w-4 text-purple-500" />
+                <Icon name="Smartphone" size={16} className="text-purple-500" />
                 <div>
                   <p className="text-sm font-medium">Push Notifications</p>
                   <p className="text-xs text-muted-foreground">Get notified on your device</p>
@@ -228,7 +209,7 @@ function NotificationTypeCard({
             {/* In-App Notifications */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Monitor className="h-4 w-4 text-orange-500" />
+                <Icon name="Monitor" size={16} className="text-orange-500" />
                 <div>
                   <p className="text-sm font-medium">In-App Alerts</p>
                   <p className="text-xs text-muted-foreground">See in your notification center</p>
@@ -244,7 +225,7 @@ function NotificationTypeCard({
             {/* Email Notifications */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-blue-500" />
+                <Icon name="Mail" size={16} className="text-blue-500" />
                 <div>
                   <p className="text-sm font-medium">Email</p>
                   <p className="text-xs text-muted-foreground">Receive email notifications</p>
@@ -395,7 +376,7 @@ export default function NotificationSettingsPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Icon name="Loader" />
           </div>
         ) : (
           <div className="space-y-6">
@@ -403,22 +384,22 @@ export default function NotificationSettingsPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
+                  <Icon name="Bell" size={16} />
                   Notification Channels
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="h-4 w-4 text-purple-500" />
+                    <Icon name="Smartphone" size={16} className="text-purple-500" />
                     <span>Push</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Monitor className="h-4 w-4 text-orange-500" />
+                    <Icon name="Monitor" size={16} className="text-orange-500" />
                     <span>In-App</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-blue-500" />
+                    <Icon name="Mail" size={16} className="text-blue-500" />
                     <span>Email</span>
                   </div>
                 </div>
@@ -517,7 +498,7 @@ export default function NotificationSettingsPage() {
               >
                 {saving ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Icon name="Loader" />
                     Saving...
                   </>
                 ) : (

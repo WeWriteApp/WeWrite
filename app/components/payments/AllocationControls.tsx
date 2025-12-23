@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../providers/AuthProvider';
@@ -322,7 +322,7 @@ export function AllocationControls({
           onMouseLeave={handleMouseLeave}
           disabled={isProcessing || allocationState.currentAllocationCents <= 0}
         >
-          <Minus className="h-4 w-4" />
+          <Icon name="Minus" size={16} />
         </Button>
 
       {/* Composition bar with animations */}
@@ -352,7 +352,7 @@ export function AllocationControls({
           onMouseLeave={handleMouseLeave}
           disabled={isProcessing}
         >
-          <Plus className="h-4 w-4" />
+          <Icon name="Plus" size={16} />
         </Button>
       </div>
 

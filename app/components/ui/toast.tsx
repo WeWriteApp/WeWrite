@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Icon } from '@/components/ui/Icon';
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { createPortal } from "react-dom"
 
@@ -107,7 +107,7 @@ const ToastClose = React.forwardRef<
     onClick={onClose}
     {...props}
   >
-    <X className="h-4 w-4" />
+    <Icon name="X" size={16} />
   </button>
 ))
 ToastClose.displayName = "ToastClose"

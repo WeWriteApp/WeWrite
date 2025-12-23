@@ -1,10 +1,10 @@
 "use client";
 import React, { useState } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from "../ui/button";
-import { Plus, Minus } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 import { formatUsdCents } from '../../utils/formatCurrency';
@@ -371,7 +371,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                         disabled={isProcessing}
                         className="h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20"
                       >
-                        <Minus className="h-4 w-4" />
+                        <Icon name="Minus" size={16} />
                       </Button>
                     )}
                   </div>
@@ -397,7 +397,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     )}
                     disabled={allocationState.currentAllocationCents <= 0 || isProcessing}
                   >
-                    <Minus className="h-4 w-4" />
+                    <Icon name="Minus" size={16} />
                   </Button>
 
                   {/* Composition Bar */}
@@ -425,7 +425,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                     )}
                     disabled={isProcessing}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Icon name="Plus" size={16} />
                   </Button>
                 </>
               )}

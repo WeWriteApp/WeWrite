@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Activity, Database } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface TestResult {
   name: string;
@@ -159,13 +159,13 @@ export function AdminDashboardTest() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <Icon name="CheckCircle" size={20} className="text-green-500" />;
       case 'error':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return <Icon name="XCircle" size={20} className="text-red-500" />;
       case 'loading':
-        return <RefreshCw className="h-5 w-5 text-primary animate-spin" />;
+        return <Icon name="RefreshCw" size={20} className="text-primary animate-spin" />;
       default:
-        return <Activity className="h-5 w-5 text-gray-500" />;
+        return <Icon name="Activity" size={20} className="text-gray-500" />;
     }
   };
 
@@ -187,7 +187,7 @@ export function AdminDashboardTest() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-primary" />
+          <Icon name="Database" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Admin Dashboard Test</h3>
         </div>
         
@@ -196,7 +196,7 @@ export function AdminDashboardTest() {
           disabled={isRunning}
           className="flex items-center gap-2 px-3 py-1 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${isRunning ? 'animate-spin' : ''}`} />
+          <Icon name="RefreshCw" size={16} className={`${isRunning ? 'animate-spin' : ''}`} />
           {isRunning ? 'Testing...' : 'Run Tests'}
         </button>
       </div>

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../lib/utils';
-import { Sun, Moon } from 'lucide-react';
 import { Button } from '../ui/button';
 import OKLCHColorSlider from './OKLCHColorSlider';
 import { oklchToHex } from '../../lib/oklch-utils';
@@ -55,7 +55,7 @@ export default function DualThemeColorPicker({ className }: DualThemeColorPicker
             onClick={() => setActiveMode('light')}
             className="flex items-center gap-2 flex-1"
           >
-            <Sun className="h-4 w-4" />
+            <Icon name="Sun" size={16} />
             Light
           </Button>
           <Button
@@ -64,7 +64,7 @@ export default function DualThemeColorPicker({ className }: DualThemeColorPicker
             onClick={() => setActiveMode('dark')}
             className="flex items-center gap-2 flex-1"
           >
-            <Moon className="h-4 w-4" />
+            <Icon name="Moon" size={16} />
             Dark
           </Button>
         </div>

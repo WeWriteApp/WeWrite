@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Edit3 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useEditsMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../services/dashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -63,7 +63,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Edit3 className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Edit3" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold">Edits Made</h3>
         </div>
         <div className="h-48 flex items-center justify-center">
@@ -77,7 +77,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Edit3 className="h-5 w-5 text-destructive" />
+          <Icon name="Edit3" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">Edits Made</h3>
         </div>
         <div className="h-48 flex items-center justify-center text-destructive">
@@ -92,11 +92,11 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Edit3 className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Edit3" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold">Edits Made</h3>
         </div>
         <div className="h-48 flex flex-col items-center justify-center text-muted-foreground">
-          <Edit3 className="h-12 w-12 mb-3 opacity-50" />
+          <Icon name="Edit3" size={48} className="mb-3 opacity-50" />
           <h4 className="font-medium mb-2">No Edit Activity</h4>
           <p className="text-sm text-center max-w-xs">
             No page edits found in the selected date range.
@@ -109,7 +109,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
   return (
     <div className={`wewrite-card ${className}`}>
       <div className="flex items-center gap-2 mb-4">
-        <Edit3 className="h-5 w-5 text-primary" />
+        <Icon name="Edit3" size={20} className="text-primary" />
         <h3 className="text-lg font-semibold">Edits Made</h3>
       </div>
 
@@ -178,7 +178,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <Edit3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <Icon name="Edit3" size={32} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No edit data available</p>
             </div>
           </div>

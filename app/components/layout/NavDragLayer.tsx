@@ -3,22 +3,22 @@
 import React from 'react';
 import { useDragLayer } from 'react-dnd';
 import { cn } from '../../lib/utils';
-import { Home, Search, Bell, User, Shuffle, TrendingUp, Clock, Heart, Settings, Shield } from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 
 const DRAG_TYPE = 'unified-nav-item';
 
 // Icon mapping
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  home: Home,
-  search: Search,
-  notifications: Bell,
-  profile: User,
-  'random-pages': Shuffle,
-  'trending-pages': TrendingUp,
-  recents: Clock,
-  following: Heart,
-  settings: Settings,
-  admin: Shield,
+const iconMap: Record<string, IconName> = {
+  home: 'Home',
+  search: 'Search',
+  notifications: 'Bell',
+  profile: 'User',
+  'random-pages': 'Shuffle',
+  'trending-pages': 'TrendingUp',
+  recents: 'Clock',
+  following: 'Heart',
+  settings: 'Settings',
+  admin: 'Shield',
 };
 
 const labelMap: Record<string, string> = {
@@ -49,7 +49,7 @@ export default function NavDragLayer() {
     return null;
   }
 
-  const Icon = iconMap[item.id] || Home;
+  const iconName = iconMap[item.id] || 'Home';
   const label = labelMap[item.id] || item.id;
 
   return (
@@ -72,7 +72,7 @@ export default function NavDragLayer() {
           "scale-105"
         )}
       >
-        <Icon className="h-5 w-5" />
+        <Icon name={iconName} size={20} />
         <span className="text-[10px] font-medium leading-tight text-center">
           {label}
         </span>

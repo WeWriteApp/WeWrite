@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shuffle } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -100,7 +100,7 @@ const RandomPagesHeader = () => {
               onClick={handleShuffle}
               className="hidden sm:flex items-center gap-2 rounded-2xl h-8 px-3"
             >
-              <Shuffle className="h-4 w-4" />
+              <Icon name="Shuffle" size={16} />
               <span className="hidden md:inline">Shuffle</span>
             </Button>
 
@@ -112,7 +112,7 @@ const RandomPagesHeader = () => {
               className="sm:hidden h-8 w-8 rounded-2xl"
               aria-label="Shuffle random pages"
             >
-              <Shuffle className="h-4 w-4" />
+              <Icon name="Shuffle" size={16} />
             </Button>
           </>
 

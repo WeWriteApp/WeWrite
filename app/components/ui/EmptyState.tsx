@@ -1,11 +1,11 @@
 "use client";
 
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 import { cn, wewriteCard } from '../../lib/utils';
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: IconName;
   title: string;
   description: string;
   className?: string;
@@ -14,12 +14,12 @@ interface EmptyStateProps {
 
 /**
  * Standardized Empty State Component
- * 
+ *
  * Provides consistent empty states across all homepage sections
  * with optional debug information for development
  */
 export default function EmptyState({
-  icon: Icon,
+  icon: iconName,
   title,
   description,
   className,
@@ -28,19 +28,19 @@ export default function EmptyState({
   const sizeClasses = {
     sm: {
       container: '',
-      icon: 'h-6 w-6 mb-2',
+      iconSize: 24,
       title: 'text-sm font-medium',
       description: 'text-xs'
     },
     md: {
       container: 'p-4', // Extra padding beyond card default
-      icon: 'h-8 w-8 mb-3',
+      iconSize: 32,
       title: 'text-base font-medium',
       description: 'text-sm'
     },
     lg: {
       container: 'p-8', // Extra padding beyond card default
-      icon: 'h-12 w-12 mb-4',
+      iconSize: 48,
       title: 'text-lg font-medium',
       description: 'text-base'
     }
@@ -55,7 +55,7 @@ export default function EmptyState({
       classes.container,
       className
     )}>
-      <Icon className={cn("mx-auto opacity-50", classes.icon)} />
+      <Icon name={iconName} size={classes.iconSize} className={cn("mx-auto opacity-50 mb-3")} />
       <h3 className={cn("mb-1", classes.title)}>
         {title}
       </h3>

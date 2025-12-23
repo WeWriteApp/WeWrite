@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
@@ -14,7 +15,6 @@ import { useDateFormat } from '../../contexts/DateFormatContext';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
-import { MoreVertical, UserMinus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,7 +86,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         </div>
         {loading && (
           <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={24} />
           </div>
         )}
       </div>
@@ -214,7 +214,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                           size="icon"
                           className="h-7 w-7 rounded-full hover:bg-muted"
                         >
-                          <MoreVertical className="h-4 w-4" />
+                          <Icon name="MoreVertical" size={16} />
                           <span className="sr-only">Page options</span>
                         </Button>
                       </DropdownMenuTrigger>
@@ -223,7 +223,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                           onClick={() => onExcludeUser(page.username)}
                           className="text-destructive focus:text-destructive"
                         >
-                          <UserMinus className="h-4 w-4 mr-2" />
+                          <Icon name="UserMinus" size={16} className="mr-2" />
                           Filter out {page.username}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -267,7 +267,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                       size="icon"
                       className="h-6 w-6 rounded-full hover:bg-muted"
                     >
-                      <MoreVertical className="h-3.5 w-3.5" />
+                      <Icon name="MoreVertical" size={24} className="h-3.5 w-3.5" />
                       <span className="sr-only">Page options</span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -276,7 +276,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                       onClick={() => onExcludeUser(page.username)}
                       className="text-destructive focus:text-destructive"
                     >
-                      <UserMinus className="h-4 w-4 mr-2" />
+                      <Icon name="UserMinus" size={16} className="mr-2" />
                       Filter out {page.username}
                     </DropdownMenuItem>
                   </DropdownMenuContent>

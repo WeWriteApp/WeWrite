@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { CheckCircle, Home, Loader2, CreditCard } from 'lucide-react';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
@@ -89,7 +89,7 @@ export function ConfirmationStep({
       <div className="max-w-md mx-auto">
         <Card>
           <CardContent className="p-8 text-center">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
+            <Icon name="Loader" className="mx-auto mb-4 text-primary" />
             <h2 className="text-xl font-semibold mb-2">Setting Up Your Subscription</h2>
             <p className="text-muted-foreground">
               We're finalizing your subscription...
@@ -106,7 +106,7 @@ export function ConfirmationStep({
       <div className="max-w-md mx-auto">
         <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800">
           <CardContent className="p-8 text-center">
-            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
+            <Icon name="CheckCircle" size={48} className="mx-auto mb-4 text-green-500" />
             <h2 className="text-xl font-semibold mb-2">Payment Successful!</h2>
             <p className="text-muted-foreground mb-4">
               Your subscription has been created, but we encountered an issue setting up your account.
@@ -121,7 +121,7 @@ export function ConfirmationStep({
             </p>
             <div className="space-y-3">
               <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full">
-                <Home className="w-4 h-4 mr-2" />
+                <Icon name="Home" size={16} className="mr-2" />
                 Go Home
               </Button>
               <Button
@@ -130,7 +130,7 @@ export function ConfirmationStep({
                 variant="secondary"
                 className="w-full"
               >
-                <CreditCard className="w-4 h-4 mr-2" />
+                <Icon name="CreditCard" size={16} className="mr-2" />
                 View Subscription
               </Button>
             </div>
@@ -146,7 +146,7 @@ export function ConfirmationStep({
       <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
         <CardContent className="p-8 text-center">
           <div className="flex justify-center mb-4">
-            <CheckCircle className="w-16 h-16 text-green-600" />
+            <Icon name="CheckCircle" size={64} className="text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
             Account Funding Activated!
@@ -156,7 +156,7 @@ export function ConfirmationStep({
           </p>
           <div className="space-y-3">
             <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full" size="lg">
-              <Home className="w-4 h-4 mr-2" />
+              <Icon name="Home" size={16} className="mr-2" />
               Go Home
             </Button>
             <Button
@@ -166,7 +166,7 @@ export function ConfirmationStep({
               size="lg"
               className="w-full"
             >
-              <CreditCard className="w-4 h-4 mr-2" />
+              <Icon name="CreditCard" size={16} className="mr-2" />
               View Subscription
             </Button>
           </div>

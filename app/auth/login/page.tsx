@@ -1,11 +1,11 @@
 "use client";
 
 import { Suspense } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useSearchParams } from 'next/navigation';
 import { LoginForm } from "../../components/forms/login-form"
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout"
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -18,7 +18,7 @@ function LoginContent() {
     <ModernAuthLayout>
       {isPostingReply && (
         <Alert className="mb-4 bg-primary/10 border-theme-medium">
-          <AlertCircle className="h-4 w-4 text-primary" />
+          <Icon name="AlertCircle" size={16} className="text-primary" />
           <AlertDescription className="text-primary">
             Sign in to post your reply. Your draft has been saved and will be posted automatically after you sign in.
           </AlertDescription>
@@ -27,7 +27,7 @@ function LoginContent() {
 
       {isSessionRevoked && (
         <Alert className="mb-4 bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800">
-          <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <Icon name="AlertCircle" size={16} className="text-orange-600 dark:text-orange-400" />
           <AlertDescription className="text-orange-700 dark:text-orange-300">
             Your session was logged out from another device for security. Please sign in again.
           </AlertDescription>

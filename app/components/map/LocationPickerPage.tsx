@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Trash2, MapPin } from 'lucide-react';
 import { Button } from '../ui/button';
 import MapPicker from './MapPicker';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
@@ -113,7 +113,7 @@ export default function LocationPickerPage({
               onClick={handleCancel}
               className="hover:bg-muted"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="ArrowLeft" size={16} />
             </Button>
             <div className="flex-1 text-center">
               <h1 className="text-lg font-semibold text-foreground">{pageTitle}</h1>
@@ -139,7 +139,7 @@ export default function LocationPickerPage({
                     onClick={handleDeleteClick}
                     className="flex-1 hover:bg-muted border-border text-destructive hover:text-destructive"
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
+                    <Icon name="Trash2" size={16} className="mr-1" />
                     Delete
                   </Button>
                 )}
@@ -149,7 +149,7 @@ export default function LocationPickerPage({
                   className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={!currentLocation}
                 >
-                  <Check className="h-4 w-4 mr-1" />
+                  <Icon name="Check" size={16} className="mr-1" />
                   Save Location
                 </Button>
               </div>

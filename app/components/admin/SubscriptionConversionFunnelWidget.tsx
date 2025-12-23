@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { TrendingDown, Users, ArrowDown, AlertTriangle } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useSubscriptionConversionFunnel } from '../../hooks/usePaymentAnalytics';
 import { type DateRange } from '../../services/dashboardAnalytics';
 import { ErrorCard } from '../ui/ErrorCard';
@@ -23,7 +23,7 @@ export function SubscriptionConversionFunnelWidget({
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <TrendingDown className="h-5 w-5 text-primary animate-pulse" />
+            <Icon name="TrendingDown" size={20} className="text-primary animate-pulse" />
             <h3 className="text-lg font-semibold">Subscription Conversion Funnel</h3>
           </div>
         </div>
@@ -70,7 +70,7 @@ export function SubscriptionConversionFunnelWidget({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <TrendingDown className="h-5 w-5 text-primary" />
+          <Icon name="TrendingDown" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Subscription Conversion Funnel</h3>
         </div>
         
@@ -86,7 +86,7 @@ export function SubscriptionConversionFunnelWidget({
       {/* Key Insights */}
       {hasData && (
         <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <Icon name="AlertTriangle" size={16} className="text-amber-500" />
           <div className="text-sm">
             <span className="font-medium">Biggest bottleneck:</span> {biggestDropOffStage}
             <span className="text-muted-foreground"> ({safeBiggestDropOff.toFixed(1)}% drop-off)</span>
@@ -110,7 +110,7 @@ export function SubscriptionConversionFunnelWidget({
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{stage.stageName}</span>
                     {!isFirst && (
-                      <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                      <Icon name="ArrowDown" size={12} className="text-muted-foreground" />
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-sm">
@@ -151,7 +151,7 @@ export function SubscriptionConversionFunnelWidget({
           })
         ) : (
           <div className="text-center py-8">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <Icon name="Users" size={48} className="text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No conversion data available for this period</p>
             <p className="text-xs text-muted-foreground mt-1">
               Conversion tracking requires subscription flow analytics events

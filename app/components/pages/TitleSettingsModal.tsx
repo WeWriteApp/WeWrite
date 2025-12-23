@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { AdaptiveModal } from '../ui/adaptive-modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { X, Plus, AlertCircle, Loader2, Tags } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { PillLink } from '../utils/PillLink';
 import EmptyState from '../ui/EmptyState';
@@ -213,7 +213,7 @@ export function TitleSettingsModal({
                       className="p-1 rounded-full hover:bg-muted transition-colors -ml-1"
                       title="Remove alternative title"
                     >
-                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Icon name="X" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                   )}
                 </div>
@@ -221,7 +221,7 @@ export function TitleSettingsModal({
             </div>
           ) : (
             <EmptyState
-              icon={Tags}
+              icon="Tags"
               title="No alternative titles"
               description="Add alternative titles to help people find this page with different search terms."
               size="sm"
@@ -247,7 +247,7 @@ export function TitleSettingsModal({
                 onClick={handleAddAlternative}
                 disabled={!newAltTitle.trim()}
               >
-                <Plus className="h-4 w-4" />
+                <Icon name="Plus" size={16} />
               </Button>
             </div>
           )}
@@ -256,7 +256,7 @@ export function TitleSettingsModal({
         {/* Error message */}
         {error && (
           <div className="flex items-center gap-2 text-destructive text-sm">
-            <AlertCircle className="h-4 w-4" />
+            <Icon name="AlertCircle" size={16} />
             <span>{error}</span>
           </div>
         )}
@@ -273,7 +273,7 @@ export function TitleSettingsModal({
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Icon name="Loader" />
                   Saving...
                 </>
               ) : (

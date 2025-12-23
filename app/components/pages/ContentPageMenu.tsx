@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Menu } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -27,7 +27,7 @@ export function ContentPageMenu({ onModeChange, currentMode }: PageMenuProps) {
           className={`text-foreground h-8 w-8 transition-colors ${isOpen ? 'bg-accent' : ''}`}
           title="Line modes"
         >
-          <Menu className="h-5 w-5" />
+          <Icon name="Menu" size={20} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

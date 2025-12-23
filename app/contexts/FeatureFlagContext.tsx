@@ -22,6 +22,7 @@ type FeatureFlagContextValue = {
 
 const DEFAULT_FLAGS: FeatureFlagMap = {
   line_numbers: false,
+  onboarding_tutorial: false,
 };
 
 const FeatureFlagContext = createContext<FeatureFlagContextValue>({

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 
 export default function ZoomControl() {
@@ -144,7 +144,7 @@ export default function ZoomControl() {
         onClick={handleZoomIn}
         aria-label="Zoom In"
       >
-        <ZoomIn className="h-4 w-4" />
+        <Icon name="ZoomIn" size={16} />
       </Button>
 
       <Button
@@ -154,7 +154,7 @@ export default function ZoomControl() {
         onClick={handleZoomOut}
         aria-label="Zoom Out"
       >
-        <ZoomOut className="h-4 w-4" />
+        <Icon name="ZoomOut" size={16} />
       </Button>
 
       <Button
@@ -163,7 +163,7 @@ export default function ZoomControl() {
         onClick={resetZoom}
         aria-label="Reset Zoom"
       >
-        <RotateCcw className="h-4 w-4 mr-2" />
+        <Icon name="RotateCcw" size={16} className="mr-2" />
         Reset ({zoomLevel}%)
       </Button>
     </div>

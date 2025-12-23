@@ -13,6 +13,8 @@ import { getEnvironmentType } from '../utils/environmentConfig';
 
 /**
  * Check if a user is an admin (server-side version)
+ * Used for checking if the CURRENT REQUEST's user has admin access
+ * In development, grants access to all authenticated users for testing
  */
 export const isAdminServer = (userEmail?: string | null): boolean => {
   if (!userEmail) return false;
@@ -23,13 +25,26 @@ export const isAdminServer = (userEmail?: string | null): boolean => {
     return true;
   }
 
-  // In development, all authenticated users are admins
+  // In development, all authenticated users are admins (for access control)
   const env = getEnvironmentType();
   if (env === 'development') {
     return true;
   }
 
   return false;
+};
+
+/**
+ * Check if a user record should be marked as admin
+ * Used for displaying admin status in admin panels - does NOT use dev mode override
+ * Only returns true if user is actually in the admin list
+ */
+export const isUserRecordAdmin = (userEmail?: string | null): boolean => {
+  if (!userEmail) return false;
+
+  // Only check against actual admin emails - no dev mode shortcut
+  const adminEmails = getAdminEmails();
+  return adminEmails.includes(userEmail);
 };
 
 /**

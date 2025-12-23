@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
+import { Icon } from '@/components/ui/Icon';
 import Link from "next/link";
-import { FileText, ChevronRight, Plus, Search } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -85,7 +85,7 @@ const DefaultEmptyState = ({ createButtonHref = "/new", createButtonText = "Crea
       </div>
       <Button variant="secondary" size="sm" asChild>
         <Link href={createButtonHref} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
+          <Icon name="Plus" size={16} />
           {createButtonText}
         </Link>
       </Button>
@@ -146,7 +146,7 @@ export default function PageList({
               <Input
                 type="search"
                 placeholder="Search pages..."
-                leftIcon={<Search className="h-4 w-4" />}
+                leftIcon={<Icon name="Search" size={16} />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -156,7 +156,7 @@ export default function PageList({
           {showCreateButton && (
             <Button variant="secondary" asChild>
               <Link href={finalCreateButtonHref} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
+                <Icon name="Plus" size={16} />
                 {createButtonText}
               </Link>
             </Button>
@@ -239,7 +239,7 @@ export default function PageList({
                   "flex items-center justify-center w-10 h-10 rounded-full",
                   "bg-primary/10 text-primary"
                 )}>
-                  <FileText className="h-5 w-5" />
+                  <Icon name="FileText" size={20} />
                 </div>
                 <div className="flex-grow">
                   <h3 className="font-medium truncate hyphens-none">{page.title}</h3>
@@ -252,7 +252,7 @@ export default function PageList({
                     </Badge>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <Icon name="ChevronRight" size={20} className="text-muted-foreground" />
               </div>
             </Link>
           ))}

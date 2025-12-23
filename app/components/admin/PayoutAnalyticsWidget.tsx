@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, DollarSign, Users, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
@@ -10,7 +10,6 @@ import { type DateRange } from '../../services/dashboardAnalytics';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ErrorCard } from '../ui/ErrorCard';
-import { Loader2 } from 'lucide-react';
 
 interface PayoutAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -56,13 +55,13 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <Icon name="TrendingUp" size={20} />
             Payout Analytics
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <Icon name="Loader" />
           </div>
         </CardContent>
       </Card>
@@ -84,7 +83,7 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+            <Icon name="TrendingUp" size={20} />
             Payout Analytics
           </CardTitle>
           <CardDescription>
@@ -118,7 +117,7 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
+          <Icon name="TrendingUp" size={20} />
           Payout Analytics
         </CardTitle>
         <CardDescription>
@@ -131,7 +130,7 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
+                <Icon name="DollarSign" size={16} className="text-green-600" />
                 <span className="text-sm font-medium">Total Payouts</span>
               </div>
               <div className="text-2xl font-bold text-green-600">
@@ -140,9 +139,9 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
               {!cumulative && payoutTrend !== 0 && (
                 <div className="flex items-center gap-1">
                   {payoutTrend > 0 ? (
-                    <TrendingUp className="h-3 w-3 text-green-500" />
+                    <Icon name="TrendingUp" size={12} className="text-green-500" />
                   ) : (
-                    <TrendingUp className="h-3 w-3 text-red-500 rotate-180" />
+                    <Icon name="TrendingUp" size={12} className="text-red-500 rotate-180" />
                   )}
                   <span className={`text-xs ${payoutTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(Math.abs(payoutTrend))} vs previous period
@@ -153,7 +152,7 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
             
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
+                <Icon name="Users" size={16} className="text-primary" />
                 <span className="text-sm font-medium">Payout Count</span>
               </div>
               <div className="text-2xl font-bold text-primary">
@@ -163,7 +162,7 @@ export function PayoutAnalyticsWidget({ dateRange, globalFilters, className = ''
             
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-purple-600" />
+                <Icon name="Activity" size={16} className="text-purple-600" />
                 <span className="text-sm font-medium">Average Payout</span>
               </div>
               <div className="text-2xl font-bold text-purple-600">

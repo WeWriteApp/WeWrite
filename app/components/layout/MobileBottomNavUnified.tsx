@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Home, User, Bell, X, Search, Shuffle, TrendingUp, Clock, Heart, Settings, Shield, Pencil, RotateCcw, Check, Trophy, Map, UserPlus } from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 import { DndProvider } from 'react-dnd';
 import { TouchBackend } from 'react-dnd-touch-backend';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -90,6 +90,7 @@ export default function MobileBottomNavUnified() {
   // Navigation optimization
   const {
     isNavigating,
+    targetRoute,
     handleButtonPress,
     handleButtonHover,
     isButtonPressed,
@@ -190,9 +191,31 @@ export default function MobileBottomNavUnified() {
   const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
   const shouldHideNav = isEditorPage;
 
+  // Helper to check if a route is active (includes optimistic navigation)
+  const isRouteActive = (route: string, label?: string) => {
+    // If we're optimistically navigating somewhere, only that target should be active
+    if (targetRoute) {
+      return isNavigatingTo(route);
+    }
+
+    // Home should match "/", "/home", and empty pathname (initial load)
+    if (label === 'Home' && (pathname === '/' || pathname === '/home' || pathname === '')) return true;
+
+    // Profile should match user profile routes
+    if (label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) return true;
+
+    return pathname === route;
+  };
+
+  // Helper to navigate only if not already on route (prevents refresh)
+  const navigateIfNeeded = (id: string, route: string) => {
+    if (pathname === route) return;
+    handleButtonPress(id, route);
+  };
+
   // Navigation button configurations
   const navigationButtons: Record<string, {
-    icon: React.ComponentType<{ className?: string }>;
+    icon: IconName;
     onClick: () => void;
     isActive: boolean;
     ariaLabel: string;
@@ -200,66 +223,66 @@ export default function MobileBottomNavUnified() {
     children?: React.ReactNode;
   }> = {
     home: {
-      icon: Home,
-      onClick: () => { handleClose(); handleButtonPress('home', '/'); },
-      isActive: pathname === '/' && !isExpanded,
+      icon: 'Home',
+      onClick: () => { handleClose(); navigateIfNeeded('home', '/'); },
+      isActive: isRouteActive('/', 'Home') && !isExpanded,
       ariaLabel: 'Home',
       label: 'Home',
     },
     search: {
-      icon: Search,
-      onClick: () => { handleClose(); router.push('/search'); },
-      isActive: pathname === '/search' && !isExpanded,
+      icon: 'Search',
+      onClick: () => { handleClose(); navigateIfNeeded('search', '/search'); },
+      isActive: isRouteActive('/search') && !isExpanded,
       ariaLabel: 'Search',
       label: 'Search',
     },
     notifications: {
-      icon: Bell,
-      onClick: () => { handleClose(); handleButtonPress('notifications', '/notifications'); },
-      isActive: pathname === '/notifications' && !isExpanded,
+      icon: 'Bell',
+      onClick: () => { handleClose(); navigateIfNeeded('notifications', '/notifications'); },
+      isActive: isRouteActive('/notifications') && !isExpanded,
       ariaLabel: 'Notifications',
       label: 'Alerts',
       children: <NotificationBadge className="absolute -top-1 -right-1" />,
     },
     profile: {
-      icon: User,
-      onClick: () => { handleClose(); if (user?.uid) router.push(`/u/${user.uid}`); },
-      isActive: pathname === `/u/${user?.uid}` && !isExpanded,
+      icon: 'User',
+      onClick: () => { handleClose(); if (user?.uid) navigateIfNeeded('profile', `/u/${user.uid}`); },
+      isActive: isRouteActive(`/u/${user?.uid}`, 'Profile') && !isExpanded,
       ariaLabel: 'Profile',
       label: 'Profile',
     },
     'random-pages': {
-      icon: Shuffle,
-      onClick: () => { handleClose(); router.push('/random-pages'); },
-      isActive: pathname === '/random-pages',
+      icon: 'Shuffle',
+      onClick: () => { handleClose(); navigateIfNeeded('random-pages', '/random-pages'); },
+      isActive: isRouteActive('/random-pages'),
       ariaLabel: 'Random Pages',
       label: 'Random',
     },
     'trending-pages': {
-      icon: TrendingUp,
-      onClick: () => { handleClose(); router.push('/trending-pages'); },
-      isActive: pathname === '/trending-pages',
+      icon: 'TrendingUp',
+      onClick: () => { handleClose(); navigateIfNeeded('trending-pages', '/trending-pages'); },
+      isActive: isRouteActive('/trending-pages'),
       ariaLabel: 'Trending',
       label: 'Trending',
     },
     recents: {
-      icon: Clock,
-      onClick: () => { handleClose(); router.push('/recents'); },
-      isActive: pathname === '/recents',
+      icon: 'Clock',
+      onClick: () => { handleClose(); navigateIfNeeded('recents', '/recents'); },
+      isActive: isRouteActive('/recents'),
       ariaLabel: 'Recently viewed',
       label: 'Recents',
     },
     following: {
-      icon: Heart,
-      onClick: () => { handleClose(); router.push('/following'); },
-      isActive: pathname === '/following',
+      icon: 'Heart',
+      onClick: () => { handleClose(); navigateIfNeeded('following', '/following'); },
+      isActive: isRouteActive('/following'),
       ariaLabel: 'Following',
       label: 'Following',
     },
     settings: {
-      icon: Settings,
-      onClick: () => { handleClose(); router.push('/settings'); },
-      isActive: pathname === '/settings',
+      icon: 'Settings',
+      onClick: () => { handleClose(); navigateIfNeeded('settings', '/settings'); },
+      isActive: isRouteActive('/settings'),
       ariaLabel: 'Settings',
       label: 'Settings',
       children: criticalSettingsStatus === 'warning' ? (
@@ -267,30 +290,30 @@ export default function MobileBottomNavUnified() {
       ) : undefined,
     },
     leaderboard: {
-      icon: Trophy,
-      onClick: () => { handleClose(); router.push('/leaderboard'); },
-      isActive: pathname === '/leaderboard',
+      icon: 'Trophy',
+      onClick: () => { handleClose(); navigateIfNeeded('leaderboard', '/leaderboard'); },
+      isActive: isRouteActive('/leaderboard'),
       ariaLabel: 'Leaderboards',
       label: 'Leaders',
     },
     map: {
-      icon: Map,
-      onClick: () => { handleClose(); router.push('/map'); },
-      isActive: pathname === '/map',
+      icon: 'Map',
+      onClick: () => { handleClose(); navigateIfNeeded('map', '/map'); },
+      isActive: isRouteActive('/map'),
       ariaLabel: 'Map',
       label: 'Map',
     },
     admin: {
-      icon: Shield,
-      onClick: () => { handleClose(); router.push('/admin'); },
-      isActive: pathname === '/admin',
+      icon: 'Shield',
+      onClick: () => { handleClose(); navigateIfNeeded('admin', '/admin'); },
+      isActive: isRouteActive('/admin'),
       ariaLabel: 'Admin Dashboard',
       label: 'Admin',
     },
     invite: {
-      icon: UserPlus,
-      onClick: () => { handleClose(); router.push('/invite'); },
-      isActive: pathname === '/invite',
+      icon: 'UserPlus',
+      onClick: () => { handleClose(); navigateIfNeeded('invite', '/invite'); },
+      isActive: isRouteActive('/invite'),
       ariaLabel: 'Invite Friends',
       label: 'Invite',
     },
@@ -306,14 +329,6 @@ export default function MobileBottomNavUnified() {
   
   const toolbarItems = getToolbarItems().filter(filterAdminIfNotAllowed);
   const overflowItems = getOverflowItems().filter(filterAdminIfNotAllowed);
-  
-  // Debug log for admin visibility
-  console.log('🔐 Admin check:', { 
-    email: user?.email, 
-    isAdmin: user?.isAdmin, 
-    overflowItems,
-    unifiedOrder 
-  });
 
   // More button (not draggable) - matches increased height for better tap targets
   const MoreButton = () => (
@@ -335,7 +350,7 @@ export default function MobileBottomNavUnified() {
       aria-label={isExpanded ? "Close More" : "Open More"}
     >
       <div className="relative">
-        {(isExpanded || isClosing) ? <X className="h-5 w-5 text-accent" /> : <Menu className="h-5 w-5" />}
+        {(isExpanded || isClosing) ? <Icon name="X" size={20} className="text-accent" /> : <Icon name="Menu" size={20} />}
         {criticalSettingsStatus === 'warning' && !isExpanded && !isClosing && (
           <WarningDot variant="warning" size="sm" position="top-right" offset={{ top: '-2px', right: '-2px' }} />
         )}
@@ -436,20 +451,20 @@ export default function MobileBottomNavUnified() {
                       <h3 className="text-sm font-medium text-foreground">Overflow menu items</h3>
                       {!isToolbarEditMode ? (
                         <Button variant="secondary" size="sm" onClick={handleStartToolbarEdit} className="text-xs h-6 px-2 gap-1">
-                          <Pencil className="h-3 w-3" />
+                          <Icon name="Pencil" size={12} />
                           Edit
                         </Button>
                       ) : (
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="sm" onClick={handleResetToDefault} className="text-xs h-6 px-2 gap-1 text-muted-foreground">
-                            <RotateCcw className="h-3 w-3" />
+                            <Icon name="RotateCcw" size={12} />
                             Reset
                           </Button>
                           <Button variant="ghost" size="sm" onClick={handleCancelToolbarEdit} className="text-xs h-6 px-2">
                             Cancel
                           </Button>
                           <Button variant="secondary" size="sm" onClick={handleSaveToolbarEdit} className="text-xs h-6 px-2 gap-1">
-                            <Check className="h-3 w-3" />
+                            <Icon name="Check" size={12} />
                             Save
                           </Button>
                         </div>

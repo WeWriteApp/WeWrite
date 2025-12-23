@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import TrendingPages from '../components/features/TrendingPages';
-import { TrendingUp, Flame } from 'lucide-react';
 
 /**
  * Trending Pages Full Page Experience
@@ -51,7 +51,7 @@ export default function TrendingPagesPage() {
       {/* Additional Info */}
       <div className="mt-12 p-6 bg-muted/30 rounded-lg">
         <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-          <Flame className="h-5 w-5 text-orange-500" />
+          <Icon name="Flame" size={20} className="text-orange-500" />
           About Trending Pages
         </h2>
         <div className="space-y-2 text-muted-foreground">

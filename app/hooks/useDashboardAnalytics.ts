@@ -949,6 +949,76 @@ export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number
 }
 
 /**
+ * Hook for platform revenue analytics (platform fees + unallocated funds)
+ */
+export function usePlatformRevenueMetrics(dateRange: DateRange, granularity?: number, cumulative: boolean = false) {
+  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({
+    totalRevenue: 0,
+    totalPlatformFees: 0,
+    totalUnallocatedFunds: 0,
+    monthlyRevenue: 0,
+    growth: 0,
+    averageRevenuePerMonth: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await adminFetch(`/api/admin/platform-revenue?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: granularity?.toString() || '50',
+        cumulative: cumulative.toString()
+      }), {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch platform revenue metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch platform revenue metrics');
+      }
+
+      setData(result.chartData || []);
+      setStats(result.stats || {
+        totalRevenue: 0,
+        totalPlatformFees: 0,
+        totalUnallocatedFunds: 0,
+        monthlyRevenue: 0,
+        growth: 0,
+        averageRevenuePerMonth: 0
+      });
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch platform revenue data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, stats, loading, error, refetch: fetchData };
+}
+
+/**
  * Hook for followed users analytics
  */
 export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: number) {

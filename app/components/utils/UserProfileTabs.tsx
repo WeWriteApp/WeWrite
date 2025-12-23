@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useRef, useContext } from "react";
+import { Icon } from '@/components/ui/Icon';
 import dynamic from "next/dynamic";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import { InlineError } from '../ui/InlineError';
-import { Clock, FileText, Loader, BookText, Check, ChevronUp, ChevronDown, Link as LinkIcon, Network, Calendar, MapPin } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useAuth } from '../../providers/AuthProvider';
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
@@ -126,7 +126,7 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
 
       {isLoading && (
         <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+          <Icon name="Loader" size={24} className="mx-auto" />
         </div>
       )}
 
@@ -461,7 +461,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="bio"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <BookText className="h-4 w-4" />
+                <Icon name="User" size={16} />
                 <span>Bio</span>
               </TabsTrigger>
 
@@ -471,7 +471,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="pages"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <FileText className="h-4 w-4" />
+                <Icon name="FileText" size={16} />
                 <span>Pages</span>
               </TabsTrigger>
 
@@ -481,7 +481,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="recent-edits"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <Clock className="h-4 w-4" />
+                <Icon name="Clock" size={16} />
                 <span>Recent Edits</span>
               </TabsTrigger>
 
@@ -491,7 +491,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="timeline"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <Calendar className="h-4 w-4" />
+                <Icon name="Calendar" size={16} />
                 <span>Timeline</span>
               </TabsTrigger>
 
@@ -501,7 +501,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="graph"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <Network className="h-4 w-4" />
+                <Icon name="Network" size={16} />
                 <span>Graph</span>
               </TabsTrigger>
 
@@ -511,7 +511,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="map"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <MapPin className="h-4 w-4" />
+                <Icon name="MapPin" size={16} />
                 <span>Map</span>
               </TabsTrigger>
 
@@ -521,7 +521,7 @@ export default function UserProfileTabs({ profile }) {
                 data-value="external-links"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <LinkIcon className="h-4 w-4" />
+                <Icon name="Link" size={16} />
                 <span>External Links</span>
               </TabsTrigger>
 
@@ -588,7 +588,7 @@ export default function UserProfileTabs({ profile }) {
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="secondary" size="sm" className="gap-2">
-                    {sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {sortDirection === "asc" ? <Icon name="ChevronUp" size={16} /> : <Icon name="ChevronDown" size={16} />}
                     {getSortLabel(sortBy, sortDirection)}
                   </Button>
                 </DropdownMenuTrigger>
@@ -598,30 +598,30 @@ export default function UserProfileTabs({ profile }) {
                     className="flex items-center justify-between cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
-                      {sortBy === "recently-edited" && sortDirection === "desc" ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      {sortBy === "recently-edited" && sortDirection === "desc" ? <Icon name="ChevronDown" size={16} /> : <Icon name="ChevronUp" size={16} />}
                       {getSortLabel("recently-edited", sortBy === "recently-edited" ? (sortDirection === "desc" ? "asc" : "desc") : "desc")}
                     </span>
-                    {sortBy === "recently-edited" && <Check className="h-4 w-4" />}
+                    {sortBy === "recently-edited" && <Icon name="Check" size={16} />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleSortChange("recently-created")}
                     className="flex items-center justify-between cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
-                      {sortBy === "recently-created" && sortDirection === "desc" ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      {sortBy === "recently-created" && sortDirection === "desc" ? <Icon name="ChevronDown" size={16} /> : <Icon name="ChevronUp" size={16} />}
                       {getSortLabel("recently-created", sortBy === "recently-created" ? (sortDirection === "desc" ? "asc" : "desc") : "desc")}
                     </span>
-                    {sortBy === "recently-created" && <Check className="h-4 w-4" />}
+                    {sortBy === "recently-created" && <Icon name="Check" size={16} />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleSortChange("alphabetical")}
                     className="flex items-center justify-between cursor-pointer"
                   >
                     <span className="flex items-center gap-2">
-                      {sortBy === "alphabetical" && sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {sortBy === "alphabetical" && sortDirection === "asc" ? <Icon name="ChevronUp" size={16} /> : <Icon name="ChevronDown" size={16} />}
                       {getSortLabel("alphabetical", sortBy === "alphabetical" ? (sortDirection === "asc" ? "desc" : "asc") : "asc")}
                     </span>
-                    {sortBy === "alphabetical" && <Check className="h-4 w-4" />}
+                    {sortBy === "alphabetical" && <Icon name="Check" size={16} />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -630,7 +630,7 @@ export default function UserProfileTabs({ profile }) {
 
             {isLoading ? (
               <div className="flex justify-center py-8">
-                <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Icon name="Loader" className="text-muted-foreground" />
               </div>
             ) : (
               <>
@@ -646,7 +646,7 @@ export default function UserProfileTabs({ profile }) {
                 {/* Infinite scroll loading indicator */}
                 {loadingMore && (
                   <div className="flex justify-center py-4">
-                    <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <Icon name="Loader" className="text-muted-foreground" />
                   </div>
                 )}
 

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
-import { ExternalLink, Twitter, Heart } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { openExternalLink } from '../../utils/pwa-detection';
 
 interface DisabledLinkModalProps {
@@ -46,9 +46,9 @@ export default function DisabledLinkModal({ isOpen, onClose }: DisabledLinkModal
             variant="default"
             className="w-full flex items-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 border-0 text-white rounded-2xl"
           >
-            <Heart className="h-4 w-4" />
+            <Icon name="Heart" size={16} />
             Support WeWrite
-            <ExternalLink className="h-3 w-3 ml-auto" />
+            <Icon name="Share" size={12} className="ml-auto" />
           </Button>
 
           <Button
@@ -56,9 +56,9 @@ export default function DisabledLinkModal({ isOpen, onClose }: DisabledLinkModal
             variant="secondary"
             className="w-full flex items-center gap-2 rounded-2xl"
           >
-            <Twitter className="h-4 w-4" />
+            <Icon name="Share" size={16} />
             Follow us on X for updates
-            <ExternalLink className="h-3 w-3 ml-auto" />
+            <Icon name="Share" size={12} className="ml-auto" />
           </Button>
 
           <Button

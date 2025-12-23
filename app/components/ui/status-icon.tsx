@@ -2,19 +2,7 @@
 
 import React from 'react';
 import { cn } from '../../lib/utils';
-import {
-  Check,
-  X,
-  AlertTriangle,
-  Clock,
-  AlertCircle,
-  Ban,
-  DollarSign,
-  Zap,
-  Shield,
-  Info,
-  Exclamation
-} from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 
 interface StatusIconProps {
   /** Status type that determines icon and color */
@@ -64,11 +52,11 @@ export function StatusIcon({
     lg: 'w-7 h-7'
   };
 
-  // Icon size classes (thicker icons, better centered)
-  const iconSizeClasses = {
-    sm: 'w-3 h-3',
-    md: 'w-3.5 h-3.5',
-    lg: 'w-4 h-4'
+  // Icon sizes in pixels
+  const iconSizes = {
+    sm: 12,
+    md: 14,
+    lg: 16
   };
 
   // Position classes
@@ -88,11 +76,12 @@ export function StatusIcon({
     left: offset.left
   } : {};
 
-  // Get icon and background color based on status
-  const getStatusConfig = () => {
+  // Get icon name and background color based on status
+  const getStatusConfig = (): { iconName: IconName | null; customComponent?: React.ComponentType; bgColor: string } => {
     if (customIcon && customBgColor) {
       return {
-        icon: customIcon,
+        iconName: null,
+        customComponent: customIcon,
         bgColor: customBgColor
       };
     }
@@ -101,45 +90,47 @@ export function StatusIcon({
       case 'success':
       case 'active':
         return {
-          icon: Check,
+          iconName: 'Check',
           bgColor: 'bg-success'
         };
       case 'error':
         return {
-          icon: X,
+          iconName: 'X',
           bgColor: 'bg-red-500'
         };
       case 'warning':
         return {
-          icon: () => <span className="text-white font-bold text-sm">!</span>,
+          iconName: null,
+          customComponent: () => <span className="text-white font-bold text-sm">!</span>,
           bgColor: 'bg-orange-500'
         };
       case 'info':
         return {
-          icon: Info,
+          iconName: 'Info',
           bgColor: 'bg-primary'
         };
       case 'pending':
         return {
-          icon: Clock,
+          iconName: 'Clock',
           bgColor: 'bg-yellow-500'
         };
       case 'inactive':
         return {
-          icon: Ban,
+          iconName: 'Ban',
           bgColor: 'bg-muted-foreground'
         };
 
       case 'custom':
       default:
         return {
-          icon: customIcon || AlertCircle,
+          iconName: customIcon ? null : 'AlertCircle',
+          customComponent: customIcon,
           bgColor: customBgColor || 'bg-muted-foreground'
         };
     }
   };
 
-  const { icon: IconComponent, bgColor } = getStatusConfig();
+  const { iconName, customComponent, bgColor } = getStatusConfig();
 
   return (
     <div
@@ -156,18 +147,21 @@ export function StatusIcon({
       data-status={status}
       data-size={size}
     >
-      {status === 'warning' ? (
-        // Custom exclamation mark for warning
-        <IconComponent />
-      ) : (
-        // Regular Lucide icon
-        <IconComponent className={cn(
-          iconSizeClasses[size],
-          'text-white flex-shrink-0',
-          // Make check icon thicker
-          status === 'success' || status === 'active' ? 'stroke-[3]' : 'stroke-[2]'
-        )} />
-      )}
+      {customComponent ? (
+        // Custom component (e.g., warning exclamation mark)
+        React.createElement(customComponent)
+      ) : iconName ? (
+        // Regular icon
+        <Icon
+          name={iconName}
+          size={iconSizes[size]}
+          className={cn(
+            'text-white flex-shrink-0',
+            // Make check icon thicker
+            status === 'success' || status === 'active' ? 'stroke-[3]' : 'stroke-[2]'
+          )}
+        />
+      ) : null}
     </div>
   );
 }

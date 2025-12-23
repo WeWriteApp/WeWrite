@@ -206,12 +206,12 @@ export async function POST(request: NextRequest) {
       followerCount: admin.firestore.FieldValue.increment(1)
     });
 
-    // Send new follower email notification (fire-and-forget, don't block response)
+    // Send notifications (fire-and-forget, don't block response)
     try {
       const targetUserData = targetUserDoc.data();
       const targetEmail = targetUserData?.email;
       const targetUsername = targetUserData?.username || `user_${targetUserId.slice(0, 8)}`;
-      
+
       // Get follower (current user) info
       const followerDoc = await db.collection(getCollectionName('users')).doc(currentUserId).get();
       const followerData = followerDoc.data();
@@ -234,26 +234,64 @@ export async function POST(request: NextRequest) {
             .trim();
         }
       }
-      
-      if (targetEmail) {
-        // Check user's email preferences (don't send if they opted out)
-        const emailPrefs = targetUserData?.emailPreferences;
-        const shouldSendEmail = emailPrefs?.newFollowers !== false; // Default to true if not set
-        
-        if (shouldSendEmail) {
-          sendNewFollowerEmail({
-            to: targetEmail,
-            username: targetUsername,
+
+      // Check user's notification preferences
+      const emailPrefs = targetUserData?.emailPreferences;
+      const shouldSendEmail = emailPrefs?.newFollowers !== false; // Default to true if not set
+
+      // Create in-app notification (always, unless user has disabled in-app notifications for follows)
+      try {
+        const notificationBatch = db.batch();
+
+        const notificationsRef = db.collection(getCollectionName('users'))
+          .doc(targetUserId)
+          .collection(getCollectionName('notifications'));
+        const notificationRef = notificationsRef.doc();
+
+        const notification = {
+          userId: targetUserId,
+          type: 'follow',
+          title: 'New Follower',
+          message: `@${followerUsername} started following you`,
+          sourceUserId: currentUserId,
+          actionUrl: `/u/${followerUsername}`,
+          metadata: {
             followerUsername,
-            followerBio,
-            userId: targetUserId
-          }).catch(() => {
-            // Silently catch email errors
-          });
-        }
+            followerBio: followerBio || undefined
+          },
+          read: false,
+          criticality: 'normal',
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        notificationBatch.set(notificationRef, notification);
+
+        // Increment unread count
+        const userDocRef = db.collection(getCollectionName('users')).doc(targetUserId);
+        notificationBatch.update(userDocRef, {
+          unreadNotificationsCount: admin.firestore.FieldValue.increment(1)
+        });
+
+        await notificationBatch.commit();
+      } catch (notificationErr) {
+        // Don't fail if in-app notification fails
+        console.error('Failed to create follow notification:', notificationErr);
       }
-    } catch (emailErr) {
-      // Don't fail the follow operation if email fails
+
+      // Send email notification if user hasn't opted out
+      if (targetEmail && shouldSendEmail) {
+        sendNewFollowerEmail({
+          to: targetEmail,
+          username: targetUsername,
+          followerUsername,
+          followerBio,
+          userId: targetUserId
+        }).catch(() => {
+          // Silently catch email errors
+        });
+      }
+    } catch (notificationErr) {
+      // Don't fail the follow operation if notifications fail
     }
 
     return createApiResponse({

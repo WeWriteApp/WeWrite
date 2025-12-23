@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import { Trash2, Home, Search, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 
 interface PageDeletedViewProps {
@@ -32,7 +32,7 @@ export default function PageDeletedView({ pageTitle = "Untitled", pageId }: Page
         {/* Icon */}
         <div className="mb-8">
           <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 bg-muted rounded-full flex items-center justify-center">
-            <Trash2 className="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
+            <Icon name="Trash2" size={32} className="sm:w-10 sm:h-10 text-muted-foreground" />
           </div>
         </div>
 
@@ -53,7 +53,7 @@ export default function PageDeletedView({ pageTitle = "Untitled", pageId }: Page
             className="w-full gap-2 h-12 text-base font-medium"
             size="lg"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <Icon name="ArrowLeft" size={16} />
             Back to previous page
           </Button>
 
@@ -63,7 +63,7 @@ export default function PageDeletedView({ pageTitle = "Untitled", pageId }: Page
             className="w-full gap-2 h-12 text-base font-medium"
             size="lg"
           >
-            <Home className="w-4 h-4" />
+            <Icon name="Home" size={16} />
             Go to Home
           </Button>
 
@@ -73,7 +73,7 @@ export default function PageDeletedView({ pageTitle = "Untitled", pageId }: Page
             className="w-full gap-2 h-12 text-base font-medium"
             size="lg"
           >
-            <Search className="w-4 h-4" />
+            <Icon name="Search" size={16} />
             Search "{pageTitle}"
           </Button>
         </div>

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { WritingIdeasManager } from '../../components/admin/WritingIdeasManager';
 import { Button } from '../../components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 
 export default function WritingIdeasPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -51,7 +51,7 @@ export default function WritingIdeasPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <Icon name="Loader" size={32} className="mx-auto mb-4" />
           <p className="text-muted-foreground">Checking permissions...</p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function WritingIdeasPage() {
               onClick={() => router.push('/admin')}
               className="gap-2"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="ArrowLeft" size={16} />
               Back to Admin
             </Button>
             <div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Calendar } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
 import DailyNotesCarousel from './DailyNotesCarousel';
@@ -69,7 +69,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
       {/* Section Header - with horizontal padding */}
       <div className="px-4">
         <SectionTitle
-          icon={Calendar}
+          icon="Calendar"
           title="My Daily Notes"
         >
           <Button

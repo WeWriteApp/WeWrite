@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Award, Flame } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { getUserStreaks } from "../../utils/apiClient";
 import { Skeleton } from "../ui/skeleton";
 import { Card, CardContent } from "../ui/card";
@@ -72,7 +72,7 @@ const UserStreak: React.FC<UserStreakProps> = ({ userId }) => {
       <Card className="border border-border/40 bg-card">
         <CardContent className="p-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+            <Icon name="Calendar" size={16} />
             <span>Unable to load streak data</span>
           </div>
         </CardContent>
@@ -86,7 +86,7 @@ const UserStreak: React.FC<UserStreakProps> = ({ userId }) => {
       <Card className="border border-border/40 bg-card">
         <CardContent className="p-4 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
+            <Icon name="Calendar" size={16} />
             <span>No writing activity yet</span>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
@@ -105,7 +105,7 @@ const UserStreak: React.FC<UserStreakProps> = ({ userId }) => {
             {/* Current Streak */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-muted-foreground" />
+                <Icon name="Star" size={20} className="text-muted-foreground" />
                 <span className="font-medium">Current Streak</span>
               </div>
               <Tooltip>
@@ -124,7 +124,7 @@ const UserStreak: React.FC<UserStreakProps> = ({ userId }) => {
             {/* Longest Streak */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-muted-foreground" />
+                <Icon name="Star" size={20} className="text-muted-foreground" />
                 <span className="font-medium">Longest Streak</span>
               </div>
               <Tooltip>

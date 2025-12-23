@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Download, Smartphone } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { usePWA } from '../../providers/PWAProvider';
@@ -25,7 +25,7 @@ export default function PWAInstallationCard() {
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-muted-foreground" />
+            <Icon name="Phone" size={20} className="text-muted-foreground" />
             <CardTitle className="text-base">PWA Installation</CardTitle>
           </div>
           <Button
@@ -35,16 +35,16 @@ export default function PWAInstallationCard() {
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? (
-              <ChevronUp className="h-4 w-4" />
+              <Icon name="ChevronUp" size={16} />
             ) : (
-              <ChevronDown className="h-4 w-4" />
+              <Icon name="ChevronDown" size={16} />
             )}
           </Button>
         </div>
         <CardDescription>
           {isPWA ? (
             <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-              <Check className="h-4 w-4" />
+              <Icon name="Check" size={16} />
               <span>Installed as app</span>
             </div>
           ) : (
@@ -86,7 +86,7 @@ export default function PWAInstallationCard() {
                     await showInfo("Installation Instructions", "Follow the instructions above to install WeWrite as an app.");
                   }}
                 >
-                  <Download className="h-4 w-4" />
+                  <Icon name="Download" size={16} />
                   <span>Install WeWrite</span>
                 </Button>
               </div>

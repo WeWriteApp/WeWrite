@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
-import { ChevronLeft, Flame, Loader } from 'lucide-react';
 import Link from 'next/link';
 import PillLink from '../components/utils/PillLink';
 import SimpleSparkline from '../components/utils/SimpleSparkline';
@@ -132,7 +132,7 @@ export default function TrendingPageClient() {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="flex flex-col items-center">
-            <Flame className="h-8 w-8 animate-pulse text-primary mb-4" />
+            <Icon name="Flame" size={32} className="animate-pulse text-primary mb-4" />
             <p className="text-muted-foreground">Loading trending pages...</p>
           </div>
         </div>

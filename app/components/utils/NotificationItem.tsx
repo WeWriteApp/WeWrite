@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { MoreVertical, Check, X, RefreshCw, Smartphone, Bell, EyeOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useNotifications } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
@@ -277,7 +277,7 @@ export default function NotificationItem({ notification }) {
                   }}
                   className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
                 >
-                  <RefreshCw className="h-3 w-3 mr-1" />
+                  <Icon name="RefreshCw" size={12} className="mr-1" />
                   Resend Email
                 </button>
                 <button
@@ -306,7 +306,7 @@ export default function NotificationItem({ notification }) {
                   }}
                   className="inline-flex items-center px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <X className="h-3 w-3 mr-1" />
+                  <Icon name="X" size={12} className="mr-1" />
                   Dismiss
                 </button>
               </div>
@@ -442,7 +442,7 @@ export default function NotificationItem({ notification }) {
                       : 'bg-primary text-primary-foreground hover:bg-primary/90'
                   }`}
                 >
-                  <RefreshCw className="h-3 w-3 mr-1" />
+                  <Icon name="RefreshCw" size={12} className="mr-1" />
                   Retry Payment
                 </button>
                 <button
@@ -550,7 +550,7 @@ export default function NotificationItem({ notification }) {
                 onClick={toggleMenu}
                 className="h-8 w-8 p-0 opacity-70 hover:opacity-100"
               >
-                <MoreVertical className="h-4 w-4" />
+                <Icon name="MoreVertical" size={16} />
               </Button>
             ) : (
               // Desktop: Show on hover
@@ -563,7 +563,7 @@ export default function NotificationItem({ notification }) {
                   showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-70 hover:opacity-100"
                 )}
               >
-                <MoreVertical className="h-4 w-4" />
+                <Icon name="MoreVertical" size={16} />
               </Button>
             )}
 
@@ -579,7 +579,7 @@ export default function NotificationItem({ notification }) {
                       onClick={handleMarkAsUnread}
                       className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left whitespace-nowrap"
                     >
-                      <X className="h-4 w-4 mr-3 flex-shrink-0" />
+                      <Icon name="X" size={16} className="mr-3 flex-shrink-0" />
                       <span>Mark as unread</span>
                     </button>
                   ) : (
@@ -587,7 +587,7 @@ export default function NotificationItem({ notification }) {
                       onClick={handleMarkAsRead}
                       className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left whitespace-nowrap"
                     >
-                      <Check className="h-4 w-4 mr-3 flex-shrink-0" />
+                      <Icon name="Check" size={16} className="mr-3 flex-shrink-0" />
                       <span>Mark as read</span>
                     </button>
                   )}
@@ -607,7 +607,7 @@ export default function NotificationItem({ notification }) {
                       (notification.criticality || 'normal') === 'device' ? "bg-primary/10 text-primary" : "text-foreground"
                     )}
                   >
-                    <Smartphone className="h-4 w-4 mr-3 flex-shrink-0" />
+                    <Icon name="Smartphone" size={16} className="mr-3 flex-shrink-0" />
                     <div className="flex-1">
                       <span>Device notification</span>
                       <div className="text-xs text-muted-foreground">Most critical</div>
@@ -621,7 +621,7 @@ export default function NotificationItem({ notification }) {
                       (notification.criticality || 'normal') === 'normal' ? "bg-primary/10 text-primary" : "text-foreground"
                     )}
                   >
-                    <Bell className="h-4 w-4 mr-3 flex-shrink-0" />
+                    <Icon name="Bell" size={16} className="mr-3 flex-shrink-0" />
                     <div className="flex-1">
                       <span>Show in notifications</span>
                       <div className="text-xs text-muted-foreground">Normal</div>
@@ -635,7 +635,7 @@ export default function NotificationItem({ notification }) {
                       (notification.criticality || 'normal') === 'hidden' ? "bg-primary/10 text-primary" : "text-foreground"
                     )}
                   >
-                    <EyeOff className="h-4 w-4 mr-3 flex-shrink-0" />
+                    <Icon name="EyeOff" size={16} className="mr-3 flex-shrink-0" />
                     <div className="flex-1">
                       <span>Hide notification</span>
                       <div className="text-xs text-muted-foreground">Not critical</div>

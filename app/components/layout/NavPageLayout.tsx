@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Suspense } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { RESPONSIVE_PADDING_CLASSES } from "../../constants/layout";
 import { useAuth } from "../../providers/AuthProvider";
 
@@ -45,7 +46,7 @@ export default function NavPageLayout({
 
   const defaultLoadingFallback = (
     <div className="flex items-center justify-center min-h-[200px] w-full">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      <Icon name="Loader" size={32} />
     </div>
   );
 

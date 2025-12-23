@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 
 function CustomPasswordResetContent() {
@@ -169,7 +169,7 @@ function CustomPasswordResetContent() {
           </p>
         </div>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Icon name="Loader" size={32} />
         </div>
       </ModernAuthLayout>
     );
@@ -188,7 +188,7 @@ function CustomPasswordResetContent() {
 
         <div className="space-y-4">
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <Icon name="AlertCircle" size={16} />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -226,7 +226,7 @@ function CustomPasswordResetContent() {
 
         <div className="space-y-4">
           <Alert className="bg-green-500/20 text-green-600 dark:text-green-200">
-            <CheckCircle className="h-4 w-4" />
+            <Icon name="CheckCircle" size={16} />
             <AlertTitle>Success!</AlertTitle>
             <AlertDescription>
               Your password has been successfully reset. You can now sign in with your new password.
@@ -276,9 +276,9 @@ function CustomPasswordResetContent() {
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <Icon name="EyeOff" size={16} />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Icon name="Eye" size={16} />
               )}
             </Button>
           </div>
@@ -305,9 +305,9 @@ function CustomPasswordResetContent() {
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             >
               {showConfirmPassword ? (
-                <EyeOff className="h-4 w-4" />
+                <Icon name="EyeOff" size={16} />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Icon name="Eye" size={16} />
               )}
             </Button>
           </div>
@@ -315,7 +315,7 @@ function CustomPasswordResetContent() {
 
         {error && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <Icon name="AlertCircle" size={16} />
             <AlertTitle>Password Reset Error</AlertTitle>
             <AlertDescription>
               {error}
@@ -364,7 +364,7 @@ export default function CustomPasswordResetPage() {
           </p>
         </div>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+          <Icon name="Loader" size={32} />
         </div>
       </ModernAuthLayout>
     }>

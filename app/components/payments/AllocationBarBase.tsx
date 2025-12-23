@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
-import { Plus, Minus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   BaseAllocationProps,
@@ -308,7 +308,7 @@ export function AllocationBarBase({
             onMouseLeave={handleMouseLeave}
             disabled={disabled || isProcessing || allocationState.currentAllocationCents <= 0}
           >
-            <Minus className="h-4 w-4" />
+            <Icon name="Minus" size={16} />
           </Button>
 
           {/* Composition bar */}
@@ -338,7 +338,7 @@ export function AllocationBarBase({
             onMouseLeave={handleMouseLeave}
             disabled={disabled || isProcessing}
           >
-            <Plus className="h-4 w-4" />
+            <Icon name="Plus" size={16} />
           </Button>
         </div>
       )}

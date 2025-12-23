@@ -26,10 +26,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
-import { Search, Mail, MailCheck, RefreshCw, Check, X, AlertTriangle } from 'lucide-react';
 // Using API endpoints instead of direct Firebase calls
 import { formatRelativeTime } from '../../utils/formatRelativeTime';
 import { format } from 'date-fns';
@@ -233,14 +233,14 @@ export function UserManagement() {
     if (emailVerified) {
       return (
         <Badge variant="default" className="bg-success/10 text-success dark:bg-success/20 dark:text-success-foreground">
-          <MailCheck className="h-3 w-3 mr-1" />
+          <Icon name="MailCheck" size={12} className="mr-1" />
           Verified
         </Badge>
       );
     }
     return (
       <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-        <Mail className="h-3 w-3 mr-1" />
+        <Icon name="Mail" size={12} className="mr-1" />
         Unverified
       </Badge>
     );
@@ -282,7 +282,7 @@ export function UserManagement() {
           onClick={loadUsers}
           disabled={loading}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Icon name="RefreshCw" size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
@@ -290,7 +290,7 @@ export function UserManagement() {
       {/* Error Display */}
       {error.hasError && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <Icon name="AlertTriangle" size={16} />
           <AlertDescription>
             <div className="space-y-1">
               <p className="font-medium">{error.message}</p>
@@ -307,7 +307,7 @@ export function UserManagement() {
         placeholder="Search users by email, username, or display name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        leftIcon={<Search className="h-4 w-4" />}
+        leftIcon={<Icon name="Search" size={16} />}
         wrapperClassName="max-w-md"
       />
 
@@ -337,11 +337,11 @@ export function UserManagement() {
           <p className="text-sm font-medium mb-2">Feature Flag States:</p>
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1">
-              <Check className="h-3 w-3 text-success" />
+              <Icon name="Check" size={12} className="text-success" />
               <span>Enabled</span>
             </div>
             <div className="flex items-center gap-1">
-              <X className="h-3 w-3 text-destructive" />
+              <Icon name="X" size={12} className="text-destructive" />
               <span>Disabled</span>
             </div>
             <div className="flex items-center gap-1">
@@ -356,7 +356,7 @@ export function UserManagement() {
       {/* Users Table */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+          <Icon name="RefreshCw" size={24} className="animate-spin mr-2" />
           <span>Loading users...</span>
         </div>
       ) : (

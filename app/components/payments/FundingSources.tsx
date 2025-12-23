@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useContext, FormEvent, ChangeEvent } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable, { TableColumn } from "react-data-table-component";
-import { Check, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 
@@ -34,9 +34,9 @@ const FundingSources: React.FC = () => {
       cell: (row) => (
         <div>
           {row.default ? (
-            <Check className="h-5 w-5 text-green-500" />
+            <Icon name="Check" size={20} className="text-green-500" />
           ) : (
-            <X className="h-5 w-5 text-red-500" />
+            <Icon name="X" size={20} className="text-red-500" />
           )}
         </div>
       ),

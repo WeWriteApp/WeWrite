@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { ArrowLeft, Loader, RefreshCw, Image as ImageIcon, Grid, List, Search, X } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { FloatingHeader } from '../../components/ui/FloatingCard';
 
@@ -347,7 +347,7 @@ export default function OpenGraphImagesPage() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <Loader className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <Icon name="Loader" className="text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -375,7 +375,7 @@ export default function OpenGraphImagesPage() {
               onClick={() => router.push('/admin')}
               className="h-10 w-10"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <Icon name="ArrowLeft" size={20} />
             </Button>
             <div>
               <h1 className="text-2xl font-bold leading-tight">OpenGraph Images</h1>
@@ -392,7 +392,7 @@ export default function OpenGraphImagesPage() {
                 onClick={() => setViewMode('grid')}
                 className="h-8 px-2"
               >
-                <Grid className="h-4 w-4" />
+                <Icon name="Grid" size={16} />
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -400,7 +400,7 @@ export default function OpenGraphImagesPage() {
                 onClick={() => setViewMode('list')}
                 className="h-8 px-2"
               >
-                <List className="h-4 w-4" />
+                <Icon name="List" size={16} />
               </Button>
             </div>
             <Button
@@ -409,7 +409,7 @@ export default function OpenGraphImagesPage() {
               onClick={handleRefreshAll}
               className="gap-2"
             >
-              <RefreshCw className="h-4 w-4" />
+              <Icon name="RefreshCw" size={16} />
               Refresh
             </Button>
           </div>
@@ -423,7 +423,7 @@ export default function OpenGraphImagesPage() {
           {/* Page Lookup Section */}
           <div className="wewrite-card mb-6">
             <div className="flex items-center gap-2 mb-4">
-              <Search className="h-5 w-5 text-muted-foreground" />
+              <Icon name="Search" size={20} className="text-muted-foreground" />
               <h3 className="text-lg font-semibold">Look Up a Specific Page</h3>
             </div>
             
@@ -443,12 +443,12 @@ export default function OpenGraphImagesPage() {
               >
                 {isLookingUp ? (
                   <>
-                    <Loader className="h-4 w-4 animate-spin" />
+                    <Icon name="Loader" />
                     Looking up...
                   </>
                 ) : (
                   <>
-                    <Search className="h-4 w-4" />
+                    <Icon name="Search" size={16} />
                     Look Up
                   </>
                 )}
@@ -459,7 +459,7 @@ export default function OpenGraphImagesPage() {
                   onClick={handleClearLookup}
                   className="gap-1"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="X" size={16} />
                   Clear
                 </Button>
               )}
@@ -496,7 +496,7 @@ export default function OpenGraphImagesPage() {
                       >
                         {loadingImages[ogType.id] && (
                           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                            <Loader className="h-5 w-5 animate-spin text-primary" />
+                            <Icon name="Loader" className="text-primary" />
                           </div>
                         )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -545,7 +545,7 @@ export default function OpenGraphImagesPage() {
                       >
                         {loadingImages[ogType.id] && (
                           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                            <Loader className="h-5 w-5 animate-spin text-primary" />
+                            <Icon name="Loader" className="text-primary" />
                           </div>
                         )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -594,7 +594,7 @@ export default function OpenGraphImagesPage() {
                       >
                         {loadingImages[ogType.id] && (
                           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                            <Loader className="h-5 w-5 animate-spin text-primary" />
+                            <Icon name="Loader" className="text-primary" />
                           </div>
                         )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -643,7 +643,7 @@ export default function OpenGraphImagesPage() {
                       >
                         {loadingImages[ogType.id] && (
                           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                            <Loader className="h-5 w-5 animate-spin text-primary" />
+                            <Icon name="Loader" className="text-primary" />
                           </div>
                         )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -692,7 +692,7 @@ export default function OpenGraphImagesPage() {
                       >
                         {loadingImages[ogType.id] && (
                           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                            <Loader className="h-5 w-5 animate-spin text-primary" />
+                            <Icon name="Loader" className="text-primary" />
                           </div>
                         )}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -794,7 +794,7 @@ export default function OpenGraphImagesPage() {
                           >
                             {loadingImages[ogType.id] && (
                               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                                <Icon name="Loader" className="text-primary" />
                               </div>
                             )}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -854,7 +854,7 @@ export default function OpenGraphImagesPage() {
                           >
                             {loadingImages[ogType.id] && (
                               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                                <Icon name="Loader" className="text-primary" />
                               </div>
                             )}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -914,7 +914,7 @@ export default function OpenGraphImagesPage() {
                           >
                             {loadingImages[ogType.id] && (
                               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                                <Icon name="Loader" className="text-primary" />
                               </div>
                             )}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -974,7 +974,7 @@ export default function OpenGraphImagesPage() {
                           >
                             {loadingImages[ogType.id] && (
                               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                                <Icon name="Loader" className="text-primary" />
                               </div>
                             )}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1044,7 +1044,7 @@ export default function OpenGraphImagesPage() {
                           >
                             {loadingImages[ogType.id] && (
                               <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                                <Loader className="h-6 w-6 animate-spin text-primary" />
+                                <Icon name="Loader" className="text-primary" />
                               </div>
                             )}
                             {/* eslint-disable-next-line @next/next/no-img-element */}

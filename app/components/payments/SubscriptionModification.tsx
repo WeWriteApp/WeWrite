@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -10,18 +11,6 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { SubscriptionUpgradeFlow } from './SubscriptionUpgradeFlow';
 import { useAuth } from '../../providers/AuthProvider';
-import { 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
-  DollarSign, 
-  AlertTriangle, 
-  CheckCircle,
-  Copy,
-  Loader2,
-  TrendingUp,
-  TrendingDown,
-  Edit3
-} from 'lucide-react';
 import { toast } from '../ui/use-toast';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 
@@ -235,7 +224,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Edit3 className="h-5 w-5" />
+            <Icon name="Edit3" size={20} />
             Modify Subscription
           </CardTitle>
           <CardDescription>
@@ -245,7 +234,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
         <CardContent className="space-y-6">
           {error && (
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <Icon name="AlertTriangle" size={16} />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>
                 {error}
@@ -258,7 +247,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
                     toast.success('Error message copied to clipboard');
                   }}
                 >
-                  <Copy className="h-3 w-3 mr-1" />
+                  <Icon name="Copy" size={12} className="mr-1" />
                   Copy
                 </Button>
               </AlertDescription>
@@ -309,8 +298,8 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
                     
                     <div className="flex items-start justify-between mb-2">
                       <h5 className="font-medium">{tier.name}</h5>
-                      {isUpgrade && <TrendingUp className="h-4 w-4 text-green-600" />}
-                      {isDowngrade && <TrendingDown className="h-4 w-4 text-orange-600" />}
+                      {isUpgrade && <Icon name="TrendingUp" size={16} className="text-green-600" />}
+                      {isDowngrade && <Icon name="TrendingDown" size={16} className="text-orange-600" />}
                     </div>
                     
                     <p className="text-lg font-bold mb-1">{formatCurrency(tier.amount)}</p>
@@ -339,7 +328,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
                   onClick={handleCustomAmountSelect}
                   disabled={loadingPreview}
                 >
-                  <DollarSign className="h-4 w-4 mr-2" />
+                  <Icon name="DollarSign" size={16} className="mr-2" />
                   Set Custom Amount
                 </Button>
               </div>
@@ -418,9 +407,9 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
               <div className="p-4 border rounded-lg">
                 <h4 className="font-medium mb-2 flex items-center gap-2">
                   {prorationPreview.isUpgrade ? (
-                    <ArrowUpCircle className="h-4 w-4 text-green-600" />
+                    <Icon name="ArrowUpCircle" size={16} className="text-green-600" />
                   ) : (
-                    <ArrowDownCircle className="h-4 w-4 text-orange-600" />
+                    <Icon name="ArrowDownCircle" size={16} className="text-orange-600" />
                   )}
                   {prorationPreview.isUpgrade ? 'Upgrade' : 'Downgrade'} Details
                 </h4>
@@ -445,7 +434,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
 
               {/* Important Notes */}
               <Alert>
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>Important</AlertTitle>
                 <AlertDescription className="text-sm">
                   <ul className="list-disc list-inside space-y-1 mt-2">
@@ -475,12 +464,12 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Icon name="Loader" />
                   Updating...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <Icon name="CheckCircle" size={16} className="mr-2" />
                   Confirm Change
                 </>
               )}

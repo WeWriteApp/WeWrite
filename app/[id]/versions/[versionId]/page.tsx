@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, use, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Clock, SkipForward } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { formatRelativeTime } from '../../../utils/formatRelativeTime';
 import { format } from 'date-fns';
@@ -202,7 +202,7 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
         />
         <div className="flex justify-center mt-4">
           <Button variant="outline" onClick={handleGoToVersionsList}>
-            <ChevronLeft className="h-4 w-4 mr-2" />
+            <Icon name="ChevronLeft" size={16} className="mr-2" />
             Back to Versions
           </Button>
         </div>
@@ -227,7 +227,7 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
               onClick={handleGoToVersionsList}
               className="text-muted-foreground hover:text-foreground"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <Icon name="ChevronLeft" size={16} className="mr-1" />
               All Versions
             </Button>
 
@@ -252,14 +252,14 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
               className="gap-1"
               title={previousVersion ? `Previous version (${formatRelativeTime(previousVersion.createdAt)})` : 'This is the first version'}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <Icon name="ChevronLeft" size={16} />
               <span className="hidden sm:inline">Older</span>
             </Button>
 
             {/* Center: Version info and position indicator */}
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <Icon name="Clock" size={16} className="text-muted-foreground" />
                 <span
                   className="font-medium cursor-help"
                   title={format(new Date(version.createdAt), 'PPpp')}
@@ -297,7 +297,7 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
                 title={nextVersion ? `Next version (${formatRelativeTime(nextVersion.createdAt)})` : 'This is the most recent version'}
               >
                 <span className="hidden sm:inline">Newer</span>
-                <ChevronRight className="h-4 w-4" />
+                <Icon name="ChevronRight" size={16} />
               </Button>
 
               {!isCurrentVersion && (
@@ -308,7 +308,7 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
                   className="gap-1"
                   title="Jump to current version"
                 >
-                  <SkipForward className="h-4 w-4" />
+                  <Icon name="SkipForward" size={16} />
                   <span className="hidden sm:inline">Current</span>
                 </Button>
               )}

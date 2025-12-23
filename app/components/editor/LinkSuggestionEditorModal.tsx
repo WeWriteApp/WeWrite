@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
-import { FileText, Sparkles } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
@@ -119,7 +119,7 @@ export default function LinkSuggestionEditorModal({
       <div className="space-y-4">
         {/* Suggestion Info */}
         <div className="flex items-center gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Icon name="Sparkles" size={16} className="text-primary" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-muted-foreground">
               Replace "<span className="font-medium text-foreground">{matchedText}</span>" with a link to:
@@ -170,7 +170,7 @@ export default function LinkSuggestionEditorModal({
         {/* Search Results */}
         <div className="space-y-2">
           <Label className="text-sm font-medium flex items-center gap-2">
-            <FileText className="h-4 w-4" />
+            <Icon name="FileText" size={16} />
             Select page to link to
           </Label>
           <div className="h-64">

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Wallet, Users, TrendingUp, DollarSign, Target, Activity } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useUsdAllocations } from '../../hooks/usePaymentAnalytics';
@@ -48,7 +48,7 @@ export function UsdAllocationsWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-primary" />
+            <Icon name="Wallet" size={20} className="text-primary" />
             USD Allocations
           </CardTitle>
           <CardDescription>User allocation patterns and distribution</CardDescription>
@@ -95,7 +95,7 @@ export function UsdAllocationsWidget({
     <Card className={`wewrite-card ${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5 text-primary" />
+          <Icon name="Wallet" size={20} className="text-primary" />
           USD Allocations
         </CardTitle>
         <CardDescription>
@@ -108,7 +108,7 @@ export function UsdAllocationsWidget({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-muted/50 dark:bg-muted/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <DollarSign className="h-4 w-4 text-primary" />
+                <Icon name="DollarSign" size={16} className="text-primary" />
                 <Badge variant="secondary" className="text-xs">Total</Badge>
               </div>
               <div className="text-lg font-bold text-foreground dark:text-muted-foreground">
@@ -119,7 +119,7 @@ export function UsdAllocationsWidget({
 
             <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Users className="h-4 w-4 text-green-600" />
+                <Icon name="Users" size={16} className="text-green-600" />
                 <Badge variant="secondary" className="text-xs">Active</Badge>
               </div>
               <div className="text-lg font-bold text-green-800 dark:text-green-400">
@@ -130,7 +130,7 @@ export function UsdAllocationsWidget({
 
             <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Target className="h-4 w-4 text-purple-600" />
+                <Icon name="Target" size={16} className="text-purple-600" />
                 <Badge variant="secondary" className="text-xs">Rate</Badge>
               </div>
               <div className="text-lg font-bold text-purple-800 dark:text-purple-400">
@@ -141,7 +141,7 @@ export function UsdAllocationsWidget({
 
             <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Activity className="h-4 w-4 text-amber-600" />
+                <Icon name="Activity" size={16} className="text-amber-600" />
                 <Badge variant="secondary" className="text-xs">Avg</Badge>
               </div>
               <div className="text-lg font-bold text-amber-800 dark:text-amber-400">
@@ -203,7 +203,7 @@ export function UsdAllocationsWidget({
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">
-                    <Wallet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <Icon name="Wallet" size={32} className="mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No allocation data</p>
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export function UsdAllocationsWidget({
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">
-                    <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <Icon name="Target" size={32} className="mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No distribution data</p>
                   </div>
                 </div>

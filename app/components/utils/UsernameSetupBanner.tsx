@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { User, ArrowRight } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { useBanner } from '../../providers/BannerProvider';
 import { useRouter } from 'next/navigation';
@@ -72,7 +72,7 @@ export default function UsernameSetupBanner() {
         }`}
       >
         <div className="flex items-center space-x-2 mb-2">
-          <User className="h-4 w-4 text-primary" />
+          <Icon name="User" size={16} className="text-primary" />
           <span className="text-sm font-medium text-foreground">Choose your username</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -91,7 +91,7 @@ export default function UsernameSetupBanner() {
             onClick={handleSetUsername}
           >
             <span>Set up</span>
-            <ArrowRight className="h-3 w-3 ml-1" />
+            <Icon name="ArrowRight" size={12} className="ml-1" />
           </Button>
         </div>
       </div>

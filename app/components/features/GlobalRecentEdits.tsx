@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Eye, Users, Loader2, Activity, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -157,9 +157,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
         params.set('_t', Date.now().toString());
       }
 
-      console.log('🌍 [GlobalRecentEdits] Fetching from /api/recent-edits/global with params:', params.toString());
-
-      // Call the NEW global recent edits API
+      // Call the global recent edits API
       const response = await fetch(`/api/recent-edits/global?${params}`, {
         cache: bustCache ? 'no-store' : 'default'
       });
@@ -190,8 +188,6 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
 
       setHasMore(data.hasMore || false);
       setNextCursor(data.nextCursor || null);
-
-      console.log(`🔄 [GlobalRecentEdits] Fetch complete: append=${append}, newEdits=${data.edits?.length || 0}, totalEdits=${append ? edits.length + (data.edits?.length || 0) : data.edits?.length || 0}, hasMore=${data.hasMore}, nextCursor=${data.nextCursor}`);
 
     } catch (error) {
       console.error('Error fetching global recent edits:', error);
@@ -230,8 +226,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
 
   // Listen for refresh events from page saves
   useEffect(() => {
-    const handleRefreshRecentEdits = (event: CustomEvent) => {
-      console.log('🔄 GlobalRecentEdits: Received refresh event, refetching data with cache bust');
+    const handleRefreshRecentEdits = () => {
       // Reset data and fetch fresh with cache busting
       setEdits([]);
       setNextCursor(null);
@@ -282,13 +277,13 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
       <div className={`space-y-4 ${className}`}>
         <div className="flex items-center justify-between">
           <SectionTitle 
-            icon={Activity} 
+            icon="Activity" 
             title="Recent Edits" 
             subtitle="Latest updates from the community"
           />
         </div>
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Icon name="Loader" size={24} className="text-muted-foreground" />
         </div>
       </div>
     );
@@ -299,7 +294,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
       <div className={`space-y-4 ${className}`}>
         <div className="flex items-center justify-between">
           <SectionTitle 
-            icon={Activity} 
+            icon="Activity" 
             title="Recent Edits" 
             subtitle="Latest updates from the community"
           />
@@ -318,7 +313,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
     <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <SectionTitle 
-          icon={Activity} 
+          icon="Activity" 
           title="Recent Edits" 
           subtitle="Latest updates from the community"
         />
@@ -385,7 +380,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
 
       {edits.length === 0 ? (
         <div className="text-center py-8">
-          <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <Icon name="Activity" size={48} className="text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No recent edits</h3>
           <p className="text-muted-foreground">
             {followingOnly && followingCount === 0 
@@ -436,7 +431,7 @@ export default function GlobalRecentEdits({ className = '' }: GlobalRecentEditsP
           {/* Infinite scroll loading indicator */}
           {(loadingMoreState || loadingMore) && (
             <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Icon name="Loader" size={24} className="text-muted-foreground" />
             </div>
           )}
 

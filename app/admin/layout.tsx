@@ -1,9 +1,9 @@
 "use client";
 
 import { AdminDataProvider, useAdminData } from '../providers/AdminDataProvider';
+import { Icon } from '@/components/ui/Icon';
 import { Switch } from '../components/ui/switch';
 import { Badge } from '../components/ui/badge';
-import { Database, Loader2 } from 'lucide-react';
 
 function AdminDataSourceToggle() {
   const { dataSource, setDataSource, isProduction, isHydrated } = useAdminData();
@@ -12,16 +12,16 @@ function AdminDataSourceToggle() {
   if (!isHydrated) {
     return (
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-lg px-4 py-2 shadow-lg">
-        <Database className="h-4 w-4 text-muted-foreground" />
+        <Icon name="Database" size={16} className="text-muted-foreground" />
         <span className="text-sm text-muted-foreground">Data:</span>
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <Icon name="Loader" className="text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-lg px-4 py-2 shadow-lg">
-      <Database className="h-4 w-4 text-muted-foreground" />
+      <Icon name="Database" size={16} className="text-muted-foreground" />
       <span className="text-sm text-muted-foreground">Data:</span>
       <div className="flex items-center gap-2">
         <span className={`text-sm ${!isProduction ? 'font-medium' : 'text-muted-foreground'}`}>

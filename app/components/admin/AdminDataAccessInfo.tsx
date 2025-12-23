@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Database, Shield, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface EnvironmentInfo {
   environment: {
@@ -45,7 +45,7 @@ export function AdminDataAccessInfo() {
     return (
       <div className="wewrite-card">
         <div className="flex items-center gap-2 mb-4">
-          <Database className="h-5 w-5 text-primary" />
+          <Icon name="Database" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Data Access Information</h3>
         </div>
         <div className="flex items-center justify-center py-4">
@@ -59,12 +59,12 @@ export function AdminDataAccessInfo() {
     return (
       <div className="wewrite-card">
         <div className="flex items-center gap-2 mb-4">
-          <Database className="h-5 w-5 text-primary" />
+          <Icon name="Database" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Data Access Information</h3>
         </div>
         <div className="p-4 bg-red-50 border border-red-200 rounded-md">
           <div className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="h-5 w-5" />
+            <Icon name="AlertTriangle" size={20} />
             <span className="font-medium">Error Loading Environment Info</span>
           </div>
           <p className="text-red-600 text-sm mt-1">{error}</p>
@@ -84,14 +84,14 @@ export function AdminDataAccessInfo() {
     <div className="wewrite-card">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Database className="h-5 w-5 text-primary" />
+        <Icon name="Database" size={20} className="text-primary" />
         <h3 className="text-lg font-semibold">Admin Data Access</h3>
       </div>
 
       {/* Admin Data Access Status */}
       <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
         <div className="flex items-center gap-2 mb-2">
-          <Shield className="h-5 w-5 text-green-600" />
+          <Icon name="Shield" size={20} className="text-green-600" />
           <span className="font-medium text-green-800">Admin Mode: Production Data Access</span>
         </div>
         <p className="text-green-700 text-sm">
@@ -163,7 +163,7 @@ export function AdminDataAccessInfo() {
       {/* Important Notes */}
       <div className="p-3 bg-muted/50 border border-border rounded-md">
         <div className="flex items-start gap-2">
-          <Info className="h-5 w-5 text-primary mt-0.5" />
+          <Icon name="Info" size={20} className="text-primary mt-0.5" />
           <div>
             <h4 className="font-medium text-foreground mb-1">Important Notes</h4>
             <ul className="text-primary text-sm space-y-1">
@@ -180,7 +180,7 @@ export function AdminDataAccessInfo() {
       {environmentInfo.environment.isDevelopment && (
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+            <Icon name="AlertTriangle" size={20} className="text-yellow-600 mt-0.5" />
             <div>
               <h4 className="font-medium text-yellow-800 mb-1">Development Environment</h4>
               <p className="text-yellow-700 text-sm">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import EmptyState from '../ui/EmptyState';
 import { PillLink } from './PillLink';
@@ -270,7 +270,7 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
     return (
       <div className="w-full h-96 flex items-center justify-center bg-muted/20 border border-red-200 dark:border-red-800 rounded-lg">
         <div className="text-center p-6">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <Icon name="AlertCircle" size={48} className="text-red-500 mx-auto mb-4" />
           <div className="text-red-600 dark:text-red-400 font-medium mb-2">Failed to load map</div>
           <div className="text-sm text-red-500 dark:text-red-500 mb-4">{error || status}</div>
           <div className="text-xs text-muted-foreground">
@@ -295,7 +295,7 @@ function MultiLocationMap({ pages, center, zoom, onPageClick }: MultiLocationMap
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/20 rounded-lg">
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Icon name="Loader" />
             <span>Loading map... ({status})</span>
           </div>
         </div>
@@ -411,7 +411,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
     return (
       <div className="flex items-center justify-center py-12 min-h-[400px]">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Icon name="Loader" />
           <span>Loading pages with locations...</span>
         </div>
       </div>
@@ -430,7 +430,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
   if (pages.length === 0) {
     return (
       <EmptyState
-        icon={MapPin}
+        icon="MapPin"
         title="No pages with locations"
         description={`${username} hasn't added location data to any pages yet. Pages can have locations added by clicking the map icon when editing.`}
         size="lg"
@@ -463,7 +463,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
         {/* Map overlay with page count */}
         <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-sm">
           <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-4 w-4 text-primary" />
+            <Icon name="MapPin" size={16} className="text-primary" />
             <span className="font-medium">{pages.length}</span>
             <span className="text-muted-foreground">
               {pages.length === 1 ? 'page' : 'pages'} with locations
@@ -482,7 +482,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
               className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Icon name="MapPin" size={16} className="text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <PillLink
                     href={`/${page.id}`}
@@ -505,7 +505,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
                   onClick={() => router.push(`/${page.id}/location/view`)}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <Icon name="ExternalLink" size={16} />
                 </Button>
               </div>
             </div>

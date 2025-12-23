@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Heart } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import DynamicPagePreviewCard from './DynamicPagePreviewCard';
 
 interface UseCasesCardProps {

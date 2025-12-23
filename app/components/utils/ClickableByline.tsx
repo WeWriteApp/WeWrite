@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, ReactNode } from 'react';
-import { ChevronDown, Loader } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,9 +35,9 @@ export default function ClickableByline({
           {children}
           <span className="flex items-center">
             {isChanging ? (
-              <Loader className="h-3 w-3 animate-spin" />
+              <Icon name="Loading" size={12} className="animate-spin" trigger="loop" />
             ) : (
-              <ChevronDown className="h-3 w-3 transition-transform duration-200 ease-in-out group-hover:text-foreground" />
+              <Icon name="ChevronDown" size={12} className="transition-transform duration-200 ease-in-out group-hover:text-foreground" />
             )}
           </span>
         </div>

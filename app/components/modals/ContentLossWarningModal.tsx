@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { AlertTriangle, X, Save, ExternalLink } from 'lucide-react';
 import { ExistingPage } from '../../utils/duplicateTitleValidation';
 
 interface ContentLossWarningModalProps {
@@ -37,7 +37,7 @@ export function ContentLossWarningModal({
       <DialogContent className="max-w-md w-[90vw]">
         <DialogHeader className="relative">
           <DialogTitle className="text-lg font-semibold pr-8 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <Icon name="AlertTriangle" size={20} className="text-red-500" />
             Unsaved Content Warning
           </DialogTitle>
           <Button
@@ -46,7 +46,7 @@ export function ContentLossWarningModal({
             className="absolute right-0 top-0 h-6 w-6 p-0"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
           </Button>
         </DialogHeader>
 
@@ -64,7 +64,7 @@ export function ContentLossWarningModal({
           {/* Recommendation */}
           <div className="p-3 bg-muted/50 dark:bg-muted/20 border border-border dark:border-border rounded-lg">
             <div className="flex items-start gap-2">
-              <Save className="h-4 w-4 text-primary dark:text-muted-foreground mt-0.5 flex-shrink-0" />
+              <Icon name="Save" size={16} className="text-primary dark:text-muted-foreground mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <div className="font-medium text-foreground dark:text-muted-foreground mb-1">
                   Recommended: Save your content first
@@ -97,7 +97,7 @@ export function ContentLossWarningModal({
               className="w-full gap-2 bg-green-600 hover:bg-green-700"
               variant="default"
             >
-              <Save className="h-4 w-4" />
+              <Icon name="Save" size={16} />
               Stay & Rename Title (Recommended)
             </Button>
             
@@ -107,7 +107,7 @@ export function ContentLossWarningModal({
               variant="destructive"
               className="w-full gap-2"
             >
-              <ExternalLink className="h-4 w-4" />
+              <Icon name="ExternalLink" size={16} />
               Go Anyway (Lose Content)
             </Button>
             

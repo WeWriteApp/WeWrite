@@ -1,13 +1,13 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import PillLink from '../utils/PillLink';
 import { Button } from '../ui/button';
-import { Plus } from 'lucide-react';
 
 interface Note {
   id: string;
@@ -180,7 +180,7 @@ const DayContainer = React.memo(function DayContainer({
               className="w-full"
               onClick={() => onAddNewClick(date)}
             >
-              <Plus className="w-4 h-4" />
+              <Icon name="Plus" size={16} />
               Add new
             </Button>
           )}

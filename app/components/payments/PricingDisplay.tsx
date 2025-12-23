@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { Info, Zap, CreditCard } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { calculateTokensForAmount } from '../../utils/subscriptionTiers';
 
 interface PricingDisplayProps {
@@ -146,7 +146,7 @@ export function PricingDisplay({
         {/* Token Allocation */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-primary" />
+            <Icon name="Zap" size={16} className="text-primary" />
             <span className="font-medium">Monthly Tokens</span>
           </div>
           <div className="text-lg font-semibold">{breakdown.tokens}</div>
@@ -165,7 +165,7 @@ export function PricingDisplay({
                 <span className="flex items-center gap-2">
                   Tax {!isCalculatingTax && `(${(calculatedTaxRate * 100).toFixed(1)}%)`}
                   {isCalculatingTax && (
-                    <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                    <Icon name="Loader" size={12} />
                   )}
                 </span>
                 <span>

@@ -1,7 +1,7 @@
 import * as React from "react"
+import { Icon } from '@/components/ui/Icon';
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
 import { cn } from "../../lib/utils"
 
 /**
@@ -236,7 +236,7 @@ const SideDrawerHeader = ({
           className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground ml-4"
           onClick={onClose}
         >
-          <X className="h-5 w-5" />
+          <Icon name="X" size={20} />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       )}

@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import DayContainer from './DayContainer';
 import { useAuth } from '../../providers/AuthProvider';
 // Removed direct Firebase imports - now using API endpoints
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { cn } from '../../lib/utils';
 /**
@@ -451,10 +451,10 @@ export default function DailyNotesCarousel({
           className="h-[200px] w-48 rounded-xl flex flex-col items-center justify-center gap-2 text-sm border-dashed"
         >
           {loadingPast ? (
-            <div className="animate-spin">⟳</div>
+            <Icon name="Loader" size={16} />
           ) : (
             <>
-              <ChevronLeft className="h-4 w-4" />
+              <Icon name="ChevronLeft" size={16} />
               <span className="text-center leading-tight">Load 15 More</span>
             </>
           )}
@@ -505,10 +505,10 @@ export default function DailyNotesCarousel({
           className="h-[200px] w-48 rounded-xl flex flex-col items-center justify-center gap-2 text-sm border-dashed"
         >
           {loadingFuture ? (
-            <div className="animate-spin">⟳</div>
+            <Icon name="Loader" size={16} />
           ) : (
             <>
-              <ChevronRight className="h-4 w-4" />
+              <Icon name="ChevronRight" size={16} />
               <span className="text-center leading-tight">Load 15 More</span>
             </>
           )}

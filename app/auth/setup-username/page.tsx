@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { addUsername, checkUsernameAvailability } from "../../utils/apiClient";
 import { Button } from "../../components/ui/button";
@@ -8,7 +9,6 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { Check, Loader2, X, AlertCircle } from "lucide-react";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { cn } from "../../lib/utils";
 import { debounce } from "lodash";
@@ -220,15 +220,15 @@ function SetupUsernameContent() {
             />
             {isChecking && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Icon name="Loader" className="text-muted-foreground" />
               </div>
             )}
             {!isChecking && username && username.length >= 3 && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {isAvailable ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Icon name="Check" size={16} className="text-green-500" />
                 ) : (
-                  <X className="h-4 w-4 text-destructive" />
+                  <Icon name="X" size={16} className="text-destructive" />
                 )}
               </div>
             )}
@@ -269,7 +269,7 @@ function SetupUsernameContent() {
 
         {error && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <Icon name="AlertCircle" size={16} />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -311,7 +311,7 @@ export default function SetupUsernamePage() {
           </p>
         </div>
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+          <Icon name="Loader" size={32} />
         </div>
       </ModernAuthLayout>
     }>

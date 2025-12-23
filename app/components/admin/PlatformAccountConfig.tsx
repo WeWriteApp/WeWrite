@@ -6,22 +6,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { 
-  Settings, 
-  DollarSign, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle,
-  RefreshCw,
-  Wallet,
-  TrendingUp
-} from 'lucide-react';
 import { useToast } from '../ui/use-toast';
 
 interface PlatformAccountStatus {
@@ -198,12 +189,12 @@ export const PlatformAccountConfig: React.FC = () => {
   const getStatusBadge = (configured: boolean) => {
     return configured ? (
       <Badge variant="default" className="bg-green-100 text-green-800">
-        <CheckCircle className="h-3 w-3 mr-1" />
+        <Icon name="CheckCircle" size={12} className="mr-1" />
         Configured
       </Badge>
     ) : (
       <Badge variant="destructive">
-        <XCircle className="h-3 w-3 mr-1" />
+        <Icon name="XCircle" size={12} className="mr-1" />
         Not Configured
       </Badge>
     );
@@ -212,7 +203,7 @@ export const PlatformAccountConfig: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <RefreshCw className="h-8 w-8 animate-spin" />
+        <Icon name="RefreshCw" size={32} className="animate-spin" />
         <span className="ml-2">Loading platform configuration...</span>
       </div>
     );
@@ -232,7 +223,7 @@ export const PlatformAccountConfig: React.FC = () => {
           variant="secondary"
           className="flex items-center gap-2"
         >
-          <RefreshCw className="h-4 w-4" />
+          <Icon name="RefreshCw" size={16} />
           Refresh
         </Button>
       </div>
@@ -241,7 +232,7 @@ export const PlatformAccountConfig: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+            <Icon name="Settings" size={20} />
             Current Platform Status
           </CardTitle>
         </CardHeader>
@@ -277,7 +268,7 @@ export const PlatformAccountConfig: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
+            <Icon name="Wallet" size={20} />
             Platform Balance
           </CardTitle>
         </CardHeader>
@@ -286,7 +277,7 @@ export const PlatformAccountConfig: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <Icon name="DollarSign" size={16} className="text-green-600" />
                   <span className="text-sm font-medium text-green-800">Available Balance</span>
                 </div>
                 <p className="text-2xl font-bold text-green-600">
@@ -295,7 +286,7 @@ export const PlatformAccountConfig: React.FC = () => {
               </div>
               <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
                 <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-yellow-600" />
+                  <Icon name="TrendingUp" size={16} className="text-yellow-600" />
                   <span className="text-sm font-medium text-yellow-800">Pending Balance</span>
                 </div>
                 <p className="text-2xl font-bold text-yellow-600">
@@ -319,7 +310,7 @@ export const PlatformAccountConfig: React.FC = () => {
               disabled={actionLoading === 'initialize'}
               className="w-full"
             >
-              {actionLoading === 'initialize' && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+              {actionLoading === 'initialize' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
               Initialize Fund Holding Model
             </Button>
             
@@ -329,7 +320,7 @@ export const PlatformAccountConfig: React.FC = () => {
               variant="secondary"
               className="w-full"
             >
-              {actionLoading === 'enable_manual_payouts' && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+              {actionLoading === 'enable_manual_payouts' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
               Enable Manual Payouts
             </Button>
           </div>
@@ -369,7 +360,7 @@ export const PlatformAccountConfig: React.FC = () => {
             disabled={actionLoading === 'create_platform_payout'}
             className="w-full"
           >
-            {actionLoading === 'create_platform_payout' && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+            {actionLoading === 'create_platform_payout' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
             Create Payout
           </Button>
         </CardContent>
@@ -398,7 +389,7 @@ export const PlatformAccountConfig: React.FC = () => {
                 onClick={handleCheckBalance}
                 disabled={actionLoading === 'check_balance'}
               >
-                {actionLoading === 'check_balance' && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+                {actionLoading === 'check_balance' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
                 Check Balance
               </Button>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, Clock, Mail, RefreshCw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { StatusIcon } from '../ui/status-icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
@@ -129,7 +129,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
             className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
             title="Check if your email has been verified"
           >
-            <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <Icon name="RefreshCw" size={12} className={`mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button
@@ -140,7 +140,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
             className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
             title="Send a new verification email"
           >
-            <Mail className={`h-3 w-3 mr-1 ${isResending ? 'opacity-50' : ''}`} />
+            <Icon name="Mail" size={12} className={`mr-1 ${isResending ? 'opacity-50' : ''}`} />
             Resend
           </Button>
         </div>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { cn } from '../../lib/utils';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 export type LoadingVariant = 'spinner' | 'dots' | 'pulse' | 'skeleton';
 export type LoadingSize = 'sm' | 'md' | 'lg';
@@ -38,21 +38,24 @@ export function LoadingState({
 }: LoadingStateProps) {
   const sizeClasses = {
     sm: {
-      spinner: 'h-4 w-4',
+      spinner: 16,
+      spinnerContainer: 'h-4 w-4',
       text: 'text-sm',
       gap: 'gap-2',
       dots: 'h-1.5 w-1.5',
       pulse: 'h-8 w-8'
     },
     md: {
-      spinner: 'h-5 w-5',
+      spinner: 20,
+      spinnerContainer: 'h-5 w-5',
       text: 'text-sm',
       gap: 'gap-3',
       dots: 'h-2 w-2',
       pulse: 'h-12 w-12'
     },
     lg: {
-      spinner: 'h-6 w-6',
+      spinner: 24,
+      spinnerContainer: 'h-6 w-6',
       text: 'text-base',
       gap: 'gap-4',
       dots: 'h-2.5 w-2.5',
@@ -69,14 +72,11 @@ export function LoadingState({
           <div className="relative">
             {/* Outer glow ring */}
             <div className={cn(
-              sizes.spinner,
+              sizes.spinnerContainer,
               "absolute inset-0 rounded-full bg-accent-30 blur-md animate-pulse"
             )} />
             {/* Spinner */}
-            <Loader2 className={cn(
-              sizes.spinner,
-              "animate-spin text-accent-80 relative"
-            )} />
+            <Icon name="Loader" className="text-accent-80 relative" />
           </div>
         );
 
@@ -176,18 +176,14 @@ export function LoadingSpinner({
   className?: string;
   size?: LoadingSize;
 }) {
-  const sizeClasses = {
-    sm: 'h-3 w-3',
-    md: 'h-4 w-4',
-    lg: 'h-5 w-5'
+  const sizes = {
+    sm: 12,
+    md: 16,
+    lg: 20
   };
 
   return (
-    <Loader2 className={cn(
-      sizeClasses[size],
-      "animate-spin",
-      className
-    )} />
+    <Icon name="Loader" size={sizes[size]} className={className} />
   );
 }
 

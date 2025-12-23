@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Info } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import ContentCarousel from './ContentCarousel';

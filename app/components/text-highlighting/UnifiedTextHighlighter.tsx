@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { 
   getHighlightHashFromUrl, 
   getStoredHighlight, 
@@ -182,7 +182,7 @@ const UnifiedTextHighlighter: React.FC<UnifiedTextHighlighterProps> = ({
         className="flex-shrink-0 p-1 hover:bg-muted rounded-sm transition-colors"
         aria-label="Dismiss highlight"
       >
-        <X className="h-4 w-4" />
+        <Icon name="X" size={16} />
       </button>
     </div>
   );

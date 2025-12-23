@@ -1,8 +1,8 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
-import { ChevronLeft, X } from 'lucide-react';
 
 interface SettingsHeaderProps {
   title?: string;
@@ -55,7 +55,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
               className="text-muted-foreground hover:text-foreground"
               aria-label="Back to Home"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <Icon name="ChevronLeft" size={20} />
             </Button>
           ) : (
             <Button
@@ -65,7 +65,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
               className="text-muted-foreground hover:text-foreground"
               aria-label="Back to Settings"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <Icon name="ChevronLeft" size={20} />
             </Button>
           )}
         </div>
@@ -84,7 +84,7 @@ export default function SettingsHeader({ title }: SettingsHeaderProps) {
             className="text-muted-foreground hover:text-foreground"
             aria-label="Close Settings"
           >
-            <X className="h-5 w-5" />
+            <Icon name="X" size={20} />
           </Button>
         </div>
       </header>

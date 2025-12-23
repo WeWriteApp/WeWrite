@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
+import { Icon } from '@/components/ui/Icon';
 import UnifiedLoader from "../components/ui/unified-loader";
 import SettingsHeader from '../components/settings/SettingsHeader';
 import { cn } from '../lib/utils';
@@ -59,7 +60,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <Icon name="Loader" size={32} className="mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -125,7 +126,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
         </div>
 
         {/* Main Content Area - Remove excessive left margin, content is already in safe zone */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto pb-20 lg:pb-0">
           {children}
         </div>
       </div>

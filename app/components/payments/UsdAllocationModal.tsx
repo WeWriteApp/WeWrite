@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, DollarSign } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -345,7 +345,7 @@ export function UsdAllocationModal({
                 disabled={isLoading || (parseDollarInputToCents(inputValue) || 0) === 0}
                 className="h-10 w-10 p-0 flex-shrink-0"
               >
-                <Minus className="h-4 w-4" />
+                <Icon name="Minus" size={16} />
               </Button>
 
               {/* Input field */}
@@ -355,7 +355,7 @@ export function UsdAllocationModal({
                 placeholder="0.00"
                 value={inputValue}
                 onChange={(e) => handleInputChange(e.target.value)}
-                leftIcon={<DollarSign className="h-4 w-4" />}
+                leftIcon={<Icon name="DollarSign" size={16} />}
                 wrapperClassName="flex-1"
                 disabled={isLoading}
               />
@@ -368,7 +368,7 @@ export function UsdAllocationModal({
                 disabled={isLoading}
                 className="h-10 w-10 p-0 flex-shrink-0"
               >
-                <Plus className="h-4 w-4" />
+                <Icon name="Plus" size={16} />
               </Button>
             </div>
             {error && (

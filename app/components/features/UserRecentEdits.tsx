@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, Loader2, Activity } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import ActivityCard from '../activity/ActivityCard';
 import EmptyState from '../ui/EmptyState';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
@@ -179,10 +179,10 @@ export default function UserRecentEdits({
     return (
       <div className="space-y-4">
         <SectionTitle
-          icon={Activity}
+          icon="Activity"
           title={`${username}'s Recent Edits`}
         >
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <Icon name="Loader" className="text-muted-foreground" />
         </SectionTitle>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -197,7 +197,7 @@ export default function UserRecentEdits({
     return (
       <div className="space-y-4">
         <SectionTitle
-          icon={Activity}
+          icon="Activity"
           title={`${username}'s Recent Edits`}
         />
         <div className="border border-destructive/20 rounded-lg p-4 text-center text-destructive">
@@ -210,14 +210,14 @@ export default function UserRecentEdits({
   return (
     <div className="space-y-4">
       <SectionTitle
-        icon={Activity}
+        icon="Activity"
         title={`${username}'s Recent Edits`}
       />
 
       {/* Content */}
       {edits.length === 0 ? (
         <EmptyState
-          icon={Clock}
+          icon="Clock"
           title="No recent edits found"
           description={`${username} hasn't made any recent page edits.`}
           size="md"
@@ -260,7 +260,7 @@ export default function UserRecentEdits({
           {/* Loading more indicator */}
           {loadingMore && (
             <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Icon name="Loader" className="text-muted-foreground" />
             </div>
           )}
 

@@ -4,6 +4,7 @@ import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { Icon, IconName } from '@/components/ui/Icon';
 
 // Single drag type for all items
 const DRAG_TYPE = 'unified-nav-item';
@@ -17,7 +18,7 @@ interface DragItem {
 interface UnifiedNavButtonProps {
   id: string;
   index: number;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: IconName;
   onClick: () => void;
   isActive: boolean;
   ariaLabel: string;
@@ -32,7 +33,7 @@ interface UnifiedNavButtonProps {
 export default function UnifiedNavButton({
   id,
   index,
-  icon: Icon,
+  icon,
   onClick,
   isActive,
   ariaLabel,
@@ -110,7 +111,7 @@ export default function UnifiedNavButton({
         // Press feedback handled by framer-motion
         // Active state - use accent/primary color for clear indication
         isActive
-          ? "bg-accent/15 text-accent"
+          ? "bg-accent/15 text-accent hover:bg-accent/25"
           : "text-muted-foreground hover:text-foreground",
         // Navigation loading state
         isNavigating && "opacity-75",
@@ -133,12 +134,15 @@ export default function UnifiedNavButton({
         animate={isActive ? { scale: 1.05 } : { scale: 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
-        <Icon className={cn(
-          // Original icon size from the old NavButton
-          "h-5 w-5 flex-shrink-0",
-          // Active icon gets accent color
-          isActive && "text-accent"
-        )} />
+        <Icon
+          name={icon}
+          size={20}
+          weight="regular"
+          className={cn(
+            "flex-shrink-0",
+            isActive && "text-accent"
+          )}
+        />
         {children}
       </motion.div>
 

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { X } from "lucide-react"
+import { Icon } from '@/components/ui/Icon';
 import { Input, InputProps } from "./input"
 import { cn } from "../../lib/utils"
 
@@ -59,7 +59,7 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
         className="text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
         aria-label="Clear input"
       >
-        <X className="h-4 w-4" />
+        <Icon name="X" size={16} />
       </button>
     ) : undefined;
 

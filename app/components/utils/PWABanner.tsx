@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Download } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { usePWA } from '../../providers/PWAProvider';
 import { useBanner } from '../../providers/BannerProvider';
@@ -102,7 +102,7 @@ export default function PWABanner() {
           <div className="flex items-center gap-3 max-w-4xl w-full justify-between">
             {/* Left: Icon + Message */}
             <div className="flex items-center gap-2 min-w-0">
-              <Download className="h-4 w-4 flex-shrink-0" />
+              <Icon name="Download" size={16} className="flex-shrink-0" />
               <span className="text-sm font-medium truncate">
                 Install WeWrite as an app
               </span>
@@ -143,7 +143,7 @@ export default function PWABanner() {
             <p className="text-sm">{getPWAInstallInstructions()}</p>
           </div>
           <div className="flex items-center space-x-2 mt-2">
-            <Download className="h-5 w-5 text-primary" />
+            <Icon name="Download" size={20} className="text-primary" />
             <p className="text-sm">
               Installing as an app gives you a better experience with faster loading times and offline access.
             </p>

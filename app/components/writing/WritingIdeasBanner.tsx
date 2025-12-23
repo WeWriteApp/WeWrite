@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight, Lightbulb, RefreshCw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { type WritingIdea } from '../../data/writingIdeas';
@@ -164,17 +164,17 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
         onClick={isExpanded ? handleCollapse : handleExpand}
       >
         <div className="flex items-center gap-2">
-          <Lightbulb className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Lightbulb" size={20} className="text-muted-foreground" />
           <span className="text-sm font-medium">
             {isLoading ? 'Loading writing ideas...' : 'Need writing ideas?'}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {isLoading && <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />}
+          {isLoading && <Icon name="RefreshCw" size={16} className="text-muted-foreground animate-spin" />}
           {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+            <Icon name="ChevronUp" size={16} className="text-muted-foreground transition-transform duration-200" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+            <Icon name="ChevronDown" size={16} className="text-muted-foreground transition-transform duration-200" />
           )}
         </div>
       </div>
@@ -203,7 +203,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
                     <div className="text-center">
                       {isLoading ? (
                         <>
-                          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-muted-foreground" />
+                          <Icon name="RefreshCw" size={24} className="animate-spin mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm text-muted-foreground">Loading ideas...</p>
                         </>
                       ) : (
@@ -244,7 +244,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-card/90 border border-border/70 shadow-md rounded-full p-1"
                 onClick={() => scrollByAmount(200)}
               >
-                <ChevronRight className="h-5 w-5" />
+                <Icon name="ChevronRight" size={20} />
               </button>
             )}
             {canScrollLeft && (
@@ -253,7 +253,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
                 className="absolute left-2 top-1/2 -translate-y-1/2 bg-card/90 border border-border/70 shadow-md rounded-full p-1"
                 onClick={() => scrollByAmount(-200)}
               >
-                <ChevronLeft className="h-5 w-5" />
+                <Icon name="ChevronLeft" size={20} />
               </button>
             )}
           </div>

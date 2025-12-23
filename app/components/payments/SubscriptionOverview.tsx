@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { CreditCard, Settings, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
 
 // Removed old smart subscription state hook - using API-first approach
@@ -136,14 +136,14 @@ export function SubscriptionOverview() {
       <Card className="wewrite-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
+            <Icon name="CreditCard" size={20} />
             Account Funding
           </CardTitle>
           <CardDescription>Your account funding overview</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={24} />
           </div>
         </CardContent>
       </Card>
@@ -154,7 +154,7 @@ export function SubscriptionOverview() {
     <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
+          <Icon name="CreditCard" size={20} />
           Account Funding
         </CardTitle>
         <CardDescription>Your account funding overview and management</CardDescription>
@@ -162,7 +162,7 @@ export function SubscriptionOverview() {
       <CardContent className="space-y-4">
         {error && (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <Icon name="AlertTriangle" size={16} />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -170,7 +170,7 @@ export function SubscriptionOverview() {
 
         {!subscription ? (
           <div className="text-center py-6">
-            <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <Icon name="CreditCard" size={48} className="mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No active funding</h3>
             <p className="text-muted-foreground mb-4">
               {USD_UI_TEXT.NO_BALANCE_MESSAGE}
@@ -210,7 +210,7 @@ export function SubscriptionOverview() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-primary" />
+                  <Icon name="DollarSign" size={16} className="text-primary" />
                   <span className="text-sm font-medium">Pledged</span>
                 </div>
                 <p className="text-lg font-bold text-primary">
@@ -219,7 +219,7 @@ export function SubscriptionOverview() {
               </div>
               <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <Icon name="DollarSign" size={16} className="text-green-600" />
                   <span className="text-sm font-medium">Available</span>
                 </div>
                 <p className="text-lg font-bold text-green-600">
@@ -231,7 +231,7 @@ export function SubscriptionOverview() {
             {/* Status Alerts */}
             {subscription.status === 'incomplete' && (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>Payment Required</AlertTitle>
                 <AlertDescription>
                   {getSubscriptionGuidanceMessage(subscription.status)}
@@ -241,7 +241,7 @@ export function SubscriptionOverview() {
 
             {subscription.status === 'pending' && (
               <Alert>
-                <Clock className="h-4 w-4" />
+                <Icon name="Clock" size={16} />
                 <AlertTitle>Processing Payment</AlertTitle>
                 <AlertDescription>
                   {getSubscriptionGuidanceMessage(subscription.status)}
@@ -251,7 +251,7 @@ export function SubscriptionOverview() {
 
             {subscription.status === 'past_due' && (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>Payment Issue</AlertTitle>
                 <AlertDescription>
                   {getSubscriptionGuidanceMessage(subscription.status)}
@@ -263,7 +263,7 @@ export function SubscriptionOverview() {
             {(subscription.status === 'canceled' || subscription.status === 'cancelled' ||
               (subscription.status === 'active' && subscription.cancelAtPeriodEnd)) && (
               <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertTitle>
                   {subscription.cancelAtPeriodEnd ? 'Subscription Will Be Cancelled' : 'Subscription Canceled'}
                 </AlertTitle>
@@ -297,7 +297,7 @@ export function SubscriptionOverview() {
 
             {subscription.status === 'trialing' && (
               <Alert>
-                <CheckCircle className="h-4 w-4" />
+                <Icon name="CheckCircle" size={16} />
                 <AlertTitle>Free Trial Active</AlertTitle>
                 <AlertDescription>
                   You're currently in your free trial period. Your first payment will be processed on {nextBillingDate}.
@@ -313,13 +313,13 @@ export function SubscriptionOverview() {
           <>
             <Button variant="success" className="flex-1" asChild>
               <Link href="/settings/fund-account/manage">
-                <CheckCircle className="h-4 w-4 mr-2" />
+                <Icon name="CheckCircle" size={16} className="mr-2" />
                 Reactivate Funding
               </Link>
             </Button>
             <Button variant="secondary" asChild>
               <Link href="/settings/fund-account">
-                <Settings className="h-4 w-4 mr-2" />
+                <Icon name="Settings" size={16} className="mr-2" />
                 Manage
               </Link>
             </Button>
@@ -327,7 +327,7 @@ export function SubscriptionOverview() {
         ) : (
           <Button variant="secondary" className="w-full" asChild>
             <Link href="/settings/fund-account">
-              <Settings className="h-4 w-4 mr-2" />
+              <Icon name="Settings" size={16} className="mr-2" />
               Manage Account Funding
             </Link>
           </Button>

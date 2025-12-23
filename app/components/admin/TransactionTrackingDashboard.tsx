@@ -7,18 +7,7 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
-import {
-  Search,
-  ExternalLink,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  ArrowRight,
-  DollarSign,
-  Users,
-  Activity
-} from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { StatusIcon } from '../ui/status-icon';
 
 interface FinancialTransaction {
@@ -199,7 +188,7 @@ export default function TransactionTrackingDashboard() {
         </div>
         {transaction.stripeInvoiceId && (
           <div className="mt-2 flex items-center gap-2">
-            <ExternalLink className="h-3 w-3" />
+            <Icon name="ExternalLink" size={12} />
             <span className="text-xs">Stripe Invoice: {transaction.stripeInvoiceId}</span>
           </div>
         )}
@@ -211,7 +200,7 @@ export default function TransactionTrackingDashboard() {
     <Card className="mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
+          <Icon name="Activity" size={20} />
           Transaction Chain
         </CardTitle>
         <CardDescription>
@@ -245,7 +234,7 @@ export default function TransactionTrackingDashboard() {
                 {renderTransaction(transaction)}
               </div>
               {index < chain.transactions.length - 1 && (
-                <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Icon name="ArrowRight" size={16} className="text-muted-foreground flex-shrink-0" />
               )}
             </div>
           ))}
@@ -269,7 +258,7 @@ export default function TransactionTrackingDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
+            <Icon name="Search" size={20} />
             Search Transactions
           </CardTitle>
         </CardHeader>

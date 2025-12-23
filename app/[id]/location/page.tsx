@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Icon } from '@/components/ui/Icon';
 import LocationPickerPage from '../../components/map/LocationPickerPage';
 
 interface Location {
@@ -127,7 +128,7 @@ function LocationPickerContent() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="h-8 w-8 mx-auto animate-spin rounded-full border-2 border-primary border-t-transparent mb-4" />
+          <Icon name="Loader" size={32} className="mx-auto mb-4" />
           <p className="text-muted-foreground">Loading page...</p>
         </div>
       </div>

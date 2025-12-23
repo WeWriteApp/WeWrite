@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import WeWriteLogo from '../ui/WeWriteLogo';
@@ -41,7 +41,7 @@ export default function PageVersionsHeader({
             onClick={handleBack}
             className="flex items-center gap-2"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <Icon name="ChevronLeft" size={16} />
             <span className="hidden sm:inline">Back</span>
           </Button>
 

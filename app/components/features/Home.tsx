@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 // Removed useOptimizedHome - now using UnifiedRecentActivity
-import { Activity } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import GlobalRecentEdits from "./GlobalRecentEdits";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmptyState from "../ui/EmptyState";
@@ -17,10 +17,8 @@ import { EmailVerificationModal } from "../auth/EmailVerificationModal";
 
 
 const Home: React.FC = () => {
-  console.log('🏠 [HOME_COMPONENT] Rendering - timestamp:', new Date().toISOString());
   const { user, isAuthenticated, isLoading } = useAuth();
   const { bannerOffset } = useBanner();
-  console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!user });
   const router = useRouter();
   // Removed recentEditsFilterState - now handled by UnifiedRecentActivity component
 
@@ -93,7 +91,7 @@ const Home: React.FC = () => {
           {/* Recent activity section skeleton */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
-              <Activity className="h-5 w-5 text-muted-foreground" />
+              <Icon name="Activity" size={20} className="text-muted-foreground" />
               <div className="h-6 w-40 bg-muted rounded animate-pulse" />
             </div>
             <div className="space-y-4">

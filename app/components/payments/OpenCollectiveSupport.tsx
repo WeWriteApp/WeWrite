@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { ArrowRight, Heart } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { openExternalLink } from '../../utils/pwa-detection';
 
 interface OpenCollectiveSupportProps {
@@ -33,7 +33,7 @@ export default function OpenCollectiveSupport({
     return (
       <div className={`flex flex-col items-center space-y-4 p-6 ${className}`}>
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-          <Heart className="h-6 w-6 text-primary" />
+          <Icon name="Heart" size={24} className="text-primary" />
         </div>
 
         <h2 className="text-xl font-semibold text-center">{title}</h2>
@@ -44,7 +44,7 @@ export default function OpenCollectiveSupport({
           className="w-full mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-primary hover:from-teal-600 hover:to-primary/90 animate-gradient-x"
         >
           Support WeWrite
-          <ArrowRight className="h-4 w-4" />
+          <Icon name="ArrowRight" size={16} />
         </Button>
       </div>
     );
@@ -54,7 +54,7 @@ export default function OpenCollectiveSupport({
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Heart className="h-5 w-5 text-primary" />
+          <Icon name="Heart" size={20} className="text-primary" />
           {title}
         </CardTitle>
         <CardDescription>
@@ -72,7 +72,7 @@ export default function OpenCollectiveSupport({
           className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-teal-500 to-primary hover:from-teal-600 hover:to-primary/90 animate-gradient-x"
         >
           Support WeWrite
-          <ArrowRight className="h-4 w-4" />
+          <Icon name="ArrowRight" size={16} />
         </Button>
       </CardFooter>
     </Card>

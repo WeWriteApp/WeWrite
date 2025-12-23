@@ -3,10 +3,10 @@ import { getPagePledgeStats } from '../../../../services/pledgeStatsService';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: pageId } = params;
+    const { id: pageId } = await params;
 
     if (!pageId) {
       return NextResponse.json(

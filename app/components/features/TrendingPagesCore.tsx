@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 import PillLink from "../utils/PillLink";
-import { Flame, Loader } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import SimpleSparkline from "../utils/SimpleSparkline";
 // import Link from "next/link";
 import { Button } from '../ui/button';
@@ -196,7 +196,7 @@ export default function TrendingPages({ limit = 5 }) {
       <div className="space-y-4">
         {/* Show structure immediately while loading */}
         <div className="flex items-center gap-2 mb-4">
-          <Flame className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Flame" size={20} className="text-muted-foreground" />
           <h2 className="text-lg font-semibold">Trending Pages</h2>
         </div>
 
@@ -259,7 +259,7 @@ export default function TrendingPages({ limit = 5 }) {
   if (trendingPages.length === 0 && !loading) {
     return (
       <EmptyState
-        icon={Flame}
+        icon="Flame"
         title="No trending pages yet"
         description="Pages will appear here as they gain popularity"
       />

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useCumulativePagesMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../services/dashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -56,7 +56,7 @@ export function CumulativePagesWidget({ dateRange, granularity, className = "" }
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="h-5 w-5 text-destructive" />
+          <Icon name="BarChart3" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">Cumulative Pages</h3>
         </div>
         <div className="h-48 flex items-center justify-center text-destructive">
@@ -71,7 +71,7 @@ export function CumulativePagesWidget({ dateRange, granularity, className = "" }
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
+          <Icon name="BarChart3" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Cumulative Pages</h3>
         </div>
         
@@ -90,9 +90,9 @@ export function CumulativePagesWidget({ dateRange, granularity, className = "" }
       {!loading && data.length > 1 && (
         <div className="flex items-center gap-2 mb-4 text-sm">
           {isPositiveGrowth ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <Icon name="TrendingUp" size={16} className="text-green-500" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-500" />
+            <Icon name="TrendingDown" size={16} className="text-red-500" />
           )}
           <span className={isPositiveGrowth ? 'text-green-500' : 'text-red-500'}>
             {isPositiveGrowth ? '+' : ''}{totalGrowth.toLocaleString()} pages

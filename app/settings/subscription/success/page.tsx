@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import { CheckCircle } from 'lucide-react';
 
 export default function SubscriptionSuccessPage() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function SubscriptionSuccessPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="wewrite-card p-8 max-w-md w-full mx-4 text-center">
-        <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+        <Icon name="CheckCircle" size={64} className="text-green-500 mx-auto mb-4" />
         <h1 className="text-2xl font-bold mb-2">Subscription Successful!</h1>
         <p className="text-muted-foreground mb-4">
           Your subscription has been activated successfully. You can now start funding your account.

@@ -592,8 +592,9 @@ export const subscriptionConfirmationTemplate: EmailTemplate = {
     planName: 'Monthly',
     amount: '$5.00/month',
     nextBillingDate: 'January 4, 2026',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, planName, amount, nextBillingDate }) => wrapEmail('Subscription Confirmed', `
+  generateHtml: ({ username, planName, amount, nextBillingDate, emailSettingsToken }) => wrapEmail('Subscription Confirmed', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Welcome to WeWrite Premium! ✨</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -629,7 +630,7 @@ export const subscriptionConfirmationTemplate: EmailTemplate = {
         </a>
       </div>
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'subscription-confirmation' }),
 };
 
 // ============================================================================
@@ -773,8 +774,9 @@ export const genericNotificationTemplate: EmailTemplate = {
     body: 'We have some exciting news to share with you about new features coming to WeWrite.',
     ctaText: 'Learn More',
     ctaUrl: 'https://getwewrite.app/updates',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, heading, body, ctaText, ctaUrl }) => wrapEmail(heading, `
+  generateHtml: ({ username, heading, body, ctaText, ctaUrl, emailSettingsToken }) => wrapEmail(heading, `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">${heading}</h2>
       ${username ? `<p class="dark-text">Hi ${username},</p>` : ''}
@@ -788,7 +790,7 @@ export const genericNotificationTemplate: EmailTemplate = {
       </div>
       ` : ''}
     </div>
-  `),
+  `, { emailSettingsToken, emailType: 'generic-notification' }),
 };
 
 export const accountSecurityTemplate: EmailTemplate = {
@@ -936,11 +938,9 @@ export const broadcastEmailTemplate: EmailTemplate = {
     <p>Thank you for being part of our community!</p>`,
     ctaText: 'Explore New Features',
     ctaUrl: 'https://getwewrite.app',
+    emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ subject, heading, body, ctaText, ctaUrl, recipientEmail }) => {
-    const baseUrl = 'https://getwewrite.app';
-    const unsubscribeUrl = `${baseUrl}/settings?tab=notifications&email=${encodeURIComponent(recipientEmail || '')}`;
-
+  generateHtml: ({ subject, heading, body, ctaText, ctaUrl, emailSettingsToken }) => {
     const ctaSection = ctaText && ctaUrl ? `
       <div style="text-align: center; margin: 30px 0;">
         <a href="${ctaUrl}" style="${emailStyles.button}">
@@ -949,6 +949,7 @@ export const broadcastEmailTemplate: EmailTemplate = {
       </div>
     ` : '';
 
+    // Use token-based unsubscribe via wrapEmail footer
     return wrapEmail(subject || 'Update from WeWrite', `
       <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">${heading}</h2>
@@ -957,11 +958,7 @@ export const broadcastEmailTemplate: EmailTemplate = {
         </div>
         ${ctaSection}
       </div>
-      <div class="dark-footer" style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">
-        <p>You're receiving this because you have an account at WeWrite.</p>
-        <p><a href="${unsubscribeUrl}" style="color: #999;">Manage email preferences</a></p>
-      </div>
-    `);
+    `, { emailSettingsToken, emailType: 'product-update' });
   },
 };
 

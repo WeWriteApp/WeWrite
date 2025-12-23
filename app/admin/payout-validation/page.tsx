@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -8,14 +9,6 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Separator } from '../../components/ui/separator';
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingDown,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw
-} from 'lucide-react';
 import { FeeConfigurationService } from '../../services/feeConfigurationService';
 
 interface PayoutValidation {
@@ -131,7 +124,7 @@ export default function PayoutValidationPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Calculator className="h-8 w-8" />
+            <Icon name="Calculator" size={32} />
             Payout Validation Tool
           </h1>
           <p className="text-muted-foreground">
@@ -215,9 +208,9 @@ export default function PayoutValidationPage() {
             <div className="flex items-end">
               <Button onClick={validatePayout} disabled={isLoading} className="w-full">
                 {isLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />
                 ) : (
-                  <Calculator className="h-4 w-4 mr-2" />
+                  <Icon name="Calculator" size={16} className="mr-2" />
                 )}
                 Calculate Payout
               </Button>
@@ -232,9 +225,9 @@ export default function PayoutValidationPage() {
           {/* Status Alert */}
           <Alert variant={validation.isValid ? "default" : "destructive"}>
             {validation.isValid ? (
-              <CheckCircle className="h-4 w-4" />
+              <Icon name="CheckCircle" size={16} />
             ) : (
-              <AlertCircle className="h-4 w-4" />
+              <Icon name="AlertCircle" size={16} />
             )}
             <AlertTitle>
               {validation.isValid ? 'Payout Validation Passed' : 'Payout Validation Failed'}

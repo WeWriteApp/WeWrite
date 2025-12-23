@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { getNextMonthlyProcessingDate } from '../utils/subscriptionTiers';
 
 interface StartOfMonthExplainerProps {
@@ -52,9 +52,9 @@ export default function StartOfMonthExplainer({
             className="text-primary hover:text-foreground"
           >
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
+              <Icon name="ChevronUp" size={16} />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <Icon name="ChevronDown" size={16} />
             )}
           </button>
         </div>

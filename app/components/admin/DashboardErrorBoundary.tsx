@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Component, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { CopyErrorButton } from '../ui/CopyErrorButton';
 import FullPageError from '../ui/FullPageError';
@@ -55,7 +55,7 @@ export class DashboardErrorBoundary extends Component<Props, State> {
       return (
         <div className="wewrite-card">
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+            <Icon name="AlertTriangle" size={48} className="text-destructive mb-4" />
             <h3 className="text-lg font-semibold mb-2">Something went wrong</h3>
             <p className="text-muted-foreground mb-4 max-w-md">
               An error occurred while loading the dashboard. This might be a temporary issue.
@@ -72,7 +72,7 @@ export class DashboardErrorBoundary extends Component<Props, State> {
             )}
             <div className="flex gap-2">
               <Button onClick={this.handleRetry} className="gap-2">
-                <RefreshCw className="h-4 w-4" />
+                <Icon name="RefreshCw" size={16} />
                 Try Again
               </Button>
               {this.state.error && (
@@ -121,7 +121,7 @@ class WidgetErrorBoundaryInternal extends Component<
       return (
         <div className="wewrite-card">
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <AlertTriangle className="h-8 w-8 text-destructive mb-3" />
+            <Icon name="AlertTriangle" size={32} className="text-destructive mb-3" />
             <h4 className="font-medium mb-2">Error loading {this.props.widgetName}</h4>
             <p className="text-sm text-muted-foreground mb-3">
               Unable to load this widget. Please try refreshing the page.
@@ -133,7 +133,7 @@ class WidgetErrorBoundaryInternal extends Component<
                 onClick={() => window.location.reload()}
                 className="gap-2"
               >
-                <RefreshCw className="h-3 w-3" />
+                <Icon name="RefreshCw" size={12} />
                 Refresh
               </Button>
               {this.state.error && (

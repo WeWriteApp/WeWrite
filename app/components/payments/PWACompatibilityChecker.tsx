@@ -5,17 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Wifi, 
-  WifiOff, 
-  Smartphone,
-  Globe,
-  Shield,
-  CreditCard
-} from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { StatusIcon } from '../ui/status-icon';
 import { usePWA } from '../../providers/PWAProvider';
 
@@ -71,10 +61,10 @@ export function PWACompatibilityChecker({
     newChecks.push({
       name: 'PWA Installation',
       status: isPWA ? 'pass' : 'warning',
-      message: isPWA 
-        ? 'Running as installed PWA' 
+      message: isPWA
+        ? 'Running as installed PWA'
         : 'Running in browser - PWA features available',
-      icon: <Smartphone className="w-4 h-4" />,
+      icon: <Icon name="Smartphone" size={16} />,
       required: false
     });
 
@@ -83,10 +73,10 @@ export function PWACompatibilityChecker({
     newChecks.push({
       name: 'Secure Context',
       status: isSecureContext ? 'pass' : 'fail',
-      message: isSecureContext 
-        ? 'HTTPS connection verified' 
+      message: isSecureContext
+        ? 'HTTPS connection verified'
         : 'HTTPS required for payment processing',
-      icon: <Shield className="w-4 h-4" />,
+      icon: <Icon name="Shield" size={16} />,
       required: true
     });
 
@@ -94,10 +84,10 @@ export function PWACompatibilityChecker({
     newChecks.push({
       name: 'Network Connection',
       status: isOnline ? 'pass' : 'fail',
-      message: isOnline 
-        ? 'Internet connection active' 
+      message: isOnline
+        ? 'Internet connection active'
         : 'No internet connection detected',
-      icon: isOnline ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />,
+      icon: isOnline ? <Icon name="Wifi" size={16} /> : <Icon name="WifiOff" size={16} />,
       required: true
     });
 
@@ -116,10 +106,10 @@ export function PWACompatibilityChecker({
     newChecks.push({
       name: 'Service Worker',
       status: swRegistered ? 'pass' : 'warning',
-      message: swRegistered 
-        ? 'Service worker active for offline support' 
+      message: swRegistered
+        ? 'Service worker active for offline support'
         : 'Service worker not registered',
-      icon: <Globe className="w-4 h-4" />,
+      icon: <Icon name="Globe" size={16} />,
       required: false
     });
 
@@ -128,10 +118,10 @@ export function PWACompatibilityChecker({
     newChecks.push({
       name: 'Payment Request API',
       status: hasPaymentRequest ? 'pass' : 'warning',
-      message: hasPaymentRequest 
-        ? 'Apple Pay/Google Pay support available' 
+      message: hasPaymentRequest
+        ? 'Apple Pay/Google Pay support available'
         : 'Limited to card payments only',
-      icon: <CreditCard className="w-4 h-4" />,
+      icon: <Icon name="CreditCard" size={16} />,
       required: false
     });
 
@@ -148,10 +138,10 @@ export function PWACompatibilityChecker({
     newChecks.push({
       name: 'Local Storage',
       status: hasLocalStorage ? 'pass' : 'warning',
-      message: hasLocalStorage 
-        ? 'Local storage available for session data' 
+      message: hasLocalStorage
+        ? 'Local storage available for session data'
         : 'Limited session persistence',
-      icon: <CheckCircle className="w-4 h-4" />,
+      icon: <Icon name="CheckCircle" size={16} />,
       required: false
     });
 
@@ -198,14 +188,14 @@ export function PWACompatibilityChecker({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Shield className="w-5 h-5" />
+          <Icon name="Shield" size={20} />
           PWA Payment Compatibility
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {isChecking ? (
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+            <Icon name="Loader" size={24} className="mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Checking compatibility...</p>
           </div>
         ) : (
@@ -213,7 +203,7 @@ export function PWACompatibilityChecker({
             {/* Critical Failures Alert */}
             {criticalFailures.length > 0 && (
               <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
+                <Icon name="XCircle" size={16} />
                 <AlertDescription>
                   <strong>Payment processing unavailable:</strong> {criticalFailures.length} critical requirement(s) not met.
                 </AlertDescription>
@@ -223,7 +213,7 @@ export function PWACompatibilityChecker({
             {/* Warnings Alert */}
             {warnings.length > 0 && criticalFailures.length === 0 && (
               <Alert>
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertDescription>
                   Payment processing available with {warnings.length} limitation(s).
                 </AlertDescription>
@@ -233,7 +223,7 @@ export function PWACompatibilityChecker({
             {/* Success Alert */}
             {criticalFailures.length === 0 && warnings.length === 0 && (
               <Alert className="bg-success/10 border-success/30">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <Icon name="CheckCircle" size={16} className="text-green-600" />
                 <AlertDescription className="text-success-foreground">
                   All compatibility checks passed. Optimal PWA payment experience available.
                 </AlertDescription>

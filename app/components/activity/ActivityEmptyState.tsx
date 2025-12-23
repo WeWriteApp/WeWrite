@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
-import { Search } from 'lucide-react';
 import { wewriteCard } from '../../lib/utils';
 
 // Type definitions
@@ -46,7 +46,7 @@ export default function ActivityEmptyState({ mode = 'all' }: ActivityEmptyStateP
           size="sm"
           className="flex items-center gap-2"
         >
-          <Search className="h-4 w-4" />
+          <Icon name="Search" size={16} />
           Discover pages
         </Button>
 

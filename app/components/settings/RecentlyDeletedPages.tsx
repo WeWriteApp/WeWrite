@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
-import { Trash2, RotateCcw, Calendar, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../providers/AuthProvider';
 import PillLink from '../utils/PillLink'
 
@@ -279,7 +279,7 @@ export default function RecentlyDeletedPages() {
       <Card className="wewrite-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground text-lg sm:text-xl">
-            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+            <Icon name="Trash2" size={16} className="sm:h-5 sm:w-5 text-muted-foreground" />
             Recently Deleted Pages
           </CardTitle>
           <CardDescription className="text-sm">
@@ -288,7 +288,7 @@ export default function RecentlyDeletedPages() {
         </CardHeader>
         <CardContent>
           <div className="text-center py-6 sm:py-8">
-            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mx-auto"></div>
+            <Icon name="Loader" size={28} className="mx-auto" />
             <p className="mt-2 text-sm text-muted-foreground">Loading deleted pages...</p>
           </div>
         </CardContent>
@@ -300,7 +300,7 @@ export default function RecentlyDeletedPages() {
     <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-foreground text-lg sm:text-xl">
-          <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+          <Icon name="Trash2" size={16} className="sm:h-5 sm:w-5 text-muted-foreground" />
           Recently Deleted Pages
         </CardTitle>
         <CardDescription className="text-sm">
@@ -311,7 +311,7 @@ export default function RecentlyDeletedPages() {
         {error && (
           <div className="mb-4 p-3 sm:p-4 bg-destructive/10 border-theme-strong rounded-lg">
             <div className="flex items-start gap-2 text-destructive mb-3">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <Icon name="AlertTriangle" size={16} className="mt-0.5 shrink-0" />
               <span className="text-sm font-medium leading-relaxed">{error}</span>
             </div>
             {retryCount < 3 && (
@@ -335,7 +335,7 @@ export default function RecentlyDeletedPages() {
         {deletedPages.length === 0 ? (
           <div className="text-center py-8 sm:py-12 px-4">
             <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
-              <Trash2 className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/60" />
+              <Icon name="Trash2" size={24} className="sm:h-8 sm:w-8 text-muted-foreground/60" />
             </div>
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No recently deleted pages</h3>
             <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto leading-relaxed">Pages you delete will appear here for 30 days before being permanently removed.</p>
@@ -359,7 +359,7 @@ export default function RecentlyDeletedPages() {
                 disabled={loading}
                 className="w-full sm:w-auto shadow-sm"
               >
-                <Trash2 className="h-3 w-3 mr-1" />
+                <Icon name="Trash2" size={12} className="mr-1" />
                 <span className="hidden xs:inline">Delete All Permanently</span>
                 <span className="xs:hidden">Delete All</span>
               </Button>
@@ -394,7 +394,7 @@ export default function RecentlyDeletedPages() {
                       </div>
                       <div className="flex flex-col gap-2 text-xs sm:text-sm">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          <Icon name="Calendar" size={12} className="sm:h-3.5 sm:w-3.5" />
                           Deleted {formatDate(page.deletedAt)}
                         </span>
                         <span className={`flex items-center gap-1.5 font-medium ${
@@ -425,9 +425,9 @@ export default function RecentlyDeletedPages() {
                         className="flex-1 sm:flex-none border-theme-medium hover:border-theme-strong hover:bg-muted/50 shadow-sm"
                       >
                         {restoring === page.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-2"></div>
+                          <Icon name="Loader" size={12} className="mr-2" />
                         ) : (
-                          <RotateCcw className="h-3 w-3 mr-2" />
+                          <Icon name="RotateCcw" size={12} className="mr-2" />
                         )}
                         <span className="hidden xs:inline">Restore</span>
                         <span className="xs:hidden">↻</span>
@@ -440,9 +440,9 @@ export default function RecentlyDeletedPages() {
                         className="flex-1 sm:flex-none shadow-sm"
                       >
                         {permanentlyDeleting === page.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                          <Icon name="Loader" size={12} className="mr-2" />
                         ) : (
-                          <Trash2 className="h-3 w-3 mr-2" />
+                          <Icon name="Trash2" size={12} className="mr-2" />
                         )}
                         <span className="hidden xs:inline">Delete Forever</span>
                         <span className="xs:hidden">Delete</span>

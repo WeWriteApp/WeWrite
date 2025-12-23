@@ -34,7 +34,7 @@ export interface UnallocatedFundsReport {
     unallocatedPercentage: number;
   }[];
   platformRevenueBreakdown: {
-    platformFees: number; // 7% fees from allocations
+    platformFees: number; // 10% payout fees (charged at withdrawal)
     unallocatedFunds: number; // "Use it or lose it" funds
     totalPlatformRevenue: number;
   };

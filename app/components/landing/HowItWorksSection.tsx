@@ -1,14 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent } from '../ui/card';
-import { Calendar, Sparkles, ChevronDown, AlertTriangle } from 'lucide-react';
 import { EmbeddedAllocationBar } from '../payments/EmbeddedAllocationBar';
 import { useDemoBalance } from '../../contexts/DemoBalanceContext';
 import { getLoggedOutPageAllocation } from '../../utils/simulatedUsd';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { cn } from '../../lib/utils';
 import { PillLink } from '../utils/PillLink';
+
+// ChevronDown component using Icon
+const ChevronDown = ({ className }: { className?: string }) => (
+  <Icon name="ChevronDown" size={16} className={className} />
+);
 
 // Demo page configuration - uses a real page for the allocation bar
 const DEMO_PAGE_ID = 'demo-how-it-works';
@@ -67,14 +72,16 @@ export default function HowItWorksSection() {
   return (
     <section className="py-8 md:py-12">
       <div className="container mx-auto px-6 max-w-4xl">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">How does it work?</h2>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            At the bottom of every page, you'll see a little bar. Hit the plus button to send that writer some of your monthly funds!
-          </p>
-        </div>
+        {/* Wrapped in a wewrite-card for consistent styling */}
+        <div className="wewrite-card p-6 md:p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">How does it work?</h2>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+              At the bottom of every page, you'll see a little bar. Hit the plus button to send that writer some of your monthly funds!
+            </p>
+          </div>
 
-        <div className="space-y-6">
+          <div className="space-y-6">
           {/* Allocation bar in a card with tooltip outside */}
           <div className="relative max-w-md mx-auto">
             {/* Click me tooltip - positioned outside the card, pointing at the plus button */}
@@ -83,7 +90,7 @@ export default function HowItWorksSection() {
             >
               <div className="flex flex-col items-center animate-bounce">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-sm font-medium shadow-lg">
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Icon name="Sparkles" size={24} className="h-3.5 w-3.5" />
                   Click me!
                 </div>
                 {/* Arrow pointing down - bounces with the chip */}
@@ -180,7 +187,7 @@ export default function HowItWorksSection() {
 
           {/* How it helps creators */}
           <div className="flex items-start gap-4 p-4 wewrite-card max-w-md mx-auto">
-            <Calendar className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <Icon name="Calendar" size={24} className="text-muted-foreground flex-shrink-0 mt-0.5" />
             <div>
               <h4 className="font-medium text-sm mb-1">Get paid monthly for your writing</h4>
               <p className="text-sm text-muted-foreground">
@@ -192,11 +199,12 @@ export default function HowItWorksSection() {
 
           {/* Beta warning */}
           <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 max-w-md mx-auto">
-            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <Icon name="AlertTriangle" size={20} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-300">
               Payouts are currently in beta. Subscribe now to support creators once payouts go live!
             </p>
           </div>
+        </div>
         </div>
       </div>
     </section>

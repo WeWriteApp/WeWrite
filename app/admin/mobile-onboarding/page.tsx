@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { X, Smartphone, TabletSmartphone } from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import MobileOnboarding from '../../components/onboarding/MobileOnboarding';
 
@@ -27,7 +27,7 @@ export default function MobileOnboardingPreviewPage() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <Icon name="Loader" size={32} className="mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function MobileOnboardingPreviewPage() {
             onClick={() => router.push('/admin')}
             className="h-10 w-10"
           >
-            <X className="h-5 w-5" />
+            <Icon name="X" size={20} />
           </Button>
         </header>
 
@@ -63,7 +63,7 @@ export default function MobileOnboardingPreviewPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <div className="p-2 rounded-lg bg-blue-500/10">
-                <Smartphone className="h-5 w-5 text-blue-500" />
+                <Icon name="Smartphone" size={20} className="text-blue-500" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold">iOS Onboarding</h2>
@@ -83,7 +83,7 @@ export default function MobileOnboardingPreviewPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <div className="p-2 rounded-lg bg-green-500/10">
-                <TabletSmartphone className="h-5 w-5 text-green-500" />
+                <Icon name="TabletSmartphone" size={20} className="text-green-500" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold">Android Onboarding</h2>

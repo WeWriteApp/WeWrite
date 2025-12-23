@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
@@ -224,7 +225,7 @@ const SearchResultsDisplay = React.memo(({
         {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-8 space-y-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={32} />
             <p className="text-sm text-muted-foreground">Searching for "{query}"...</p>
           </div>
         )}

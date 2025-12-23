@@ -3,11 +3,11 @@ import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { LucideIcon } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface DraggableNavButtonProps {
   id: string;
-  icon: LucideIcon;
+  icon: string;
   onClick: () => void;
   onHover?: () => void;
   isActive: boolean;
@@ -27,7 +27,7 @@ interface DragItem {
 
 const DraggableNavButton: React.FC<DraggableNavButtonProps> = ({
   id,
-  icon: Icon,
+  icon,
   onClick,
   onHover,
   isActive,
@@ -41,8 +41,8 @@ const DraggableNavButton: React.FC<DraggableNavButtonProps> = ({
   const ref = useRef<HTMLButtonElement>(null);
 
   // Defensive programming - ensure all required props are present
-  if (!id || !Icon || !onClick || !ariaLabel || !label) {
-    console.warn('DraggableNavButton: Missing required props', { id, Icon, onClick, ariaLabel, label });
+  if (!id || !icon || !onClick || !ariaLabel || !label) {
+    console.warn('DraggableNavButton: Missing required props', { id, icon, onClick, ariaLabel, label });
     return null;
   }
 
@@ -174,11 +174,11 @@ const DraggableNavButton: React.FC<DraggableNavButtonProps> = ({
       data-handler-id={handlerId}
     >
       {/* Icon */}
-      <Icon className={cn(
-        "h-5 w-5 flex-shrink-0 transition-colors duration-75 mb-1",
+      <Icon name={icon} size={20} className={cn(
+        "flex-shrink-0 transition-colors duration-75 mb-1",
         isActive && "text-primary"
       )} />
-      
+
       {/* Label */}
       <span className={cn(
         "text-xs font-medium transition-colors duration-75",

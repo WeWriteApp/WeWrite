@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '../ui/drawer';
-import { MoreHorizontal, UserX, Grid3X3, Search, X, Check, Loader2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface UserSuggestion {
   id: string;
@@ -143,7 +143,7 @@ export default function RandomPagesFilterDrawer({
         onClick={onExcludeOwnToggle}
       >
         <div className="flex items-center gap-3">
-          <UserX className="h-5 w-5 text-muted-foreground" />
+          <Icon name="UserX" size={20} className="text-muted-foreground" />
           <div className="flex flex-col">
             <span className="font-medium text-sm">Not mine</span>
             <span className="text-xs text-muted-foreground">
@@ -165,7 +165,7 @@ export default function RandomPagesFilterDrawer({
           onClick={onDenseModeToggle}
         >
           <div className="flex items-center gap-3">
-            <Grid3X3 className="h-5 w-5 text-muted-foreground" />
+            <Icon name="Grid3X3" size={20} className="text-muted-foreground" />
             <div className="flex flex-col">
               <span className="font-medium text-sm">Dense Mode</span>
               <span className="text-xs text-muted-foreground">
@@ -214,7 +214,7 @@ export default function RandomPagesFilterDrawer({
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder={filterMode === 'include' ? 'Search username to include...' : 'Search username to exclude...'}
-              leftIcon={<Search className="h-4 w-4" />}
+              leftIcon={<Icon name="Search" size={16} />}
               className="pr-9"
               onFocus={() => {
                 if (suggestions.length > 0) {
@@ -236,11 +236,11 @@ export default function RandomPagesFilterDrawer({
                 onClick={handleClearUsername}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10"
               >
-                <X className="h-4 w-4" />
+                <Icon name="X" size={16} />
               </button>
             )}
             {isSearching && (
-              <Loader2 className="absolute right-9 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground z-10" />
+              <Icon name="Loader" className="text-muted-foreground z-10" />
             )}
           </div>
 
@@ -289,7 +289,7 @@ export default function RandomPagesFilterDrawer({
         aria-label="Filter options"
         onClick={() => setIsOpen(true)}
       >
-        <MoreHorizontal className="h-4 w-4" />
+        <Icon name="MoreHorizontal" size={16} />
       </Button>
 
       <Drawer open={isOpen} onOpenChange={setIsOpen}>
@@ -318,7 +318,7 @@ export default function RandomPagesFilterDrawer({
               onClick={handleApply}
               className="flex-1"
             >
-              <Check className="h-4 w-4 mr-2" />
+              <Icon name="Check" size={16} className="mr-2" />
               Apply Filters
             </Button>
           </DrawerFooter>

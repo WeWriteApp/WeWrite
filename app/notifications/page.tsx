@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useEffect, Suspense, useState, useMemo } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { useNotifications } from "../providers/NotificationProvider";
@@ -11,7 +12,6 @@ import NavPageLayout from '../components/layout/NavPageLayout';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
-import { Loader, CheckCheck, ChevronLeft, MoreHorizontal, Settings, Filter } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
 
@@ -97,7 +97,7 @@ function NotificationsContent() {
             onClick={() => setFilter(filter === 'unread' ? 'all' : 'unread')}
             className="flex items-center gap-2"
           >
-            <Filter className="h-4 w-4" />
+            <Icon name="Filter" size={16} />
             <span className="hidden md:inline">
               {filter === 'unread' ? 'Unread' : 'All'}
             </span>
@@ -129,7 +129,7 @@ function NotificationsContent() {
                 >
                   {loading ? (
                     <>
-                      <Loader className="animate-spin h-4 w-4 mr-2" />
+                      <Icon name="Loader" className="mr-2" />
                       Loading...
                     </>
                   ) : (
@@ -191,17 +191,17 @@ function NotificationsHeaderButton() {
           className="flex items-center gap-2"
           aria-label="Notification actions"
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <Icon name="MoreHorizontal" size={16} />
           <span className="hidden md:inline">Actions</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onClick={handleMarkAllAsRead} disabled={loading}>
-          <CheckCheck className="h-4 w-4 mr-2" />
+          <Icon name="CheckCheck" size={16} className="mr-2" />
           Mark all as read
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleNotificationSettings}>
-          <Settings className="h-4 w-4 mr-2" />
+          <Icon name="Settings" size={16} className="mr-2" />
           Notification settings
         </DropdownMenuItem>
       </DropdownMenuContent>

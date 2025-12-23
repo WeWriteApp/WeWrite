@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
@@ -11,7 +12,6 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 // Swipeable tabs removed - simplified admin interface
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette, Database, Image as ImageIcon, FileText, Mail, Calendar, TabletSmartphone } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -20,7 +20,6 @@ import Link from 'next/link';
 // UserManagement import removed - users tab deleted
 
 import { isAdmin } from '../utils/isAdmin';
-import { Flag } from 'lucide-react';
 import { useAdminData } from '../providers/AdminDataProvider';
 
 interface User {
@@ -224,7 +223,7 @@ export default function AdminPage() {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
-          <Loader className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <Icon name="Loader" className="text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading authentication...</p>
         </div>
       </div>
@@ -267,7 +266,7 @@ export default function AdminPage() {
           onClick={() => router.push('/')}
           className="h-10 w-10"
         >
-          <X className="h-5 w-5" />
+          <Icon name="X" size={20} />
         </Button>
       </header>
 
@@ -286,7 +285,7 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Admin Product KPIs</h3>
-                <BarChart3 className="h-5 w-5 text-primary" />
+                <Icon name="BarChart3" size={20} className="text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-4">
                 View comprehensive analytics including user registrations, page creation metrics, platform fee revenue, and sharing statistics.
@@ -298,7 +297,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/dashboard')}
                 >
-                  <BarChart3 className="h-4 w-4" />
+                  <Icon name="BarChart3" size={16} />
                   Open Product KPIs
                 </Button>
               </div>
@@ -308,7 +307,7 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Monthly Financials</h3>
-                <Calendar className="h-5 w-5 text-primary" />
+                <Icon name="Calendar" size={20} className="text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-4">
                 View current month fund status, creator obligations, Stripe balance breakdown, and historical monthly financial data with charts.
@@ -320,7 +319,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/monthly-financials')}
                 >
-                  <Calendar className="h-4 w-4" />
+                  <Icon name="Calendar" size={16} />
                   Open Monthly Financials
                 </Button>
               </div>
@@ -331,7 +330,7 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Users</h3>
-                <Users className="h-4 w-4 text-primary" />
+                <Icon name="Users" size={16} className="text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-3">
                 {usersCount !== null ? `${usersCount} users total` : 'User count unavailable'}
@@ -343,7 +342,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/users')}
                 >
-                  <Users className="h-4 w-4" />
+                  <Icon name="Users" size={16} />
                   View users
                 </Button>
               </div>
@@ -352,7 +351,7 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Feature Flags</h3>
-                <Flag className="h-4 w-4 text-primary" />
+                <Icon name="Flag" size={16} className="text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-3">
                 View and manage gated features (e.g., line numbers). Admin-only controls.
@@ -364,7 +363,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/feature-flags')}
                 >
-                  <Flag className="h-4 w-4" />
+                  <Icon name="Flag" size={16} />
                   Open feature flags
                 </Button>
               </div>
@@ -502,7 +501,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/design-system')}
                 >
-                  <Palette className="h-4 w-4" />
+                  <Icon name="Palette" size={16} />
                   View Design System
                 </Button>
               </div>
@@ -523,7 +522,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/background-images')}
                 >
-                  <ImageIcon className="h-4 w-4" />
+                  <Icon name="Image" size={16} className="" />
                   Manage Backgrounds
                 </Button>
               </div>
@@ -544,7 +543,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/opengraph-images')}
                 >
-                  <ImageIcon className="h-4 w-4" />
+                  <Icon name="Image" size={16} className="" />
                   View OG Images
                 </Button>
               </div>
@@ -565,7 +564,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/financial-tests')}
                 >
-                  <DollarSign className="h-4 w-4" />
+                  <Icon name="DollarSign" size={16} />
                   Open Financial Tests
                 </Button>
               </div>
@@ -586,7 +585,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/writing-ideas')}
                 >
-                  <FileText className="h-4 w-4" />
+                  <Icon name="FileText" size={16} />
                   Manage Writing Ideas
                 </Button>
               </div>
@@ -607,7 +606,7 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/notifications')}
                 >
-                  <Mail className="h-4 w-4" />
+                  <Icon name="Mail" size={16} />
                   Manage Notifications
                 </Button>
               </div>
@@ -617,7 +616,7 @@ export default function AdminPage() {
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Capacitor App Onboarding</h3>
-                <TabletSmartphone className="h-4 w-4 text-primary" />
+                <Icon name="TabletSmartphone" size={16} className="text-primary" />
               </div>
               <span className="text-sm text-muted-foreground mb-3">
                 Preview and test the iOS and Android mobile app onboarding flows without needing simulators.
@@ -629,8 +628,30 @@ export default function AdminPage() {
                   className="gap-2 w-full"
                   onClick={() => router.push('/admin/mobile-onboarding')}
                 >
-                  <TabletSmartphone className="h-4 w-4" />
+                  <Icon name="TabletSmartphone" size={16} />
                   Preview Onboarding
+                </Button>
+              </div>
+            </div>
+
+            {/* Onboarding Tutorial */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Onboarding Tutorial</h3>
+                <Icon name="BookOpen" size={16} className="text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Test and preview the guided onboarding experience. Start the tutorial to see tooltips guiding new users.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/onboarding-tutorial')}
+                >
+                  <Icon name="BookOpen" size={16} />
+                  Test Tutorial
                 </Button>
               </div>
             </div>

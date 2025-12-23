@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from '../components/ui/segmented-control';
-import { Users, FileText, Heart, Lock, UserPlus } from 'lucide-react';
 import UserFollowingList from '../components/utils/UserFollowingList';
 import FollowedPages from '../components/pages/FollowedPages';
 import { Button } from '../components/ui/button';
@@ -71,7 +71,7 @@ export default function FollowingPage() {
       <NavPageLayout>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-            <Lock className="h-8 w-8 text-primary" />
+            <Icon name="Lock" size={32} className="text-primary" />
           </div>
           <h1 className="text-2xl font-bold mb-4">Sign In Required</h1>
           <p className="text-muted-foreground mb-6 max-w-md">
@@ -101,7 +101,7 @@ export default function FollowingPage() {
                   onClick={() => router.push('/search')}
                   className="flex items-center gap-2 rounded-2xl h-8 px-3"
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <Icon name="UserPlus" size={16} />
                   <span className="hidden sm:inline">Find Users</span>
                 </Button>
               </div>
@@ -117,11 +117,11 @@ export default function FollowingPage() {
         <SegmentedControl defaultValue="users" className="space-y-4 sm:space-y-6">
           <SegmentedControlList className="grid w-full grid-cols-2 max-w-md">
             <SegmentedControlTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Icon name="Users" size={12} className="sm:h-4 sm:w-4" />
               <span>Following Users</span>
             </SegmentedControlTrigger>
             <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Icon name="FileText" size={12} className="sm:h-4 sm:w-4" />
               <span>Following Pages</span>
             </SegmentedControlTrigger>
           </SegmentedControlList>
@@ -157,7 +157,7 @@ export default function FollowingPage() {
       {/* Additional Info */}
       <div className="mt-12 p-6 bg-muted/30 rounded-lg">
         <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-          <Heart className="h-5 w-5 text-red-500" />
+          <Icon name="Heart" size={20} className="text-red-500" />
           About Following
         </h2>
         <div className="space-y-2 text-muted-foreground">

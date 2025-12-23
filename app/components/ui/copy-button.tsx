@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { copyToClipboard } from '../../utils/clipboard';
 import { toast } from './use-toast';
 
@@ -76,18 +76,18 @@ export function CopyButton({
   };
 
   const iconSize = {
-    sm: 'h-3 w-3',
-    md: 'h-4 w-4',
-    lg: 'h-5 w-5'
+    sm: 12,
+    md: 16,
+    lg: 20
   };
 
   return (
     <button
       onClick={handleCopy}
       className={`
-        inline-flex items-center justify-center rounded-md font-medium 
-        ring-offset-background transition-colors 
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 
+        inline-flex items-center justify-center rounded-md font-medium
+        ring-offset-background transition-colors
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
         disabled:pointer-events-none disabled:opacity-50
         ${sizeClasses[size]}
         ${variantClasses[variant]}
@@ -98,9 +98,9 @@ export function CopyButton({
       disabled={!text || !text.trim()}
     >
       {copied ? (
-        <Check className={`${iconSize[size]} text-green-600`} />
+        <Icon name="Check" size={iconSize[size]} className="text-green-600" />
       ) : (
-        <Copy className={iconSize[size]} />
+        <Icon name="Copy" size={iconSize[size]} />
       )}
     </button>
   );

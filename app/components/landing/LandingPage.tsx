@@ -25,7 +25,7 @@ import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
 import SiteFooter from '../layout/SiteFooter';
 import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
-import { Plus, PenLine, DollarSign, Users, Heart, Smartphone, ChevronDown, Rocket, Building2, Copy, Check, UserPlus, LayoutDashboard, ArrowLeft, ExternalLink, Gift } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { LANDING_VERTICALS, getVerticalSlugs } from '../../constants/landing-verticals';
@@ -341,7 +341,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
               onClick={() => router.push('/invite')}
               className="flex items-center gap-1 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="ArrowLeft" size={16} />
               Back
             </Button>
             <Button
@@ -352,12 +352,12 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
             >
               {inviteLinkCopied ? (
                 <>
-                  <Check className="h-4 w-4" />
+                  <Icon name="Check" size={16} />
                   Copied!
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4" />
+                  <Icon name="Copy" size={16} />
                   Copy referral link
                 </>
               )}
@@ -517,7 +517,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
               <div className="wewrite-card p-4 md:p-5 bg-primary/5 border-primary/20">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Heart className="h-5 w-5 text-primary" />
+                    <Icon name="Heart" size={20} className="text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">
@@ -539,7 +539,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
             {showReferralSection && isAuthenticated && !showAsPreview && (
               <div className="wewrite-card p-6 md:p-8">
                 <div className="flex items-center gap-3 mb-4">
-                  <UserPlus className="h-6 w-6 text-primary" />
+                  <Icon name="UserPlus" size={24} className="text-primary" />
                   <h3 className="text-xl font-semibold">Invite Friends to WeWrite</h3>
                 </div>
                 <p className="text-muted-foreground mb-6">
@@ -558,12 +558,12 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                   >
                     {inviteLinkCopied ? (
                       <>
-                        <Check className="h-4 w-4" />
+                        <Icon name="Check" size={16} />
                         Copied!
                       </>
                     ) : (
                       <>
-                        <Copy className="h-4 w-4" />
+                        <Icon name="Copy" size={16} />
                         Copy Link
                       </>
                     )}
@@ -575,7 +575,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                   <h4 className="text-sm font-medium text-muted-foreground mb-4">Your Referrals</h4>
                   {referralStatsLoading ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      <Icon name="Loader" size={16} />
                       Loading...
                     </div>
                   ) : referralStats && referralStats.totalReferrals > 0 ? (
@@ -658,7 +658,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
             <div className="grid md:grid-cols-2 gap-6">
               <div className="wewrite-card p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <PenLine className="h-6 w-6 text-primary flex-shrink-0" />
+                  <Icon name="PenLine" size={24} className="text-primary flex-shrink-0" />
                   <h3 className="text-xl font-semibold">Write About Anything</h3>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
@@ -670,7 +670,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
 
               <div className="wewrite-card p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <DollarSign className="h-6 w-6 text-primary flex-shrink-0" />
+                  <Icon name="DollarSign" size={24} className="text-primary flex-shrink-0" />
                   <h3 className="text-xl font-semibold">Earn From Your Content</h3>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
@@ -682,7 +682,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
 
               <div className="wewrite-card p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <Users className="h-6 w-6 text-primary flex-shrink-0" />
+                  <Icon name="Users" size={24} className="text-primary flex-shrink-0" />
                   <h3 className="text-xl font-semibold">Build Your Audience</h3>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
@@ -694,7 +694,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
 
               <div className="wewrite-card p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <Heart className="h-6 w-6 text-primary flex-shrink-0" />
+                  <Icon name="Heart" size={24} className="text-primary flex-shrink-0" />
                   <h3 className="text-xl font-semibold">Join Our Community</h3>
                 </div>
                 <p className="text-muted-foreground leading-relaxed">
@@ -723,7 +723,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                 <AccordionItem value="app-install" className="wewrite-card border-none">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
-                      <Smartphone className="h-5 w-5 text-primary flex-shrink-0" />
+                      <Icon name="Smartphone" size={20} className="text-primary flex-shrink-0" />
                       <span className="font-medium text-left">How do I install WeWrite as an app?</span>
                     </div>
                   </AccordionTrigger>
@@ -740,7 +740,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                 <AccordionItem value="bootstrapped" className="wewrite-card border-none">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
                     <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-primary flex-shrink-0" />
+                      <Icon name="Building2" size={20} className="text-primary flex-shrink-0" />
                       <span className="font-medium text-left">Is WeWrite backed by investors?</span>
                     </div>
                   </AccordionTrigger>
@@ -782,7 +782,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                       <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
                         {vertical.name}
                       </h3>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <Icon name="ExternalLink" size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {vertical.heroTitle}
@@ -800,7 +800,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
             <div className="container mx-auto px-6 max-w-4xl">
               <div className="wewrite-card p-8 md:p-10 text-center">
                 <div className="flex justify-center mb-4">
-                  <Rocket className="h-10 w-10 text-primary" />
+                  <Icon name="Rocket" size={40} className="text-primary" />
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold mb-3">Ready to Start Writing & Earning?</h2>
                 <p className="text-lg text-muted-foreground mb-6 max-w-xl mx-auto">
@@ -844,7 +844,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
           className="fixed right-4 bottom-6 z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
           aria-label="Start writing"
         >
-          <Plus className="h-6 w-6" />
+          <Icon name="Plus" size={24} />
         </button>
       )}
 

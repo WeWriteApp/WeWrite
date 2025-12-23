@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { Button } from './button';
-import { RefreshCw, AlertCircle } from 'lucide-react';
 import FullPageError from './FullPageError';
 
 interface UnifiedLoaderProps {
@@ -72,7 +72,7 @@ export function UnifiedLoader({
         {/* Overlay loading spinner */}
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 text-center px-4">
-            <div className="loader loader-md"></div>
+            <Icon name="Loader" size={32} />
             {message && (
               <p className="text-sm font-medium text-foreground">{message}</p>
             )}
@@ -103,7 +103,7 @@ export function UnifiedLoader({
           className
         )}>
           <div className="max-w-md w-full space-y-4">
-            <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
+            <Icon name="AlertCircle" size={48} className="text-amber-500 mx-auto" />
             <h3 className="text-lg font-semibold">Taking longer than expected</h3>
             <p className="text-muted-foreground">
               This content is taking a while to load. You can try refreshing or wait a bit longer.
@@ -112,7 +112,7 @@ export function UnifiedLoader({
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               {onRetry && (
                 <Button onClick={onRetry} className="gap-2">
-                  <RefreshCw className="h-4 w-4" />
+                  <Icon name="RefreshCw" size={16} />
                   Try Again
                 </Button>
               )}
@@ -167,7 +167,7 @@ export function UnifiedLoader({
     >
       <div className="flex flex-col items-center gap-3 text-center px-4">
         {/* Simple spinner */}
-        <div className="loader loader-md"></div>
+        <Icon name="Loader" size={32} />
 
         {/* Loading message */}
         {message && (

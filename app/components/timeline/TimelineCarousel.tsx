@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { format, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
-import { ChevronLeft, ChevronRight, X, Info } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import DayContainer from '../daily-notes/DayContainer';
@@ -339,7 +339,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
           className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-background border border-border rounded-full p-2 shadow-lg hover:bg-accent transition-colors"
           aria-label="Load earlier dates"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <Icon name="ChevronLeft" size={16} />
         </button>
 
         {/* Scrollable container */}
@@ -375,7 +375,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
           className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-background border border-border rounded-full p-2 shadow-lg hover:bg-accent transition-colors"
           aria-label="Load later dates"
         >
-          <ChevronRight className="w-4 h-4" />
+          <Icon name="ChevronRight" size={16} />
         </button>
       </div>
 
@@ -390,7 +390,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
           <div className="bg-muted/50 border border-border rounded-lg p-4 mx-auto max-w-md">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 mt-0.5">
-                <Info className="h-4 w-4 text-muted-foreground" />
+                <Icon name="Info" size={16} className="text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-foreground font-medium mb-1">
@@ -405,7 +405,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
                 className="flex-shrink-0 p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors rounded"
                 aria-label="Dismiss"
               >
-                <X className="h-3 w-3" />
+                <Icon name="X" size={12} />
               </button>
             </div>
           </div>

@@ -21,18 +21,15 @@ class GlobalCacheInvalidation {
     const callbacks = this.callbacks.get(cacheType)!;
     callbacks.push(callback);
 
-    console.log(`🔵 GlobalCache: Registered callback for ${cacheType} (total: ${callbacks.length})`);
-
     // Check if there's a pending invalidation for this cache type
     if (this.pendingInvalidations.has(cacheType)) {
-      console.log(`🔵 GlobalCache: Found pending invalidation for ${cacheType}, triggering immediately`);
       this.pendingInvalidations.delete(cacheType);
       // Trigger the callback immediately
       setTimeout(() => {
         try {
           callback();
         } catch (error) {
-          console.error(`🔵 GlobalCache: Error in ${cacheType} callback:`, error);
+          console.error(`GlobalCache: Error in ${cacheType} callback:`, error);
         }
       }, 0);
     }
@@ -42,7 +39,6 @@ class GlobalCacheInvalidation {
       const index = callbacks.indexOf(callback);
       if (index > -1) {
         callbacks.splice(index, 1);
-        console.log(`🔵 GlobalCache: Unregistered callback for ${cacheType} (remaining: ${callbacks.length})`);
       }
     };
   }
@@ -53,16 +49,14 @@ class GlobalCacheInvalidation {
   invalidate(cacheType: string, data?: any): void {
     const callbacks = this.callbacks.get(cacheType);
     if (callbacks && callbacks.length > 0) {
-      console.log(`🔵 GlobalCache: Invalidating ${cacheType} (${callbacks.length} callbacks)`);
       callbacks.forEach(callback => {
         try {
           callback();
         } catch (error) {
-          console.error(`🔵 GlobalCache: Error in ${cacheType} callback:`, error);
+          console.error(`GlobalCache: Error in ${cacheType} callback:`, error);
         }
       });
     } else {
-      console.log(`🔵 GlobalCache: No callbacks registered for ${cacheType}, marking as pending`);
       this.pendingInvalidations.add(cacheType);
     }
   }
@@ -79,7 +73,6 @@ class GlobalCacheInvalidation {
    */
   clear(): void {
     this.callbacks.clear();
-    console.log('🔵 GlobalCache: All callbacks cleared');
   }
 }
 
@@ -88,17 +81,14 @@ export const globalCacheInvalidation = new GlobalCacheInvalidation();
 
 // Convenience functions for common cache types
 export const invalidateUserPages = (userId?: string) => {
-  console.log('🔵 GlobalCache: Invalidating user pages', { userId });
   globalCacheInvalidation.invalidate('user-pages', { userId });
 };
 
 export const invalidateRecentActivity = () => {
-  console.log('🔵 GlobalCache: Invalidating recent activity');
   globalCacheInvalidation.invalidate('recent-activity');
 };
 
 export const invalidateHomeActivity = () => {
-  console.log('🔵 GlobalCache: Invalidating home activity');
   globalCacheInvalidation.invalidate('home-activity');
 };
 

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useContext, useEffect } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { DataContext } from "../../providers/DataProvider";
 import { useAuth } from '../../providers/AuthProvider';
@@ -7,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { PillLink, PillLinkSkeleton } from "../utils/PillLink";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, Plus, FileText, Clock, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
 
@@ -150,7 +150,7 @@ const ContentPageTabs = () => {
         </div>
         <Link href="/pages/new">
           <Button className="rounded-full">
-            <Plus className="h-4 w-4 mr-2" />
+            <Icon name="Plus" size={16} className="mr-2" />
             Create a new page
           </Button>
         </Link>
@@ -183,7 +183,7 @@ const ContentPageTabs = () => {
         <div className="relative">
           <TabsList className="relative overflow-x-auto flex w-full justify-start md:justify-center scrollbar-hide">
             <TabsTrigger value="all" className="relative flex-shrink-0">
-              <FileText className="h-4 w-4 mr-2" />
+              <Icon name="FileText" size={16} className="mr-2" />
               All Pages
               <motion.div
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
@@ -193,7 +193,7 @@ const ContentPageTabs = () => {
               />
             </TabsTrigger>
             <TabsTrigger value="recent" className="relative flex-shrink-0">
-              <Clock className="h-4 w-4 mr-2" />
+              <Icon name="Clock" size={16} className="mr-2" />
               Recent
               <motion.div
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
@@ -203,7 +203,7 @@ const ContentPageTabs = () => {
               />
             </TabsTrigger>
             <TabsTrigger value="favorites" className="relative flex-shrink-0">
-              <Star className="h-4 w-4 mr-2" />
+              <Icon name="Star" size={16} className="mr-2" />
               Favorites
               <motion.div
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
@@ -261,9 +261,9 @@ const ContentPageTabs = () => {
                 className="rounded-full"
               >
                 {isMoreLoading ? (
-                  <Loader className="h-4 w-4 animate-spin mr-2" />
+                  <Icon name="Loader" className="mr-2" />
                 ) : (
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Icon name="Plus" size={16} className="mr-2" />
                 )}
                 Load more
               </Button>

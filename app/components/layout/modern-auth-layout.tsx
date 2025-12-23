@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 
 interface ModernAuthLayoutProps {
   children: ReactNode;
@@ -31,7 +31,7 @@ export function ModernAuthLayout({
             href="/"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <Icon name="ArrowLeft" size={16} />
             Back to landing page
           </Link>
 

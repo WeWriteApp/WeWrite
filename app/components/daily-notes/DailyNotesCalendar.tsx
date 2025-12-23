@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
@@ -167,7 +167,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
           onClick={goToPreviousMonth}
           disabled={loading}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <Icon name="ChevronLeft" size={16} />
         </Button>
 
         <div className="flex items-center gap-4">
@@ -193,7 +193,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
           onClick={goToNextMonth}
           disabled={loading}
         >
-          <ChevronRight className="h-4 w-4" />
+          <Icon name="ChevronRight" size={16} />
         </Button>
       </div>
 
@@ -263,7 +263,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
       {loading && (
         <div className="text-center py-8 text-muted-foreground">
           <div className="flex items-center justify-center gap-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={16} />
             <span>Loading calendar...</span>
           </div>
         </div>

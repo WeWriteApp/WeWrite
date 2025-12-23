@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
-import { Loader, UserX, Users } from 'lucide-react';
 import { InlineError } from '../ui/InlineError';
 import { followsApi } from "../../utils/apiClient";
 import { useAuth } from '../../providers/AuthProvider';
@@ -145,7 +145,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Icon name="Loader" className="text-muted-foreground" />
       </div>
     );
   }
@@ -163,7 +163,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
     return (
       <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-          <Users className="h-5 w-5 text-primary" />
+          <Icon name="Users" size={20} className="text-primary" />
         </div>
         <h3 className="text-lg font-medium mb-2">No followed users yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
@@ -231,9 +231,9 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
                 disabled={unfollowingId === followedUser.id}
               >
                 {unfollowingId === followedUser.id ? (
-                  <Loader className="h-4 w-4 animate-spin" />
+                  <Icon name="Loader" />
                 ) : (
-                  <UserX className="h-4 w-4" />
+                  <Icon name="UserX" size={16} />
                 )}
                 <span className="sr-only">Unfollow</span>
               </Button>
@@ -252,7 +252,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
           >
             {loadingMore ? (
               <>
-                <Loader className="h-4 w-4 animate-spin mr-2" />
+                <Icon name="Loader" className="mr-2" />
                 Loading more...
               </>
             ) : (

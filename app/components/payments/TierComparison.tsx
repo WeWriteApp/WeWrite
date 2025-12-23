@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Check, Star, Zap, Crown } from 'lucide-react';
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG } from '../../utils/subscriptionTiers';
 
 import { useAuth } from '../../providers/AuthProvider';
@@ -36,13 +36,13 @@ export function TierComparison({
   const getTierIcon = (tierId: string) => {
     switch (tierId) {
       case 'tier1':
-        return <Star className="h-5 w-5 text-primary" />;
+        return <Icon name="Star" size={20} className="text-primary" />;
       case 'tier2':
-        return <Zap className="h-5 w-5 text-purple-500" />;
+        return <Icon name="Zap" size={20} className="text-purple-500" />;
       case 'tier3':
-        return <Crown className="h-5 w-5 text-yellow-500" />;
+        return <Icon name="Crown" size={20} className="text-yellow-500" />;
       default:
-        return <Star className="h-5 w-5 text-muted-foreground" />;
+        return <Icon name="Star" size={20} className="text-muted-foreground" />;
     }
   };
 
@@ -95,7 +95,7 @@ export function TierComparison({
                 <div className="space-y-2 mb-4">
                   {tier.features.slice(0, 3).map((feature, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <Icon name="Check" size={16} className="text-green-500 flex-shrink-0" />
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -175,7 +175,7 @@ export function TierComparison({
                 <div className="space-y-3">
                   {(tier.features || []).map((feature, index) => (
                     <div key={index} className="flex items-start gap-3">
-                      <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                      <Icon name="Check" size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
                       <span className="text-sm">{feature}</span>
                     </div>
                   ))}
@@ -192,7 +192,7 @@ export function TierComparison({
                     >
                       {isCurrent ? (
                         <>
-                          <Check className="h-4 w-4 mr-2" />
+                          <Icon name="Check" size={16} className="mr-2" />
                           Current Plan
                         </>
                       ) : status === 'upgrade' ? (
@@ -226,7 +226,7 @@ export function TierComparison({
       <Card className="border-2 border-dashed border-theme-medium">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <Icon name="DollarSign" size={20} />
             Custom Amount
           </CardTitle>
           <CardDescription>
@@ -239,11 +239,11 @@ export function TierComparison({
               Perfect for those who want to contribute more than ${SUBSCRIPTION_TIERS[2].amount}/month
             </div>
             <div className="flex items-center justify-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
+              <Icon name="Check" size={16} className="text-green-500" />
               <span>All Champion tier features</span>
             </div>
             <div className="flex items-center justify-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
+              <Icon name="Check" size={16} className="text-green-500" />
               <span>Extra tokens (10 per $1)</span>
             </div>
             
@@ -270,4 +270,3 @@ export function TierComparison({
 }
 
 // Import DollarSign icon
-import { DollarSign } from 'lucide-react';

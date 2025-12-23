@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { getPlatform, isNativeApp, Platform } from '../utils/capacitor';
 import MobileOnboarding from '../components/onboarding/MobileOnboarding';
-import { Loader } from 'lucide-react';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function OnboardingPage() {
   if (authLoading || isChecking) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-background">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <Icon name="Loader" className="text-primary" />
       </div>
     );
   }

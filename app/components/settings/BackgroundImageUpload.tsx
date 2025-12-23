@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Image as ImageIcon, X, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { useAppBackground, type ImageBackground } from '@/contexts/AppBackgroundContext';
 import { cn } from '@/lib/utils';
@@ -203,7 +203,7 @@ export function BackgroundImageUpload({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             <div className="absolute bottom-2 left-2 flex items-center gap-2">
-              <ImageIcon className="h-4 w-4 text-white" />
+              <Icon name="Image" size={16} className=" text-white" />
               <span className="text-xs text-white font-medium">Custom Background</span>
             </div>
           </div>
@@ -217,7 +217,7 @@ export function BackgroundImageUpload({
               disabled={isUploading}
               className="flex-1"
             >
-              <Upload className="h-4 w-4 mr-2" />
+              <Icon name="Upload" size={16} className="mr-2" />
               {isUploading ? 'Uploading...' : 'Change Image'}
             </Button>
             <Button
@@ -226,7 +226,7 @@ export function BackgroundImageUpload({
               onClick={handleRemoveImage}
               disabled={isUploading}
             >
-              <X className="h-4 w-4" />
+              <Icon name="X" size={16} />
             </Button>
           </div>
         </div>
@@ -254,7 +254,7 @@ export function BackgroundImageUpload({
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                 <div className="absolute bottom-1 left-2 flex items-center gap-1">
-                  <ImageIcon className="h-3 w-3 text-white" />
+                  <Icon name="Image" size={12} className=" text-white" />
                   <span className="text-xs text-white">Click to use</span>
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function BackgroundImageUpload({
             disabled={isUploading || isLoading}
             className="w-full h-12 border-dashed"
           >
-            <Upload className="h-4 w-4 mr-2" />
+            <Icon name="Upload" size={16} className="mr-2" />
             {isUploading ? 'Uploading...' : isLoading ? 'Loading...' : 'Upload Background Image'}
           </Button>
         </div>

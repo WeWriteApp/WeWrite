@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Users, Eye, UserCheck, UserX } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { visitorTrackingService } from '../../services/VisitorTrackingService';
 
 interface LiveVisitorsWidgetProps {
@@ -88,7 +88,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Users className="h-5 w-5 text-destructive" />
+          <Icon name="Users" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">Live Visitors</h3>
         </div>
         <div className="h-32 flex items-center justify-center text-destructive">
@@ -103,7 +103,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Eye className="h-5 w-5 text-primary" />
+          <Icon name="Eye" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Live Visitors</h3>
 
         </div>
@@ -137,7 +137,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
           {/* Authenticated Users */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-green-600" />
+              <Icon name="UserCheck" size={16} className="text-green-600" />
               <span className="text-sm font-medium">Authenticated</span>
             </div>
             <span className="text-sm font-bold text-green-600">{counts.authenticated}</span>
@@ -146,7 +146,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
           {/* Anonymous Users */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
             <div className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-primary" />
+              <Icon name="UserX" size={16} className="text-primary" />
               <span className="text-sm font-medium">Anonymous</span>
             </div>
             <span className="text-sm font-bold text-primary">{counts.anonymous}</span>
@@ -156,7 +156,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
           {debugMode && (
             <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-theme-medium">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-orange-600" />
+                <Icon name="Users" size={16} className="text-orange-600" />
                 <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Bots Filtered</span>
               </div>
               <span className="text-sm font-bold text-orange-600">{counts.bots}</span>

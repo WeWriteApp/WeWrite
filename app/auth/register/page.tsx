@@ -1,11 +1,11 @@
 "use client";
 
 import { Suspense } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useSearchParams } from 'next/navigation';
 import { RegisterForm } from "../../components/forms/register-form";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 function RegisterContent(): JSX.Element {
   const searchParams = useSearchParams();
@@ -19,7 +19,7 @@ function RegisterContent(): JSX.Element {
     >
       {isPostingReply && (
         <Alert className="mb-4 bg-primary/10 border-theme-medium">
-          <AlertCircle className="h-4 w-4 text-primary" />
+          <Icon name="AlertCircle" size={16} className="text-primary" />
           <AlertDescription className="text-primary">
             Create an account to post your reply. Your draft has been saved and will be posted automatically after you sign up.
           </AlertDescription>
@@ -39,7 +39,7 @@ export default function RegisterPage(): JSX.Element {
         description="Create your account to start writing, collaborating, and sharing your ideas with the world."
       >
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+          <Icon name="Loader" size={32} />
         </div>
       </ModernAuthLayout>
     }>

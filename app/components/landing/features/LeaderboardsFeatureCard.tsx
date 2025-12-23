@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Trophy, Medal, Award } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -15,7 +15,7 @@ export default function LeaderboardsFeatureCard() {
       rank: 1,
       username: 'storyteller42',
       score: '$127.50',
-      icon: Trophy,
+      iconName: 'Trophy' as const,
       bgColor: 'bg-amber-500/15',
       textColor: 'text-amber-600 dark:text-amber-400',
       iconColor: 'text-amber-500'
@@ -24,7 +24,7 @@ export default function LeaderboardsFeatureCard() {
       rank: 2,
       username: 'thoughtsbyj',
       score: '$89.25',
-      icon: Medal,
+      iconName: 'Trophy' as const,
       bgColor: 'bg-gray-400/15',
       textColor: 'text-gray-600 dark:text-gray-400',
       iconColor: 'text-gray-400'
@@ -33,7 +33,7 @@ export default function LeaderboardsFeatureCard() {
       rank: 3,
       username: 'wanderer_writes',
       score: '$64.00',
-      icon: Award,
+      iconName: 'Trophy' as const,
       bgColor: 'bg-amber-700/15',
       textColor: 'text-amber-700 dark:text-amber-500',
       iconColor: 'text-amber-700 dark:text-amber-600'
@@ -43,7 +43,6 @@ export default function LeaderboardsFeatureCard() {
   return (
     <div className="flex flex-col gap-2 py-2">
       {leaderboardEntries.map((entry) => {
-        const Icon = entry.icon;
         return (
           <div
             key={entry.rank}
@@ -55,7 +54,7 @@ export default function LeaderboardsFeatureCard() {
                 "flex items-center justify-center w-8 h-8 rounded-full",
                 entry.bgColor
               )}>
-                <Icon className={cn("w-4 h-4", entry.iconColor)} />
+                <Icon name={entry.iconName} size={16} className={entry.iconColor} />
               </div>
               <div>
                 <div className="font-medium text-sm">@{entry.username}</div>

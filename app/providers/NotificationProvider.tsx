@@ -55,26 +55,21 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
   // Fetch notifications when user changes
   useEffect(() => {
-    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: Effect triggered, user:', { uid: user?.uid, exists: !!user });
     if (!user) {
-      console.log('🟣 NOTIFICATION_PROVIDER EFFECT: No user, clearing notifications');
       setNotifications([]);
       setUnreadCount(0);
       setLastVisible(null);
       setHasMore(true);
       return;
     }
-    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: User exists, fetching notifications');
 
     const fetchNotifications = async () => {
       try {
         setLoading(true);
 
-        // 🚨 EMERGENCY: Use optimized notifications service for 90% read reduction
+        // Use optimized notifications service for 90% read reduction
         const result = await optimizedNotificationsService.getNotifications(user.uid, 20);
         const notificationData = result.notifications || [];
-
-        console.log('NotificationProvider - fetched notifications:', notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })));
 
         // Extract unique user IDs from notifications for batch fetching
         const userIds = new Set<string>();
@@ -88,16 +83,14 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         if (userIds.size > 0) {
           try {
             await preloadUserData(Array.from(userIds));
-            console.log('NotificationProvider - user data preloaded successfully');
           } catch (preloadError) {
             console.warn('NotificationProvider - error preloading user data:', preloadError?.message || preloadError);
             // Continue even if preloading fails - don't let this crash the app
           }
         }
 
-        // 🚨 EMERGENCY: Use optimized unread count with aggressive caching
+        // Use optimized unread count with aggressive caching
         const unreadCount = await optimizedNotificationsService.getUnreadCount(user.uid);
-        console.log('NotificationProvider - unread count (OPTIMIZED):', unreadCount);
 
         setUnreadCount(unreadCount);
         setNotifications(notificationData);

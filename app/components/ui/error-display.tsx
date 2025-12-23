@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { AlertCircle, RefreshCw, ChevronDown, Copy } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
 import {
   Collapsible,
@@ -165,7 +165,7 @@ ${errorDetails.stack ? `Stack Trace:\n${errorDetails.stack}` : ''}
       <div className={cn('p-4 rounded-lg', color.bgLight)}>
         <div className="flex items-start gap-3">
           <div className={cn('mt-0.5 p-1.5 rounded-full', color.bg)}>
-            <AlertCircle className={cn('h-4 w-4', color.text)} />
+            <Icon name="AlertCircle" size={16} className={color.text} />
           </div>
           <div className="flex-1">
             <h3 className={cn('text-sm font-medium', color.text)}>
@@ -182,7 +182,7 @@ ${errorDetails.stack ? `Stack Trace:\n${errorDetails.stack}` : ''}
                 className={cn('mt-3 gap-1.5', color.text, color.border)}
                 onClick={handleRetry}
               >
-                <RefreshCw className="h-3.5 w-3.5" />
+                <Icon name="RefreshCw" size={24} className="h-3.5 w-3.5" />
                 Try again
               </Button>
             )}
@@ -202,7 +202,7 @@ ${errorDetails.stack ? `Stack Trace:\n${errorDetails.stack}` : ''}
                 className="w-full flex items-center justify-between p-2 h-auto"
               >
                 <span className="text-xs">Error Details</span>
-                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <Icon name="ChevronDown" size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="p-3">
@@ -217,7 +217,7 @@ ${errorDetails.stack ? `Stack Trace:\n${errorDetails.stack}` : ''}
                 className="gap-1.5 w-full text-xs h-8"
                 onClick={copyToClipboard}
               >
-                <Copy className="h-3.5 w-3.5" />
+                <Icon name="Copy" size={24} className="h-3.5 w-3.5" />
                 {copied ? "Copied!" : "Copy to Clipboard"}
               </Button>
             </CollapsibleContent>

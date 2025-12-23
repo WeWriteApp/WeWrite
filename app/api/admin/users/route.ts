@@ -4,11 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAdminPermissions, isAdminServer } from '../../admin-auth-helper';
+import { checkAdminPermissions, isUserRecordAdmin } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { getCollectionNameAsync, getEnvironmentType, USD_COLLECTIONS } from '../../../utils/environmentConfig';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
+import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 
 interface UserData {
   uid: string;
@@ -37,7 +35,10 @@ interface UserData {
 }
 
 // GET endpoint - Get all users with their details and feature flag overrides
+// OPTIMIZED: Uses parallel batch queries instead of sequential N+1 queries
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     // Initialize Firebase Admin
     let admin;
@@ -45,15 +46,15 @@ export async function GET(request: NextRequest) {
       admin = getFirebaseAdmin();
     } catch (initError: any) {
       console.error('[Admin Users API] Firebase Admin initialization error:', initError.message);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Firebase Admin initialization failed',
         details: initError.message
       }, { status: 500 });
     }
-    
+
     if (!admin) {
       console.error('[Admin Users API] Firebase Admin failed to initialize');
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Firebase Admin not available',
         details: 'Server configuration issue - check environment variables'
       }, { status: 500 });
@@ -65,7 +66,6 @@ export async function GET(request: NextRequest) {
     if (!adminCheck.success) {
       return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
-    const adminEmail = adminCheck.userEmail;
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');
@@ -73,60 +73,42 @@ export async function GET(request: NextRequest) {
     const includeFinancial = searchParams.get('includeFinancial') === 'true';
     const countOnly = searchParams.get('countOnly') === 'true';
 
-    console.log('Loading users from Firestore via API...');
-
     // Pre-compute collection names (async to support X-Force-Production-Data header)
-    const usersCollectionName = await getCollectionNameAsync('users');
-    const pagesCollectionName = await getCollectionNameAsync('pages');
-    const usdBalancesCollectionName = await getCollectionNameAsync('usdBalances');
-    const writerEarningsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+    const [usersCollectionName, pagesCollectionName, writerEarningsCollectionName] = await Promise.all([
+      getCollectionNameAsync('users'),
+      getCollectionNameAsync('pages'),
+      getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS),
+    ]);
 
-    // Pre-fetch active Stripe subscriptions if financial data is requested
-    // This ensures we show accurate subscription status from Stripe (source of truth)
-    const activeStripeSubscriptions = new Map<string, { amountCents: number; status: string }>();
-    if (includeFinancial) {
+    // If only the count is needed, return early
+    if (countOnly) {
       try {
-        const stripeKey = getStripeSecretKey();
-        if (stripeKey) {
-          const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
-          const subscriptions = await stripe.subscriptions.list({
-            status: 'active',
-            limit: 100,
-            expand: ['data.items.data.price']
-          });
-
-          for (const sub of subscriptions.data) {
-            const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
-            if (customerId) {
-              const item = sub.items.data[0];
-              activeStripeSubscriptions.set(customerId, {
-                amountCents: item?.price?.unit_amount || 0,
-                status: sub.status
-              });
-            }
-          }
-          console.log(`[Admin Users] Fetched ${activeStripeSubscriptions.size} active Stripe subscriptions`);
+        const usersCollection = db.collection(usersCollectionName);
+        if (typeof (usersCollection as any).count === 'function') {
+          const countSnap = await (usersCollection as any).count().get();
+          const totalCount = countSnap.data()?.count ?? 0;
+          return NextResponse.json({ success: true, total: totalCount });
         }
-      } catch (stripeErr) {
-        console.warn('[Admin Users] Could not fetch Stripe subscriptions:', stripeErr);
+      } catch (countError) {
+        console.warn('Count query failed:', countError);
       }
+      const snapshot = await db.collection(usersCollectionName).limit(1).get();
+      return NextResponse.json({ success: true, total: snapshot.size });
     }
 
     // Query Firestore for user documents
-    let usersQuery = db.collection(usersCollectionName)
-      .orderBy('createdAt', 'desc')
-      .limit(limit);
-
     let snapshot;
     try {
-      snapshot = await usersQuery.get();
+      snapshot = await db.collection(usersCollectionName)
+        .orderBy('createdAt', 'desc')
+        .limit(limit)
+        .get();
     } catch (orderingError) {
       console.warn('Order by createdAt failed; falling back to unordered fetch:', orderingError);
       snapshot = await db.collection(usersCollectionName).limit(limit).get();
     }
 
     if (snapshot.empty) {
-      console.warn('No users found in Firestore');
       return NextResponse.json({
         success: true,
         users: [],
@@ -134,207 +116,101 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`Found ${snapshot.docs.length} users in Firestore`);
+    console.log(`[Admin Users] Found ${snapshot.docs.length} users, fetching additional data...`);
+
+    // Extract all user IDs for batch queries
+    const userIds = snapshot.docs.map(doc => doc.id);
+
+    // OPTIMIZATION: Run all data fetches in parallel instead of sequentially
+    const [subscriptionsMap, earningsMap, pageCountsMap, referrerUsernamesMap] = await Promise.all([
+      // 1. Fetch Firestore subscription documents (source of truth - updated by webhooks)
+      includeFinancial ? batchFetchSubscriptions(db, usersCollectionName, userIds) : Promise.resolve(new Map()),
+
+      // 2. Batch fetch all earnings (aggregated by userId)
+      includeFinancial ? batchFetchEarnings(db, writerEarningsCollectionName, userIds) : Promise.resolve(new Map()),
+
+      // 3. Batch fetch page counts (using parallel count queries)
+      batchFetchPageCounts(db, pagesCollectionName, userIds),
+
+      // 4. Pre-fetch referrer usernames
+      batchFetchReferrerUsernames(db, usersCollectionName, snapshot.docs),
+    ]);
+
+    // Build user data array (now just simple object construction, no async)
     const userData: UserData[] = [];
 
-    // If only the count is needed, try using Firestore count() for accuracy
-    if (countOnly) {
-      try {
-        const usersCollection = db.collection(usersCollectionName);
-        // Use count() if available (Firestore v11+), otherwise fallback to snapshot size
-        if (typeof (usersCollection as any).count === 'function') {
-          const countSnap = await (usersCollection as any).count().get();
-          const totalCount = countSnap.data()?.count ?? snapshot.size;
-          return NextResponse.json({ success: true, total: totalCount });
-        }
-      } catch (countError) {
-        console.warn('Count query failed, falling back to snapshot size:', countError);
-      }
-      return NextResponse.json({ success: true, total: snapshot.size });
-    }
-
-    // Reuse pages collection reference for counts
-    const pagesCollection = db.collection(pagesCollectionName);
-
     for (const userDoc of snapshot.docs) {
-      try {
-        const data = userDoc.data();
+      const data = userDoc.data();
+      const uid = userDoc.id;
 
-        // Get email verification status from Firestore data
-        // (Avoid using admin.auth().getUser() which causes jose issues in Vercel)
-        const emailVerified = data.emailVerified === true;
+      // Build basic user object
+      const user: UserData = {
+        uid,
+        email: data.email || 'No email',
+        username: data.username,
+        emailVerified: data.emailVerified === true,
+        createdAt: data.createdAt,
+        lastLogin: data.lastLoginAt || data.lastLogin || null,
+        stripeConnectedAccountId: data.stripeConnectedAccountId || null,
+        isAdmin: data.isAdmin === true || isUserRecordAdmin(data.email || ''),
+        referredBy: data.referredBy || undefined,
+        referralSource: data.referralSource || undefined,
+        totalPages: pageCountsMap.get(uid) ?? 0,
+      };
 
-        // Handle both lastLogin and lastLoginAt field names (codebase inconsistency)
-        // lastLoginAt is used by session/register code, lastLogin by some older code
-        const lastLoginValue = data.lastLoginAt || data.lastLogin || null;
+      // Add referrer username if available
+      if (user.referredBy && referrerUsernamesMap.has(user.referredBy)) {
+        user.referredByUsername = referrerUsernamesMap.get(user.referredBy);
+      }
 
-        // In dev environment, all users are admins (for testing purposes)
-        const isDev = getEnvironmentType() === 'development';
-        
-        const user: UserData = {
-          uid: userDoc.id,
-          email: data.email || 'No email',
-          username: data.username,
-          emailVerified,
-          createdAt: data.createdAt,
-          lastLogin: lastLoginValue,
-          stripeConnectedAccountId: data.stripeConnectedAccountId || null,
-          isAdmin: isDev || data.isAdmin === true || isAdminServer(data.email || ''),
-          referredBy: data.referredBy || undefined,
-          referralSource: data.referralSource || undefined
+      // Add financial data if requested
+      if (includeFinancial) {
+        const subscriptionData = subscriptionsMap.get(uid);
+        const earningsData = earningsMap.get(uid) || { total: 0, available: 0, pending: 0 };
+
+        // Use Firestore subscription document as source of truth (updated by webhooks)
+        let subscriptionAmount: number | null = null;
+        let subscriptionStatus: string | null = null;
+        let subscriptionCancelReason: string | null = null;
+
+        if (subscriptionData) {
+          subscriptionAmount = subscriptionData.amount;
+          subscriptionStatus = subscriptionData.status;
+          subscriptionCancelReason = subscriptionData.cancelReason || null;
+        }
+
+        user.financial = {
+          hasSubscription: subscriptionStatus === 'active',
+          subscriptionAmount,
+          subscriptionStatus,
+          subscriptionCancelReason,
+          availableEarningsUsd: earningsData.available > 0 ? earningsData.available / 100 : undefined,
+          earningsTotalUsd: earningsData.total > 0 ? earningsData.total / 100 : undefined,
+          earningsThisMonthUsd: earningsData.pending > 0 ? earningsData.pending / 100 : undefined,
+          payoutsSetup: Boolean(user.stripeConnectedAccountId),
         };
+      }
 
-        // Total pages (non-deleted) for this user
-        try {
-          const pagesQuery = pagesCollection.where('userId', '==', userDoc.id);
-          if (typeof (pagesQuery as any).count === 'function') {
-            const countSnap = await (pagesQuery as any).count().get();
-            user.totalPages = countSnap.data()?.count ?? 0;
-          } else {
-            const pagesSnap = await pagesQuery.get();
-            user.totalPages = pagesSnap.size;
-          }
-        } catch (pagesErr) {
-          console.warn(`Could not count pages for user ${userDoc.id}:`, pagesErr);
-        }
-
-        if (includeFinancial) {
-          try {
-            const balanceDoc = await db.collection(usdBalancesCollectionName).doc(userDoc.id).get();
-            const balanceData = balanceDoc.data() || {};
-
-            // Phase 2: Calculate writer balance from earnings records (single source of truth)
-            let availableEarningsUsd: number | undefined;
-            let earningsTotalUsd: number | undefined;
-            let earningsThisMonthUsd: number | undefined;
-
-            const earningsQuery = db.collection(writerEarningsCollectionName)
-              .where('userId', '==', userDoc.id);
-            const earningsSnapshot = await earningsQuery.get();
-
-            if (!earningsSnapshot.empty) {
-              let totalCents = 0;
-              let availableCents = 0;
-              let pendingCents = 0;
-
-              earningsSnapshot.docs.forEach(doc => {
-                const earning = doc.data();
-                const cents = earning.totalUsdCentsReceived || earning.totalCentsReceived || 0;
-                totalCents += cents;
-
-                if (earning.status === 'pending') {
-                  pendingCents += cents;
-                } else if (earning.status === 'available') {
-                  availableCents += cents;
-                }
-              });
-
-              earningsTotalUsd = totalCents / 100;
-              availableEarningsUsd = availableCents / 100;
-              earningsThisMonthUsd = pendingCents / 100;
-            }
-
-            // Get user's Stripe customer ID to verify subscription status against Stripe
-            const stripeCustomerId = data.stripeCustomerId;
-            const stripeSubData = stripeCustomerId ? activeStripeSubscriptions.get(stripeCustomerId) : null;
-
-            // Use Stripe as source of truth for subscription status
-            // Firebase data may be stale if webhook didn't update correctly
-            let subscriptionAmount: number | null = null;
-            let subscriptionStatus: string | null = null;
-
-            if (stripeSubData) {
-              // User has active subscription in Stripe
-              subscriptionAmount = stripeSubData.amountCents / 100;
-              subscriptionStatus = 'active';
-            } else if (balanceData.monthlyAllocationCents > 0 || balanceData.subscriptionAmount > 0) {
-              // Firebase shows subscription but Stripe doesn't have active one - cancelled
-              subscriptionAmount = balanceData.subscriptionAmount ??
-                (balanceData.monthlyAllocationCents ? balanceData.monthlyAllocationCents / 100 : null);
-              subscriptionStatus = 'cancelled';
-            }
-
-            const subscriptionCancelReason =
-              balanceData.subscriptionCancellationReason ??
-              balanceData.cancelReason ??
-              null;
-
-            user.financial = {
-              hasSubscription: subscriptionStatus === 'active',
-              subscriptionAmount: subscriptionAmount ?? null,
-              subscriptionStatus,
-              subscriptionCancelReason,
-              availableEarningsUsd,
-              earningsTotalUsd,
-              earningsThisMonthUsd,
-              payoutsSetup: Boolean(user.stripeConnectedAccountId)
-            };
-          } catch (finError) {
-            console.warn(`Financial data fetch failed for user ${userDoc.id}:`, finError);
-          }
-        }
-
-        // Apply search filter if provided
-        if (searchTerm) {
-          const searchLower = searchTerm.toLowerCase();
-          const emailMatch = user.email.toLowerCase().includes(searchLower);
-          const usernameMatch = user.username?.toLowerCase().includes(searchLower);
-
-          if (emailMatch || usernameMatch) {
-            userData.push(user);
-          }
-        } else {
+      // Apply search filter if provided
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        if (user.email.toLowerCase().includes(searchLower) ||
+            user.username?.toLowerCase().includes(searchLower)) {
           userData.push(user);
         }
-
-      } catch (error) {
-        console.error(`Error processing user ${userDoc.id}:`, error);
-        // Continue processing other users
+      } else {
+        userData.push(user);
       }
     }
 
-    console.log(`Processed ${userData.length} users successfully`);
-
-    // Resolve referrer usernames for users that have referredBy
-    const referrerUids = [...new Set(userData.filter(u => u.referredBy).map(u => u.referredBy!))];
-    if (referrerUids.length > 0) {
-      console.log(`[Admin Users] Resolving ${referrerUids.length} unique referrer usernames`);
-      const referrerUsernameMap = new Map<string, string>();
-
-      // Batch fetch referrer documents (Firestore 'in' query supports up to 30 items)
-      const batchSize = 30;
-      for (let i = 0; i < referrerUids.length; i += batchSize) {
-        const batch = referrerUids.slice(i, i + batchSize);
-        try {
-          const referrerDocs = await Promise.all(
-            batch.map(uid => db.collection(usersCollectionName).doc(uid).get())
-          );
-          for (const doc of referrerDocs) {
-            if (doc.exists) {
-              const refData = doc.data();
-              if (refData?.username) {
-                referrerUsernameMap.set(doc.id, refData.username);
-              }
-            }
-          }
-        } catch (refErr) {
-          console.warn('[Admin Users] Error fetching referrer usernames:', refErr);
-        }
-      }
-
-      // Apply referrer usernames to user data
-      for (const user of userData) {
-        if (user.referredBy && referrerUsernameMap.has(user.referredBy)) {
-          user.referredByUsername = referrerUsernameMap.get(user.referredBy);
-        }
-      }
-      console.log(`[Admin Users] Resolved ${referrerUsernameMap.size} referrer usernames`);
-    }
+    const duration = Date.now() - startTime;
+    console.log(`[Admin Users] Processed ${userData.length} users in ${duration}ms`);
 
     return NextResponse.json({
       success: true,
       users: userData,
-      total: userData.length
+      total: userData.length,
+      _debug: { durationMs: duration }
     });
 
   } catch (error) {
@@ -342,9 +218,191 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: 'Failed to load users',
-      details: error.message
+      details: (error as Error).message
     }, { status: 500 });
   }
+}
+
+// Helper: Batch fetch subscription documents from Firestore (source of truth)
+// Subscriptions are stored at users/{userId}/subscriptions/current and updated by webhooks
+interface SubscriptionInfo {
+  status: string;
+  amount: number | null;
+  cancelReason?: string;
+  cancelAtPeriodEnd?: boolean;
+  currentPeriodEnd?: string;
+  tier?: string;
+}
+
+async function batchFetchSubscriptions(
+  db: FirebaseFirestore.Firestore,
+  usersCollectionName: string,
+  userIds: string[]
+): Promise<Map<string, SubscriptionInfo>> {
+  const map = new Map<string, SubscriptionInfo>();
+  if (userIds.length === 0) return map;
+
+  try {
+    // Fetch subscription documents from users/{userId}/subscriptions/current
+    const refs = userIds.map(uid =>
+      db.collection(usersCollectionName).doc(uid).collection('subscriptions').doc('current')
+    );
+    const docs = await db.getAll(...refs);
+
+    for (let i = 0; i < docs.length; i++) {
+      const doc = docs[i];
+      const userId = userIds[i];
+
+      if (doc.exists) {
+        const data = doc.data()!;
+        map.set(userId, {
+          status: data.status || 'inactive',
+          amount: data.amount ?? null,
+          cancelReason: data.cancelReason,
+          cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+          currentPeriodEnd: data.currentPeriodEnd,
+          tier: data.tier,
+        });
+      }
+    }
+
+    console.log(`[Admin Users] Fetched ${map.size} subscription documents from Firestore`);
+  } catch (err) {
+    console.warn('[Admin Users] Error batch fetching subscriptions:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch earnings aggregated by userId
+async function batchFetchEarnings(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userIds: string[]
+): Promise<Map<string, { total: number; available: number; pending: number }>> {
+  const map = new Map<string, { total: number; available: number; pending: number }>();
+  if (userIds.length === 0) return map;
+
+  try {
+    // Firestore 'in' query supports up to 30 items, batch if needed
+    const batchSize = 30;
+    const batches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+      batches.push(
+        db.collection(collectionName)
+          .where('userId', 'in', batch)
+          .get()
+      );
+    }
+
+    const results = await Promise.all(batches);
+
+    // Aggregate earnings by userId
+    for (const snapshot of results) {
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const userId = data.userId;
+        const cents = data.totalUsdCentsReceived || data.totalCentsReceived || 0;
+
+        if (!map.has(userId)) {
+          map.set(userId, { total: 0, available: 0, pending: 0 });
+        }
+
+        const entry = map.get(userId)!;
+        entry.total += cents;
+
+        if (data.status === 'pending') {
+          entry.pending += cents;
+        } else if (data.status === 'available') {
+          entry.available += cents;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Admin Users] Error batch fetching earnings:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch page counts using parallel count queries
+async function batchFetchPageCounts(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userIds: string[]
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (userIds.length === 0) return map;
+
+  try {
+    // Run count queries in parallel (limit concurrency to avoid overwhelming Firestore)
+    const CONCURRENCY = 20;
+    const pagesCollection = db.collection(collectionName);
+
+    for (let i = 0; i < userIds.length; i += CONCURRENCY) {
+      const batch = userIds.slice(i, i + CONCURRENCY);
+      const countPromises = batch.map(async (uid) => {
+        try {
+          const query = pagesCollection.where('userId', '==', uid);
+          if (typeof (query as any).count === 'function') {
+            const countSnap = await (query as any).count().get();
+            return { uid, count: countSnap.data()?.count ?? 0 };
+          } else {
+            const snap = await query.select().get(); // select() returns only doc refs, not data
+            return { uid, count: snap.size };
+          }
+        } catch {
+          return { uid, count: 0 };
+        }
+      });
+
+      const results = await Promise.all(countPromises);
+      for (const { uid, count } of results) {
+        map.set(uid, count);
+      }
+    }
+  } catch (err) {
+    console.warn('[Admin Users] Error batch fetching page counts:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch referrer usernames
+async function batchFetchReferrerUsernames(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userDocs: FirebaseFirestore.QueryDocumentSnapshot[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+
+  // Collect unique referrer IDs
+  const referrerIds = new Set<string>();
+  for (const doc of userDocs) {
+    const referredBy = doc.data().referredBy;
+    if (referredBy) {
+      referrerIds.add(referredBy);
+    }
+  }
+
+  if (referrerIds.size === 0) return map;
+
+  try {
+    // Use getAll for efficient batch fetching
+    const refs = Array.from(referrerIds).map(uid => db.collection(collectionName).doc(uid));
+    const docs = await db.getAll(...refs);
+
+    for (const doc of docs) {
+      if (doc.exists) {
+        const username = doc.data()?.username;
+        if (username) {
+          map.set(doc.id, username);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Admin Users] Error fetching referrer usernames:', err);
+  }
+  return map;
 }
 
 // POST endpoint - Update user feature flag overrides

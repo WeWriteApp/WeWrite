@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "../ui/button";
-import { Check, Plus, UserPlus, UserMinus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../providers/AuthProvider';
 import {
@@ -122,7 +122,7 @@ export function UserFollowButton({
               exit={{ scale: 0, rotate: 180 }}
               transition={{ duration: 0.3 }}
             >
-              <Check className="h-4 w-4 text-green-600" />
+              <Icon name="Check" size={16} className="text-green-600" />
             </motion.div>
           ) : isFollowing ? (
             <motion.div
@@ -132,7 +132,7 @@ export function UserFollowButton({
               exit={{ scale: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <UserMinus className="h-4 w-4" />
+              <Icon name="User" size={16} />
             </motion.div>
           ) : (
             <motion.div
@@ -142,7 +142,7 @@ export function UserFollowButton({
               exit={{ scale: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <UserPlus className="h-4 w-4" />
+              <Icon name="User" size={16} />
             </motion.div>
           )}
         </AnimatePresence>

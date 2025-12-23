@@ -264,10 +264,10 @@ export async function GET(
 // POST /api/pages/[id]/versions
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: pageId } = params;
+    const { id: pageId } = await params;
     const currentUserId = await getUserIdFromRequest(request);
     
     if (!currentUserId) {

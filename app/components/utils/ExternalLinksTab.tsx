@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Loader2, Globe, Link, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import PillLink from './PillLink';
 import EmptyState from '../ui/EmptyState';
 import ExternalLinkPreviewModal from '../ui/ExternalLinkPreviewModal';
@@ -101,7 +101,7 @@ export default function ExternalLinksTab({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Icon name="Loader" />
           <span>Loading external links...</span>
         </div>
       </div>
@@ -125,7 +125,7 @@ export default function ExternalLinksTab({
   if (!externalLinks || externalLinks.length === 0) {
     return (
       <EmptyState
-        icon={Globe}
+        icon="Globe"
         title="No external links found"
         description={`${username} hasn't added any external links to their pages yet.`}
         size="lg"
@@ -138,7 +138,7 @@ export default function ExternalLinksTab({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Globe className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Globe" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold">External Links</h3>
           <span className="text-sm text-muted-foreground">
             ({externalLinks?.length || 0})

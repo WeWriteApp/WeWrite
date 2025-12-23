@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
-import { UserCircle, CreditCard, Settings, Plus, Minus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import TokenAllocationBar from '../editor/TokenAllocationBar';
 import { updateUsername } from "../../firebase/usernameHistory";
@@ -240,7 +240,7 @@ const AccountDrawer = ({
           onClick={() => setIsOpen(true)}
           className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-background/80 hover:bg-background/90 border border-border/50 shadow-sm transition-colors"
         >
-          <UserCircle size={18} />
+          <Icon name="UserCircle" size={18} />
           <span>Account</span>
         </button>
       )}
@@ -269,7 +269,7 @@ const AccountDrawer = ({
                   className="p-1 hover:bg-muted rounded-full"
                   aria-label="Close"
                 >
-                  <X size={20} />
+                  <Icon name="X" size={20} />
                 </button>
               </div>
             </div>

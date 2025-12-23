@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { Check, ChevronRight, Circle } from "lucide-react"
+import { Icon } from "@/components/ui/Icon"
 import { cn } from "../../lib/utils"
 
 // SIMPLE dropdown - no Radix UI, just basic show/hide
@@ -93,13 +93,43 @@ const DropdownMenuTrigger = ({ children, className, asChild, ...props }: any) =>
   );
 };
 
-const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 4, ...props }: any) => {
+/**
+ * Open direction determines where the dropdown opens FROM and how it's anchored:
+ * - "bottom-left": Opens downward, anchored to trigger's LEFT edge (dropdown's left = trigger's left)
+ * - "bottom-right": Opens downward, anchored to trigger's RIGHT edge (dropdown's right = trigger's right)
+ * - "top-left": Opens upward, anchored to trigger's LEFT edge
+ * - "top-right": Opens upward, anchored to trigger's RIGHT edge
+ *
+ * Legacy "align" prop is mapped: align="start" -> "bottom-left", align="end" -> "bottom-right"
+ */
+type OpenDirection = "bottom-left" | "bottom-right" | "top-left" | "top-right";
+
+const DropdownMenuContent = ({
+  children,
+  className,
+  align, // Legacy prop for backwards compatibility
+  openDirection: openDirectionProp,
+  sideOffset = 4,
+  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
+  align?: "start" | "end"; // Legacy - maps to openDirection
+  openDirection?: OpenDirection;
+  sideOffset?: number;
+  [key: string]: any;
+}) => {
   const { open, triggerRef } = React.useContext(DropdownContext);
   const [triggerRect, setTriggerRect] = React.useState<DOMRect | null>(null);
+  const [contentRect, setContentRect] = React.useState<DOMRect | null>(null);
   const [mounted, setMounted] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [shouldRender, setShouldRender] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // Resolve openDirection from legacy align prop or new openDirection prop
+  const openDirection: OpenDirection = openDirectionProp ||
+    (align === "start" ? "bottom-left" : "bottom-right");
 
   // Ensure we're mounted on client side
   React.useEffect(() => {
@@ -122,7 +152,8 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
       // Remove from DOM after animation completes
       const timer = setTimeout(() => {
         setShouldRender(false);
-      }, 200); // Slightly longer to ensure animation completes
+        setContentRect(null); // Reset content rect when closing
+      }, 200);
       return () => clearTimeout(timer);
     }
   }, [open]);
@@ -149,50 +180,66 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
     }
   }, [shouldRender, open, triggerRef]);
 
+  // Measure content after render to get accurate width for right-aligned positioning
+  React.useLayoutEffect(() => {
+    if (shouldRender && contentRef.current) {
+      setContentRect(contentRef.current.getBoundingClientRect());
+    }
+  }, [shouldRender, children]);
+
   if (!shouldRender || !triggerRect || !mounted) return null;
 
-  // Calculate position based on alignment
+  // Calculate position based on openDirection
   const calculatePosition = () => {
     const gap = sideOffset;
-    const viewportPadding = 8; // Padding from viewport edges
+    const viewportPadding = 8;
+
+    const isBottom = openDirection.startsWith("bottom");
+    const isLeft = openDirection.endsWith("left");
+
+    let top: number;
     let left: number;
     let transformOrigin: string;
 
-    if (align === "start") {
-      // Align to left edge of trigger
-      left = triggerRect.left;
-      transformOrigin = "top left";
-      // Ensure dropdown doesn't go off left edge
-      left = Math.max(viewportPadding, left);
+    // Vertical positioning
+    if (isBottom) {
+      top = triggerRect.bottom + gap;
     } else {
-      // Default: align to right edge of trigger (end)
-      // For earnings dropdown, we want the RIGHT edge of the dropdown to align with the RIGHT edge of the trigger
+      // For top, we need content height - use measured or estimate
+      const contentHeight = contentRect?.height || 200;
+      top = triggerRect.top - gap - contentHeight;
+    }
 
-      // Try to get actual dropdown width if element exists
-      let dropdownWidth = 280; // Default estimate
-      if (contentRef.current) {
-        const rect = contentRef.current.getBoundingClientRect();
-        if (rect.width > 0) {
-          dropdownWidth = rect.width;
-        }
+    // Horizontal positioning - anchor to the appropriate edge
+    if (isLeft) {
+      // Left edge of dropdown aligns with left edge of trigger
+      left = triggerRect.left;
+      transformOrigin = isBottom ? "top left" : "bottom left";
+    } else {
+      // Right edge of dropdown aligns with right edge of trigger
+      // We need the content width for this calculation
+      const contentWidth = contentRect?.width || 0;
+      if (contentWidth > 0) {
+        left = triggerRect.right - contentWidth;
+      } else {
+        // Fallback: just align to trigger right edge, will adjust after measure
+        left = triggerRect.right;
       }
+      transformOrigin = isBottom ? "top right" : "bottom right";
+    }
 
-      // Position so the right edge of dropdown aligns with right edge of trigger
-      left = triggerRect.right - dropdownWidth;
-      transformOrigin = "top right";
-
-      // Ensure dropdown doesn't go off left edge of viewport
-      left = Math.max(viewportPadding, left);
-
-      // If the dropdown would still go off the right edge, adjust
-      if (left + dropdownWidth > window.innerWidth - viewportPadding) {
-        left = window.innerWidth - dropdownWidth - viewportPadding;
+    // Viewport boundary checks
+    left = Math.max(viewportPadding, left);
+    if (contentRect?.width) {
+      const rightEdge = left + contentRect.width;
+      if (rightEdge > window.innerWidth - viewportPadding) {
+        left = window.innerWidth - contentRect.width - viewportPadding;
       }
     }
 
     return {
       position: 'fixed' as const,
-      top: triggerRect.bottom + gap,
+      top,
       left,
       zIndex: 99999,
       transformOrigin
@@ -201,17 +248,19 @@ const DropdownMenuContent = ({ children, className, align = "end", sideOffset = 
 
   const style = calculatePosition();
 
-  // Animation classes based on state and alignment
+  // Animation classes based on state and direction
+  // Uses only vertical translation (no scale) to prevent horizontal shift
   const getAnimationClasses = () => {
     const baseClasses = "transition-all duration-150 ease-out";
-    const transformOrigin = align === 'start' ? 'origin-top-left' : 'origin-top-right';
+    const isBottom = openDirection.startsWith("bottom");
+
+    // Slide direction: bottom-* slides down from above, top-* slides up from below
+    const translateClass = isBottom ? '-translate-y-2' : 'translate-y-2';
 
     if (isAnimating) {
-      // Enter animation - slide down and fade in
-      return `${baseClasses} ${transformOrigin} opacity-100 scale-100 translate-y-0`;
+      return `${baseClasses} opacity-100 translate-y-0`;
     } else {
-      // Exit animation - slide up and fade out
-      return `${baseClasses} ${transformOrigin} opacity-0 scale-95 -translate-y-2`;
+      return `${baseClasses} opacity-0 ${translateClass}`;
     }
   };
 

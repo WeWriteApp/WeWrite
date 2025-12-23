@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
-import { TrendingUp, TrendingDown, Users, FileText, Share2, Edit3, DollarSign, Smartphone, Eye } from 'lucide-react';
 
 // Safe tooltip component that handles malformed data
 const SafeTooltip = ({ active, payload, label }: any) => {
@@ -47,6 +47,7 @@ import {
   usePWAInstallsMetrics,
   useVisitorMetrics,
   usePlatformFeeMetrics,
+  usePlatformRevenueMetrics,
   useFollowedUsersMetrics
 } from '../../hooks/useDashboardAnalytics';
 import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
@@ -166,7 +167,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'new-accounts',
       title: 'New Accounts Created',
-      icon: <Users className="h-5 w-5" />,
+      icon: <Icon name="Users" size={20} />,
       color: '#3b82f6',
       hook: (dateRange: DateRange, granularity: number) => useAccountsMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -204,7 +205,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'new-pages',
       title: 'Pages Created & Deleted',
-      icon: <FileText className="h-5 w-5" />,
+      icon: <Icon name="FileText" size={20} />,
       color: '#10b981',
       hook: (dateRange: DateRange, granularity: number) => usePagesMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -242,7 +243,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'content-changes',
       title: 'Content Changes',
-      icon: <Edit3 className="h-5 w-5" />,
+      icon: <Icon name="Edit3" size={20} />,
       color: '#f59e0b',
       hook: (dateRange: DateRange, granularity: number) => useContentChangesMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -277,7 +278,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'shares',
       title: 'Content Shares',
-      icon: <Share2 className="h-5 w-5" />,
+      icon: <Icon name="Share2" size={20} />,
       color: '#8b5cf6',
       hook: (dateRange: DateRange, granularity: number) => useSharesMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -322,7 +323,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'pwa-installs',
       title: 'PWA Installs',
-      icon: <Smartphone className="h-5 w-5" />,
+      icon: <Icon name="Smartphone" size={20} />,
       color: '#06b6d4',
       hook: (dateRange: DateRange, granularity: number) => usePWAInstallsMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -360,7 +361,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'visitors',
       title: 'Visitors',
-      icon: <Eye className="h-5 w-5" />,
+      icon: <Icon name="Eye" size={20} />,
       color: '#84cc16',
       hook: (dateRange: DateRange, granularity: number) => useVisitorMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -396,14 +397,14 @@ export function DesktopOptimizedDashboard({
       )
     },
     {
-      id: 'platform-fees',
-      title: 'Platform Fee Revenue',
-      icon: <DollarSign className="h-5 w-5" />,
+      id: 'platform-revenue',
+      title: 'Platform Revenue',
+      icon: <Icon name="DollarSign" size={20} />,
       color: '#10b981',
-      hook: (dateRange: DateRange, granularity: number) => usePlatformFeeMetrics(dateRange, granularity),
+      hook: (dateRange: DateRange, granularity: number) => usePlatformRevenueMetrics(dateRange, granularity),
       valueFormatter: (data, stats) => {
         // Use stats if available, otherwise calculate from data
-        const totalRevenue = stats?.totalRevenue || data.reduce((sum, item) => sum + (item.revenue || 0), 0);
+        const totalRevenue = stats?.totalRevenue || data.reduce((sum, item) => sum + (item.totalRevenue || 0), 0);
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
@@ -443,7 +444,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'followed-users',
       title: 'User Follows',
-      icon: <Users className="h-5 w-5" />,
+      icon: <Icon name="Users" size={20} />,
       color: '#8b5cf6',
       hook: (dateRange: DateRange, granularity: number) => useFollowedUsersMetrics(dateRange, granularity),
       valueFormatter: (data) => {
@@ -481,7 +482,7 @@ export function DesktopOptimizedDashboard({
     {
       id: 'payout-analytics',
       title: 'Writer Payouts',
-      icon: <DollarSign className="h-5 w-5" />,
+      icon: <Icon name="DollarSign" size={20} />,
       color: '#059669',
       hook: (dateRange: DateRange, granularity: number, globalFilters?: any) => {
         return usePayoutAnalytics(dateRange, false);
@@ -600,7 +601,7 @@ function DashboardRow({
             <span className="font-medium">Total: {currentValue}</span>
             {trend && (
               <div className={`flex items-center gap-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {trend.isPositive ? <Icon name="TrendingUp" size={12} /> : <Icon name="TrendingDown" size={12} />}
                 <span className="text-xs">{trend.percentage}%</span>
               </div>
             )}

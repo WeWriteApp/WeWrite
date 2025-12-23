@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { AlertTriangle, CheckCircle, Monitor, Trash2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 
 interface MonitoringReport {
@@ -113,7 +113,7 @@ export default function SubscriptionManagement() {
             disabled={isMonitoring}
             variant="secondary"
           >
-            <Monitor className="w-4 h-4 mr-2" />
+            <Icon name="Monitor" size={16} className="mr-2" />
             {isMonitoring ? 'Scanning...' : 'Run Monitor'}
           </Button>
         </div>
@@ -123,7 +123,7 @@ export default function SubscriptionManagement() {
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-700">
-              <AlertTriangle className="w-4 h-4" />
+              <Icon name="AlertTriangle" size={16} />
               <span>{error}</span>
             </div>
           </CardContent>
@@ -135,7 +135,7 @@ export default function SubscriptionManagement() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Monitor className="w-5 h-5" />
+              <Icon name="Monitor" size={20} />
               Monitoring Report
             </CardTitle>
             <CardDescription>
@@ -192,7 +192,7 @@ export default function SubscriptionManagement() {
                   disabled={isCleaningUp}
                   variant="secondary"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <Icon name="RefreshCw" size={16} className="mr-2" />
                   Preview Cleanup
                 </Button>
                 <Button 
@@ -200,7 +200,7 @@ export default function SubscriptionManagement() {
                   disabled={isCleaningUp}
                   variant="destructive"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Icon name="Trash2" size={16} className="mr-2" />
                   Execute Cleanup
                 </Button>
               </div>
@@ -214,7 +214,7 @@ export default function SubscriptionManagement() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {cleanupResult.dryRun ? <RefreshCw className="w-5 h-5" /> : <Trash2 className="w-5 h-5" />}
+              {cleanupResult.dryRun ? <Icon name="RefreshCw" size={20} /> : <Icon name="Trash2" size={20} />}
               Cleanup {cleanupResult.dryRun ? 'Preview' : 'Results'}
             </CardTitle>
             <CardDescription>
@@ -243,7 +243,7 @@ export default function SubscriptionManagement() {
                 <ul className="space-y-1">
                   {cleanupResult.summary.errors.map((error, index) => (
                     <li key={index} className="text-sm text-red-600 flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <Icon name="AlertTriangle" size={16} className="mt-0.5 flex-shrink-0" />
                       <span>{error}</span>
                     </li>
                   ))}
@@ -258,7 +258,7 @@ export default function SubscriptionManagement() {
                   disabled={isCleaningUp}
                   variant="destructive"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Icon name="Trash2" size={16} className="mr-2" />
                   Execute This Cleanup
                 </Button>
               </div>
@@ -266,7 +266,7 @@ export default function SubscriptionManagement() {
 
             {!cleanupResult.dryRun && (
               <div className="flex items-center gap-2 text-green-600 pt-4 border-t">
-                <CheckCircle className="w-4 h-4" />
+                <Icon name="CheckCircle" size={16} />
                 <span>Cleanup completed successfully</span>
               </div>
             )}
@@ -289,7 +289,7 @@ export default function SubscriptionManagement() {
               className="h-auto p-4 flex flex-col items-start"
             >
               <div className="flex items-center gap-2 mb-2">
-                <RefreshCw className="w-4 h-4" />
+                <Icon name="RefreshCw" size={16} />
                 <span className="font-semibold">Preview Cleanup</span>
               </div>
               <span className="text-sm text-muted-foreground text-left">
@@ -304,7 +304,7 @@ export default function SubscriptionManagement() {
               className="h-auto p-4 flex flex-col items-start"
             >
               <div className="flex items-center gap-2 mb-2">
-                <Monitor className="w-4 h-4" />
+                <Icon name="Monitor" size={16} />
                 <span className="font-semibold">Health Check</span>
               </div>
               <span className="text-sm text-muted-foreground text-left">

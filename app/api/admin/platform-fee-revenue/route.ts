@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,17 +43,17 @@ export async function GET(request: NextRequest) {
       const payoutAmount = payout.amount || 0;
 
       // Calculate platform fee correctly:
-      // The payout amount is the net amount after platform fee (7%) and Stripe fees
+      // The payout amount is the net amount after platform fee (10%) and Stripe fees
       // To find the gross amount: gross = net / (1 - platform_fee_rate - stripe_fee_rate)
       // For simplicity, we'll estimate Stripe fees at ~0.5% for standard payouts
       const estimatedStripeFeeRate = 0.005; // 0.5%
-      const platformFeeRate = 0.07; // 7%
+      const platformFeeRate = PLATFORM_FEE_CONFIG.PERCENTAGE; // 10%
       const totalFeeRate = platformFeeRate + estimatedStripeFeeRate;
 
       // Calculate gross amount from net payout
       const grossAmount = payoutAmount / (1 - totalFeeRate);
 
-      // Platform fee is 7% of gross amount
+      // Platform fee is 10% of gross amount
       const platformFee = grossAmount * platformFeeRate;
 
       if (!monthlyData[monthKey]) {

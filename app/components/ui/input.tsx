@@ -13,10 +13,18 @@ export interface InputProps
   rightIcon?: React.ReactNode;
   /** Additional className for the wrapper when icons are used */
   wrapperClassName?: string;
+  /** Whether the input is in an error state */
+  error?: boolean;
+  /** Whether the input is in a warning state */
+  warning?: boolean;
+  /** Error message to display below the input */
+  errorText?: string;
+  /** Warning message to display below the input */
+  warningText?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, leftIcon, rightIcon, wrapperClassName, value, defaultValue, ...props }, ref) => {
+  ({ className, type, leftIcon, rightIcon, wrapperClassName, value, defaultValue, error, warning, errorText, warningText, ...props }, ref) => {
     // Track if input has value for icon coloring
     const [hasValue, setHasValue] = React.useState(() => {
       return !!(value || defaultValue);
@@ -43,21 +51,31 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     // If no icons, render simple input
     if (!leftIcon && !rightIcon) {
       return (
-        <input
-          type={type}
-          className={cn(
-            // Use global glassmorphic input style
-            "wewrite-input",
-            // Additional utility classes that don't conflict with glassmorphic styling
-            "flex h-10 w-full text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium",
-            shinyClass,
-            className
+        <div className="w-full">
+          <input
+            type={type}
+            className={cn(
+              // Use global glassmorphic input style
+              "wewrite-input",
+              error && "wewrite-input-error",
+              warning && "wewrite-input-warning",
+              // Additional utility classes that don't conflict with glassmorphic styling
+              "flex h-10 w-full text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium",
+              shinyClass,
+              className
+            )}
+            ref={ref}
+            value={value}
+            defaultValue={defaultValue}
+            {...props}
+          />
+          {error && errorText && (
+            <p className="mt-1 text-sm text-destructive">{errorText}</p>
           )}
-          ref={ref}
-          value={value}
-          defaultValue={defaultValue}
-          {...props}
-        />
+          {warning && warningText && (
+            <p className="mt-1 text-sm text-warning">{warningText}</p>
+          )}
+        </div>
       )
     }
 
@@ -86,41 +104,51 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     };
 
     return (
-      <div className={cn("relative flex", widthClasses, wrapperClassName)}>
-        {leftIcon && (
-          <div className={cn(
-            "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center z-10 transition-colors",
-            iconColorClass
-          )}>
-            {leftIcon}
-          </div>
-        )}
-        <input
-          type={type}
-          className={cn(
-            // Use global glassmorphic input style
-            "wewrite-input",
-            // Additional utility classes that don't conflict with glassmorphic styling
-            "flex h-10 w-full text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium",
-            // Padding classes for icons
-            leftIcon && "wewrite-input-left-icon",
-            rightIcon && "wewrite-input-right-icon",
-            shinyClass,
-            otherClasses
+      <div className="w-full">
+        <div className={cn("relative flex", widthClasses, wrapperClassName)}>
+          {leftIcon && (
+            <div className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center z-10 transition-colors",
+              iconColorClass
+            )}>
+              {leftIcon}
+            </div>
           )}
-          ref={ref}
-          value={value}
-          defaultValue={defaultValue}
-          onChange={handleChange}
-          {...props}
-        />
-        {rightIcon && (
-          <div className={cn(
-            "absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center z-10 transition-colors",
-            iconColorClass
-          )}>
-            {rightIcon}
-          </div>
+          <input
+            type={type}
+            className={cn(
+              // Use global glassmorphic input style
+              "wewrite-input",
+              error && "wewrite-input-error",
+              warning && "wewrite-input-warning",
+              // Additional utility classes that don't conflict with glassmorphic styling
+              "flex h-10 w-full text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium",
+              // Padding classes for icons
+              leftIcon && "wewrite-input-left-icon",
+              rightIcon && "wewrite-input-right-icon",
+              shinyClass,
+              otherClasses
+            )}
+            ref={ref}
+            value={value}
+            defaultValue={defaultValue}
+            onChange={handleChange}
+            {...props}
+          />
+          {rightIcon && (
+            <div className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center z-10 transition-colors",
+              iconColorClass
+            )}>
+              {rightIcon}
+            </div>
+          )}
+        </div>
+        {error && errorText && (
+          <p className="mt-1 text-sm text-destructive">{errorText}</p>
+        )}
+        {warning && warningText && (
+          <p className="mt-1 text-sm text-warning">{warningText}</p>
         )}
       </div>
     )

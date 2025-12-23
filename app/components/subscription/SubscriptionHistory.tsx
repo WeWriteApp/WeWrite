@@ -1,15 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import '../ui/tooltip.css';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import {
-  History,
-  Loader2,
-  RefreshCw,
-  AlertCircle
-} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../../providers/AuthProvider';
@@ -167,7 +162,7 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
       <div className={cn("wewrite-card", className)}>
         <div className="flex items-center justify-center py-6">
             <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <Icon name="Loader" className="mx-auto mb-4" />
               <p className="text-sm text-muted-foreground">Loading subscription history...</p>
             </div>
           </div>
@@ -179,13 +174,13 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
     return (
       <div className={cn("wewrite-card", className)}>
         <div className="flex flex-col items-center gap-4 py-6">
-          <AlertCircle className="h-12 w-12 text-destructive" />
+          <Icon name="AlertCircle" size={48} className="text-destructive" />
           <div className="text-center">
             <p className="text-sm font-medium text-destructive mb-2">Failed to load subscription history</p>
             <p className="text-xs text-muted-foreground mb-4">{error}</p>
           </div>
           <Button onClick={fetchHistory} variant="secondary" size="sm">
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <Icon name="RefreshCw" size={16} className="mr-2" />
             Try Again
           </Button>
         </div>
@@ -197,7 +192,7 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
     <div className={cn("wewrite-card", className)}>
       {history.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-6">
-          <History className="h-12 w-12 text-muted-foreground" />
+          <Icon name="History" size={48} className="text-muted-foreground" />
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-2">No subscription history found</p>
             <p className="text-xs text-muted-foreground">

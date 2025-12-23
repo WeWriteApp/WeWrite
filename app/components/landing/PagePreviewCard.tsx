@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { ChevronRight } from 'lucide-react';
 
 interface PagePreviewCardProps {
   title: string;
@@ -86,7 +86,7 @@ export function PagePreviewCard({
             <CardTitle className="text-sm sm:text-base mb-0 pr-2 line-clamp-2">
               {title}
             </CardTitle>
-            <ChevronRight className="h-4 w-4 flex-shrink-0" />
+            <Icon name="ChevronRight" size={16} className="flex-shrink-0" />
           </div>
           {!hideStatus && (
             <div className="mt-1">

@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../providers/AuthProvider";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { Button } from "../../components/ui/button";
 import { auth } from "../../firebase/config";
-import { Mail, Loader2, RefreshCw, CheckCircle, LogOut, Clock } from "lucide-react";
 
 export default function VerifyEmailPendingPage() {
   const router = useRouter();
@@ -120,7 +120,7 @@ export default function VerifyEmailPendingPage() {
         showTerms={false}
       >
         <div className="flex flex-col items-center gap-6 py-4">
-          <Loader2 className="h-12 w-12 text-muted-foreground animate-spin" />
+          <Icon name="Loader" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </ModernAuthLayout>
@@ -140,7 +140,7 @@ export default function VerifyEmailPendingPage() {
       <div className="flex flex-col items-center gap-6 py-2">
         {/* Email icon */}
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Mail className="h-10 w-10 text-primary" />
+          <Icon name="Mail" size={40} className="text-primary" />
         </div>
 
         {/* Message */}
@@ -159,7 +159,7 @@ export default function VerifyEmailPendingPage() {
         {/* Success message */}
         {resendSuccess && (
           <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-4 py-2 rounded-lg">
-            <CheckCircle className="h-4 w-4" />
+            <Icon name="CheckCircle" size={16} />
             <span className="text-sm">Verification email sent!</span>
           </div>
         )}
@@ -174,12 +174,12 @@ export default function VerifyEmailPendingPage() {
           >
             {isCheckingVerification ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Icon name="Loader" />
                 Checking...
               </>
             ) : (
               <>
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <Icon name="RefreshCw" size={16} className="mr-2" />
                 I've verified my email
               </>
             )}
@@ -194,14 +194,14 @@ export default function VerifyEmailPendingPage() {
           >
             {isResending ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Icon name="Loader" />
                 Sending...
               </>
             ) : resendCooldown > 0 ? (
               <>Resend email in {resendCooldown}s</>
             ) : (
               <>
-                <Mail className="h-4 w-4 mr-2" />
+                <Icon name="Mail" size={16} className="mr-2" />
                 Resend verification email
               </>
             )}
@@ -217,7 +217,7 @@ export default function VerifyEmailPendingPage() {
             }}
             className="w-full text-muted-foreground"
           >
-            <Clock className="h-4 w-4 mr-2" />
+            <Icon name="Clock" size={16} className="mr-2" />
             Do this later
           </Button>
         </div>
@@ -234,7 +234,7 @@ export default function VerifyEmailPendingPage() {
           onClick={handleSignOut}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
         >
-          <LogOut className="h-4 w-4" />
+          <Icon name="LogOut" size={16} />
           Sign out and use a different email
         </button>
       </div>

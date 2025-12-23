@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Share2, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useSharesMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -84,7 +84,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Share2 className="h-5 w-5 text-destructive" />
+          <Icon name="Share2" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">Shares Analytics</h3>
         </div>
         <div className="h-48 flex items-center justify-center text-destructive">
@@ -99,11 +99,11 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <Share2 className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Share2" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold">Shares Analytics</h3>
         </div>
         <div className="h-48 flex flex-col items-center justify-center text-muted-foreground">
-          <Share2 className="h-12 w-12 mb-3 opacity-50" />
+          <Icon name="Share2" size={48} className="mb-3 opacity-50" />
           <h4 className="font-medium mb-2">No Share Data Available</h4>
           <p className="text-sm text-center max-w-xs">
             Share analytics tracking is not yet implemented.
@@ -119,7 +119,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Share2 className="h-5 w-5 text-primary" />
+          <Icon name="Share2" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Shares Analytics</h3>
         </div>
         
@@ -136,11 +136,11 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <Icon name="CheckCircle" size={16} className="text-green-500" />
             <span className="text-sm font-medium">{isNaN(successRate) ? '0.0' : successRate.toFixed(1)}% Success Rate</span>
           </div>
           <div className="flex items-center gap-2">
-            <XCircle className="h-4 w-4 text-red-500" />
+            <Icon name="XCircle" size={16} className="text-red-500" />
             <span className="text-sm text-muted-foreground">{totalAborted} Aborted</span>
           </div>
         </div>
@@ -149,9 +149,9 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
         {!loading && data.length > 1 && (
           <div className="flex items-center gap-2 text-sm">
             {isPositiveTrend ? (
-              <TrendingUp className="h-4 w-4 text-green-500" />
+              <Icon name="TrendingUp" size={16} className="text-green-500" />
             ) : (
-              <TrendingDown className="h-4 w-4 text-red-500" />
+              <Icon name="TrendingDown" size={16} className="text-red-500" />
             )}
             <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
               {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'better' : 'worse'}
@@ -169,7 +169,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
         ) : !hasData ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <Share2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <Icon name="Share2" size={32} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No share data available</p>
             </div>
           </div>

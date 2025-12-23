@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface BillingCountdownProps {
   billingDate: string | Date | null | undefined;
@@ -111,7 +111,7 @@ export function BillingCountdown({
   if (!isClient) {
     return (
       <p className={`text-sm text-muted-foreground ${className}`}>
-        <Calendar className="h-4 w-4 inline mr-1" />
+        <Icon name="Calendar" size={16} className="inline mr-1" />
         Loading billing information...
       </p>
     );
@@ -123,7 +123,7 @@ export function BillingCountdown({
   if (!targetDate) {
     return (
       <p className={`text-sm text-muted-foreground ${className}`}>
-        <Calendar className="h-4 w-4 inline mr-1" />
+        <Icon name="Calendar" size={16} className="inline mr-1" />
         Billing date unavailable
       </p>
     );
@@ -133,7 +133,7 @@ export function BillingCountdown({
   if (timeRemaining.isExpired) {
     return (
       <p className={`text-sm text-muted-foreground ${className}`}>
-        <Calendar className="h-4 w-4 inline mr-1" />
+        <Icon name="Calendar" size={16} className="inline mr-1" />
         {cancelAtPeriodEnd ? 'Subscription has ended' : 'Billing date has passed'}
       </p>
     );
@@ -164,7 +164,7 @@ export function BillingCountdown({
   return (
     <div className={`text-sm text-muted-foreground ${className}`}>
       <div className="flex items-center gap-1 mb-1">
-        <Clock className="h-4 w-4" />
+        <Icon name="Clock" size={16} />
         <span className="font-medium">{prefix}</span>
       </div>
       <div className="ml-5">

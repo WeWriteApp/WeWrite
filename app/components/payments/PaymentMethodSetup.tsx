@@ -5,7 +5,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { CreditCard, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
@@ -88,7 +88,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
   if (success) {
     return (
       <div className="text-center py-6">
-        <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-4" />
+        <Icon name="CheckCircle" size={48} className="mx-auto text-green-600 mb-4" />
         <h3 className="text-lg font-medium mb-2 text-green-800">Payment Method Added!</h3>
         <p className="text-muted-foreground">
           Your payment method has been successfully added to your account.
@@ -101,7 +101,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <Icon name="AlertTriangle" size={16} />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -152,12 +152,12 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
         >
           {loading ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current mr-2" />
+              <Icon name="Loader" size={16} className="mr-2" />
               Adding...
             </>
           ) : (
             <>
-              <Plus className="h-4 w-4 mr-2" />
+              <Icon name="Plus" size={16} className="mr-2" />
               Add Payment Method
             </>
           )}
@@ -193,7 +193,7 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
   if (!user) {
     return (
       <Alert>
-        <AlertTriangle className="h-4 w-4" />
+        <Icon name="AlertTriangle" size={16} />
         <AlertTitle>Authentication Required</AlertTitle>
         <AlertDescription>
           Please log in to add payment methods.
@@ -241,7 +241,7 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
     <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
+          <Icon name="CreditCard" size={20} />
           Add Payment Method
         </CardTitle>
         <CardDescription>

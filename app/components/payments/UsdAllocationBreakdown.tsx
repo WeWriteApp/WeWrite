@@ -1,17 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
-import {
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Minus,
-  FileText
-} from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { UsdAllocation } from '../../types/database';
 import { PillLink } from '../utils/PillLink';
@@ -143,7 +136,7 @@ export function UsdAllocationBreakdown({
       return (
         <div className={className}>
           <div className="text-center py-6 text-muted-foreground bg-muted/30 rounded-lg">
-            <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+            <Icon name="FileText" size={40} className="mx-auto mb-3 opacity-50" />
             <p className="text-base font-medium mb-1">No allocations yet</p>
             <p className="text-sm px-2">
               Start supporting creators by allocating funds to their content
@@ -163,7 +156,7 @@ export function UsdAllocationBreakdown({
         </CardHeader>
         <CardContent className="px-3 sm:px-4 pb-3">
           <div className="text-center py-4 sm:py-6 text-muted-foreground">
-            <FileText className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-3 opacity-50" />
+            <Icon name="FileText" size={32} className="sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-3 opacity-50" />
             <p className="text-sm sm:text-base font-medium mb-1">No allocations yet</p>
             <p className="text-xs sm:text-sm px-2">
               Start supporting creators by allocating funds to their content
@@ -245,7 +238,7 @@ export function UsdAllocationBreakdown({
                     className="h-8 w-8 p-0 text-destructive hover:text-destructive flex-shrink-0"
                     title="Remove allocation"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Icon name="Trash2" size={16} />
                   </Button>
                 )}
               </div>
@@ -279,7 +272,7 @@ export function UsdAllocationBreakdown({
                   }}
                   disabled={!onDecreaseAllocation}
                 >
-                  <Minus className="h-3 w-3" />
+                  <Icon name="Minus" size={12} />
                 </Button>
 
                 {/* Three-part composition bar in middle */}
@@ -333,7 +326,7 @@ export function UsdAllocationBreakdown({
                   }}
                   disabled={!onIncreaseAllocation}
                 >
-                  <Plus className="h-3 w-3" />
+                  <Icon name="Plus" size={12} />
                 </Button>
               </div>
               </div>
@@ -349,12 +342,12 @@ export function UsdAllocationBreakdown({
         >
           {showAll ? (
             <>
-              <ChevronUp className="h-4 w-4 mr-2" />
+              <Icon name="ChevronUp" size={16} className="mr-2" />
               Show Less
             </>
           ) : (
             <>
-              <ChevronDown className="h-4 w-4 mr-2" />
+              <Icon name="ChevronDown" size={16} className="mr-2" />
               Show {sortedAllocations.length - maxVisible} More
             </>
           )}

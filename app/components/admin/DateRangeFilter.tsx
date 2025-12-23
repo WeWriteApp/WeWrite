@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import { Calendar, RotateCcw, TrendingUp, Users, BarChart3, Activity } from 'lucide-react';
 import { format, subDays, subWeeks, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { GlobalAnalyticsFilters as GlobalAnalyticsFiltersType } from './GlobalAnalyticsFilters';
 
@@ -207,7 +207,7 @@ export function DateRangeFilter({
             className="h-8 w-8 p-0 flex-shrink-0"
             title="Reset to last 24 hours"
           >
-            <RotateCcw className="h-3 w-3" />
+            <Icon name="RotateCcw" size={12} />
           </Button>
 
           {/* Separator */}
@@ -219,7 +219,7 @@ export function DateRangeFilter({
               {/* Time Display Mode Toggle */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Icon name="BarChart3" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium text-muted-foreground">Display:</span>
                 </div>
                 <div className="flex items-center bg-muted rounded-md p-0.5">
@@ -229,7 +229,7 @@ export function DateRangeFilter({
                     onClick={() => handleTimeDisplayModeChange('cumulative')}
                     className="h-6 px-2 text-xs font-medium"
                   >
-                    <TrendingUp className="h-3 w-3 mr-1" />
+                    <Icon name="TrendingUp" size={12} className="mr-1" />
                     Cumulative
                   </Button>
                   <Button
@@ -238,7 +238,7 @@ export function DateRangeFilter({
                     onClick={() => handleTimeDisplayModeChange('overTime')}
                     className="h-6 px-2 text-xs font-medium"
                   >
-                    <Activity className="h-3 w-3 mr-1" />
+                    <Icon name="Activity" size={12} className="mr-1" />
                     Over Time
                   </Button>
                 </div>
@@ -250,7 +250,7 @@ export function DateRangeFilter({
               {/* Per-User Normalization Toggle */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Icon name="Users" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium text-muted-foreground">Per User:</span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -326,7 +326,7 @@ export function DateRangeFilter({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
+            <Icon name="Calendar" size={20} className="text-primary" />
             <h2 className="text-lg font-semibold">Date Range Filter</h2>
           </div>
           <Button
@@ -336,7 +336,7 @@ export function DateRangeFilter({
             className="h-8 w-8 p-0"
             title="Reset to last 24 hours"
           >
-            <RotateCcw className="h-4 w-4" />
+            <Icon name="RotateCcw" size={16} />
           </Button>
         </div>
 

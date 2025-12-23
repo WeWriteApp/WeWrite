@@ -1,22 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { Label } from '../../components/ui/label';
-import {
-  Mail,
-  Loader,
-  Bell,
-  DollarSign,
-  Sparkles,
-  Shield,
-  Save,
-  Check,
-  AlertCircle,
-  User
-} from 'lucide-react';
 import { useToast } from '../../components/ui/use-toast';
 
 interface EmailPreferences {
@@ -172,7 +161,7 @@ export default function TokenEmailPreferencesPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-background">
         <div className="text-center">
-          <Loader className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <Icon name="Loader" className="text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading your preferences...</p>
         </div>
       </div>
@@ -183,7 +172,7 @@ export default function TokenEmailPreferencesPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-background">
         <div className="text-center max-w-md p-6">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <Icon name="AlertCircle" size={48} className="text-destructive mx-auto mb-4" />
           <h1 className="text-xl font-bold mb-2">Unable to Load Preferences</h1>
           <p className="text-muted-foreground mb-4">{error}</p>
           <p className="text-sm text-muted-foreground">
@@ -255,7 +244,7 @@ export default function TokenEmailPreferencesPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <Mail className="h-8 w-8 text-primary" />
+            <Icon name="Mail" size={32} className="text-primary" />
             <h1 className="text-2xl font-bold">Email Preferences</h1>
           </div>
           <p className="text-muted-foreground">
@@ -265,7 +254,7 @@ export default function TokenEmailPreferencesPage() {
           {/* Account indicator */}
           {userData && (
             <div className="mt-4 flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-2">
-              <User className="h-4 w-4 text-muted-foreground" />
+              <Icon name="User" size={16} className="text-muted-foreground" />
               <span className="text-muted-foreground">Managing preferences for:</span>
               <span className="font-medium">
                 {userData.username ? `@${userData.username}` : userData.email}
@@ -284,9 +273,9 @@ export default function TokenEmailPreferencesPage() {
               className="gap-2"
             >
               {saving ? (
-                <Loader className="h-4 w-4 animate-spin" />
+                <Icon name="Loader" />
               ) : (
-                <Save className="h-4 w-4" />
+                <Icon name="Save" size={16} />
               )}
               Save Changes
             </Button>
@@ -297,7 +286,7 @@ export default function TokenEmailPreferencesPage() {
           {/* Security & Authentication */}
           <section className="bg-card rounded-lg border p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Shield className="h-5 w-5 text-blue-500" />
+              <Icon name="Shield" size={20} className="text-blue-500" />
               <h2 className="text-lg font-semibold">Security & Authentication</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -317,7 +306,7 @@ export default function TokenEmailPreferencesPage() {
           {/* Notifications */}
           <section className="bg-card rounded-lg border p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Bell className="h-5 w-5 text-orange-500" />
+              <Icon name="Bell" size={20} className="text-orange-500" />
               <h2 className="text-lg font-semibold">Notifications</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -358,7 +347,7 @@ export default function TokenEmailPreferencesPage() {
           {/* Payments */}
           <section className="bg-card rounded-lg border p-6">
             <div className="flex items-center gap-2 mb-4">
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <Icon name="DollarSign" size={20} className="text-green-500" />
               <h2 className="text-lg font-semibold">Payments & Earnings</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -392,7 +381,7 @@ export default function TokenEmailPreferencesPage() {
           {/* Engagement & Marketing */}
           <section className="bg-card rounded-lg border p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="h-5 w-5 text-purple-500" />
+              <Icon name="Sparkles" size={20} className="text-purple-500" />
               <h2 className="text-lg font-semibold">Engagement & Updates</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -447,9 +436,9 @@ export default function TokenEmailPreferencesPage() {
                 className="gap-2"
               >
                 {saving ? (
-                  <Loader className="h-4 w-4 animate-spin" />
+                  <Icon name="Loader" />
                 ) : (
-                  <Check className="h-4 w-4" />
+                  <Icon name="Check" size={16} />
                 )}
                 Save All Changes
               </Button>

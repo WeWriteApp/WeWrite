@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '../../lib/utils';
-import { Loader2, MessageCircle, ThumbsUp, ThumbsDown, Minus, Reply } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
@@ -188,28 +188,28 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
   }, [activeFilter, allReplies]);
 
   const filterButtons: { type: FilterType; label: string; icon: React.ReactNode; count: number }[] = [
-    { 
-      type: 'all', 
-      label: 'All', 
-      icon: <MessageCircle className="w-3.5 h-3.5" />, 
+    {
+      type: 'all',
+      label: 'All',
+      icon: <Icon name="MessageCircle" size={14} />,
       count: counts.total
     },
-    { 
-      type: 'disagree', 
-      label: 'Disagree', 
-      icon: <ThumbsDown className="w-3.5 h-3.5" />, 
+    {
+      type: 'disagree',
+      label: 'Disagree',
+      icon: <Icon name="ThumbsDown" size={14} />,
       count: counts.disagree
     },
-    { 
-      type: 'agree', 
-      label: 'Agree', 
-      icon: <ThumbsUp className="w-3.5 h-3.5" />, 
+    {
+      type: 'agree',
+      label: 'Agree',
+      icon: <Icon name="ThumbsUp" size={14} />,
       count: counts.agree
     },
-    { 
-      type: 'neutral', 
-      label: 'Neutral', 
-      icon: <Minus className="w-3.5 h-3.5" />, 
+    {
+      type: 'neutral',
+      label: 'Neutral',
+      icon: <Icon name="Minus" size={14} />,
       count: counts.neutral
     },
   ];
@@ -228,11 +228,11 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
   const getReplyTypeIcon = (replyType: string | null) => {
     switch (replyType) {
       case 'agree':
-        return <ThumbsUp className="w-3 h-3 text-green-600 dark:text-green-400" />;
+        return <Icon name="ThumbsUp" size={12} className="text-green-600 dark:text-green-400" />;
       case 'disagree':
-        return <ThumbsDown className="w-3 h-3 text-red-600 dark:text-red-400" />;
+        return <Icon name="ThumbsDown" size={12} className="text-red-600 dark:text-red-400" />;
       default:
-        return <Minus className="w-3 h-3 text-gray-500" />;
+        return <Icon name="Minus" size={12} className="text-gray-500" />;
     }
   };
 
@@ -240,7 +240,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
     <div className={cn("wewrite-card", className)}>
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <MessageCircle className="w-4 h-4 text-muted-foreground" />
+          <Icon name="MessageCircle" size={16} className="text-muted-foreground" />
           <h3 className="font-semibold text-sm">Replies</h3>
           <span className="text-xs text-muted-foreground">({counts.total})</span>
         </div>
@@ -305,7 +305,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center py-6">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <Icon name="Loader" className="text-muted-foreground" />
           </div>
         )}
 
@@ -353,7 +353,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
                 className="gap-2"
                 onClick={() => setIsReplyPickerOpen(true)}
               >
-                <Reply className="w-4 h-4" />
+                <Icon name="Reply" size={16} />
                 {activeFilter !== 'all' ? `Be the first to ${activeFilter}` : 'Reply'}
               </Button>
             )}
@@ -373,7 +373,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
                 className="gap-2"
                 onClick={() => setIsReplyPickerOpen(true)}
               >
-                <Reply className="w-4 h-4" />
+                <Icon name="Reply" size={16} />
                 Reply
               </Button>
             )}
@@ -392,7 +392,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
                 className="w-full justify-start gap-2"
                 onClick={() => handleReply('agree')}
               >
-                <ThumbsUp className="h-4 w-4" />
+                <Icon name="ThumbsUp" size={16} />
                 Agree
               </Button>
               <Button
@@ -400,7 +400,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
                 className="w-full justify-start gap-2"
                 onClick={() => handleReply('disagree')}
               >
-                <ThumbsDown className="h-4 w-4" />
+                <Icon name="ThumbsDown" size={16} />
                 Disagree
               </Button>
               <Button
@@ -408,7 +408,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
                 className="w-full justify-start gap-2"
                 onClick={() => handleReply(null)}
               >
-                <Reply className="h-4 w-4" />
+                <Icon name="Reply" size={16} />
                 Just reply
               </Button>
             </div>

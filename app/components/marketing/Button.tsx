@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { Icon } from '@/components/ui/Icon';
 import { Button as ShadcnButton } from "../ui/button";
 
 interface MarketingButtonProps {
@@ -28,7 +28,7 @@ const Button = ({
     >
       <Link href={href} className="flex items-center gap-2">
         {text}
-        <ArrowRight className="h-5 w-5" />
+        <Icon name="ArrowRight" size={20} />
       </Link>
     </ShadcnButton>
   );

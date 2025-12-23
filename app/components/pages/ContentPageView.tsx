@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getPageById, recordPageView } from "../../utils/apiClient";
@@ -55,9 +56,20 @@ const PageGraphView = dynamic(() => import("./PageGraphView"), {
   )
 });
 
+const WhatLinksHere = dynamic(() => import("./WhatLinksHere"), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+      <div className="h-5 w-32 bg-muted rounded mb-3" />
+      <div className="flex flex-wrap gap-2">
+        {[1, 2, 3].map(i => <div key={i} className="h-6 w-20 bg-muted rounded-full" />)}
+      </div>
+    </div>
+  )
+});
+
 import DeletedPageBanner from "../utils/DeletedPageBanner";
 import { Button } from "../ui/button";
-import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import { UnifiedErrorBoundary } from "../utils/UnifiedErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -1090,8 +1102,7 @@ export default function ContentPageView({
     // Validate title is not empty
     if (!title || title.trim() === '') {
       pageLogger.warn('Save aborted - no title provided', { pageId });
-      setTitleError("Title is required");
-      setError("Please add a title before saving");
+      setTitleError("Pages must have a title");
       return;
     }
 
@@ -1746,6 +1757,12 @@ export default function ContentPageView({
                   pageOwnerId={page.userId}
                 />
 
+                {/* What Links Here */}
+                <WhatLinksHere
+                  pageId={page.id}
+                  pageTitle={page.title}
+                />
+
                 {page.replyTo && (
                   <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1811,7 +1828,7 @@ export default function ContentPageView({
                   className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
                   onClick={handleDelete}
                 >
-                  <Trash2 className="h-5 w-5" />
+                  <Icon name="Trash2" size={20} />
                   <span>Delete</span>
                 </Button>
               </div>

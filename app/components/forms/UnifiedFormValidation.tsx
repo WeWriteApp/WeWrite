@@ -16,10 +16,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
-import { Loader2, X, Check, ExternalLink, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 type ValidationType = 'text' | 'email' | 'username' | 'title' | 'password' | 'custom';
@@ -229,12 +229,12 @@ export function UnifiedFormValidation({
 
     switch (validationState) {
       case 'checking':
-        return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+        return <Icon name="Loader" className="text-muted-foreground" />;
       case 'valid':
-        return showSuccessState ? <Check className="h-4 w-4 text-green-500" /> : null;
+        return showSuccessState ? <Icon name="Check" size={16} className="text-green-500" /> : null;
       case 'invalid':
       case 'duplicate':
-        return <X className="h-4 w-4 text-red-500" />;
+        return <Icon name="X" size={16} className="text-red-500" />;
       default:
         return null;
     }
@@ -277,7 +277,7 @@ export function UnifiedFormValidation({
               onClick={() => onGoToExisting(validationResult.existingItem)}
               className="text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 p-1 h-auto"
             >
-              <ExternalLink className="h-3 w-3" />
+              <Icon name="ExternalLink" size={12} />
             </Button>
           </div>
         </div>
@@ -287,7 +287,7 @@ export function UnifiedFormValidation({
     if (validationState === 'invalid') {
       return (
         <div className="flex items-start gap-2 p-2 text-sm text-red-600 dark:text-red-400">
-          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <Icon name="AlertCircle" size={16} className="mt-0.5 flex-shrink-0" />
           <span>{validationResult.message}</span>
         </div>
       );

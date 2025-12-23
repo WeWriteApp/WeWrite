@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
-import { Loader2, AlertTriangle, ArrowLeft, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { apiClient } from '../../../utils/apiClient';
 
@@ -85,7 +85,7 @@ export default function CancelSubscriptionPage() {
       <div className="p-6 lg:p-8">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <Icon name="Loader" className="mx-auto mb-4" />
             <p className="text-muted-foreground">Loading subscription...</p>
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function CancelSubscriptionPage() {
           <CardContent>
             <Button asChild>
               <Link href="/settings/fund-account">
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <Icon name="ArrowLeft" size={16} className="mr-2" />
                 Back to Account Funding
               </Link>
             </Button>
@@ -123,7 +123,7 @@ export default function CancelSubscriptionPage() {
         <div>
           <Button variant="ghost" asChild className="mb-4">
             <Link href="/settings/fund-account">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+              <Icon name="ArrowLeft" size={16} className="mr-2" />
               Back to Account Funding
             </Link>
           </Button>
@@ -136,7 +136,7 @@ export default function CancelSubscriptionPage() {
         {/* Error Alert */}
         {error && (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <Icon name="AlertTriangle" size={16} />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -145,7 +145,7 @@ export default function CancelSubscriptionPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+              <Icon name="CreditCard" size={20} />
               Current Subscription
             </CardTitle>
           </CardHeader>
@@ -221,7 +221,7 @@ export default function CancelSubscriptionPage() {
           >
             {isCancelling ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Icon name="Loader" />
                 Cancelling...
               </>
             ) : (

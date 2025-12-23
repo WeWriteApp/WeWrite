@@ -1,29 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from "react";
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../providers/AuthProvider';
 import { useSearchParams, useRouter } from 'next/navigation';
-import {
-  Trophy,
-  FileText,
-  Link2,
-  Heart,
-  Eye,
-  Loader2,
-  Medal,
-  ChevronLeft,
-  ChevronRight,
-  Share2,
-  Users,
-  FileStack,
-  MessageSquare,
-  Calendar,
-  ArrowLeft
-} from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import NavPageLayout from "../components/layout/NavPageLayout";
+import { LottieAnimation, TrophyAnimation, StarAnimation, FireAnimation } from "../components/ui/LottieAnimation";
 
 // Types
 type UserLeaderboardCategory = 'pages-created' | 'links-received' | 'sponsors-gained' | 'page-views';
@@ -49,7 +34,7 @@ interface LeaderboardPage {
 interface UserCategoryConfig {
   id: UserLeaderboardCategory;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string;
   description: string;
   countLabel: string;
 }
@@ -57,7 +42,7 @@ interface UserCategoryConfig {
 interface PageCategoryConfig {
   id: PageLeaderboardCategory;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: string;
   description: string;
   countLabel: string;
 }
@@ -66,28 +51,28 @@ const userCategories: UserCategoryConfig[] = [
   {
     id: 'pages-created',
     label: 'Pages Created',
-    icon: FileText,
+    icon: 'FileText',
     description: 'Most pages written',
     countLabel: 'pages'
   },
   {
     id: 'links-received',
     label: 'Links Received',
-    icon: Link2,
+    icon: 'Link2',
     description: 'Most links to their pages',
     countLabel: 'links'
   },
   {
     id: 'sponsors-gained',
     label: 'New Sponsors',
-    icon: Heart,
+    icon: 'Heart',
     description: 'Most sponsors gained',
     countLabel: 'sponsors'
   },
   {
     id: 'page-views',
     label: 'Page Views',
-    icon: Eye,
+    icon: 'Eye',
     description: 'Most views received',
     countLabel: 'views'
   }
@@ -97,28 +82,28 @@ const pageCategories: PageCategoryConfig[] = [
   {
     id: 'new-supporters',
     label: 'New Sponsors',
-    icon: Heart,
+    icon: 'Heart',
     description: 'Most users donating to this page',
     countLabel: 'sponsors'
   },
   {
     id: 'most-replies',
     label: 'Most Replies',
-    icon: MessageSquare,
+    icon: 'MessageSquare',
     description: 'Most reply pages',
     countLabel: 'replies'
   },
   {
     id: 'most-views',
     label: 'Most Views',
-    icon: Eye,
+    icon: 'Eye',
     description: 'Most page views',
     countLabel: 'views'
   },
   {
     id: 'most-links',
     label: 'Most Links',
-    icon: Link2,
+    icon: 'Link2',
     description: 'Most links received',
     countLabel: 'links'
   }
@@ -242,8 +227,6 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
   renderEntry: (entry: any, category: T, isFirst?: boolean) => React.ReactNode;
   type: 'user' | 'page';
 }) {
-  const Icon = category.icon;
-  
   const handleShare = () => {
     const shareUrl = `${window.location.origin}/leaderboard?view=${type}&category=${category.id}&month=${selectedMonth}`;
     if (navigator.share) {
@@ -265,7 +248,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
           onClick={onBack}
           className="gap-2"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <Icon name="ArrowLeft" size={16} />
           Leaderboards
         </Button>
         <Button
@@ -273,7 +256,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
           onClick={handleShare}
           className="gap-2"
         >
-          <Share2 className="h-4 w-4" />
+          <Icon name="Share2" size={16} />
           Share
         </Button>
       </div>
@@ -288,7 +271,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
             <div className="flex items-center gap-3 sm:contents">
               {/* Icon Container */}
               <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
-                <Icon className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                <Icon name={category.icon as any} className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
               </div>
               {/* Title + Description */}
               <div className="flex-1 min-w-0 sm:order-2">
@@ -298,7 +281,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
               {/* Date Badge - inline on mobile, right-aligned on desktop */}
               <div className="flex-shrink-0 sm:order-3">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground whitespace-nowrap">
-                  <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <Icon name="Calendar" size={12} className="sm:h-3.5 sm:w-3.5" />
                   {formatMonth(selectedMonth)}
                 </span>
               </div>
@@ -307,7 +290,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
         </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <Icon name="Loader" className="text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         ) : error ? (
@@ -319,7 +302,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
           </div>
         ) : data.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Heart className="h-12 w-12 text-muted-foreground/30" />
+            <Icon name="Heart" size={48} className="text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
               No data available yet
             </p>
@@ -337,7 +320,7 @@ function LeaderboardDetailView<T extends UserCategoryConfig | PageCategoryConfig
 // Carousel Component for both user and page leaderboards
 function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>({
   title,
-  titleIcon: TitleIcon,
+  titleIcon,
   categories,
   selectedIndex,
   onSelectIndex,
@@ -351,7 +334,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
   selectedMonth
 }: {
   title: string;
-  titleIcon: React.ComponentType<{ className?: string }>;
+  titleIcon: string;
   categories: T[];
   selectedIndex: number;
   onSelectIndex: (index: number) => void;
@@ -422,7 +405,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
     <div className="space-y-3">
       {/* Section Header */}
       <div className="flex items-center gap-2 px-4">
-        <TitleIcon className="h-5 w-5 text-muted-foreground" />
+        <Icon name={titleIcon as any} className="h-5 w-5 text-muted-foreground" />
         <h2 className="text-lg font-semibold">{title}</h2>
       </div>
 
@@ -441,14 +424,14 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
             className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
             aria-label="Previous leaderboard"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <Icon name="ChevronLeft" size={20} />
           </button>
           <button
             onClick={() => navigateCategory('next')}
             className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
             aria-label="Next leaderboard"
           >
-            <ChevronRight className="h-5 w-5" />
+            <Icon name="ChevronRight" size={20} />
           </button>
 
           {/* Cards Container - centered with visible neighbors */}
@@ -492,7 +475,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                           className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
                           aria-label={`Share ${category.label} leaderboard`}
                         >
-                          <Share2 className="h-4 w-4 text-muted-foreground" />
+                          <Icon name="Share2" size={16} className="text-muted-foreground" />
                         </button>
                       </div>
                     </div>
@@ -500,7 +483,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                     {/* Content */}
                     {loading ? (
                       <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <Icon name="Loader" className="text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">Loading...</p>
                       </div>
                     ) : error ? (
@@ -512,7 +495,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
                       </div>
                     ) : leaderboard.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <Heart className="h-12 w-12 text-muted-foreground/30" />
+                        <Icon name="Heart" size={48} className="text-muted-foreground/30" />
                         <p className="text-sm text-muted-foreground">
                           No data available yet
                         </p>
@@ -563,12 +546,12 @@ function LeaderboardLoading() {
     <NavPageLayout maxWidth="2xl">
       <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
-          <Trophy className="h-6 w-6 text-yellow-500" />
+          <Icon name="Trophy" size={24} className="text-yellow-500" />
           <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
         </div>
       </div>
       <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Icon name="Loader" className="text-muted-foreground" />
         <p className="text-sm text-muted-foreground">Loading leaderboards...</p>
       </div>
     </NavPageLayout>
@@ -776,6 +759,7 @@ function LeaderboardContent() {
   const renderUserEntry = (entry: LeaderboardUser, category: UserCategoryConfig, isFirst: boolean = false) => {
     const medalColor = getMedalColor(entry.rank);
     const isCurrentUser = user?.uid === entry.userId;
+    const showAnimation = entry.rank <= 3; // Show animation for top 3
     
     return (
       <Link
@@ -793,7 +777,7 @@ function LeaderboardContent() {
           isFirst ? "w-10" : "w-6"
         )}>
           {medalColor ? (
-            <Medal className={cn(isFirst ? "h-8 w-8" : "h-5 w-5", medalColor)} />
+            <Icon name="Medal" className={cn(isFirst ? "h-8 w-8" : "h-5 w-5", medalColor)} />
           ) : (
             <span className={cn(
               "font-bold text-muted-foreground",
@@ -803,6 +787,16 @@ function LeaderboardContent() {
             </span>
           )}
         </div>
+        
+        {/* Animated column for top performers */}
+        {showAnimation && (
+          <div className="flex-shrink-0 flex items-center justify-center w-8">
+            {entry.rank === 1 && <TrophyAnimation size={isFirst ? 32 : 24} />}
+            {entry.rank === 2 && <StarAnimation size={isFirst ? 28 : 20} />}
+            {entry.rank === 3 && <FireAnimation size={isFirst ? 24 : 18} />}
+          </div>
+        )}
+        
         <div className="flex-1 min-w-0">
           <p className={cn(
             "font-medium truncate",
@@ -833,6 +827,7 @@ function LeaderboardContent() {
   // Render page entry
   const renderPageEntry = (entry: LeaderboardPage, category: PageCategoryConfig, isFirst: boolean = false) => {
     const medalColor = getMedalColor(entry.rank);
+    const showAnimation = entry.rank <= 3; // Show animation for top 3
     
     return (
       <Link
@@ -849,7 +844,7 @@ function LeaderboardContent() {
           isFirst ? "w-10" : "w-6"
         )}>
           {medalColor ? (
-            <Medal className={cn(isFirst ? "h-8 w-8" : "h-5 w-5", medalColor)} />
+            <Icon name="Medal" className={cn(isFirst ? "h-8 w-8" : "h-5 w-5", medalColor)} />
           ) : (
             <span className={cn(
               "font-bold text-muted-foreground",
@@ -859,6 +854,16 @@ function LeaderboardContent() {
             </span>
           )}
         </div>
+        
+        {/* Animated column for top performers */}
+        {showAnimation && (
+          <div className="flex-shrink-0 flex items-center justify-center w-8">
+            {entry.rank === 1 && <TrophyAnimation size={isFirst ? 32 : 24} />}
+            {entry.rank === 2 && <StarAnimation size={isFirst ? 28 : 20} />}
+            {entry.rank === 3 && <FireAnimation size={isFirst ? 24 : 18} />}
+          </div>
+        )}
+        
         <div className="flex-1 min-w-0">
           <p className={cn(
             "font-medium truncate",
@@ -929,7 +934,7 @@ function LeaderboardContent() {
       {/* Header with Calendar Toggle */}
       <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
-          <Trophy className="h-6 w-6 text-yellow-500" />
+          <Icon name="Trophy" size={24} className="text-yellow-500" />
           <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
         </div>
         <button
@@ -942,7 +947,7 @@ function LeaderboardContent() {
           )}
           aria-label="Select month"
         >
-          <Calendar className="h-4 w-4" />
+          <Icon name="Calendar" size={16} />
           <span className="text-sm font-medium">
             {selectedMonth === getCurrentMonth() ? 'This month' : formatMonth(selectedMonth)}
           </span>
@@ -964,7 +969,7 @@ function LeaderboardContent() {
       <div className="mb-8">
         <LeaderboardCarousel
           title="By User"
-          titleIcon={Users}
+          titleIcon="Users"
           categories={sortedUserCategories}
           selectedIndex={userCategoryIndex}
           onSelectIndex={setUserCategoryIndex}
@@ -983,7 +988,7 @@ function LeaderboardContent() {
       <div className="mb-4">
         <LeaderboardCarousel
           title="By Page"
-          titleIcon={FileStack}
+          titleIcon="FileStack"
           categories={sortedPageCategories}
           selectedIndex={pageCategoryIndex}
           onSelectIndex={setPageCategoryIndex}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PillLink } from "../utils/PillLink";
-import { Loader2, User, Users } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useRelatedPagesV2, type RelatedPage } from '../../hooks/useRelatedPagesV2';
 
 interface RelatedPagesSectionProps {
@@ -15,25 +15,6 @@ interface RelatedPagesSectionProps {
     isPublic?: boolean;
   };
   linkedPageIds?: string[];
-}
-
-// Sub-component for rendering a list of related pages
-function RelatedPagesList({ pages, emptyMessage }: { pages: RelatedPage[]; emptyMessage: string }) {
-  if (pages.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground italic">{emptyMessage}</p>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {pages.map((relatedPage) => (
-        <PillLink key={relatedPage.id} href={`/${relatedPage.id}`}>
-          {relatedPage.title || "Untitled"}
-        </PillLink>
-      ))}
-    </div>
-  );
 }
 
 export default function RelatedPagesSection({ page, linkedPageIds = [] }: RelatedPagesSectionProps) {
@@ -74,31 +55,36 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
 
   return (
     <div className="space-y-4">
-      {/* Related Pages by Others */}
-      <div className="wewrite-card">
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Related pages by others</h3>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Finding related content...</span>
+      {/* Related Pages by Others - only show if loading or has results */}
+      {(loading || relatedByOthers.length > 0) && (
+        <div className="wewrite-card">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="Users" size={16} className="text-muted-foreground" />
+            <h3 className="text-sm font-medium">Related pages by others</h3>
           </div>
-        ) : (
-          <RelatedPagesList
-            pages={relatedByOthers}
-            emptyMessage="No related pages found"
-          />
-        )}
-      </div>
 
-      {/* More by Same Author */}
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Icon name="Loader" />
+              <span>Finding related content...</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {relatedByOthers.map((relatedPage) => (
+                <PillLink key={relatedPage.id} href={`/${relatedPage.id}`}>
+                  {relatedPage.title || "Untitled"}
+                </PillLink>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* More by Same Author - only show if loading or has results */}
       {(loading || relatedByAuthor.length > 0) && (
         <div className="wewrite-card">
           <div className="flex items-center gap-2 mb-3">
-            <User className="w-4 h-4 text-muted-foreground" />
+            <Icon name="User" size={16} className="text-muted-foreground" />
             <h3 className="text-sm font-medium">
               More by {authorUsername || page?.username || 'this author'}
             </h3>
@@ -106,14 +92,17 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
 
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Icon name="Loader" />
               <span>Loading author's pages...</span>
             </div>
           ) : (
-            <RelatedPagesList
-              pages={relatedByAuthor}
-              emptyMessage="No other public pages by this author"
-            />
+            <div className="flex flex-wrap gap-2">
+              {relatedByAuthor.map((relatedPage) => (
+                <PillLink key={relatedPage.id} href={`/${relatedPage.id}`}>
+                  {relatedPage.title || "Untitled"}
+                </PillLink>
+              ))}
+            </div>
           )}
         </div>
       )}

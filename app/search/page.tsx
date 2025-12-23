@@ -4,10 +4,10 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../providers/AuthProvider';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
@@ -169,7 +169,7 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          leftIcon={<Search className="h-5 w-5" />}
+          leftIcon={<Icon name="Search" size={20} />}
           className="w-full pr-12"
           autoComplete="off"
         />
@@ -177,7 +177,7 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
         {/* Right side - loading indicator or clear button */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 gap-1 z-20">
           {isLoading ? (
-            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+            <Icon name="Loader" size={16} />
           ) : inputValue.trim() ? (
             <button
               type="button"
@@ -185,7 +185,7 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
               className="p-1 text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Clear search"
             >
-              <X className="h-4 w-4" />
+              <Icon name="X" size={16} />
             </button>
           ) : null}
         </div>
@@ -534,7 +534,7 @@ const SearchPage = React.memo(() => {
               className="flex items-center gap-2"
               aria-label="Save search"
             >
-              <Pin className="h-4 w-4" />
+              <Icon name="Pin" size={16} />
               <span className="hidden sm:inline">Save search</span>
             </Button>
             <Button
@@ -544,7 +544,7 @@ const SearchPage = React.memo(() => {
               className="flex items-center gap-2"
               aria-label="Share search results"
             >
-              <Share2 className="h-4 w-4" />
+              <Icon name="Share2" size={16} />
               <span className="hidden sm:inline">Share</span>
             </Button>
           </div>

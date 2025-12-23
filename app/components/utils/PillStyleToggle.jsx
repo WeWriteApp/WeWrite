@@ -7,7 +7,7 @@ import PillLink from "./PillLink";
 import { cn } from "../../lib/utils";
 import { useAccentColor } from "../../contexts/AccentColorContext";
 import { hexToOklch } from "../../lib/oklch-utils";
-import { Check } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 
 export default function PillStyleToggle() {
   const { pillStyle, changePillStyle, getPillStyleClasses, isShinyUI } = usePillStyle();
@@ -86,9 +86,11 @@ export default function PillStyleToggle() {
           >
             {/* Centered pill preview */}
             <PillPreview style={style} label={label} />
-            <Check
+            <Icon
+              name="Check"
+              size={16}
               className={cn(
-                "h-4 w-4 text-primary transition-all duration-200",
+                "text-primary transition-all duration-200",
                 pillStyle === style
                   ? "opacity-100 scale-100"
                   : "opacity-0 scale-75"

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -8,17 +9,6 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Separator } from '../ui/separator';
-import { 
-  Loader, 
-  Save, 
-  AlertCircle, 
-  CheckCircle2, 
-  DollarSign, 
-  CreditCard,
-  Settings,
-  Calculator,
-  Info
-} from 'lucide-react';
 import { 
   FeeConfigurationService, 
   ComprehensiveFeeStructure,
@@ -120,7 +110,7 @@ export default function ComprehensiveFeeManagement() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader className="h-6 w-6 animate-spin mr-2" />
+        <Icon name="Loader" className="mr-2" />
         <span>Loading fee configuration...</span>
       </div>
     );
@@ -132,11 +122,11 @@ export default function ComprehensiveFeeManagement() {
       {message && (
         <Alert className={message.type === 'error' ? 'border-red-500' : message.type === 'success' ? 'border-green-500' : 'border-border'}>
           {message.type === 'error' ? (
-            <AlertCircle className="h-4 w-4" />
+            <Icon name="AlertCircle" size={16} />
           ) : message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4" />
+            <Icon name="CheckCircle2" size={16} />
           ) : (
-            <Info className="h-4 w-4" />
+            <Icon name="Info" size={16} />
           )}
           <AlertDescription>{message.text}</AlertDescription>
         </Alert>
@@ -145,19 +135,19 @@ export default function ComprehensiveFeeManagement() {
       <Tabs defaultValue="platform" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="platform">
-            <DollarSign className="h-4 w-4 mr-2" />
+            <Icon name="DollarSign" size={16} className="mr-2" />
             Platform Fees
           </TabsTrigger>
           <TabsTrigger value="stripe">
-            <CreditCard className="h-4 w-4 mr-2" />
+            <Icon name="CreditCard" size={16} className="mr-2" />
             Stripe Fees
           </TabsTrigger>
           <TabsTrigger value="settings">
-            <Settings className="h-4 w-4 mr-2" />
+            <Icon name="Settings" size={16} className="mr-2" />
             Settings
           </TabsTrigger>
           <TabsTrigger value="calculator">
-            <Calculator className="h-4 w-4 mr-2" />
+            <Icon name="Calculator" size={16} className="mr-2" />
             Calculator
           </TabsTrigger>
         </TabsList>
@@ -420,12 +410,12 @@ export default function ComprehensiveFeeManagement() {
           >
             {isSaving ? (
               <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                <Icon name="Loader" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
+                <Icon name="Save" size={16} className="mr-2" />
                 Save Changes
               </>
             )}

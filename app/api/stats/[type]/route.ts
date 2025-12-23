@@ -148,12 +148,12 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { type: string } }
+  { params }: { params: Promise<{ type: string }> }
 ) {
   const startTime = performance.now();
   
   try {
-    const { type } = params;
+    const { type } = await params;
     const body = await request.json();
 
     console.log(`📊 [STATS_API] ${type.toUpperCase()} POST request:`, body);
@@ -261,11 +261,11 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { type: string } }
+  { params }: { params: Promise<{ type: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const { type } = params;
+    const { type } = await params;
 
     switch (type) {
       case 'cache': {

@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import RandomPages from '../components/features/RandomPages';
 import RandomPagesFilterDrawer from '../components/features/RandomPagesFilterDrawer';
-import { Shuffle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { RandomPagesSkeleton } from '../components/ui/skeleton-loaders';
 import { useFeatureFlags } from '../contexts/FeatureFlagContext';
@@ -253,7 +253,7 @@ export default function RandomPagesPage() {
               onClick={handleShuffle}
               className="flex items-center gap-2 rounded-2xl h-8 px-3"
             >
-              <Shuffle className="h-4 w-4" />
+              <Icon name="Shuffle" size={16} />
               <span className="hidden sm:inline">Shuffle</span>
             </Button>
 

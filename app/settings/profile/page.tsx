@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { doc, getDoc } from "firebase/firestore";
 import { updateEmail as updateFirebaseEmail, updatePassword, checkUsernameAvailability } from "../../firebase/auth";
@@ -19,7 +20,6 @@ import { useAlert } from '../../hooks/useAlert';
 import { useConfirmation } from '../../hooks/useConfirmation';
 import AlertModal from '../../components/utils/AlertModal';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
-import { Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -355,7 +355,7 @@ export default function ProfilePage() {
                         disabled={loading || !tempUsername.trim()}
                         className="h-9 px-3"
                       >
-                        <Save className="h-4 w-4 mr-1" />
+                        <Icon name="Save" size={16} className="mr-1" />
                         Save
                       </Button>
                       <Button
@@ -365,7 +365,7 @@ export default function ProfilePage() {
                         disabled={loading}
                         className="h-9 px-3"
                       >
-                        <X className="h-4 w-4 mr-1" />
+                        <Icon name="X" size={16} className="mr-1" />
                         Cancel
                       </Button>
                     </>
@@ -376,7 +376,7 @@ export default function ProfilePage() {
                       onClick={handleEditUsername}
                       className="h-9 px-3"
                     >
-                      <Edit3 className="h-4 w-4 mr-1" />
+                      <Icon name="Edit3" size={16} className="mr-1" />
                       Edit
                     </Button>
                   )}
@@ -414,7 +414,7 @@ export default function ProfilePage() {
                         disabled={loading || !tempEmail.trim()}
                         className="h-9 px-3"
                       >
-                        <Save className="h-4 w-4 mr-1" />
+                        <Icon name="Save" size={16} className="mr-1" />
                         Save
                       </Button>
                       <Button
@@ -424,7 +424,7 @@ export default function ProfilePage() {
                         disabled={loading}
                         className="h-9 px-3"
                       >
-                        <X className="h-4 w-4 mr-1" />
+                        <Icon name="X" size={16} className="mr-1" />
                         Cancel
                       </Button>
                     </>
@@ -435,7 +435,7 @@ export default function ProfilePage() {
                       onClick={handleEditEmail}
                       className="h-9 px-3"
                     >
-                      <Edit3 className="h-4 w-4 mr-1" />
+                      <Icon name="Edit3" size={16} className="mr-1" />
                       Edit
                     </Button>
                   )}
@@ -450,7 +450,7 @@ export default function ProfilePage() {
               {/* Email Error */}
               {emailError && (
                 <div className="flex items-center gap-2 mt-2 p-3 bg-destructive/10 border-theme-medium rounded-md">
-                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                  <Icon name="AlertCircle" size={16} className="text-red-600 dark:text-red-400" />
                   <p className="text-sm text-red-700 dark:text-red-300">{emailError}</p>
                 </div>
               )}
@@ -479,7 +479,7 @@ export default function ProfilePage() {
                       onClick={handleEditPassword}
                       className="h-9 px-3"
                     >
-                      <Lock className="h-4 w-4 mr-1" />
+                      <Icon name="Lock" size={16} className="mr-1" />
                       Change
                     </Button>
                   </div>
@@ -509,9 +509,9 @@ export default function ProfilePage() {
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       >
                         {showCurrentPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <Icon name="EyeOff" size={16} />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Icon name="Eye" size={16} />
                         )}
                       </Button>
                     </div>
@@ -540,9 +540,9 @@ export default function ProfilePage() {
                         onClick={() => setShowNewPassword(!showNewPassword)}
                       >
                         {showNewPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <Icon name="EyeOff" size={16} />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Icon name="Eye" size={16} />
                         )}
                       </Button>
                     </div>
@@ -571,9 +571,9 @@ export default function ProfilePage() {
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <Icon name="EyeOff" size={16} />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Icon name="Eye" size={16} />
                         )}
                       </Button>
                     </div>
@@ -587,7 +587,7 @@ export default function ProfilePage() {
                       disabled={loading || !currentPassword || !newPassword || !confirmPassword}
                       className="h-9 px-3"
                     >
-                      <Save className="h-4 w-4 mr-1" />
+                      <Icon name="Save" size={16} className="mr-1" />
                       Update Password
                     </Button>
                     <Button
@@ -597,7 +597,7 @@ export default function ProfilePage() {
                       disabled={loading}
                       className="h-9 px-3"
                     >
-                      <X className="h-4 w-4 mr-1" />
+                      <Icon name="X" size={16} className="mr-1" />
                       Cancel
                     </Button>
                   </div>
@@ -605,7 +605,7 @@ export default function ProfilePage() {
                   {/* Password Error */}
                   {passwordError && (
                     <div className="flex items-center gap-2 mt-2 p-3 bg-destructive/10 border-theme-medium rounded-md">
-                      <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <Icon name="AlertCircle" size={16} className="text-red-600 dark:text-red-400" />
                       <p className="text-sm text-red-700 dark:text-red-300">{passwordError}</p>
                     </div>
                   )}

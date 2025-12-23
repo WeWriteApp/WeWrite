@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
-import { TrendingUp, Users, BarChart3, Activity } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 export interface GlobalAnalyticsFilters {
   timeDisplayMode: 'cumulative' | 'overTime';
@@ -41,7 +41,7 @@ export function GlobalAnalyticsFilters({
       {/* Time Display Mode Toggle */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <Icon name="BarChart3" size={16} className="text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Display:</span>
         </div>
         <div className="flex items-center bg-muted rounded-lg p-1">
@@ -51,7 +51,7 @@ export function GlobalAnalyticsFilters({
             onClick={() => handleTimeDisplayModeChange('cumulative')}
             className="h-7 px-3 text-xs font-medium"
           >
-            <TrendingUp className="h-3 w-3 mr-1.5" />
+            <Icon name="TrendingUp" size={12} className="mr-1.5" />
             Cumulative
           </Button>
           <Button
@@ -60,7 +60,7 @@ export function GlobalAnalyticsFilters({
             onClick={() => handleTimeDisplayModeChange('overTime')}
             className="h-7 px-3 text-xs font-medium"
           >
-            <Activity className="h-3 w-3 mr-1.5" />
+            <Icon name="Activity" size={12} className="mr-1.5" />
             Over Time
           </Button>
         </div>
@@ -72,7 +72,7 @@ export function GlobalAnalyticsFilters({
       {/* Per-User Normalization Toggle */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Icon name="Users" size={16} className="text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Per User:</span>
         </div>
         <div className="flex items-center gap-2">

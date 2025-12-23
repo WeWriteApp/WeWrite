@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { calculateDiff, DiffResult } from '../../utils/diffService';
 import TextView from './TextView';
 
@@ -60,7 +61,7 @@ export default function DiffViewer({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-b-foreground"></div>
+        <Icon name="Loader" size={24} />
         <span className="ml-2 text-sm text-muted-foreground">Calculating differences...</span>
       </div>
     );

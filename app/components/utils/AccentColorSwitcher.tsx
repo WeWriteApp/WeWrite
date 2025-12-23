@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import { cn } from "../../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 
@@ -40,7 +40,7 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
           aria-label={`Select ${option.label} accent color`}
         >
           {accentColor === option.value && (
-            <Check className="h-5 w-5 text-white absolute inset-0 m-auto drop-shadow-sm" />
+            <Icon name="Check" size={20} className="text-white absolute inset-0 m-auto drop-shadow-sm" />
           )}
         </button>
       ))}

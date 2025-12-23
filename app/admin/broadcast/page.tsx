@@ -1,27 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
-import { 
-  ArrowLeft, 
-  Send, 
-  Eye, 
-  Loader,
-  Users,
-  Mail,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  History,
-  TestTube,
-  Megaphone,
-  RefreshCw
-} from 'lucide-react';
 import { isAdmin } from '../../utils/isAdmin';
 import { FloatingHeader } from '../../components/ui/FloatingCard';
 import { useToast } from '../../components/ui/use-toast';
@@ -269,7 +255,7 @@ export default function AdminBroadcastPage() {
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader className="w-8 h-8 animate-spin text-muted-foreground" />
+        <Icon name="Loader" className="text-muted-foreground" />
       </div>
     );
   }
@@ -284,12 +270,12 @@ export default function AdminBroadcastPage() {
         <div className="flex items-center gap-3">
           <Link href="/admin/emails">
             <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <Icon name="ArrowLeft" size={16} className="mr-2" />
               Back to Emails
             </Button>
           </Link>
           <div className="h-6 w-px bg-border" />
-          <Megaphone className="w-5 h-5 text-primary" />
+          <Icon name="Megaphone" size={20} className="text-primary" />
           <span className="font-semibold">Send Broadcast</span>
         </div>
       </FloatingHeader>
@@ -300,7 +286,7 @@ export default function AdminBroadcastPage() {
           <div className="bg-card border rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Icon name="Users" size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Contacts</p>
@@ -312,7 +298,7 @@ export default function AdminBroadcastPage() {
           <div className="bg-card border rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <Mail className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <Icon name="Mail" size={20} className="text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Subscribed</p>
@@ -324,7 +310,7 @@ export default function AdminBroadcastPage() {
           <div className="bg-card border rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <Icon name="AlertCircle" size={20} className="text-orange-600 dark:text-orange-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Unsubscribed</p>
@@ -415,9 +401,9 @@ export default function AdminBroadcastPage() {
                     disabled={sending}
                   >
                     {sending ? (
-                      <Loader className="w-4 h-4 animate-spin mr-2" />
+                      <Icon name="Loader" className="mr-2" />
                     ) : (
-                      <TestTube className="w-4 h-4 mr-2" />
+                      <Icon name="TestTube" size={16} className="mr-2" />
                     )}
                     Send Test
                   </Button>
@@ -427,7 +413,7 @@ export default function AdminBroadcastPage() {
                   {confirmSend ? (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                        <AlertCircle className="w-5 h-5 text-yellow-600" />
+                        <Icon name="AlertCircle" size={20} className="text-yellow-600" />
                         <span className="text-sm">
                           This will send to <strong>{stats?.subscribed || 0}</strong> subscribed contacts. Are you sure?
                         </span>
@@ -440,9 +426,9 @@ export default function AdminBroadcastPage() {
                           className="flex-1"
                         >
                           {sending ? (
-                            <Loader className="w-4 h-4 animate-spin mr-2" />
+                            <Icon name="Loader" className="mr-2" />
                           ) : (
-                            <Send className="w-4 h-4 mr-2" />
+                            <Icon name="Send" size={16} className="mr-2" />
                           )}
                           Yes, Send to All
                         </Button>
@@ -461,7 +447,7 @@ export default function AdminBroadcastPage() {
                       disabled={sending || !subject || !heading || !body}
                       className="w-full"
                     >
-                      <Send className="w-4 h-4 mr-2" />
+                      <Icon name="Send" size={16} className="mr-2" />
                       Send Broadcast to {stats?.subscribed || 0} Contacts
                     </Button>
                   )}
@@ -481,7 +467,7 @@ export default function AdminBroadcastPage() {
                   size="sm"
                   onClick={() => setShowPreview(!showPreview)}
                 >
-                  <Eye className="w-4 h-4 mr-2" />
+                  <Icon name="Eye" size={16} className="mr-2" />
                   {showPreview ? 'Hide' : 'Show'}
                 </Button>
               </div>
@@ -500,7 +486,7 @@ export default function AdminBroadcastPage() {
               
               {!showPreview && (
                 <div className="p-8 text-center text-muted-foreground">
-                  <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <Icon name="Eye" size={32} className="mx-auto mb-2 opacity-50" />
                   <p>Click "Show" to preview your email</p>
                 </div>
               )}
@@ -510,18 +496,18 @@ export default function AdminBroadcastPage() {
             <div className="bg-card border rounded-lg">
               <div className="flex items-center justify-between p-4 border-b">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <History className="w-5 h-5" />
+                  <Icon name="History" size={20} />
                   Recent Broadcasts
                 </h2>
                 <Button variant="ghost" size="sm" onClick={loadData}>
-                  <RefreshCw className="w-4 h-4" />
+                  <Icon name="RefreshCw" size={16} />
                 </Button>
               </div>
               
               <div className="divide-y">
                 {history.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground">
-                    <Megaphone className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <Icon name="Megaphone" size={32} className="mx-auto mb-2 opacity-50" />
                     <p>No broadcasts sent yet</p>
                   </div>
                 ) : (
@@ -534,7 +520,7 @@ export default function AdminBroadcastPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="whitespace-nowrap">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            <Icon name="CheckCircle2" size={12} className="mr-1" />
                             {item.recipients} sent
                           </Badge>
                           {item.failed > 0 && (
@@ -545,7 +531,7 @@ export default function AdminBroadcastPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
+                        <Icon name="Clock" size={12} />
                         {new Date(item.sentAt).toLocaleString()}
                       </div>
                     </div>

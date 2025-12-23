@@ -1,22 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { 
-  Shield, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle,
-  Globe,
-  Fingerprint,
-  Key
-} from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
 
 interface SecurityCheck {
@@ -63,7 +52,7 @@ export function SecurityComplianceChecker({
       message: isHTTPS 
         ? 'Secure HTTPS connection established' 
         : 'HTTPS required for payment processing',
-      icon: <Lock className="w-4 h-4" />,
+      icon: <Icon name="Lock" size={16} />,
       critical: true,
       details: isHTTPS 
         ? 'All data transmission is encrypted using TLS 1.2 or higher'
@@ -78,7 +67,7 @@ export function SecurityComplianceChecker({
       message: isSecureContext 
         ? 'Browser security context verified' 
         : 'Secure context required for payment APIs',
-      icon: <Shield className="w-4 h-4" />,
+      icon: <Icon name="Shield" size={16} />,
       critical: true,
       details: isSecureContext
         ? 'Browser APIs are available in secure context'
@@ -104,7 +93,7 @@ export function SecurityComplianceChecker({
       message: hasCSP 
         ? 'CSP configured for enhanced security' 
         : 'CSP recommended for additional security',
-      icon: <Globe className="w-4 h-4" />,
+      icon: <Icon name="Globe" size={16} />,
       critical: false,
       details: cspDetails
     });
@@ -119,7 +108,7 @@ export function SecurityComplianceChecker({
       message: stripeElementsAvailable 
         ? 'Stripe.js loaded from official CDN' 
         : 'Stripe Elements not yet loaded',
-      icon: <Key className="w-4 h-4" />,
+      icon: <Icon name="Key" size={16} />,
       critical: false,
       details: stripeElementsAvailable
         ? 'Payment data will be handled by Stripe\'s secure elements'
@@ -134,7 +123,7 @@ export function SecurityComplianceChecker({
       message: hasSubresourceIntegrity 
         ? 'Script integrity verification enabled' 
         : 'SRI recommended for external scripts',
-      icon: <Fingerprint className="w-4 h-4" />,
+      icon: <Icon name="Fingerprint" size={16} />,
       critical: false,
       details: hasSubresourceIntegrity
         ? 'External scripts are verified for integrity'
@@ -160,7 +149,7 @@ export function SecurityComplianceChecker({
       message: localStorageSecure 
         ? 'Secure local storage available' 
         : 'Limited local storage access',
-      icon: <Lock className="w-4 h-4" />,
+      icon: <Icon name="Lock" size={16} />,
       critical: false,
       details: localStorageDetails
     });
@@ -173,7 +162,7 @@ export function SecurityComplianceChecker({
       message: hasMixedContent 
         ? 'Mixed content detected - may affect security' 
         : 'No mixed content detected',
-      icon: <Shield className="w-4 h-4" />,
+      icon: <Icon name="Shield" size={16} />,
       critical: false,
       details: hasMixedContent
         ? 'Some resources are loaded over HTTP instead of HTTPS'
@@ -225,7 +214,7 @@ export function SecurityComplianceChecker({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
+            <Icon name="Shield" size={20} />
             Security & PCI Compliance
           </div>
           {!isChecking && (
@@ -238,7 +227,7 @@ export function SecurityComplianceChecker({
       <CardContent className="space-y-4">
         {isChecking ? (
           <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+            <Icon name="Loader" size={24} className="mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Validating security...</p>
           </div>
         ) : (
@@ -246,7 +235,7 @@ export function SecurityComplianceChecker({
             {/* Critical Failures Alert */}
             {criticalFailures.length > 0 && (
               <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
+                <Icon name="XCircle" size={16} />
                 <AlertDescription>
                   <strong>Security requirements not met:</strong> {criticalFailures.length} critical security check(s) failed. Payment processing is not available.
                 </AlertDescription>
@@ -256,7 +245,7 @@ export function SecurityComplianceChecker({
             {/* Warnings Alert */}
             {warnings.length > 0 && criticalFailures.length === 0 && (
               <Alert>
-                <AlertTriangle className="h-4 w-4" />
+                <Icon name="AlertTriangle" size={16} />
                 <AlertDescription>
                   Payment processing is secure with {warnings.length} recommendation(s) for enhanced security.
                 </AlertDescription>
@@ -266,7 +255,7 @@ export function SecurityComplianceChecker({
             {/* Success Alert */}
             {criticalFailures.length === 0 && warnings.length === 0 && (
               <Alert className="bg-success/10 border-success/30">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <Icon name="CheckCircle" size={16} className="text-green-600" />
                 <AlertDescription className="text-success-foreground">
                   All security checks passed. PCI DSS compliant payment processing available.
                 </AlertDescription>
@@ -310,7 +299,7 @@ export function SecurityComplianceChecker({
                 onClick={() => setShowDetails(!showDetails)}
                 className="flex items-center gap-2"
               >
-                {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showDetails ? <Icon name="EyeOff" size={16} /> : <Icon name="Eye" size={16} />}
                 {showDetails ? 'Hide' : 'Show'} Details
               </Button>
               

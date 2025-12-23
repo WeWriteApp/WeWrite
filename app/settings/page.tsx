@@ -1,9 +1,9 @@
 'use client';
 
 import { useAuth } from '../providers/AuthProvider';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { ChevronRight } from 'lucide-react';
 import { WarningDot } from '../components/ui/warning-dot';
 import { useSettingsSections } from '../hooks/useSettingsSections';
 import { useSubscription } from '../contexts/SubscriptionContext';
@@ -94,7 +94,7 @@ export default function SettingsIndexPage() {
                   <div className="flex items-center gap-2">
                     {/* Status indicator from shared hook */}
                     {section.statusIndicator}
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    <Icon name="ChevronRight" size={20} className="text-muted-foreground" />
                   </div>
                 </button>
                 {section.showWarning && (

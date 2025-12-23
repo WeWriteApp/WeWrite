@@ -6,10 +6,10 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import ActionModal from '../utils/ActionModal';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
-import { Loader2 } from 'lucide-react';
 import './ui/tooltip.css';
 
 interface Pledge {
@@ -235,7 +235,7 @@ const TokenAllocationBar: React.FC<TokenAllocationBarProps> = ({
                   )}
                 >
                   {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Icon name="Loader" />
                   ) : (
                     <span className="text-lg font-bold leading-none">−</span>
                   )}
@@ -267,7 +267,7 @@ const TokenAllocationBar: React.FC<TokenAllocationBarProps> = ({
                     )}
                   >
                     {isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Icon name="Loader" />
                     ) : (
                       <span className="text-lg font-bold leading-none">+</span>
                     )}

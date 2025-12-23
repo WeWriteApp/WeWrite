@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAppBackground, SolidBackground, ImageBackground } from '../../contexts/AppBackgroundContext';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../lib/utils';
-import { Check, Palette, Upload, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -80,7 +80,7 @@ export default function SolidColorPicker({ className }: SolidColorPickerProps) {
               {isColorSelected(bg) && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="bg-background/90 rounded-full p-1">
-                    <Check className="h-4 w-4 text-primary" />
+                    <Icon name="Check" size={16} className="text-primary" />
                   </div>
                 </div>
               )}
@@ -106,13 +106,13 @@ export default function SolidColorPicker({ className }: SolidColorPickerProps) {
               disabled={!imageUrl.trim()}
               className="gap-2"
             >
-              <Upload className="h-4 w-4" />
+              <Icon name="Upload" size={16} />
               Set Image
             </Button>
           </div>
           {background.type === 'image' && (
             <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-              <ImageIcon className="h-5 w-5 text-primary" />
+              <Icon name="Image" size={20} className=" text-primary" />
               <div>
                 <p className="text-sm font-medium">Image Background Active</p>
                 <p className="text-xs text-muted-foreground truncate max-w-xs">
@@ -134,7 +134,7 @@ export default function SolidColorPicker({ className }: SolidColorPickerProps) {
             onClick={() => setShowCustomPicker(!showCustomPicker)}
             className="gap-2"
           >
-            <Palette className="h-4 w-4" />
+            <Icon name="Palette" size={16} />
             {showCustomPicker ? 'Hide' : 'Show'} Picker
           </Button>
         </div>
@@ -191,7 +191,7 @@ export default function SolidColorPicker({ className }: SolidColorPickerProps) {
             </>
           ) : background.type === 'image' ? (
             <>
-              <ImageIcon className="h-6 w-6 text-primary" />
+              <Icon name="Image" size={24} className=" text-primary" />
               <div>
                 <p className="text-sm font-medium">Image Background</p>
                 <p className="text-xs text-muted-foreground">

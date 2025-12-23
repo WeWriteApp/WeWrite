@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { Icon } from '@/components/ui/Icon';
 import Link from "next/link";
 import Image from "next/image";
 import PillLink from "../utils/PillLink";
@@ -23,7 +24,6 @@ import { setCurrentVersion } from "../../utils/apiClient";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
-import { RotateCcw } from "lucide-react";
 import { AllocationControls } from "../payments/AllocationControls";
 
 
@@ -491,12 +491,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                   >
                     {isRestoring ? (
                       <>
-                        <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                        <Icon name="Loader" size={12} className="mr-1" />
                         Restoring...
                       </>
                     ) : (
                       <>
-                        <RotateCcw className="h-3 w-3 mr-1" />
+                        <Icon name="RotateCcw" size={12} className="mr-1" />
                         Restore
                       </>
                     )}

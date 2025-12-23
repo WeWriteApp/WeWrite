@@ -3,7 +3,7 @@
 import React from 'react';
 import { Modal } from '../ui/modal';
 import { Button } from '../ui/button';
-import { AlertTriangle, Trash2, LogOut, X, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -43,26 +43,26 @@ export function ConfirmationModal({
   const getIcon = () => {
     switch (icon) {
       case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />;
+        return <Icon name="Warning" size={24} className="text-amber-600 dark:text-amber-400" />;
       case 'delete':
-        return <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />;
+        return <Icon name="Trash" size={24} className="text-red-600 dark:text-red-400" />;
       case 'logout':
-        return <LogOut className="h-6 w-6 text-primary dark:text-muted-foreground" />;
+        return <Icon name="User" size={24} className="text-primary dark:text-muted-foreground" />;
       case 'check':
-        return <Check className="h-6 w-6 text-green-600 dark:text-green-400" />;
+        return <Icon name="Check" size={24} className="text-green-600 dark:text-green-400" />;
       default:
         return null;
     }
   };
 
-  const getConfirmButtonVariant = () => {
+  const getConfirmButtonClass = () => {
     switch (variant) {
       case 'destructive':
-        return 'destructive';
+        return 'bg-red-600 hover:bg-red-700 text-white';
       case 'warning':
-        return 'default';
+        return 'bg-yellow-600 hover:bg-yellow-700 text-white';
       default:
-        return 'default';
+        return '';
     }
   };
 
@@ -110,17 +110,17 @@ export function ConfirmationModal({
             disabled={isLoading}
             className="flex-1"
           >
-            <X className="h-4 w-4 mr-2" />
+            <Icon name="Close" size={16} className="mr-2" />
             {cancelText}
           </Button>
           <Button
-            variant={getConfirmButtonVariant()}
+            variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={handleConfirm}
             disabled={isLoading}
-            className="flex-1"
+            className={`flex-1 ${getConfirmButtonClass()}`}
           >
             {isLoading ? (
-              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <Icon name="Loader" size={16} className="mr-2" />
             ) : (
               getIcon() && <span className="h-4 w-4 mr-2">{getIcon()}</span>
             )}

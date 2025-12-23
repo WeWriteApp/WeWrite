@@ -3,34 +3,35 @@
  *
  * SINGLE SOURCE OF TRUTH for all WeWrite platform fees.
  *
- * There are TWO different platform fees:
+ * Fee Structure:
+ * - PAYOUT_FEE (10%) - Charged when writers request payouts to their bank
  *
- * 1. ALLOCATION_FEE (7%) - Charged on funded allocations
- *    - Applied when calculating platform revenue from allocations
- *    - Part of the monthly financials calculations
- *
- * 2. PAYOUT_FEE (10%) - Charged when writers request payouts
- *    - Applied when writers withdraw their earnings to bank
- *    - Deducted from the final payout amount
+ * Referral Split (when writer was referred):
+ * - 70% of payout fee → WeWrite (7% of payout amount)
+ * - 30% of payout fee → Referrer (3% of payout amount)
  *
  * Business Model:
  * 1. User subscribes → Funds go to Stripe Payments Balance
- * 2. User allocates to writers → Ledger entries only (no money moves)
+ * 2. User allocates to writers → Ledger entries only (no money moves, no fee charged)
  * 3. Month-end:
- *    - Allocated funds → 7% allocation fee applied, remainder held for writers
- *    - Unallocated funds → Stay in Payments Balance (WeWrite revenue - "use it or lose it")
- * 4. Writer requests payout → 10% payout fee deducted, remainder sent to writer's bank
+ *    - Allocated funds → Held for writers (full amount, no deduction)
+ *    - Unallocated funds → WeWrite revenue ("use it or lose it")
+ * 4. Writer requests payout:
+ *    - 10% payout fee deducted
+ *    - If writer was referred: 30% of that fee goes to referrer, 70% to WeWrite
+ *    - If not referred: 100% of fee goes to WeWrite
+ *    - Remainder sent to writer's bank
  *
  * @example
- * import { PLATFORM_FEE_CONFIG, calculatePlatformFee, calculateAllocationFee } from '../config/platformFee';
+ * import { PLATFORM_FEE_CONFIG, calculatePlatformFee } from '../config/platformFee';
  *
  * // For payout calculations
  * const payoutFee = calculatePlatformFee(10000); // $100.00 earnings
  * // payoutFee = 1000 (10% = $10.00), writer receives $90.00
  *
- * // For allocation calculations
- * const allocationFee = calculateAllocationFee(10000); // $100.00 allocated
- * // allocationFee = 700 (7% = $7.00)
+ * // If writer was referred, the $10 fee splits:
+ * // - $7.00 to WeWrite (70%)
+ * // - $3.00 to referrer (30%)
  */
 
 /**
@@ -49,15 +50,26 @@ export const PLATFORM_FEE_CONFIG = {
   PERCENTAGE_DISPLAY: 10,
 
   /**
-   * Allocation fee percentage as a decimal (0.07 = 7%)
-   * Charged on funded allocations when calculating platform revenue.
+   * Referral share - percentage of payout fee that goes to the referrer
+   * (0.30 = 30% of the payout fee)
    */
-  ALLOCATION_FEE_PERCENTAGE: 0.07,
+  REFERRAL_SHARE: 0.30,
 
   /**
-   * Human-readable allocation fee percentage (7%)
+   * Human-readable referral share percentage (30%)
    */
-  ALLOCATION_FEE_PERCENTAGE_DISPLAY: 7,
+  REFERRAL_SHARE_DISPLAY: 30,
+
+  /**
+   * WeWrite's share of the payout fee when writer was referred
+   * (0.70 = 70% of the payout fee)
+   */
+  WEWRITE_SHARE: 0.70,
+
+  /**
+   * Human-readable WeWrite share percentage (70%)
+   */
+  WEWRITE_SHARE_DISPLAY: 70,
 
   /**
    * Minimum payout threshold in cents
@@ -110,30 +122,27 @@ export function getPayoutBreakdown(amountCents: number): {
 }
 
 /**
+ * Get a breakdown of how the payout fee is split when writer was referred
+ * @param feeCents - The total payout fee in cents
+ */
+export function getReferralFeeBreakdown(feeCents: number): {
+  totalFeeCents: number;
+  referrerShareCents: number;
+  wewriteShareCents: number;
+} {
+  const referrerShareCents = Math.round(feeCents * PLATFORM_FEE_CONFIG.REFERRAL_SHARE);
+  const wewriteShareCents = feeCents - referrerShareCents;
+  return {
+    totalFeeCents: feeCents,
+    referrerShareCents,
+    wewriteShareCents,
+  };
+}
+
+/**
  * Check if an amount meets the minimum payout threshold
  * @param amountCents - The amount in cents
  */
 export function meetsMinimumPayout(amountCents: number): boolean {
   return amountCents >= PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_CENTS;
-}
-
-/**
- * Calculate the allocation fee for a given amount in cents
- * This is the 7% fee charged on funded allocations for platform revenue calculations.
- * @param amountCents - The allocation amount in cents
- * @returns The fee amount in cents
- */
-export function calculateAllocationFee(amountCents: number): number {
-  return Math.round(amountCents * PLATFORM_FEE_CONFIG.ALLOCATION_FEE_PERCENTAGE);
-}
-
-/**
- * Calculate the net amount after allocation fee
- * This is what remains after the 7% allocation fee is deducted.
- * @param amountCents - The allocation amount in cents
- * @returns The net amount after allocation fee in cents
- */
-export function calculateNetAllocation(amountCents: number): number {
-  const fee = calculateAllocationFee(amountCents);
-  return amountCents - fee;
 }

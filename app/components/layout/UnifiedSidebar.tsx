@@ -5,33 +5,34 @@ import { createPortal } from 'react-dom';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
-import {
-  Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
-  Link as LinkIcon, X, Check, Trash2, MapPin, Shield, Map,
-  Clock, Shuffle, LogOut, TrendingUp, Heart, Trophy, UserPlus
-} from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
 import DraggableSidebarItem from './DraggableSidebarItem';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
-
+import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import MapEditor from "../editor/MapEditor";
-
 import { cn } from "../../lib/utils";
 import { WarningDot } from '../ui/warning-dot';
-import { StatusIcon } from '../ui/status-icon';
-import { CheckCircle } from 'lucide-react';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
-import { ConfirmationModal } from '../utils/ConfirmationModal';
 import { buildNewPageUrl } from '../../utils/pageId';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 
-// Context for sidebar state management
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const COLLAPSED_WIDTH = 72; // px - gives room for 40px button + 16px padding each side
+const EXPANDED_WIDTH = 256; // px
+
+// ============================================================================
+// CONTEXTS
+// ============================================================================
+
 interface SidebarContextType {
   isExpanded: boolean;
   isHovering: boolean;
@@ -42,13 +43,12 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType>({
   isExpanded: false,
   isHovering: false,
-  sidebarWidth: 64,
+  sidebarWidth: COLLAPSED_WIDTH,
   toggleExpanded: () => {}
 });
 
 export const useSidebarContext = () => useContext(SidebarContext);
 
-// Context for editor functions
 interface EditorContextType {
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
@@ -66,28 +66,23 @@ export const useEditorContext = () => useContext(EditorContext);
 export const EditorProvider: React.FC<{ children: React.ReactNode } & EditorContextType> = ({
   children,
   ...editorProps
-}) => {
-  return (
-    <EditorContext.Provider value={editorProps}>
-      {children}
-    </EditorContext.Provider>
-  );
-};
+}) => (
+  <EditorContext.Provider value={editorProps}>
+    {children}
+  </EditorContext.Provider>
+);
 
-/**
- * Sidebar Provider Component
- * Provides sidebar state to the entire app
- */
+// ============================================================================
+// SIDEBAR PROVIDER
+// ============================================================================
+
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-
-  // 🚀 OPTIMIZATION: Navigation preloader for smooth navigation
   const { handleNavigationHover } = useNavigationPreloader();
 
-  // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
     setIsMounted(true);
     const savedState = localStorage.getItem('unified-sidebar-expanded');
@@ -96,22 +91,15 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Toggle function that updates state and localStorage
   const toggleExpanded = () => {
     const newState = !isExpanded;
     setIsExpanded(newState);
     localStorage.setItem('unified-sidebar-expanded', JSON.stringify(newState));
   };
 
-  // Calculate sidebar width based on state - only for authenticated users
-  const sidebarWidth = user && (isExpanded || isHovering) ? 256 : user ? 64 : 0;
+  const sidebarWidth = user && (isExpanded || isHovering) ? EXPANDED_WIDTH : user ? COLLAPSED_WIDTH : 0;
+  const contentOffset = user ? (isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH) : 0;
 
-  // Calculate content offset width (for fixed elements that need to respect sidebar)
-  // This only responds to persistent expanded state, not hover state
-  const contentOffset = user ? (isExpanded ? 256 : 64) : 0;
-
-  // Set CSS custom property for sidebar-aware fixed elements
-  // This allows any fixed element to use: left: calc(var(--sidebar-content-offset) + 12px)
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.style.setProperty('--sidebar-content-offset', `${contentOffset}px`);
@@ -127,26 +115,31 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarContext.Provider value={contextValue}>
-      {/* Only render sidebar for authenticated users and not on admin dashboard */}
-      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} handleNavigationHover={handleNavigationHover} />}
+      {isMounted && user && (
+        <SidebarContent
+          isExpanded={isExpanded}
+          setIsExpanded={setIsExpanded}
+          isHovering={isHovering}
+          setIsHovering={setIsHovering}
+          toggleExpanded={toggleExpanded}
+          handleNavigationHover={handleNavigationHover}
+        />
+      )}
       {children}
     </SidebarContext.Provider>
   );
 }
 
-/**
- * Default export - just the sidebar content (for backward compatibility)
- */
+// ============================================================================
+// DEFAULT EXPORT (backward compatibility)
+// ============================================================================
+
 export default function UnifiedSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-
-  // 🚀 OPTIMIZATION: Navigation preloader for smooth navigation
   const { handleNavigationHover } = useNavigationPreloader();
 
-
-  // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
     setIsMounted(true);
     const savedState = localStorage.getItem('unified-sidebar-expanded');
@@ -155,494 +148,349 @@ export default function UnifiedSidebar() {
     }
   }, []);
 
-  // Toggle function for standalone usage
   const toggleExpanded = () => {
     const newState = !isExpanded;
     setIsExpanded(newState);
     localStorage.setItem('unified-sidebar-expanded', JSON.stringify(newState));
   };
 
-  if (!isMounted) {
-    return null;
-  }
+  if (!isMounted) return null;
 
-  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} handleNavigationHover={handleNavigationHover} />;
+  return (
+    <SidebarContent
+      isExpanded={isExpanded}
+      setIsExpanded={setIsExpanded}
+      isHovering={isHovering}
+      setIsHovering={setIsHovering}
+      toggleExpanded={toggleExpanded}
+      handleNavigationHover={handleNavigationHover}
+    />
+  );
 }
 
-/**
- * UnifiedSidebar Content Component
- * The actual sidebar implementation
- */
-function UnifiedSidebarContent({
-  isExpanded,
-  setIsExpanded,
-  isHovering,
-  setIsHovering,
-  toggleExpanded,
-  handleNavigationHover
-}: {
+// ============================================================================
+// SIDEBAR CONTENT
+// ============================================================================
+
+interface SidebarContentProps {
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
   isHovering: boolean;
   setIsHovering: (value: boolean) => void;
   toggleExpanded: () => void;
   handleNavigationHover: (href: string) => void;
-}) {
+}
+
+function SidebarContent({
+  isExpanded,
+  setIsHovering,
+  isHovering,
+  toggleExpanded,
+  handleNavigationHover
+}: SidebarContentProps) {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
-  const { sidebarOrder, reorderSidebarItem, setSidebarOrder, resetSidebarOrder } = useNavigationOrder();
+  const { sidebarOrder, setSidebarOrder, resetSidebarOrder } = useNavigationOrder();
   const { hasActiveSubscription } = useSubscription();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useEarnings();
   const emailVerificationStatus = useEmailVerificationStatus();
-
-  // Derive subscription warning state
-  const shouldShowSubscriptionWarning = hasActiveSubscription === false;
-
-  // Calculate the most critical status from all settings sections
-  const getMostCriticalSettingsStatus = () => {
-    // Payments are always enabled
-
-    // Check for email verification first (info level - blinking dot to guide user)
-    // Only show if user has dismissed the modal but email is still not verified
-    const hasEmailVerificationNeeded = emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed;
-
-    // Check for warnings (most critical)
-    const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
-    // Only show bank setup warning if user has funds but bank isn't set up (and not loading)
-    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.loading && !bankSetupStatus.isSetup;
-
-    if (hasSubscriptionWarning || hasBankSetupWarning) {
-      return 'warning';
-    }
-
-    // Email verification is info level (less critical than warnings)
-    if (hasEmailVerificationNeeded) {
-      return 'info';
-    }
-
-    // If no warnings and we have data, don't show any icon (success is hidden)
-    if (hasActiveSubscription !== null) {
-      return null; // Hide success status
-    }
-
-    return null;
-  };
-
-  const criticalSettingsStatus = getMostCriticalSettingsStatus();
-
-  // Debug subscription status (console only, less spammy)
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[UnifiedSidebar] Subscription status:', {
-        hasActiveSubscription,
-        shouldShowSubscriptionWarning,
-        bankSetupStatus: { isSetup: bankSetupStatus.isSetup, loading: bankSetupStatus.loading },
-        criticalSettingsStatus
-      });
-    }
-  }, [hasActiveSubscription, shouldShowSubscriptionWarning, bankSetupStatus.isSetup, criticalSettingsStatus]);
-
-  // Map feature is now always enabled
-  const mapFeatureEnabled = true;
-
-  // Logout confirmation modal state
+  const { handleButtonPress, isNavigatingTo, targetRoute } = useOptimisticNavigation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Check if account is admin (from user payload)
+  // Computed states
+  const showContent = isExpanded || isHovering;
+  const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
   const isUserAdmin = user?.isAdmin === true;
+  const isAdminDashboard = pathname === '/admin/dashboard';
 
-  // Handle logout confirmation
+  // Settings warning status
+  const criticalSettingsStatus = (() => {
+    const hasEmailVerificationNeeded = emailVerificationStatus.needsVerification && emailVerificationStatus.isModalDismissed;
+    const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
+    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.loading && !bankSetupStatus.isSetup;
+
+    if (hasSubscriptionWarning || hasBankSetupWarning) return 'warning';
+    if (hasEmailVerificationNeeded) return 'info';
+    return null;
+  })();
+
+  // Don't render on admin dashboard
+  if (isAdminDashboard) return null;
+
+  // Navigation config
+  const navigationItemsConfig: Record<string, { icon: string; label: string; href: string; action?: () => void }> = {
+    'home': { icon: 'Home', label: 'Home', href: '/' },
+    'search': { icon: 'Search', label: 'Search', href: '/search' },
+    'new': { icon: 'Plus', label: 'New Page', href: '/new', action: () => router.push(buildNewPageUrl()) },
+    'notifications': { icon: 'Bell', label: 'Notifications', href: '/notifications' },
+    'map': { icon: 'Map', label: 'Map', href: '/map' },
+    'leaderboard': { icon: 'Trophy', label: 'Leaderboards', href: '/leaderboard' },
+    'random-pages': { icon: 'Shuffle', label: 'Random', href: '/random-pages' },
+    'trending-pages': { icon: 'TrendingUp', label: 'Trending', href: '/trending-pages' },
+    'following': { icon: 'Heart', label: 'Following', href: '/following' },
+    'recents': { icon: 'Clock', label: 'Recents', href: '/recents' },
+    'invite': { icon: 'UserPlus', label: 'Invite Friends', href: '/invite' },
+    'profile': { icon: 'User', label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
+    'settings': { icon: 'Settings', label: 'Settings', href: '/settings' },
+    ...(isUserAdmin ? { 'admin': { icon: 'Shield', label: 'Admin', href: '/admin' } } : {}),
+  };
+
+  // Build ordered nav items
+  const allAvailableItems = Object.keys(navigationItemsConfig);
+  const completeSidebarOrder = [
+    ...sidebarOrder.filter(itemId => navigationItemsConfig[itemId]),
+    ...allAvailableItems.filter(itemId => !sidebarOrder.includes(itemId))
+  ];
+
+  const reorderCompleteItems = (dragIndex: number, hoverIndex: number) => {
+    const newOrder = [...completeSidebarOrder];
+    const draggedItem = newOrder[dragIndex];
+    newOrder.splice(dragIndex, 1);
+    newOrder.splice(hoverIndex, 0, draggedItem);
+    setSidebarOrder(newOrder.filter(itemId => navigationItemsConfig[itemId]));
+  };
+
+  const isNavItemActive = (item: { href: string; label: string }) => {
+    if (!item.href) return false;
+
+    // If we're optimistically navigating somewhere, only that target should be active
+    if (targetRoute) {
+      return isNavigatingTo(item.href);
+    }
+
+    // Home should match "/", "/home", and empty pathname (initial load)
+    if (item.label === 'Home' && (pathname === '/' || pathname === '/home' || pathname === '')) return true;
+    if (pathname === item.href) return true;
+    if (item.label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) return true;
+    if (item.label === 'Settings' && pathname.startsWith('/settings')) return true;
+    if (item.label === 'Admin' && pathname.startsWith('/admin')) return true;
+    return false;
+  };
+
+  const handleNavItemClick = (item: { href: string; label: string; action?: () => void }) => {
+    if (item.action) {
+      item.action();
+    } else if (item.href) {
+      if (pathname === item.href) return;
+      if (isHovering && !isExpanded) setIsHovering(false);
+      handleButtonPress(item.label.toLowerCase(), item.href);
+    }
+  };
+
   const handleLogoutClick = async () => {
-    // CRITICAL FIX: Use system dialog instead of custom WeWrite dialog
-    const confirmed = window.confirm('Are you sure you want to log out? You\'ll need to sign in again to access your account.');
-
+    const confirmed = window.confirm('Are you sure you want to log out?');
     if (confirmed) {
       setIsLoggingOut(true);
       try {
-        console.log('🔴 SIDEBAR: Logout confirmed, calling signOut function');
         await signOut();
-        console.log('🔴 SIDEBAR: signOut completed successfully');
       } catch (error) {
-        console.error('🔴 SIDEBAR: Error during logout:', error);
+        console.error('Logout error:', error);
       } finally {
         setIsLoggingOut(false);
       }
     }
   };
 
-  // Check if we're on admin dashboard (should hide sidebar)
-  const isAdminDashboard = pathname === '/admin/dashboard';
+  // ============================================================================
+  // RENDER - Clean, simple structure
+  // ============================================================================
 
-  // Don't render sidebar on admin dashboard
-  if (isAdminDashboard) {
-    return null;
-  }
-
-  // Determine if we're in edit mode (editor functions are available)
-  const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
-
-  // Determine if sidebar should show content (expanded or hovering)
-  const showContent = isExpanded || isHovering;
-
-  // Navigation items configuration
-  const navigationItemsConfig = {
-    'home': { icon: Home, label: 'Home', href: '/' },
-    'search': { icon: Search, label: 'Search', href: '/search' },
-    'new': { icon: Plus, label: 'New Page', href: '/new', action: () => router.push(buildNewPageUrl()) },
-    'notifications': { icon: Bell, label: 'Notifications', href: '/notifications' },
-    'map': { icon: Map, label: 'Map', href: '/map' },
-    'leaderboard': { icon: Trophy, label: 'Leaderboards', href: '/leaderboard' },
-    'random-pages': { icon: Shuffle, label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: TrendingUp, label: 'Trending', href: '/trending-pages' },
-    'following': { icon: Heart, label: 'Following', href: '/following' },
-    'recents': { icon: Clock, label: 'Recents', href: '/recents' },
-    'invite': { icon: UserPlus, label: 'Invite Friends', href: '/invite' },
-    'profile': { icon: User, label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
-    'settings': { icon: Settings, label: 'Settings', href: '/settings' },
-    // Admin Dashboard - only for admin users
-    ...(isUserAdmin ? { 'admin': { icon: Shield, label: 'Admin', href: '/admin' } } : {}),
-  };
-
-  // Build ordered navigation items - ensure ALL items are shown
-  // First, get all available items from config
-  const allAvailableItems = Object.keys(navigationItemsConfig);
-
-  // Create a complete sidebar order that includes all items
-  const completeSidebarOrder = [
-    ...sidebarOrder.filter(itemId => navigationItemsConfig[itemId]), // Keep existing order for known items
-    ...allAvailableItems.filter(itemId => !sidebarOrder.includes(itemId)) // Add any missing items at the end
-  ];
-
-  // Custom reorder function that works with the complete order
-  const reorderCompleteItems = (dragIndex: number, hoverIndex: number) => {
-    const newOrder = [...completeSidebarOrder];
-    const draggedItem = newOrder[dragIndex];
-    newOrder.splice(dragIndex, 1);
-    newOrder.splice(hoverIndex, 0, draggedItem);
-
-    // Update the context with the new complete order
-    // Filter out any items that shouldn't be in the sidebar context
-    const newSidebarOrder = newOrder.filter(itemId => navigationItemsConfig[itemId]);
-    setSidebarOrder(newSidebarOrder);
-  };
-
-  const navItems = completeSidebarOrder
-    .map(itemId => navigationItemsConfig[itemId])
-    .filter(Boolean); // Remove any undefined items
-
-  // Check if navigation item is active
-  const isNavItemActive = (item: any) => {
-    if (!item.href) return false;
-
-    // Exact match for most routes
-    if (pathname === item.href) return true;
-
-    // Special case for profile - match account profile pages
-    if (item.label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) {
-      return true;
-    }
-
-    // Special case for settings - match all settings pages
-    if (item.label === 'Settings' && (pathname.startsWith('/settings/') || pathname === '/settings/')) {
-      return true;
-    }
-
-    // Special case for admin - match all admin pages
-    if (item.label === 'Admin' && (pathname.startsWith('/admin/') || pathname === '/admin/')) {
-      return true;
-    }
-
-    return false;
-  };
-
-  // Handle navigation item click
-  const handleNavItemClick = (item: any) => {
-    if (item.action) {
-      item.action();
-    } else if (item.href) {
-      // If we're in a temporary hover state (not persistently expanded),
-      // end the hover state before navigation
-      if (isHovering && !isExpanded) {
-        setIsHovering(false);
-      }
-      router.push(item.href);
-    }
-  };
-
-  // Render the sidebar
   const sidebarContent = (
     <DndProvider backend={HTML5Backend}>
-      {/* Desktop Sidebar - Hidden on mobile */}
-      <div
+      <aside
         className={cn(
-          "hidden md:flex fixed left-0 z-fixed-toolbar flex-col",
-          // Use full wewrite-card system (includes glassmorphism backdrop blur)
-          "wewrite-card border-r border-[var(--card-border)]",
-          // Slightly higher opacity in light mode when expanded/hovered to match toolbar behavior
-          showContent && "bg-white dark:bg-[var(--card-bg)]",
-          // Remove rounded corners for sidebar
-          "!rounded-none",
-          "sidebar-smooth-transition overflow-hidden",
-          showContent ? "w-64" : "w-16",
-          isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
+          // Base positioning
+          "hidden md:flex fixed left-0 top-0 h-screen flex-col",
+          "z-fixed-toolbar",
+          // Simple styling - NO wewrite-card to avoid hidden rules
+          "bg-background/80 backdrop-blur-md border-r border-border",
+          // Width transition
+          "transition-[width] duration-300 ease-out",
+          showContent ? "w-64" : "w-[72px]"
         )}
         style={{
           top: 'var(--email-banner-height, 0px)',
           height: 'calc(100vh - var(--email-banner-height, 0px))',
+          overflow: 'visible',
         }}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
-        {/* 
-          Inner container:
-          - Collapsed: No horizontal padding, buttons center themselves in 64px
-          - Expanded: px-3 for nice margins
+        {/*
+          SIMPLE LAYOUT:
+          - Fixed 16px padding on all sides
+          - Collapsed: 72px total width = 16px + 40px button + 16px
+          - This ensures buttons never touch edges and rounded corners are visible
+          - All containers use overflow-visible to prevent icon clipping
         */}
-        <div className={cn(
-          "flex flex-col h-full py-4",
-          "transition-[padding] duration-300 ease-out",
-          showContent ? "px-3" : "px-0"
-        )}>
-          {/* Header with toggle button - Fixed at top */}
-          <div className={cn(
-            "flex items-center mb-6 flex-shrink-0 h-10",
-            !showContent && "justify-center"
-          )}>
-            {/* Toggle button */}
+        <div className="flex flex-col h-full p-4" style={{ overflow: 'visible' }}>
+
+          {/* Header */}
+          <div className="flex items-center h-10 mb-4">
             <button
               onClick={toggleExpanded}
               className={cn(
-                "h-10 flex items-center rounded-lg cursor-pointer border-0 bg-transparent",
-                "text-foreground hover:bg-muted/50 transition-all duration-300 ease-out",
-                showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
+                "h-10 w-10 flex items-center justify-center rounded-lg",
+                "text-foreground hover:bg-muted transition-colors"
               )}
               aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             >
-              <ChevronRight className={cn(
-                "h-5 w-5 flex-shrink-0 transition-transform duration-300 ease-out",
-                isExpanded && "rotate-180"
-              )} />
-              {/* Title */}
-              <span className={cn(
-                "text-lg font-semibold whitespace-nowrap overflow-hidden",
-                "transition-all duration-300 ease-out",
-                showContent ? "ml-3 opacity-100 w-auto" : "ml-0 opacity-0 w-0"
-              )}>
+              <Icon
+                name="ChevronRight"
+                size={20}
+                className={cn(
+                  "transition-transform duration-300",
+                  isExpanded && "rotate-180"
+                )}
+              />
+            </button>
+            {showContent && (
+              <span className="ml-3 text-lg font-semibold whitespace-nowrap">
                 {isEditMode ? "Editor" : "WeWrite"}
               </span>
-            </button>
+            )}
           </div>
 
-          {/* Scrollable content area */}
-          <div className={cn(
-            "flex-1 overflow-y-auto overflow-x-hidden",
-            "scrollbar-hide"
-          )}>
-            {/* Navigation Items */}
-            <nav className={cn(
+          {/* Navigation */}
+          <nav className="flex-1 scrollbar-hide" style={{ overflow: 'visible' }}>
+            <div className={cn(
               "flex flex-col gap-1",
               !showContent && "items-center"
-            )}>
-            {completeSidebarOrder
-              .filter((itemId, index, array) => array.indexOf(itemId) === index)
-              .map((itemId, index) => {
-                const item = navigationItemsConfig[itemId];
-                if (!item) return null;
+            )} style={{ overflow: 'visible' }}>
+              {completeSidebarOrder
+                .filter((itemId, i, arr) => arr.indexOf(itemId) === i)
+                .map((itemId, index) => {
+                  const item = navigationItemsConfig[itemId];
+                  if (!item) return null;
 
-                const isActive = isNavItemActive(item);
-                const isSettings = item.label === 'Settings';
+                  const isActive = isNavItemActive(item);
+                  const isSettings = item.label === 'Settings';
 
-                return (
-                  <DraggableSidebarItem
-                    key={`desktop-sidebar-${itemId}-${index}`}
-                    id={itemId}
-                    icon={item.icon}
-                    label={item.label}
-                    href={item.href}
-                    onClick={() => handleNavItemClick(item)}
-                    onMouseEnter={() => handleNavigationHover(item.href)}
-                    isActive={isActive}
-                    index={index}
-                    moveItem={reorderCompleteItems}
-                    showContent={showContent}
-                  >
-                    {/* Settings status indicator - always use orange warning dot (not blue info icon) */}
-                    {isSettings && criticalSettingsStatus && (
-                      <>
-                        {!showContent && (
-                          <WarningDot
-                            variant="warning"
-                            size="sm"
-                            position="top-right"
-                            offset={{ top: '-4px', right: '-4px' }}
-                          />
-                        )}
-                        {showContent && (
-                          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse ml-auto flex-shrink-0" />
-                        )}
-                      </>
-                    )}
-                    {/* Email verification dot moved to Settings > Profile menu item */}
-                  </DraggableSidebarItem>
-                );
-              })}
-          </nav>
-
-          {/* Reset to Default Button - only show when expanded */}
-          {showContent && (
-            <div className="mt-auto mb-4">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={resetSidebarOrder}
-                className="w-full text-xs text-muted-foreground hover:text-foreground"
-              >
-                Reset to default
-              </Button>
+                  return (
+                    <DraggableSidebarItem
+                      key={itemId}
+                      id={itemId}
+                      icon={item.icon}
+                      label={item.label}
+                      href={item.href}
+                      onClick={() => handleNavItemClick(item)}
+                      onMouseEnter={() => handleNavigationHover(item.href)}
+                      isActive={isActive}
+                      index={index}
+                      moveItem={reorderCompleteItems}
+                      showContent={showContent}
+                    >
+                      {isSettings && criticalSettingsStatus && (
+                        <>
+                          {!showContent && (
+                            <WarningDot
+                              variant="warning"
+                              size="sm"
+                              position="top-right"
+                              offset={{ top: '-4px', right: '-4px' }}
+                            />
+                          )}
+                          {showContent && (
+                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse ml-auto" />
+                          )}
+                        </>
+                      )}
+                    </DraggableSidebarItem>
+                  );
+                })}
             </div>
-          )}
 
-          {/* Editor Functions (only show in edit mode) */}
-          {isEditMode && (
-            <>
-              {/* Divider */}
-              <div className="border-t border-border mb-4" />
-              
-              <div className="flex flex-col gap-4 flex-1">
+            {/* Reset button - expanded only */}
+            {showContent && (
+              <div className="mt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetSidebarOrder}
+                  className="w-full text-xs text-muted-foreground"
+                >
+                  Reset to default
+                </Button>
+              </div>
+            )}
 
-
-                {/* Insert Link button removed - editing controls should only be in editing contexts */}
-
-                {/* Location button - only show if map feature is enabled */}
-                {mapFeatureEnabled && (
-                  <div className={cn("flex", !showContent && "justify-center")}>
-                    <MapEditor
-                      location={editorContext.location}
-                      onChange={editorContext.setLocation}
-                      compact={!showContent}
-                    />
-                  </div>
-                )}
-
-                {/* Spacer */}
-                <div className="flex-1" />
-
-                {/* Action buttons at bottom */}
-                <div className="flex flex-col gap-2">
-                  {/* Mobile: Save button first, Desktop: Save button last */}
-                  <div className={cn(
-                    "flex gap-2",
-                    showContent ? "md:flex-row-reverse md:justify-start" : "flex-col"
-                  )}>
-                    {/* Save button */}
-                    <Button
-                      onClick={editorContext.onSave}
-                      disabled={editorContext.isSaving}
-                      variant="success"
-                      className={cn(
-                        "flex items-center gap-3 h-auto p-3 justify-start",
-                        !showContent && "justify-center w-12 h-12 p-0",
-                        showContent && "md:order-last"
-                      )}
-                      title={showContent ? "" : "Save"}
-                    >
-                      <Check className="h-4 w-4 flex-shrink-0" />
-                      {showContent && (
-                        <span className="font-medium transition-opacity duration-200">
-                          {editorContext.isSaving ? "Saving..." : "Save"}
-                        </span>
-                      )}
-                    </Button>
-
-                    {/* Cancel button */}
-                    <Button
-                      onClick={editorContext.onCancel}
-                      variant="secondary"
-                      className={cn(
-                        "flex items-center gap-3 h-auto p-3 justify-start",
-                        !showContent && "justify-center w-12 h-12 p-0"
-                      )}
-                      title={showContent ? "" : "Cancel"}
-                    >
-                      <X className="h-4 w-4 flex-shrink-0" />
-                      {showContent && <span className="font-medium transition-opacity duration-200">Cancel</span>}
-                    </Button>
-                  </div>
-
-                  {/* Delete button (only show if onDelete is provided) */}
+            {/* Editor controls */}
+            {isEditMode && (
+              <div className="mt-4 pt-4 border-t border-border space-y-2">
+                <div className={cn("flex", !showContent && "justify-center")}>
+                  <MapEditor
+                    location={editorContext.location}
+                    onChange={editorContext.setLocation}
+                    compact={!showContent}
+                  />
+                </div>
+                <div className="flex flex-col gap-2 mt-auto">
+                  <Button
+                    onClick={editorContext.onSave}
+                    disabled={editorContext.isSaving}
+                    variant="success"
+                    size={showContent ? "default" : "icon"}
+                  >
+                    <Icon name="Check" size={16} />
+                    {showContent && <span className="ml-2">{editorContext.isSaving ? "Saving..." : "Save"}</span>}
+                  </Button>
+                  <Button
+                    onClick={editorContext.onCancel}
+                    variant="secondary"
+                    size={showContent ? "default" : "icon"}
+                  >
+                    <Icon name="X" size={16} />
+                    {showContent && <span className="ml-2">Cancel</span>}
+                  </Button>
                   {editorContext.onDelete && (
                     <Button
                       onClick={editorContext.onDelete}
                       disabled={editorContext.isSaving}
                       variant="destructive"
-                      className={cn(
-                        "flex items-center gap-3 h-auto p-3 justify-start",
-                        !showContent && "justify-center w-12 h-12 p-0"
-                      )}
-                      title={showContent ? "" : "Delete"}
+                      size={showContent ? "default" : "icon"}
                     >
-                      <Trash2 className="h-4 w-4 flex-shrink-0" />
-                      {showContent && <span className="font-medium transition-opacity duration-200">Delete</span>}
+                      <Icon name="Trash2" size={16} />
+                      {showContent && <span className="ml-2">Delete</span>}
                     </Button>
                   )}
                 </div>
               </div>
-            </>
-          )}
-          </div>
+            )}
+          </nav>
 
-
-          {/* Fixed bottom section - User info and logout at bottom for non-edit mode */}
+          {/* Footer - User/Logout */}
           {!isEditMode && user && (
             <div className={cn(
-              "mt-auto pt-4 border-t border-border flex-shrink-0",
+              "pt-4 border-t border-border",
               !showContent && "flex flex-col items-center"
             )}>
-              {/* User Information - only show when expanded */}
               {showContent && (
-                <div className="mb-3 pl-3 py-2">
-                  <div className="text-sm font-medium text-foreground truncate">
-                    {sanitizeUsername(user.username, 'Loading...', 'User')}
-                  </div>
+                <div className="mb-2 text-sm font-medium text-foreground truncate">
+                  {sanitizeUsername(user.username, 'Loading...', 'User')}
                 </div>
               )}
-
-              {/* Logout Button */}
               <button
                 onClick={handleLogoutClick}
                 className={cn(
-                  "h-10 flex items-center rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20",
-                  "transition-all duration-300 ease-out cursor-pointer border-0 bg-transparent",
-                  showContent ? "w-full pl-3 pr-2" : "w-10 justify-center"
+                  "h-10 flex items-center rounded-lg",
+                  "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
+                  "transition-colors cursor-pointer border-0 bg-transparent",
+                  showContent ? "w-full px-3" : "w-10 justify-center"
                 )}
                 title={!showContent ? "Logout" : undefined}
-                aria-label="Logout"
               >
-                <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className={cn(
-                  "text-sm font-medium whitespace-nowrap overflow-hidden",
-                  "transition-all duration-300 ease-out",
-                  showContent ? "ml-3 opacity-100 w-auto" : "ml-0 opacity-0 w-0"
-                )}>
-                  Logout
-                </span>
+                <Icon name="LogOut" size={20} />
+                {showContent && <span className="ml-3 text-sm font-medium">Logout</span>}
               </button>
             </div>
           )}
         </div>
-      </div>
+      </aside>
     </DndProvider>
   );
 
-  // Use portal to render sidebar at document root level
-  return (
-    <>
-      {createPortal(sidebarContent, document.body)}
-
-      {/* Logout confirmation now uses system dialog - no custom modal needed */}
-    </>
-  );
+  return createPortal(sidebarContent, document.body);
 }

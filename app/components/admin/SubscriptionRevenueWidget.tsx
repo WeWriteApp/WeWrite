@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Users, Percent } from 'lucide-react';
 import { useSubscriptionRevenue } from '../../hooks/usePaymentAnalytics';
 import { type DateRange } from '../../services/dashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -28,7 +28,7 @@ export function SubscriptionRevenueWidget({
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary animate-pulse" />
+            <Icon name="DollarSign" size={20} className="text-primary animate-pulse" />
             <h3 className="text-lg font-semibold">Subscription Revenue</h3>
           </div>
           <div className="text-right">
@@ -101,7 +101,7 @@ export function SubscriptionRevenueWidget({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-primary" />
+          <Icon name="DollarSign" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Subscription Revenue</h3>
         </div>
         
@@ -117,9 +117,9 @@ export function SubscriptionRevenueWidget({
       {/* Trend Indicator */}
       <div className="flex items-center gap-2 mb-4">
         {isPositiveTrend ? (
-          <TrendingUp className="h-4 w-4 text-green-600" />
+          <Icon name="TrendingUp" size={16} className="text-green-600" />
         ) : (
-          <TrendingDown className="h-4 w-4 text-red-600" />
+          <Icon name="TrendingDown" size={16} className="text-red-600" />
         )}
         <span className={`text-sm font-medium ${isPositiveTrend ? 'text-green-600' : 'text-red-600'}`}>
           {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
@@ -198,7 +198,7 @@ export function SubscriptionRevenueWidget({
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <Icon name="DollarSign" size={48} className="text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No revenue data available</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Revenue data will appear when subscription payments are processed
@@ -214,7 +214,7 @@ export function SubscriptionRevenueWidget({
           <div className="grid grid-cols-4 gap-4 text-center">
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
-                <DollarSign className="h-3 w-3 text-green-600" />
+                <Icon name="DollarSign" size={12} className="text-green-600" />
                 <span className="text-xs text-muted-foreground">Net Revenue</span>
               </div>
               <div className={`text-lg font-bold ${netRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -223,7 +223,7 @@ export function SubscriptionRevenueWidget({
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Users className="h-3 w-3 text-primary" />
+                <Icon name="Users" size={12} className="text-primary" />
                 <span className="text-xs text-muted-foreground">Avg ARPU</span>
               </div>
               <div className="text-lg font-bold text-primary">
@@ -232,7 +232,7 @@ export function SubscriptionRevenueWidget({
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Percent className="h-3 w-3 text-amber-600" />
+                <Icon name="Percent" size={12} className="text-amber-600" />
                 <span className="text-xs text-muted-foreground">Churn Rate</span>
               </div>
               <div className="text-lg font-bold text-amber-600">

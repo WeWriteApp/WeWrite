@@ -32,8 +32,8 @@ export interface UserEarnings {
     allocatedAt: Date;
   }[];
   totalAllocationsReceived: number; // Total allocated to this user
-  platformFee: number; // 7% platform fee
-  netEarnings: number; // After platform fee
+  platformFee: number; // 10% payout fee (charged at withdrawal)
+  netEarnings: number; // After payout fee
   earningsBreakdown: {
     fromPages: number;
     fromDirectAllocations: number;

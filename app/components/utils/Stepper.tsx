@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronDown, Plus, Minus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useTheme } from 'next-themes';
 
 interface StepperProps {
@@ -59,7 +59,7 @@ export default function Stepper({
           className="flex items-center gap-1 text-sm text-primary hover:text-primary/80"
         >
           Change
-          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <Icon name="ChevronDown" size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
@@ -106,7 +106,7 @@ export default function Stepper({
           onClick={() => handleIncrement(-1)}
           className="p-2 rounded-md bg-secondary hover:bg-secondary/80"
         >
-          <Minus className="h-5 w-5" />
+          <Icon name="Close" size={20} />
         </button>
         
         <span className="text-lg font-medium">
@@ -117,7 +117,7 @@ export default function Stepper({
           onClick={() => handleIncrement(1)}
           className="p-2 rounded-md bg-secondary hover:bg-secondary/80"
         >
-          <Plus className="h-5 w-5" />
+          <Icon name="Plus" size={20} />
         </button>
       </div>
     </div>

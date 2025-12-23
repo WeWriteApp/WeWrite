@@ -2,10 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  X, Heart, Map, Info, MessageSquare, Code, Home, Search,
-  Shuffle, TrendingUp, Clock, Bell, User, Settings, Mail
-} from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from "../../providers/AuthProvider";
 import { usePathname } from "next/navigation";
 import FeedbackModal from "./FeedbackModal";
@@ -17,7 +14,7 @@ interface SiteFooterProps {
 interface FooterLink {
   href: string;
   label: string;
-  icon: React.ReactNode;
+  icon: string;
   external?: boolean;
   section: 'navigation' | 'content' | 'external';
   onClick?: () => void;
@@ -40,12 +37,12 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
 
   // All footer links (content pages and external links only)
   const footerLinks: FooterLink[] = [
-    { href: "/zRNwhNgIEfLFo050nyAT", label: "Feature Roadmap", icon: <Map className="h-3 w-3" />, section: 'content' },
-    { href: "/sUASL4gNdCMVHkr7Qzty", label: "About us", icon: <Info className="h-3 w-3" />, section: 'content' },
-    { href: "#", label: "Feedback", icon: <MessageSquare className="h-3 w-3" />, section: 'content', onClick: () => setShowFeedbackModal(true) },
-    { href: "mailto:support@getwewrite.app", label: "Email support", icon: <Mail className="h-3 w-3" />, external: true, section: 'external' },
-    { href: "https://x.com/WeWriteApp", label: "Follow on X", icon: <X className="h-3 w-3" />, external: true, section: 'external' },
-    { href: "https://github.com/WeWriteApp/WeWrite", label: "Source code", icon: <Code className="h-3 w-3" />, external: true, section: 'external' },
+    { href: "/zRNwhNgIEfLFo050nyAT", label: "Feature Roadmap", icon: 'Map', section: 'content' },
+    { href: "/sUASL4gNdCMVHkr7Qzty", label: "About us", icon: 'Info', section: 'content' },
+    { href: "#", label: "Feedback", icon: 'MessageSquare', section: 'content', onClick: () => setShowFeedbackModal(true) },
+    { href: "mailto:support@getwewrite.app", label: "Email support", icon: 'Mail', external: true, section: 'external' },
+    { href: "https://x.com/WeWriteApp", label: "Follow on X", icon: 'X', external: true, section: 'external' },
+    { href: "https://github.com/WeWriteApp/WeWrite", label: "Source code", icon: 'Code', external: true, section: 'external' },
   ];
 
   return (
@@ -62,7 +59,7 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 group"
                 >
                   <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                    {link.icon}
+                    <Icon name={link.icon} size={12} />
                   </span>
                   <span>{link.label}</span>
                 </button>
@@ -75,7 +72,7 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 group"
                 >
                   <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                    {link.icon}
+                    <Icon name={link.icon} size={12} />
                   </span>
                   <span>{link.label}</span>
                 </Link>

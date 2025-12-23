@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Loader, Check, X } from 'lucide-react';
 // Using API endpoints instead of direct Firebase calls
 import { useAuth } from '../../providers/AuthProvider';
 import { cn } from '../../lib/utils';
@@ -24,24 +24,18 @@ export default function UsernameEnforcementModal() {
 
   // Check if the user has a username using centralized logic
   useEffect(() => {
-    console.log('[UsernameEnforcementModal] User data:', user);
-
     // If user is authenticated but has no username or null username, show modal
     if (user && (!user.username || user.username === null || user.username.trim() === '')) {
-      console.log('[UsernameEnforcementModal] User authenticated but missing username, opening modal');
       setOpen(true);
       return;
     }
 
     // Use centralized logic as backup
     const needsUsername = userNeedsUsername(user);
-    console.log('[UsernameEnforcementModal] User needs username (centralized check):', needsUsername);
 
     if (needsUsername) {
-      console.log('[UsernameEnforcementModal] Opening modal for user without username');
       setOpen(true);
     } else {
-      console.log('[UsernameEnforcementModal] User has valid username, closing modal');
       setOpen(false);
     }
   }, [user]);
@@ -203,7 +197,7 @@ export default function UsernameEnforcementModal() {
 
               {isChecking && (
                 <p className="text-sm text-muted-foreground flex items-center">
-                  <Loader className="h-3 w-3 animate-spin mr-1" />
+                  <Icon name="Loader" className="mr-1" />
                   Checking availability...
                 </p>
               )}
@@ -255,7 +249,7 @@ export default function UsernameEnforcementModal() {
           >
             {isSaving ? (
               <>
-                <Loader className="h-4 w-4 animate-spin mr-2" />
+                <Icon name="Loader" className="mr-2" />
                 Saving...
               </>
             ) : (

@@ -2,6 +2,7 @@
 
 import React, { use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Icon } from '@/components/ui/Icon';
 import ContentPageView from '../../../components/pages/ContentPageView';
 
 interface PageDiffProps {
@@ -36,7 +37,7 @@ function PageDiffContent({ params }: PageDiffProps) {
 export default function PageDiff({ params }: PageDiffProps) {
   return (
     <Suspense fallback={<div className="flex items-center justify-center py-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      <Icon name="Loader" size={32} />
     </div>}>
       <PageDiffContent params={params} />
     </Suspense>

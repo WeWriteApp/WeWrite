@@ -4,8 +4,8 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Calendar, List } from 'lucide-react';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../components/ui/segmented-control';
 import { Button } from '../components/ui/button';
 import NavPageLayout from '../components/layout/NavPageLayout';
@@ -137,7 +137,7 @@ function TimelineContent() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <Icon name="Loader" size={32} className="mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -169,11 +169,11 @@ function TimelineContent() {
             <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
               <SegmentedControlList className="grid w-full grid-cols-2">
                 <SegmentedControlTrigger value="timeline" className="flex items-center justify-center gap-2">
-                  <List className="h-4 w-4" />
+                  <Icon name="List" size={16} />
                   Timeline
                 </SegmentedControlTrigger>
                 <SegmentedControlTrigger value="calendar" className="flex items-center justify-center gap-2">
-                  <Calendar className="h-4 w-4" />
+                  <Icon name="Calendar" size={16} />
                   Calendar
                 </SegmentedControlTrigger>
               </SegmentedControlList>

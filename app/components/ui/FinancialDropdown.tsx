@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { Button } from './button';
-import { AlertCircle } from 'lucide-react';
 
 /**
  * Simple Financial Dropdown - Clean implementation
@@ -359,7 +359,7 @@ export function EarningsBreakdown({
       {/* Beta warning card */}
       <div className="mt-4 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30">
         <div className="flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+          <Icon name="AlertCircle" size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <div className="text-sm font-medium text-amber-600 dark:text-amber-400">
               Earnings are in beta

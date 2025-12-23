@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import dynamic from 'next/dynamic';
-import { X, Network, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Link2, Loader2, Share2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
@@ -17,7 +17,7 @@ const PageGraph3D = dynamic(() => import('./PageGraph3D'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <Icon name="Loader" className="text-muted-foreground" />
     </div>
   ),
 });
@@ -64,8 +64,6 @@ interface PageGraphViewProps {
  * - Styled with current pill link style
  * - Visual key shows different hop levels
  */
-type SortField = 'title' | 'links';
-type SortDirection = 'asc' | 'desc';
 
 export default function PageGraphView({
   pageId,
@@ -90,19 +88,6 @@ export default function PageGraphView({
     setHasActivatedGraph(true);
     setIsFullscreen(true);
   }, []);
-  const [isPageListExpanded, setIsPageListExpanded] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('links');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-
-  // Toggle sort handler
-  const handleSort = useCallback((field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection(field === 'links' ? 'desc' : 'asc');
-    }
-  }, [sortField]);
 
   // ESC key handler for fullscreen mode
   useEffect(() => {
@@ -137,109 +122,6 @@ export default function PageGraphView({
     limitByOthers: 10,
     limitByAuthor: 0 // We only need related pages by others for the graph
   });
-
-  // Compute page link statistics for the page list
-  const pageLinkStats = useMemo(() => {
-    // Map to track unique pages and their link counts
-    const pageMap = new Map<string, {
-      id: string;
-      title: string;
-      username?: string;
-      inLinks: number;
-      outLinks: number;
-      totalLinks: number;
-    }>();
-
-    // Add current page
-    pageMap.set(pageId, {
-      id: pageId,
-      title: pageTitle,
-      username: user?.username,
-      inLinks: incoming.length,
-      outLinks: outgoing.length,
-      totalLinks: incoming.length + outgoing.length
-    });
-
-    // Process all direct connections
-    allConnections.forEach(conn => {
-      const isIncoming = incoming.some(inc => inc.id === conn.id);
-      const isOutgoing = outgoing.some(out => out.id === conn.id);
-      const isBidirectional = bidirectional.some(bi => bi.id === conn.id);
-
-      let inCount = 0;
-      let outCount = 0;
-
-      if (isBidirectional) {
-        // Bidirectional means this page links to us AND we link to it
-        inCount = 1;
-        outCount = 1;
-      } else if (isIncoming) {
-        // This page links to us
-        outCount = 1; // From their perspective, it's an outgoing link
-      } else if (isOutgoing) {
-        // We link to this page
-        inCount = 1; // From their perspective, it's an incoming link
-      }
-
-      if (!pageMap.has(conn.id)) {
-        pageMap.set(conn.id, {
-          id: conn.id,
-          title: conn.title,
-          username: conn.username,
-          inLinks: inCount,
-          outLinks: outCount,
-          totalLinks: inCount + outCount
-        });
-      }
-    });
-
-    // Add second-hop connections
-    secondHopConnections.forEach(conn => {
-      if (!pageMap.has(conn.id)) {
-        pageMap.set(conn.id, {
-          id: conn.id,
-          title: conn.title,
-          username: conn.username,
-          inLinks: 1, // Has at least one connection to reach here
-          outLinks: 0,
-          totalLinks: 1
-        });
-      }
-    });
-
-    // Add third-hop connections
-    thirdHopConnections.forEach(conn => {
-      if (!pageMap.has(conn.id)) {
-        pageMap.set(conn.id, {
-          id: conn.id,
-          title: conn.title,
-          username: conn.username,
-          inLinks: 1,
-          outLinks: 0,
-          totalLinks: 1
-        });
-      }
-    });
-
-    // Convert to array (sorting will be applied in sortedPageLinkStats)
-    return Array.from(pageMap.values());
-  }, [pageId, pageTitle, user?.username, incoming, outgoing, bidirectional, allConnections, secondHopConnections, thirdHopConnections]);
-
-  // Sorted page link stats based on sort field and direction
-  const sortedPageLinkStats = useMemo(() => {
-    return [...pageLinkStats].sort((a, b) => {
-      if (sortField === 'links') {
-        const diff = b.totalLinks - a.totalLinks;
-        return sortDirection === 'desc' ? diff : -diff;
-      } else {
-        // Sort by title
-        const titleA = (a.title || '').toLowerCase();
-        const titleB = (b.title || '').toLowerCase();
-        const diff = titleA.localeCompare(titleB);
-        return sortDirection === 'asc' ? diff : -diff;
-      }
-    });
-  }, [pageLinkStats, sortField, sortDirection]);
 
   // Expose refresh function to parent component
   useEffect(() => {
@@ -424,7 +306,7 @@ export default function PageGraphView({
       <div className={className}>
         <div className="wewrite-card">
           <div className="flex items-center gap-2 mb-4">
-            <Network className="w-4 h-4 text-muted-foreground" />
+            <Icon name="Network" size={16} className="text-muted-foreground" />
             <h3 className="text-sm font-medium">Graph view</h3>
           </div>
           <LoadingState
@@ -477,14 +359,14 @@ export default function PageGraphView({
                 className="text-muted-foreground hover:text-foreground"
                 title="Share graph view"
               >
-                <Share2 className="h-4 w-4" />
+                <Icon name="Share2" size={16} />
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="secondary"
                   size="sm"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="X" size={16} />
                 </Button>
               </DrawerClose>
             </div>
@@ -528,7 +410,7 @@ export default function PageGraphView({
           {/* Header */}
           <div className="flex items-center justify-between mb-4 w-full">
             <div className="flex items-center gap-2">
-              <Network className="w-4 h-4 text-muted-foreground" />
+              <Icon name="Network" size={16} className="text-muted-foreground" />
               <h3 className="text-sm font-medium">Graph view</h3>
             </div>
             <span className="text-xs text-muted-foreground">Tap to view interactive graph</span>
@@ -563,92 +445,6 @@ export default function PageGraphView({
             </div>
           </SubscriptionGate>
         </div>
-
-        {/* Page List - as pills with sorting */}
-        {pageLinkStats.length > 1 && (
-          <div className="wewrite-card mt-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPageListExpanded(!isPageListExpanded);
-              }}
-              className="w-full flex items-center justify-between text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span className="font-medium">Pages ({pageLinkStats.length})</span>
-              {isPageListExpanded ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
-
-            {isPageListExpanded && (
-              <div className="mt-3">
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-muted/50 border-b border-border">
-                        <th className="text-left px-4 py-2 font-medium">
-                          <button
-                            onClick={() => handleSort('title')}
-                            className="flex items-center gap-1 hover:text-foreground transition-colors"
-                          >
-                            Page
-                            {sortField === 'title' && (
-                              sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            )}
-                          </button>
-                        </th>
-                        <th className="text-right px-4 py-2 font-medium w-24">
-                          <button
-                            onClick={() => handleSort('links')}
-                            className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors"
-                          >
-                            Links
-                            {sortField === 'links' && (
-                              sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
-                            )}
-                          </button>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedPageLinkStats.map((page) => (
-                        <tr
-                          key={page.id}
-                          className={`border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors ${
-                            page.id === pageId ? 'bg-primary/5' : ''
-                          }`}
-                        >
-                          <td className="px-4 py-2">
-                            {page.id === pageId ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-sm font-medium rounded-lg bg-primary/20 text-primary border border-primary/30">
-                                {page.title}
-                              </span>
-                            ) : (
-                              <PillLink
-                                href={`/${page.id}`}
-                                pageId={page.id}
-                              >
-                                {page.title}
-                              </PillLink>
-                            )}
-                          </td>
-                          <td className="text-right px-4 py-2 tabular-nums">
-                            <span className="inline-flex items-center gap-1 text-muted-foreground">
-                              <Link2 className="h-3 w-3" />
-                              {page.totalLinks}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </>
   );

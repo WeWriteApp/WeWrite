@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { FileText, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useCompositePagesMetrics, useTotalPagesEverCreated } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -61,11 +61,11 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
           <p className="font-medium">{label}</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm">
-              <Plus className="h-3 w-3 text-green-500" />
+              <Icon name="Plus" size={12} className="text-green-500" />
               <span className="text-green-600">{created} created</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Minus className="h-3 w-3 text-red-500" />
+              <Icon name="Minus" size={12} className="text-red-500" />
               <span className="text-red-600">{deleted} deleted</span>
             </div>
             <div className="pt-1 border-t border-border">
@@ -110,7 +110,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
+          <Icon name="FileText" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Pages Created & Deleted</h3>
         </div>
 
@@ -121,11 +121,11 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
           </div>
           <div className="text-xs text-muted-foreground space-y-1">
             <div className="flex items-center gap-2 justify-end">
-              <Plus className="h-3 w-3 text-green-500" />
+              <Icon name="Plus" size={12} className="text-green-500" />
               <span className="text-green-600">{totalPagesCreated} created</span>
             </div>
             <div className="flex items-center gap-2 justify-end">
-              <Minus className="h-3 w-3 text-red-500" />
+              <Icon name="Minus" size={12} className="text-red-500" />
               <span className="text-red-600">{totalPagesDeleted} deleted</span>
             </div>
             {!totalLoading && (
@@ -141,9 +141,9 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
       {!loading && data.length > 1 && (
         <div className="flex items-center gap-2 mb-4 text-sm">
           {isPositiveTrend ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <Icon name="TrendingUp" size={16} className="text-green-500" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-500" />
+            <Icon name="TrendingDown" size={16} className="text-red-500" />
           )}
           <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
             {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}

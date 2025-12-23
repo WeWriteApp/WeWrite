@@ -1,22 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { isAdmin } from '../../utils/isAdmin';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../components/ui/use-toast';
-import { 
-  Upload, 
-  Trash2, 
-  GripVertical, 
-  Eye, 
-  EyeOff, 
-  ArrowLeft,
-  Image as ImageIcon,
-  Plus,
-  Loader
-} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
@@ -298,7 +288,7 @@ export default function AdminBackgroundImagesPage() {
   if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader className="h-8 w-8 animate-spin" />
+        <Icon name="Loader" />
       </div>
     );
   }
@@ -325,7 +315,7 @@ export default function AdminBackgroundImagesPage() {
               onClick={() => router.push('/admin')}
               className="gap-2"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="ArrowLeft" size={16} />
               Back to Admin
             </Button>
           </div>
@@ -353,9 +343,9 @@ export default function AdminBackgroundImagesPage() {
                 className="gap-2"
               >
                 {uploading ? (
-                  <Loader className="h-4 w-4 animate-spin" />
+                  <Icon name="Loader" />
                 ) : (
-                  <Plus className="h-4 w-4" />
+                  <Icon name="Plus" size={16} />
                 )}
                 Upload Image
               </Button>
@@ -368,7 +358,7 @@ export default function AdminBackgroundImagesPage() {
           {images.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <ImageIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <Icon name="Image" size={48} className=" mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-medium mb-2">No background images</h3>
                 <p className="text-muted-foreground mb-4">
                   Upload your first default background image to get started
@@ -378,7 +368,7 @@ export default function AdminBackgroundImagesPage() {
                   disabled={uploading}
                   className="gap-2"
                 >
-                  <Upload className="h-4 w-4" />
+                  <Icon name="Upload" size={16} />
                   Upload Image
                 </Button>
               </CardContent>
@@ -399,7 +389,7 @@ export default function AdminBackgroundImagesPage() {
                   <div className="flex items-center gap-4">
                     {/* Drag Handle */}
                     <div className="cursor-move text-muted-foreground">
-                      <GripVertical className="h-5 w-5" />
+                      <Icon name="GripVertical" size={20} />
                     </div>
 
                     {/* Image Preview */}
@@ -432,7 +422,7 @@ export default function AdminBackgroundImagesPage() {
                           onCheckedChange={(checked) => handleActiveToggle(image.id, checked)}
                         />
                         <span className="text-sm text-muted-foreground">
-                          {image.active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          {image.active ? <Icon name="Eye" size={16} /> : <Icon name="EyeOff" size={16} />}
                         </span>
                       </div>
                       
@@ -442,7 +432,7 @@ export default function AdminBackgroundImagesPage() {
                         onClick={() => handleDelete(image.id)}
                         className="text-destructive hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Icon name="Trash2" size={16} />
                       </Button>
                     </div>
                   </div>

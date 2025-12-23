@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../providers/AuthProvider';
@@ -134,16 +134,13 @@ export default function FloatingActionButton() {
           size="icon"
           className={cn(
             "h-14 w-14 rounded-full shadow-lg pointer-events-auto",
-            "bg-primary hover:bg-primary/90 text-primary-foreground"
+            "bg-primary hover:bg-primary/90 text-primary-foreground",
+            "flex items-center justify-center"
           )}
           aria-label="Create new page"
+          id="floating-action-button"
         >
-          <motion.div
-            whileHover={{ rotate: 90 }}
-            transition={{ type: "spring", stiffness: 300, damping: 15 }}
-          >
-            <Plus className="h-6 w-6" />
-          </motion.div>
+          <Icon name="Plus" size={24} />
         </Button>
       </motion.div>
     </FixedPortal>

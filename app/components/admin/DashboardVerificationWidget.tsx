@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Activity } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 interface VerificationResult {
   status: 'success' | 'error';
@@ -66,14 +66,14 @@ export function DashboardVerificationWidget() {
     switch (status) {
       case 'success':
       case 'healthy':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <Icon name="CheckCircle" size={20} className="text-green-500" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+        return <Icon name="AlertTriangle" size={20} className="text-yellow-500" />;
       case 'error':
       case 'critical':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return <Icon name="XCircle" size={20} className="text-red-500" />;
       default:
-        return <Activity className="h-5 w-5 text-gray-500" />;
+        return <Icon name="Activity" size={20} className="text-gray-500" />;
     }
   };
 
@@ -97,7 +97,7 @@ export function DashboardVerificationWidget() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-primary" />
+          <Icon name="Activity" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">Dashboard Health Check</h3>
         </div>
         
@@ -106,7 +106,7 @@ export function DashboardVerificationWidget() {
           disabled={loading}
           className="flex items-center gap-2 px-3 py-1 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <Icon name="RefreshCw" size={16} className={`${loading ? 'animate-spin' : ''}`} />
           {loading ? 'Running...' : 'Run Check'}
         </button>
       </div>
@@ -122,7 +122,7 @@ export function DashboardVerificationWidget() {
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-md">
           <div className="flex items-center gap-2 text-red-600">
-            <XCircle className="h-5 w-5" />
+            <Icon name="XCircle" size={20} />
             <span className="font-medium">Verification Failed</span>
           </div>
           <p className="text-red-600 text-sm mt-1">{error}</p>

@@ -4,16 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { 
-  CheckCircle, 
-  Zap, 
-  Shield, 
-  Smartphone, 
-  CreditCard, 
-  Globe,
-  ArrowRight,
-  Star
-} from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 
 /**
  * EmbeddedCheckoutSummary - Summary of the new embedded checkout capabilities
@@ -25,7 +16,7 @@ export function EmbeddedCheckoutSummary() {
   const features = [
     {
       category: "PWA Compatibility",
-      icon: <Smartphone className="w-5 h-5" />,
+      icon: <Icon name="Smartphone" size={20} />,
       items: [
         "No external redirects - everything happens in-app",
         "Works seamlessly in PWA mode",
@@ -36,7 +27,7 @@ export function EmbeddedCheckoutSummary() {
     },
     {
       category: "Embedded Payment Elements",
-      icon: <CreditCard className="w-5 h-5" />,
+      icon: <Icon name="CreditCard" size={20} />,
       items: [
         "Stripe Payment Element for secure card collection",
         "Address Element for billing information",
@@ -47,7 +38,7 @@ export function EmbeddedCheckoutSummary() {
     },
     {
       category: "Multi-Step Checkout Flow",
-      icon: <ArrowRight className="w-5 h-5" />,
+      icon: <Icon name="ArrowRight" size={20} />,
       items: [
         "Plan selection with standard and custom tiers",
         "Payment information collection",
@@ -58,7 +49,7 @@ export function EmbeddedCheckoutSummary() {
     },
     {
       category: "Industry-Standard UX",
-      icon: <Star className="w-5 h-5" />,
+      icon: <Icon name="Star" size={20} />,
       items: [
         "Real-time tax calculations based on location",
         "Clear pricing breakdown with fees",
@@ -69,7 +60,7 @@ export function EmbeddedCheckoutSummary() {
     },
     {
       category: "Security & Compliance",
-      icon: <Shield className="w-5 h-5" />,
+      icon: <Icon name="Shield" size={20} />,
       items: [
         "PCI DSS compliance through Stripe Elements",
         "HTTPS/TLS encryption validation",
@@ -80,7 +71,7 @@ export function EmbeddedCheckoutSummary() {
     },
     {
       category: "Token System Integration",
-      icon: <Zap className="w-5 h-5" />,
+      icon: <Icon name="Zap" size={20} />,
       items: [
         "Automatic token balance initialization",
         "Migration of unfunded token allocations",
@@ -131,7 +122,7 @@ export function EmbeddedCheckoutSummary() {
       <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border-theme-medium">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-200">
-            <CheckCircle className="w-6 h-6" />
+            <Icon name="CheckCircle" size={24} />
             Embedded Checkout Implementation Complete
           </CardTitle>
         </CardHeader>
@@ -161,7 +152,7 @@ export function EmbeddedCheckoutSummary() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
+            <Icon name="Globe" size={20} />
             Implementation Features
           </CardTitle>
         </CardHeader>
@@ -176,7 +167,7 @@ export function EmbeddedCheckoutSummary() {
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {feature.items.map((item, itemIndex) => (
                     <li key={itemIndex} className="flex items-start gap-2">
-                      <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                      <Icon name="CheckCircle" size={12} className="text-green-500 mt-0.5 flex-shrink-0" />
                       {item}
                     </li>
                   ))}
@@ -217,7 +208,7 @@ export function EmbeddedCheckoutSummary() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {components.map((component, index) => (
               <div key={index} className="flex items-center gap-2 text-sm">
-                <CheckCircle className="w-3 h-3 text-green-500" />
+                <Icon name="CheckCircle" size={12} className="text-green-500" />
                 <code className="text-xs">{component}</code>
               </div>
             ))}

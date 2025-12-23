@@ -1,11 +1,11 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Switch } from './switch';
 import { Slider } from './slider';
 import { Label } from './label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './card';
-import { Sparkles, Settings } from 'lucide-react';
 
 interface LinkSuggestionSettingsProps {
   enabled: boolean;
@@ -26,7 +26,7 @@ export function LinkSuggestionSettings({
     <Card className={className}>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Icon name="Sparkles" size={16} className="text-primary" />
           Link Suggestions
         </CardTitle>
         <CardDescription className="text-xs">

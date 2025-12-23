@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useAllocationInterval, ALLOCATION_INTERVAL_OPTIONS } from '../../contexts/AllocationIntervalContext';
 import { formatUsdCents } from '../../utils/formatCurrency';
-import { Check } from 'lucide-react';
 
 interface AllocationIntervalModalProps {
   isOpen: boolean;
@@ -95,7 +95,7 @@ export function AllocationIntervalModal({ isOpen, onClose }: AllocationIntervalM
                 >
                   <span>{option.label}</span>
                   {selectedInterval === option.cents && (
-                    <Check className="h-4 w-4" />
+                    <Icon name="Check" size={16} />
                   )}
                 </Button>
               ))}

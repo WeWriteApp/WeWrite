@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Check, RotateCcw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useBanner } from '../../providers/BannerProvider';
 
 interface StickySaveHeaderProps {
@@ -77,7 +77,7 @@ export default function StickySaveHeader({
             onClick={onCancel}
             disabled={isSaving}
           >
-            <RotateCcw className="h-4 w-4" />
+            <Icon name="RotateCcw" size={16} />
             Revert
           </Button>
           <Button
@@ -87,7 +87,7 @@ export default function StickySaveHeader({
             onClick={onSave}
             disabled={isSaving}
           >
-            <Check className="h-4 w-4" />
+            <Icon name="Check" size={16} />
             {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
@@ -101,7 +101,7 @@ export default function StickySaveHeader({
             onClick={onCancel}
             disabled={isSaving}
           >
-            <RotateCcw className="h-4 w-4" />
+            <Icon name="RotateCcw" size={16} />
             Revert
           </Button>
           <Button
@@ -111,7 +111,7 @@ export default function StickySaveHeader({
             onClick={onSave}
             disabled={isSaving}
           >
-            <Check className="h-4 w-4" />
+            <Icon name="Check" size={16} />
             {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>

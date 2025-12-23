@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, Clock, Heart, Calendar } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useDateFormat } from "../../contexts/DateFormatContext";
@@ -222,7 +222,7 @@ export default function ContentPageStats({
       {/* Views Card */}
       <div className="wewrite-card flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Eye className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Eye" size={20} className="text-muted-foreground" />
           <span className="text-sm font-medium">Views</span>
         </div>
 
@@ -260,7 +260,7 @@ export default function ContentPageStats({
         {/* Header with icon, title, and stats */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-muted-foreground" />
+            <Icon name="Clock" size={20} className="text-muted-foreground" />
             <span className="text-sm font-medium">Recent Edits</span>
           </div>
 
@@ -354,7 +354,7 @@ export default function ContentPageStats({
       {hasSupporters && (
         <div className="wewrite-card flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-muted-foreground" />
+            <Icon name="Heart" size={20} className="text-muted-foreground" />
             <span className="text-sm font-medium">Supporters</span>
           </div>
 

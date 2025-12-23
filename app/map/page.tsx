@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { MapPin, Loader2, AlertCircle, ChevronLeft, ChevronRight, Plus, Link2, Share2, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../components/ui/drawer';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
@@ -608,7 +608,7 @@ function MapPageContent() {
         {loading && !mapReady && (
           <div className="absolute inset-0 bg-background flex items-center justify-center z-10">
             <div className="text-center space-y-2">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <Icon name="Loader" className="mx-auto text-primary" />
               <p className="text-sm text-muted-foreground">Loading map...</p>
             </div>
           </div>
@@ -618,7 +618,7 @@ function MapPageContent() {
         {error && (
           <div className="absolute top-4 left-4 right-4 z-10">
             <div className="wewrite-card p-3 flex items-center gap-3 bg-destructive/10 border-destructive/30">
-              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+              <Icon name="AlertCircle" size={20} className="text-destructive flex-shrink-0" />
               <p className="text-sm text-destructive flex-1">{error}</p>
               <Button variant="outline" size="sm" onClick={() => fetchMapPages()}>
                 Retry
@@ -634,6 +634,15 @@ function MapPageContent() {
           style={{ zIndex: 1 }}
         />
 
+        {/* Top hint text */}
+        {mapReady && !showNewPinDrawer && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+            <div className="bg-background/90 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-lg">
+              <p className="text-sm text-muted-foreground">Tap to add to the map</p>
+            </div>
+          </div>
+        )}
+
         {/* Share Button - top right */}
         {mapReady && (
           <button
@@ -642,9 +651,9 @@ function MapPageContent() {
             aria-label="Share map view"
           >
             {shareSuccess ? (
-              <Check className="h-5 w-5 text-green-600" />
+              <Icon name="Check" size={20} className="text-green-600" />
             ) : (
-              <Share2 className="h-5 w-5" />
+              <Icon name="Share2" size={20} />
             )}
           </button>
         )}
@@ -660,14 +669,14 @@ function MapPageContent() {
                   className="absolute left-2 bottom-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
                   aria-label="Previous page"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <Icon name="ChevronLeft" size={16} />
                 </button>
                 <button
                   onClick={navigateToNext}
                   className="absolute right-2 bottom-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
                   aria-label="Next page"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <Icon name="ChevronRight" size={16} />
                 </button>
               </>
             )}
@@ -764,7 +773,7 @@ function MapPageContent() {
         {!loading && pages.length === 0 && mapReady && !showNewPinDrawer && (
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
             <div className="wewrite-card p-6 text-center space-y-3">
-              <MapPin className="h-12 w-12 mx-auto text-muted-foreground" />
+              <Icon name="MapPin" size={48} className="mx-auto text-muted-foreground" />
               <div>
                 <h3 className="font-semibold">No pages with locations</h3>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -779,7 +788,7 @@ function MapPageContent() {
         {loading && mapReady && (
           <div className="absolute top-4 right-4 z-10">
             <div className="wewrite-card p-2">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <Icon name="Loader" className="text-primary" />
             </div>
           </div>
         )}
@@ -798,7 +807,7 @@ function MapPageContent() {
               onClick={handleCreateNewPage}
               className="w-full justify-start gap-3"
             >
-              <Plus className="h-5 w-5" />
+              <Icon name="Plus" size={20} />
               Create new page
             </Button>
             <Button
@@ -806,7 +815,7 @@ function MapPageContent() {
               onClick={handleLinkExistingPage}
               className="w-full justify-start gap-3"
             >
-              <Link2 className="h-5 w-5" />
+              <Icon name="Link2" size={20} />
               Link existing page
             </Button>
             <Button
@@ -830,7 +839,7 @@ export default function MapPage() {
       <NavPageLayout maxWidth="full" className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
         <div className="fixed inset-0 flex items-center justify-center" style={{ top: 0 }}>
           <div className="text-center space-y-2">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <Icon name="Loader" className="mx-auto text-primary" />
             <p className="text-sm text-muted-foreground">Loading map...</p>
           </div>
         </div>

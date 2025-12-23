@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { FileText, Users, TrendingUp, Copy, ChevronDown, ChevronRight, UserPlus } from 'lucide-react';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { toast } from '../ui/use-toast';
@@ -287,7 +287,7 @@ export default function EarningsSourceBreakdown() {
       {/* Page Subheader */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-green-600" />
+          <Icon name="TrendingUp" size={20} className="text-green-600" />
           Earnings Sources
         </h2>
 
@@ -299,7 +299,7 @@ export default function EarningsSourceBreakdown() {
               onClick={() => setMode('pages')}
               className="flex items-center gap-1"
             >
-              <FileText className="h-3 w-3" />
+              <Icon name="FileText" size={12} />
               Pages
             </Button>
             <Button
@@ -308,7 +308,7 @@ export default function EarningsSourceBreakdown() {
               onClick={() => setMode('sponsors')}
               className="flex items-center gap-1"
             >
-              <Users className="h-3 w-3" />
+              <Icon name="Users" size={12} />
               Sponsors
             </Button>
             {hasReferrals && (
@@ -318,7 +318,7 @@ export default function EarningsSourceBreakdown() {
                 onClick={() => setMode('referrals')}
                 className="flex items-center gap-1"
               >
-                <UserPlus className="h-3 w-3" />
+                <Icon name="UserPlus" size={12} />
                 Referrals
               </Button>
             )}
@@ -329,7 +329,7 @@ export default function EarningsSourceBreakdown() {
       {/* Content */}
       {!hasEarnings ? (
         <div className="text-center py-8 text-muted-foreground">
-          <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <Icon name="TrendingUp" size={48} className="mx-auto mb-3 opacity-50" />
           <p className="text-sm">No current earnings sources</p>
           <p className="text-xs mt-1">Start writing pages to earn from supporters</p>
         </div>
@@ -368,7 +368,7 @@ export default function EarningsSourceBreakdown() {
                               copyPageLink(page.pageId, page.pageTitle);
                             }}
                           >
-                            <Copy className="h-3 w-3" />
+                            <Icon name="Copy" size={12} />
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -382,7 +382,7 @@ export default function EarningsSourceBreakdown() {
                           </div>
                           <div className="text-xs text-muted-foreground">/month</div>
                         </div>
-                        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                        <Icon name="ChevronRight" size={16} className={`text-muted-foreground transition-transform duration-200 ${
                           isExpanded ? 'rotate-90' : 'rotate-0'
                         }`} />
                       </div>
@@ -459,7 +459,7 @@ export default function EarningsSourceBreakdown() {
                             </div>
                             <div className="text-xs text-muted-foreground">/month</div>
                           </div>
-                          <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                          <Icon name="ChevronRight" size={16} className={`text-muted-foreground transition-transform duration-200 ${
                             isExpanded ? 'rotate-90' : 'rotate-0'
                           }`} />
                         </div>
@@ -511,7 +511,7 @@ export default function EarningsSourceBreakdown() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
-                          <UserPlus className="h-4 w-4 text-purple-500" />
+                          <Icon name="UserPlus" size={16} className="text-purple-500" />
                           <PillLink
                             href={`/u/${referral.referredUserId}`}
                             isPublic={true}

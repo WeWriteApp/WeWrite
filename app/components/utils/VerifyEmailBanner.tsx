@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Mail } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { useAuth } from '../../providers/AuthProvider';
@@ -148,7 +148,7 @@ export default function VerifyEmailBanner() {
         }`}
       >
         <div className="flex items-center space-x-2 mb-2">
-          <Mail className="h-4 w-4 text-primary" />
+          <Icon name="Mail" size={16} className="text-primary" />
           <span className="text-sm font-medium text-foreground">Please verify your email address</span>
         </div>
         <div className="grid grid-cols-2 gap-2">

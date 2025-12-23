@@ -1,30 +1,30 @@
 "use client";
 
 import React from 'react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown, Users } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { usePlatformFeeMetrics } from '../../hooks/useDashboardAnalytics';
+import { usePlatformRevenueMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart } from '../../utils/chartUtils';
 
-interface PlatformFeeRevenueWidgetProps {
+interface PlatformRevenueWidgetProps {
   dateRange: DateRange;
   globalFilters: GlobalAnalyticsFilters;
   granularity?: number;
   className?: string;
 }
 
-export function PlatformFeeRevenueWidget({
+export function PlatformRevenueWidget({
   dateRange,
   globalFilters,
   granularity = 50,
   className = ""
-}: PlatformFeeRevenueWidgetProps) {
+}: PlatformRevenueWidgetProps) {
   const isCumulative = globalFilters.timeDisplayMode === 'cumulative';
-  const { data, stats, loading, error } = usePlatformFeeMetrics(dateRange, granularity, isCumulative);
+  const { data, stats, loading, error } = usePlatformRevenueMetrics(dateRange, granularity, isCumulative);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
@@ -51,10 +51,10 @@ export function PlatformFeeRevenueWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            Platform Fee Revenue
+            <Icon name="DollarSign" size={20} className="text-green-600" />
+            Platform Revenue
           </CardTitle>
-          <CardDescription>WeWrite platform fee revenue (10% of payouts)</CardDescription>
+          <CardDescription>WeWrite platform revenue (fees + unallocated funds)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -80,14 +80,14 @@ export function PlatformFeeRevenueWidget({
       <Card className={`wewrite-card ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-red-600" />
-            Platform Fee Revenue
+            <Icon name="DollarSign" size={20} className="text-red-600" />
+            Platform Revenue
           </CardTitle>
-          <CardDescription>WeWrite platform fee revenue (10% of payouts)</CardDescription>
+          <CardDescription>WeWrite platform revenue (fees + unallocated funds)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <p className="text-red-600 mb-2">Failed to load platform fee data</p>
+            <p className="text-red-600 mb-2">Failed to load platform revenue data</p>
             <p className="text-sm text-muted-foreground">{error}</p>
           </div>
         </CardContent>
@@ -99,11 +99,11 @@ export function PlatformFeeRevenueWidget({
     <Card className={`wewrite-card ${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-green-600" />
-          Platform Fee Revenue
+          <Icon name="DollarSign" size={20} className="text-green-600" />
+          Platform Revenue
         </CardTitle>
         <CardDescription>
-          WeWrite platform fee revenue (10% of payouts) over time
+          WeWrite platform revenue (10% payout fees + unallocated subscription funds)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -116,33 +116,28 @@ export function PlatformFeeRevenueWidget({
               </div>
               <div className="text-xs text-green-600">Total Revenue</div>
             </div>
-            
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-lg font-bold text-foreground">
-                {formatCurrency(stats.monthlyRevenue)}
+
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <div className="text-lg font-bold text-blue-800">
+                {formatCurrency(stats.totalPlatformFees)}
               </div>
-              <div className="text-xs text-primary">This Month</div>
+              <div className="text-xs text-blue-600">Platform Fees</div>
             </div>
-            
+
             <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-lg font-bold text-purple-800">
-                  {formatPercentage(stats.growth)}
-                </span>
-                {stats.growth > 0 ? (
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                ) : stats.growth < 0 ? (
-                  <TrendingDown className="h-3 w-3 text-red-600" />
-                ) : null}
+              <div className="text-lg font-bold text-purple-800">
+                {formatCurrency(stats.totalUnallocatedFunds)}
               </div>
-              <div className="text-xs text-purple-600">Monthly Growth</div>
+              <div className="text-xs text-purple-600">Unallocated Funds</div>
             </div>
-            
-            <div className="text-center p-3 bg-orange-50 rounded-lg">
-              <div className="text-lg font-bold text-orange-800">
-                {formatCurrency(stats.averageFeePerPayout)}
+
+            <div className="flex items-center justify-center p-3 bg-orange-50 rounded-lg">
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-800">
+                  {formatPercentage(stats.growth)}
+                </div>
+                <div className="text-xs text-orange-600">Monthly Growth</div>
               </div>
-              <div className="text-xs text-orange-600">Avg per Payout</div>
             </div>
           </div>
 
@@ -150,17 +145,17 @@ export function PlatformFeeRevenueWidget({
           {hasData ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">Revenue Trend</h4>
+                <h4 className="text-sm font-medium">Revenue Breakdown</h4>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
-                    {stats.totalPayouts} total payouts
+                    {data.length} months
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
                     10% platform fee
                   </Badge>
                 </div>
               </div>
-              
+
               <div style={{ height: chartConfig.height }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
@@ -183,8 +178,9 @@ export function PlatformFeeRevenueWidget({
                     />
                     <Tooltip
                       formatter={(value: number, name: string) => [
-                        name === 'revenue' ? formatCurrency(value) : value,
-                        name === 'revenue' ? 'Revenue' : 'Payouts'
+                        formatCurrency(value),
+                        name === 'platformFees' ? 'Platform Fees' :
+                        name === 'unallocatedFunds' ? 'Unallocated Funds' : 'Total Revenue'
                       ]}
                       labelFormatter={(label) => `Date: ${label}`}
                       contentStyle={{
@@ -194,27 +190,40 @@ export function PlatformFeeRevenueWidget({
                         fontSize: '12px'
                       }}
                     />
+                    <Legend
+                      wrapperStyle={{ fontSize: '12px' }}
+                      iconType="rect"
+                    />
                     <Bar
-                      dataKey="revenue"
+                      dataKey="platformFees"
+                      stackId="revenue"
                       fill="#10b981"
+                      name="Platform Fees"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="unallocatedFunds"
+                      stackId="revenue"
+                      fill="#8b5cf6"
+                      name="Unallocated Funds"
                       radius={[2, 2, 0, 0]}
                     />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              
+
               {/* Additional insights */}
               <div className="text-xs text-muted-foreground">
-                Platform fee revenue is calculated as 10% of completed payout amounts.
+                Platform revenue includes 10% fees from writer payouts and unallocated subscription funds from the "use it or lose it" system.
                 Growth is calculated month-over-month.
               </div>
             </div>
           ) : (
             <div className="h-32 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
-                <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No platform fee revenue data available for this period</p>
-                <p className="text-xs mt-1">Revenue will appear when payouts are completed</p>
+                <Icon name="DollarSign" size={32} className="mx-auto mb-2 opacity-50" />
+                <p>No platform revenue data available for this period</p>
+                <p className="text-xs mt-1">Revenue will appear when payouts are completed or funds are processed</p>
               </div>
             </div>
           )}

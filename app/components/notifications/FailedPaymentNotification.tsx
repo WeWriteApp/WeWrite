@@ -1,16 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { InlineError } from '../ui/InlineError';
-import { 
-  AlertTriangle, 
-  CreditCard, 
-  RefreshCw, 
-  ExternalLink,
-  X
-} from 'lucide-react';
 import { toast } from '../ui/use-toast';
 
 import { useAuth } from '../../providers/AuthProvider';
@@ -121,9 +115,9 @@ export function FailedPaymentNotification({
 
   const getIcon = () => {
     if (notification.type === 'payment_failed_final') {
-      return <AlertTriangle className="h-5 w-5 text-destructive" />;
+      return <Icon name="AlertTriangle" size={20} className="text-destructive" />;
     }
-    return <CreditCard className="h-5 w-5 text-orange-500" />;
+    return <Icon name="CreditCard" size={20} className="text-orange-500" />;
   };
 
   const getBadge = () => {
@@ -148,7 +142,7 @@ export function FailedPaymentNotification({
         className="absolute top-2 right-2 h-6 w-6 p-0 opacity-60 hover:opacity-100"
         onClick={handleDismiss}
       >
-        <X className="h-3 w-3" />
+        <Icon name="X" size={12} />
       </Button>
 
       <div className="space-y-3 pr-8">
@@ -187,9 +181,9 @@ export function FailedPaymentNotification({
             variant={notification.type === 'payment_failed_final' ? 'destructive' : 'default'}
           >
             {retrying ? (
-              <RefreshCw className="h-3 w-3 animate-spin" />
+              <Icon name="RefreshCw" size={12} className="animate-spin" />
             ) : (
-              <RefreshCw className="h-3 w-3" />
+              <Icon name="RefreshCw" size={12} />
             )}
             {retrying ? 'Retrying...' : 'Retry Payment'}
           </Button>
@@ -200,7 +194,7 @@ export function FailedPaymentNotification({
             onClick={handleGoToSettings}
             className="flex items-center gap-1"
           >
-            <CreditCard className="h-3 w-3" />
+            <Icon name="CreditCard" size={12} />
             Update Payment
           </Button>
           
@@ -210,7 +204,7 @@ export function FailedPaymentNotification({
             onClick={handleGoToSettings}
             className="flex items-center gap-1"
           >
-            <ExternalLink className="h-3 w-3" />
+            <Icon name="ExternalLink" size={12} />
             View Details
           </Button>
         </div>

@@ -1,10 +1,13 @@
 /**
  * Platform Revenue Service
- * 
+ *
  * Calculates and tracks WeWrite's platform revenue from multiple sources:
- * 1. Platform fees (7% of allocations)
+ * 1. Payout fees (10% of writer payouts, charged at withdrawal)
  * 2. Unallocated subscription funds ("use it or lose it")
  * 3. Other revenue streams
+ *
+ * NOTE: No fee is charged at allocation time - writers receive the full amount.
+ * The 10% payout fee is only charged when writers request a payout.
  */
 
 import { db } from '../firebase/config';
@@ -30,7 +33,7 @@ export interface PlatformRevenueReport {
   revenueStreams: {
     platformFees: {
       amount: number;
-      description: '7% fee on all user allocations';
+      description: '10% payout fee (charged at withdrawal)';
       percentage: number; // Percentage of total revenue
     };
     unallocatedFunds: {
@@ -143,7 +146,7 @@ export class PlatformRevenueService {
         revenueStreams: {
           platformFees: {
             amount: platformFeesAmount,
-            description: '7% fee on all user allocations',
+            description: '10% payout fee (charged at withdrawal)',
             percentage: platformFeesPercentage
           },
           unallocatedFunds: {

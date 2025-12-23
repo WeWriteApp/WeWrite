@@ -1,20 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { useAuth } from '../../providers/AuthProvider';
-import { 
-  AlertTriangle, 
-  CreditCard, 
-  RefreshCw, 
-  Clock, 
-  XCircle,
-  CheckCircle,
-  Copy
-} from 'lucide-react';
 import { toast } from '../ui/use-toast';
 import { PaymentErrorDisplay } from './PaymentErrorDisplay';
 
@@ -98,21 +90,21 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
     if (failureCount >= 3) {
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
-          <XCircle className="h-3 w-3" />
+          <Icon name="XCircle" size={12} />
           Critical
         </Badge>
       );
     } else if (failureCount >= 2) {
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
-          <AlertTriangle className="h-3 w-3" />
+          <Icon name="AlertTriangle" size={12} />
           Warning
         </Badge>
       );
     } else {
       return (
         <Badge variant="secondary" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
+          <Icon name="Clock" size={12} />
           Past Due
         </Badge>
       );
@@ -144,7 +136,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <Icon name="AlertTriangle" size={20} className="text-destructive" />
             <CardTitle className="text-destructive">{getTitle()}</CardTitle>
           </div>
           {getStatusBadge()}
@@ -198,9 +190,9 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
             variant={failureCount >= 3 ? 'destructive' : 'default'}
           >
             {retrying ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
+              <Icon name="RefreshCw" size={16} className="animate-spin" />
             ) : (
-              <CheckCircle className="h-4 w-4" />
+              <Icon name="CheckCircle" size={16} />
             )}
             {retrying ? 'Retrying Payment...' : 'Retry Payment'}
           </Button>
@@ -213,7 +205,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
               window.location.hash = '#payment-methods';
             }}
           >
-            <CreditCard className="h-4 w-4" />
+            <Icon name="CreditCard" size={16} />
             Update Payment Method
           </Button>
         </div>

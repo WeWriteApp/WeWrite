@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { isAdmin } from '../../utils/isAdmin';
@@ -43,7 +43,7 @@ export default function AdminSection({ userId, userEmail }: AdminSectionProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+            <Icon name="Shield" size={20} />
             Admin
           </CardTitle>
           <CardDescription>Access administrative tools and settings</CardDescription>

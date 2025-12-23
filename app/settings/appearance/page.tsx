@@ -1,9 +1,9 @@
 'use client';
 
 import { useAuth } from '../../providers/AuthProvider';
+import { Icon } from '@/components/ui/Icon';
 import { useTheme } from "../../providers/ThemeProvider";
 import { useRouter } from 'next/navigation';
-import { Sun, Moon, Laptop, Check } from 'lucide-react';
 import ColorSystemManager from '../../components/settings/ColorSystemManager';
 import SolidColorPicker from '../../components/settings/SolidColorPicker';
 import CardOpacityControl from '../../components/settings/CardOpacityControl';
@@ -58,17 +58,17 @@ export default function AppearancePage() {
     {
       value: 'light',
       label: 'Light',
-      icon: <Sun className="h-6 w-6" />
+      icon: <Icon name="Sun" size={24} />
     },
     {
       value: 'dark',
       label: 'Dark',
-      icon: <Moon className="h-6 w-6" />
+      icon: <Icon name="Moon" size={24} />
     },
     {
       value: 'system',
       label: 'System',
-      icon: <Laptop className="h-6 w-6" />
+      icon: <Icon name="Laptop" size={24} />
     }
   ];
 

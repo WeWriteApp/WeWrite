@@ -6,7 +6,7 @@ import PillLink from "../utils/PillLink";
 import { Sparkline } from '../ui/sparkline';
 import Link from 'next/link';
 import ContentCarousel from './ContentCarousel';
-import { Loader } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useProductionDataFetchJson } from '../../hooks/useProductionDataFetch';
 import { getBatchUserData } from '../../utils/apiClient';

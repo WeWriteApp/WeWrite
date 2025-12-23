@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
-import { X } from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 
@@ -55,7 +55,7 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
             className="absolute right-0 top-0 h-6 w-6 p-0"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
           </Button>
         </DialogHeader>
 

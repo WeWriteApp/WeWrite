@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Clock, Filter, Check } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { SectionTitle } from '../ui/section-title';
 import { useActivityFilter } from '../../contexts/ActivityFilterContext';
 import { useAuth } from '../../providers/AuthProvider';
@@ -79,7 +79,7 @@ const ActivitySectionHeader = () => {
                     }`}
                     aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : viewMode === 'following' ? 'Following' : 'Mine'}`}
                   >
-                    <Filter className="h-4 w-4" />
+                    <Icon name="Filter" size={16} />
                     <span className="sr-only md:not-sr-only md:inline-block">
                       {viewMode === 'all' ? 'All' : viewMode === 'following' ? 'Following' : 'Mine'}
                     </span>
@@ -100,7 +100,7 @@ const ActivitySectionHeader = () => {
                 className="flex items-center justify-between cursor-pointer"
               >
                 <span>All</span>
-                {viewMode === 'all' && <Check className="h-4 w-4 ml-2" />}
+                {viewMode === 'all' && <Icon name="Check" size={16} className="ml-2" />}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => {
@@ -125,9 +125,9 @@ const ActivitySectionHeader = () => {
                     <span className="text-xs text-muted-foreground ml-1">(0)</span>
                   )}
                 </div>
-                {viewMode === 'following' && !isLoadingFollows && <Check className="h-4 w-4 ml-2" />}
+                {viewMode === 'following' && !isLoadingFollows && <Icon name="Check" size={16} className="ml-2" />}
                 {isLoadingFollows && (
-                  <div className="h-4 w-4 ml-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                  <Icon name="Loader" size={16} className="ml-2" />
                 )}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -139,7 +139,7 @@ const ActivitySectionHeader = () => {
                 className="flex items-center justify-between cursor-pointer"
               >
                 <span>Mine</span>
-                {viewMode === 'mine' && <Check className="h-4 w-4 ml-2" />}
+                {viewMode === 'mine' && <Icon name="Check" size={16} className="ml-2" />}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -150,7 +150,7 @@ const ActivitySectionHeader = () => {
 
   return (
     <SectionTitle
-      icon={Clock}
+      icon="Clock"
       title="Recent Edits"
       rightContent={renderFilterDropdown()}
     />

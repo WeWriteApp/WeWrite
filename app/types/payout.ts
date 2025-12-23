@@ -150,7 +150,7 @@ export interface ContributionActivity {
 
 // Platform configuration
 export interface PayoutConfig {
-  platformFeePercentage: number; // Default 7%
+  platformFeePercentage: number; // Default 10%
   stripeFeePercentage: number; // Default 2.9%
   stripeFeeFixed: number; // Default 0.30
   minimumPayoutThreshold: number; // Default $25

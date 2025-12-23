@@ -421,6 +421,9 @@ export const COLLECTIONS = {
   BROADCAST_HISTORY: 'broadcast_history',
   WEBHOOK_ERRORS: 'webhookErrors',
 
+  // User stats snapshots for historical sparklines (60-day rolling)
+  USER_STATS_SNAPSHOTS: 'userStatsSnapshots',
+
   // Financial transaction collections
   FINANCIAL_TRANSACTIONS: 'financialTransactions',
   TOKEN_PAYOUTS: 'tokenPayouts',

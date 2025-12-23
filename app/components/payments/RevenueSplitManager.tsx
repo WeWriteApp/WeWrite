@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -22,15 +23,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue} from '../ui/select';
-import {
-  Users,
-  Plus,
-  Trash2,
-  Edit,
-  DollarSign,
-  Percent,
-  AlertCircle
-} from 'lucide-react';
 
 interface RevenueSplit {
   id: string;
@@ -204,7 +196,7 @@ export default function RevenueSplitManager({
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <Icon name="Loader" size={32} className="mx-auto" />
           <p className="mt-4">Loading revenue split...</p>
         </CardContent>
       </Card>
@@ -218,7 +210,7 @@ export default function RevenueSplitManager({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+                <Icon name="Users" size={20} />
                 Revenue Split
               </CardTitle>
               <CardDescription>
@@ -230,7 +222,7 @@ export default function RevenueSplitManager({
               size="sm"
               disabled={!revenueSplit}
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Icon name="Plus" size={16} className="mr-1" />
               Add Contributor
             </Button>
           </div>
@@ -238,7 +230,7 @@ export default function RevenueSplitManager({
         <CardContent>
           {!revenueSplit ? (
             <div className="text-center py-6">
-              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <Icon name="AlertCircle" size={48} className="mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No Revenue Split Configured</h3>
               <p className="text-muted-foreground mb-4">
                 Set up revenue splitting to share earnings with contributors.
@@ -250,7 +242,7 @@ export default function RevenueSplitManager({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-3 border rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <Icon name="DollarSign" size={16} className="text-green-600" />
                     <span className="text-sm font-medium">Creator Share</span>
                   </div>
                   <p className="text-xl font-bold text-green-600">
@@ -262,7 +254,7 @@ export default function RevenueSplitManager({
                 </div>
                 <div className="p-3 border rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
-                    <Percent className="h-4 w-4 text-primary" />
+                    <Icon name="Percent" size={16} className="text-primary" />
                     <span className="text-sm font-medium">Platform Fee</span>
                   </div>
                   <p className="text-xl font-bold text-primary">
@@ -274,7 +266,7 @@ export default function RevenueSplitManager({
                 </div>
                 <div className="p-3 border rounded-lg">
                   <div className="flex items-center gap-2 mb-1">
-                    <Users className="h-4 w-4 text-purple-600" />
+                    <Icon name="Users" size={16} className="text-purple-600" />
                     <span className="text-sm font-medium">Contributors</span>
                   </div>
                   <p className="text-xl font-bold text-purple-600">
@@ -310,7 +302,7 @@ export default function RevenueSplitManager({
                           size="sm"
                           className="h-auto p-1 text-destructive"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Icon name="Trash2" size={12} />
                         </Button>
                       )}
                     </div>

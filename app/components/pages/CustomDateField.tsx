@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, MouseEvent } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { createPortal } from 'react-dom';
-import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAccentColor, ACCENT_COLOR_VALUES } from '../../contexts/AccentColorContext';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import {
@@ -123,7 +123,7 @@ function CalendarGrid({ selectedDate, onDateSelect, accentColorValue }: Calendar
           onClick={prevMonth}
           className="p-1 hover:bg-muted rounded-md transition-colors"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <Icon name="ChevronLeft" size={16} />
         </button>
         <h3 className="text-lg font-semibold">
           {format(currentMonth, 'MMMM yyyy')}
@@ -132,7 +132,7 @@ function CalendarGrid({ selectedDate, onDateSelect, accentColorValue }: Calendar
           onClick={nextMonth}
           className="p-1 hover:bg-muted rounded-md transition-colors"
         >
-          <ChevronRight className="h-4 w-4" />
+          <Icon name="ChevronRight" size={16} />
         </button>
       </div>
 
@@ -228,7 +228,7 @@ export default function CustomDateField({
       onClick={handleDateClick}
     >
       <div className="flex items-center gap-2">
-        <Calendar className="h-5 w-5 text-muted-foreground" />
+        <Icon name="Calendar" size={20} className="text-muted-foreground" />
         <span className="text-sm font-medium">Custom date</span>
       </div>
 
@@ -259,7 +259,7 @@ export default function CustomDateField({
                   className="p-2 rounded-md hover:bg-muted text-muted-foreground"
                   aria-label="Close"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="X" size={16} />
                 </button>
               </div>
 

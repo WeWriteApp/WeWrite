@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useContext, useRef, useMemo } from "react";
 import { Button } from "../ui/button";
-import { Edit, Save, X, Loader, AlertTriangle } from "lucide-react";
+import { Icon } from '@/components/ui/Icon';
 import { getUserProfile } from "../../utils/apiClient";
 import { toast } from "../ui/use-toast";
 // REMOVED: recordBioEditActivity - bio activity tracking disabled for cost optimization
@@ -268,7 +268,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
-        <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
+        <Icon name="Warning" size={48} className="text-amber-500 mb-4" />
         <h3 className="text-xl font-semibold mb-2">Something went wrong</h3>
         <p className="text-muted-foreground text-center mb-4">{error}</p>
         <Button
@@ -293,12 +293,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       />
 
       <div className="space-y-4 page-content-wrapper">
-        {/* Header - no standalone edit icon or duplicate buttons */}
-        <div className="flex justify-end items-center">
-          {/* Edit icon removed - now handled by hover-reveal in content area */}
-          {/* Save/Cancel buttons removed - handled by PageEditor at bottom */}
-        </div>
-
       {/* Content display or editor - unified container structure */}
       <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
         {isProfileOwner ? (

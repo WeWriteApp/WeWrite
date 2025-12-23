@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
 import { cn } from '../../lib/utils';
 import {
@@ -157,8 +157,8 @@ export function DateFormatPicker({
             className="justify-between w-full"
           >
             <span>{getPreviewText(dateFormat)}</span>
-            <ChevronDown className={cn(
-              "h-4 w-4 transition-transform",
+            <Icon name="ChevronDown" size={16} className={cn(
+              "transition-transform",
               isOpen && "rotate-180"
             )} />
           </Button>
@@ -189,7 +189,7 @@ export function DateFormatPicker({
                     {previewText}
                   </div>
                   {isSelected && (
-                    <Check className="h-4 w-4 text-primary" />
+                    <Icon name="Check" size={16} className="text-primary" />
                   )}
                 </button>
               );

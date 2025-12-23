@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Plus, X, Quote } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import Modal from '../ui/modal';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
@@ -286,12 +286,12 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         >
           {isAdding ? (
             <>
-              <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+              <Icon name="Loader" size={20} className="mr-1" />
               <span>Adding...</span>
             </>
           ) : (
             <>
-              <Quote className="h-5 w-5" />
+              <Icon name="Copy" size={20} />
               <span>Add this page to another page</span>
             </>
           )}
@@ -362,7 +362,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
                 >
                   {isAdding ? (
                     <>
-                      <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+                      <Icon name="Loader" size={20} className="mr-1" />
                       <span>Adding...</span>
                     </>
                   ) : (
@@ -459,7 +459,7 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
 
       {isLoadingPages && (
         <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+          <Icon name="Loader" size={24} className="mx-auto" />
         </div>
       )}
 

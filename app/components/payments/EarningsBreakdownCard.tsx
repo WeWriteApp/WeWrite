@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '../ui/card';
-import { DollarSign, TrendingUp, Calendar, Award } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { formatUsdCents } from '../../utils/formatCurrency';
 
@@ -47,7 +47,7 @@ export default function EarningsBreakdownCard() {
             <div className="text-sm font-medium text-muted-foreground">
               Pending: This month
             </div>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <Icon name="TrendingUp" size={16} className="text-green-600" />
           </div>
           <div className="text-2xl font-bold text-green-600">
             {formatUsdCents(pendingEarnings * 100)}
@@ -60,7 +60,7 @@ export default function EarningsBreakdownCard() {
             <div className="text-sm font-medium text-muted-foreground">
               Earned last month
             </div>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Icon name="Calendar" size={16} className="text-muted-foreground" />
           </div>
           <div className="text-2xl font-bold">
             {formatUsdCents(lastMonthEarnings * 100)}
@@ -73,7 +73,7 @@ export default function EarningsBreakdownCard() {
             <div className="text-sm font-medium text-muted-foreground">
               Lifetime earnings
             </div>
-            <Award className="h-4 w-4 text-muted-foreground" />
+            <Icon name="Award" size={16} className="text-muted-foreground" />
           </div>
           <div className="text-2xl font-bold">
             {formatUsdCents(totalEarnings * 100)}

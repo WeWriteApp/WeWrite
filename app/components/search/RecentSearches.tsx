@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Clock, X } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { getRecentSearches, clearRecentSearches, removeRecentSearch } from "../../utils/recentSearches";
 import { Button } from "../ui/button";
 import PillLink from "../utils/PillLink";
@@ -154,7 +154,7 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+            <Icon name="Clock" size={16} />
             Recent Searches
           </h3>
         </div>
@@ -176,7 +176,7 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
     <div className="mt-6 mb-8">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center">
-          <Clock className="h-4 w-4 mr-2" />
+          <Icon name="Clock" size={16} className="mr-2" />
           Recent Searches
         </h3>
         <Button
@@ -216,7 +216,7 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
                 }}
                 className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
               >
-                <X className="h-3 w-3" />
+                <Icon name="X" size={12} />
               </Button>
             </div>
 

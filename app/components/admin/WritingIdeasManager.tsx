@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Search, RefreshCw } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -301,7 +301,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
               placeholder="Search ideas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              leftIcon={<Search className="h-4 w-4" />}
+              leftIcon={<Icon name="Search" size={16} />}
               className="w-64"
               disabled={isLoading}
             />
@@ -311,7 +311,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
               size="sm"
               disabled={isLoading}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              <Icon name="RefreshCw" size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Button
@@ -319,7 +319,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
               disabled={isAddingNew || isLoading || isSaving}
               size="sm"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Icon name="Plus" size={16} className="mr-2" />
               Add New
             </Button>
           </div>
@@ -339,7 +339,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                 size="sm"
                 disabled={isDeleting || isSaving}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Icon name="Trash2" size={16} className="mr-2" />
                 {isDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
               </Button>
             </div>
@@ -378,11 +378,11 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                       size="sm"
                       disabled={isSaving || !newIdea.title.trim() || !newIdea.placeholder.trim()}
                     >
-                      <Save className="h-4 w-4 mr-2" />
+                      <Icon name="Save" size={16} className="mr-2" />
                       {isSaving ? 'Saving...' : 'Save'}
                     </Button>
                     <Button onClick={handleCancel} variant="secondary" size="sm" disabled={isSaving}>
-                      <X className="h-4 w-4 mr-2" />
+                      <Icon name="X" size={16} className="mr-2" />
                       Cancel
                     </Button>
                   </div>
@@ -394,7 +394,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
           {/* Ideas List */}
           {isLoading ? (
             <div className="text-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+              <Icon name="RefreshCw" size={24} className="animate-spin mx-auto mb-2" />
               <p className="text-muted-foreground">Loading writing ideas...</p>
             </div>
           ) : (
@@ -508,11 +508,11 @@ function IdeaRow({ idea, isEditing, isSelected, onSelect, onEdit, onSave, onDele
                 size="sm"
                 disabled={isSaving || !editTitle.trim() || !editPlaceholder.trim()}
               >
-                <Save className="h-4 w-4 mr-2" />
+                <Icon name="Save" size={16} className="mr-2" />
                 {isSaving ? 'Saving...' : 'Save'}
               </Button>
               <Button onClick={onCancel} variant="secondary" size="sm" disabled={isSaving}>
-                <X className="h-4 w-4 mr-2" />
+                <Icon name="X" size={16} className="mr-2" />
                 Cancel
               </Button>
             </div>
@@ -553,7 +553,7 @@ function IdeaRow({ idea, isEditing, isSelected, onSelect, onEdit, onSave, onDele
               size="sm"
               disabled={isSaving || isDeleting}
             >
-              <Edit2 className="h-4 w-4" />
+              <Icon name="Edit2" size={16} />
             </Button>
             <Button
               onClick={onDelete}
@@ -562,7 +562,7 @@ function IdeaRow({ idea, isEditing, isSelected, onSelect, onEdit, onSave, onDele
               className="text-destructive hover:text-destructive"
               disabled={isSaving || isDeleting}
             >
-              <Trash2 className="h-4 w-4" />
+              <Icon name="Trash2" size={16} />
             </Button>
           </div>
         </div>

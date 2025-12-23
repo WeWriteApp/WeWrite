@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Icon } from '@/components/ui/Icon';
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { ChevronRight } from "lucide-react"
 
 import { cn } from "../../lib/utils"
 
@@ -42,7 +42,7 @@ const AccordionTrigger = React.forwardRef<
         {value && (
           <span className="text-sm text-muted-foreground font-normal">{value}</span>
         )}
-        <ChevronRight className="accordion-chevron h-4 w-4 shrink-0 transition-transform duration-200" />
+        <Icon name="ChevronRight" size={16} className="accordion-chevron shrink-0 transition-transform duration-200" />
       </div>
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>

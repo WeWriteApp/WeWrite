@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { FileText } from 'lucide-react';
 import { useContentChangesMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -63,7 +63,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-muted-foreground" />
+          <Icon name="FileText" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold">Content Changes</h3>
         </div>
         <div className="h-48 flex items-center justify-center">
@@ -77,7 +77,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-destructive" />
+          <Icon name="FileText" size={20} className="text-destructive" />
           <h3 className="text-lg font-semibold">Content Changes</h3>
         </div>
         <div className="h-48 flex items-center justify-center text-destructive">
@@ -92,11 +92,11 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-muted-foreground" />
+          <Icon name="FileText" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold">Content Changes</h3>
         </div>
         <div className="h-48 flex flex-col items-center justify-center text-muted-foreground">
-          <FileText className="h-12 w-12 mb-3 opacity-50" />
+          <Icon name="FileText" size={48} className="mb-3 opacity-50" />
           <h4 className="font-medium mb-2">Historical Character Tracking Not Available</h4>
           <p className="text-sm text-center max-w-xs">
             Character change tracking is not yet implemented. 
@@ -110,7 +110,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
   return (
     <div className={`wewrite-card ${className}`}>
       <div className="flex items-center gap-2 mb-4">
-        <FileText className="h-5 w-5 text-purple-500" />
+        <Icon name="FileText" size={20} className="text-purple-500" />
         <h3 className="text-lg font-semibold">Content Changes</h3>
       </div>
 
@@ -198,7 +198,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
         ) : (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <Icon name="FileText" size={32} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm">No character change data available</p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -8,7 +9,6 @@ import { getStripePublishableKey } from '../../utils/stripeConfig';
 import { useTheme } from '../../providers/ThemeProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
-import { Loader2, CreditCard, Building2, X, Trash2 } from 'lucide-react';
 import { ErrorCard } from '../ui/ErrorCard';
 import {
   Drawer,
@@ -333,7 +333,7 @@ function CheckoutForm({
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {loadingPaymentMethods ? (
           <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-muted/30">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Icon name="Loader" />
             <span className="text-sm text-muted-foreground">Loading your payment methods...</span>
           </div>
         ) : paymentMethods.length > 0 ? (
@@ -345,8 +345,8 @@ function CheckoutForm({
                   const method = paymentMethods.find((pm) => pm.id === selectedPaymentMethod);
                   const icon =
                     method?.type === 'us_bank_account'
-                      ? <Building2 className="h-5 w-5 text-muted-foreground" />
-                      : <CreditCard className="h-5 w-5 text-muted-foreground" />;
+                      ? <Icon name="Building2" size={20} className="text-muted-foreground" />
+                      : <Icon name="CreditCard" size={20} className="text-muted-foreground" />;
                   return (
                     <>
                       <div className="mt-0.5">{icon}</div>
@@ -392,9 +392,9 @@ function CheckoutForm({
                     >
                       <div className="flex items-center gap-3">
                         {method.type === 'us_bank_account' ? (
-                          <Building2 className="h-5 w-5 text-muted-foreground" />
+                          <Icon name="Building2" size={20} className="text-muted-foreground" />
                         ) : (
-                          <CreditCard className="h-5 w-5 text-muted-foreground" />
+                          <Icon name="CreditCard" size={20} className="text-muted-foreground" />
                         )}
                         <div>
                           <p className="text-base font-medium">{getPaymentMethodDisplay(method)}</p>
@@ -416,9 +416,9 @@ function CheckoutForm({
                           disabled={deletingPaymentMethod === method.id}
                         >
                           {deletingPaymentMethod === method.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Icon name="Loader" />
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <Icon name="Trash2" size={16} />
                           )}
                         </button>
                       </div>
@@ -488,7 +488,7 @@ function CheckoutForm({
         >
           {isProcessing ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Icon name="Loader" className="mr-2" />
               Processing...
             </>
           ) : (
@@ -589,7 +589,7 @@ export function SubscriptionCheckoutDrawer({
               className="absolute right-4 top-0 rounded-full p-2 hover:bg-muted transition-colors"
               aria-label="Close"
             >
-              <X className="h-5 w-5 text-muted-foreground" />
+              <Icon name="X" size={20} className="text-muted-foreground" />
             </button>
           </DrawerClose>
           <DrawerTitle>{getTitle()}</DrawerTitle>
@@ -610,7 +610,7 @@ export function SubscriptionCheckoutDrawer({
         ) : isLoading || !clientSecret ? (
           <div className="flex items-center justify-center flex-1 p-4">
             <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <Icon name="Loader" className="mx-auto mb-4" />
               <p className="text-muted-foreground">Setting up payment...</p>
             </div>
           </div>

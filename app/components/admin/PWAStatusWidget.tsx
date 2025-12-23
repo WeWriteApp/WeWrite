@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { getPWADataForAdmin } from '../../utils/pwaAnalytics';
 
 interface PWAStatusWidgetProps {
@@ -25,7 +25,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-3 mb-4">
-          <Smartphone className="h-5 w-5 text-primary" />
+          <Icon name="Smartphone" size={20} className="text-primary" />
           <h3 className="text-lg font-semibold">PWA Status</h3>
         </div>
         <div className="animate-pulse">
@@ -40,7 +40,7 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-3 mb-4">
-          <Smartphone className="h-5 w-5 text-muted-foreground" />
+          <Icon name="Smartphone" size={20} className="text-muted-foreground" />
           <h3 className="text-lg font-semibold text-muted-foreground">PWA Status</h3>
         </div>
         <p className="text-sm text-muted-foreground">PWA data not available</p>
@@ -48,18 +48,18 @@ export function PWAStatusWidget({ className = "" }: PWAStatusWidgetProps) {
     );
   }
 
-  const getDeviceIcon = () => {
-    if (pwaData.deviceInfo.isDesktop) return Monitor;
-    if (pwaData.deviceInfo.isIOS || pwaData.deviceInfo.isAndroid) return Smartphone;
-    return Tablet;
+  const getDeviceIconName = () => {
+    if (pwaData.deviceInfo.isDesktop) return "Monitor";
+    if (pwaData.deviceInfo.isIOS || pwaData.deviceInfo.isAndroid) return "Smartphone";
+    return "Tablet";
   };
 
-  const DeviceIcon = getDeviceIcon();
+  const deviceIconName = getDeviceIconName();
 
   return (
     <div className={`wewrite-card ${className}`}>
       <div className="flex items-center gap-3 mb-4">
-        <DeviceIcon className="h-5 w-5 text-primary" />
+        <Icon name={deviceIconName} size={20} className="text-primary" />
         <h3 className="text-lg font-semibold">PWA Status</h3>
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${
           pwaData.isPWA 

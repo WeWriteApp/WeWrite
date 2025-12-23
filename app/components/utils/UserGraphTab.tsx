@@ -26,8 +26,8 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import dynamic from 'next/dynamic';
-import { X, Link2, FileText, ArrowUp, ArrowDown, Loader2, Network, Share2 } from 'lucide-react';
 import { LoadingState } from '../ui/LoadingState';
 import EmptyState from '../ui/EmptyState';
 import { Button } from '../ui/button';
@@ -40,7 +40,7 @@ const UserGraph3D = dynamic(() => import('./UserGraph3D'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <Icon name="Loader" className="text-muted-foreground" />
     </div>
   ),
 });
@@ -198,7 +198,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
   if (nodes.length === 0) {
     return (
       <EmptyState
-        icon={Network}
+        icon="Network"
         title="No connected pages"
         description={`${username} doesn't have any pages with connections yet. Pages become connected when they link to each other.`}
         size="lg"
@@ -231,14 +231,14 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
                 onClick={handleShare}
                 title="Share graph view"
               >
-                <Share2 className="h-4 w-4" />
+                <Icon name="Share2" size={16} />
               </Button>
               <DrawerClose asChild>
                 <Button
                   variant="secondary"
                   size="sm"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="X" size={16} />
                 </Button>
               </DrawerClose>
             </div>
@@ -279,7 +279,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
           {/* Header */}
           <div className="flex items-center justify-between mb-4 w-full">
             <div className="flex items-center gap-2">
-              <Network className="w-4 h-4 text-muted-foreground" />
+              <Icon name="Network" size={16} className="text-muted-foreground" />
               <h3 className="text-sm font-medium">Page Connections Graph</h3>
             </div>
             <span className="text-xs text-muted-foreground">Tap to view interactive graph</span>
@@ -313,7 +313,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
         {/* Page Connections Table */}
         <div className="wewrite-card space-y-3">
           <h3 className="text-sm font-medium flex items-center gap-2">
-            <FileText className="h-4 w-4" />
+            <Icon name="FileText" size={16} />
             Pages ({nodes.length})
           </h3>
           <div className="border border-border rounded-lg overflow-hidden">
@@ -330,7 +330,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
                     >
                       Page
                       {sortField === 'title' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        sortDirection === 'asc' ? <Icon name="ArrowUp" size={12} /> : <Icon name="ArrowDown" size={12} />
                       )}
                     </button>
                   </th>
@@ -344,7 +344,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
                     >
                       Links
                       {sortField === 'links' && (
-                        sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
+                        sortDirection === 'desc' ? <Icon name="ArrowDown" size={12} /> : <Icon name="ArrowUp" size={12} />
                       )}
                     </button>
                   </th>
@@ -371,7 +371,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
                       <span className={`inline-flex items-center gap-1 ${
                         node.isOrphan ? 'text-muted-foreground/50' : 'text-muted-foreground'
                       }`}>
-                        <Link2 className="h-3 w-3" />
+                        <Icon name="Link2" size={12} />
                         {node.connectionCount || 0}
                       </span>
                     </td>

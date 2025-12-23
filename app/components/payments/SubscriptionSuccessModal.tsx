@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { CheckCircle2, ArrowRight } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 
 interface SubscriptionSuccessModalProps {
@@ -59,7 +59,7 @@ export function SubscriptionSuccessModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex justify-center mb-4">
-            <CheckCircle2 className="h-16 w-16 text-primary" />
+            <Icon name="CheckCircle2" size={64} className="text-primary" />
           </div>
           <DialogTitle className="text-center text-xl">Subscription Activated!</DialogTitle>
           <DialogDescription className="text-center">
@@ -78,7 +78,7 @@ export function SubscriptionSuccessModal({
         
         <div className="flex flex-col gap-2">
           <Button onClick={handleGoToAccount} className="w-full">
-            Go to Account Settings <ArrowRight className="ml-2 h-4 w-4" />
+            Go to Account Settings <Icon name="ArrowRight" size={16} className="ml-2" />
           </Button>
           <p className="text-xs text-center text-muted-foreground mt-2">
             This dialog will close automatically in {countdown} seconds

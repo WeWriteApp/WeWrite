@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, FileText } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { getRecentlyViewedPageIds } from "../../utils/recentSearches";
 // Removed direct Firebase imports - now using API endpoints
 import { useAuth } from '../../providers/AuthProvider';
@@ -104,7 +104,7 @@ const RecentPages = React.memo(function RecentPages() {
   return (
     <div className="mt-6 mb-8">
       <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-3">
-        <Clock className="h-4 w-4 mr-2" />
+        <Icon name="Clock" size={16} className="mr-2" />
         Recently Viewed
       </h3>
 

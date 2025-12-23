@@ -16,12 +16,12 @@ import { sanitizeUsername } from '../../../../utils/usernameSecurity';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   const startTime = Date.now();
 
   try {
-    const userId = params.userId;
+    const userId = (await params).userId;
 
     // Get authenticated user (optional)
     let currentUserId: string | null = null;

@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
-import { Link, ExternalLink, Users, FileText, X, Type, Globe, Search, Check } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
@@ -656,11 +656,11 @@ export default function LinkEditorModal({
               <SegmentedControl value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0">
                 <SegmentedControlList className="grid w-full grid-cols-2 min-w-0">
                   <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                    <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <Icon name="FileText" size={12} className="sm:h-4 sm:w-4" />
                     <span className="hidden sm:inline">WeWrite </span>Pages
                   </SegmentedControlTrigger>
                   <SegmentedControlTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                    <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <Icon name="ExternalLink" size={12} className="sm:h-4 sm:w-4" />
                     External<span className="hidden sm:inline"> Link</span>
                   </SegmentedControlTrigger>
                 </SegmentedControlList>
@@ -711,7 +711,7 @@ export default function LinkEditorModal({
                       value={displayText}
                       onChange={handleDisplayTextChange}
                       placeholder="Enter custom link text"
-                      leftIcon={<Type className="h-4 w-4" />}
+                      leftIcon={<Icon name="Type" size={16} />}
                       className="w-full min-w-0"
                       autoComplete="off"
                       onFocus={(e) => {
@@ -780,7 +780,7 @@ export default function LinkEditorModal({
                         className="text-muted-foreground hover:text-foreground transition-colors"
                         title="Clear current link"
                       >
-                        <X className="h-4 w-4" />
+                        <Icon name="X" size={16} />
                       </button>
                     </div>
                   </div>
@@ -824,7 +824,7 @@ export default function LinkEditorModal({
               <div className="space-y-2">
                 <Label htmlFor="external-url">URL</Label>
                 <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Icon name="Globe" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
                     ref={externalUrlInputRef}
                     id="external-url"
@@ -867,7 +867,7 @@ export default function LinkEditorModal({
               {customText && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
                   <div className="relative">
-                    <Type className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Icon name="Type" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <Input
                       ref={externalCustomTextInputRef}
                       id="display-text-external"
@@ -918,7 +918,7 @@ export default function LinkEditorModal({
       disabled={!selectedPage && !(isEditing && editingLink?.data)}
       className="w-full"
     >
-      <Link className="h-4 w-4 mr-2" />
+      <Icon name="Link" size={16} className="mr-2" />
       {isEditing ? 'Update Link' : 'Create Link'}
     </Button>
   ) : (
@@ -927,7 +927,7 @@ export default function LinkEditorModal({
       disabled={!externalUrl.trim()}
       className="w-full"
     >
-      <Link className="h-4 w-4 mr-2" />
+      <Icon name="Link" size={16} className="mr-2" />
       {isEditing ? 'Update Link' : 'Create Link'}
     </Button>
   );
@@ -975,7 +975,7 @@ export default function LinkEditorModal({
           <DrawerHeader>
             <DrawerTitle>{modalTitle}</DrawerTitle>
             <DrawerClose className="absolute right-4 top-1 p-2 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-              <X className="h-4 w-4" />
+              <Icon name="X" size={16} />
               <span className="sr-only">Close</span>
             </DrawerClose>
           </DrawerHeader>
@@ -1052,7 +1052,7 @@ export default function LinkEditorModal({
         <DialogHeader className="relative flex-shrink-0">
           <DialogTitle>{modalTitle}</DialogTitle>
           <DialogClose className="absolute right-0 top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
             <span className="sr-only">Close</span>
           </DialogClose>
         </DialogHeader>

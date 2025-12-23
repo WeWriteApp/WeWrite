@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useSearchParams } from 'next/navigation';
 import UsdFundingTierSlider from '../../components/payments/UsdFundingTierSlider';
 import SubscriptionHistory from '../../components/subscription/SubscriptionHistory';
@@ -8,7 +9,6 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Loader2, CheckCircle, Wallet, History, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
@@ -202,7 +202,7 @@ export default function FundAccountPage() {
       <div className="p-6 lg:p-8">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <Icon name="Loader" className="mx-auto mb-4" />
             <p className="text-muted-foreground">Loading subscription...</p>
           </div>
         </div>
@@ -227,7 +227,7 @@ export default function FundAccountPage() {
       {/* Success/Cancellation Messages */}
       {cancelled && (
         <Alert>
-          <CheckCircle className="h-4 w-4" />
+          <Icon name="CheckCircle" size={16} />
           <AlertDescription>
             Your subscription has been successfully cancelled. It will remain active until the end of your current billing period.
           </AlertDescription>
@@ -236,7 +236,7 @@ export default function FundAccountPage() {
 
       {success && (
         <Alert>
-          <CheckCircle className="h-4 w-4" />
+          <Icon name="CheckCircle" size={16} />
           <AlertDescription>
             Your subscription has been successfully updated!
           </AlertDescription>
@@ -246,7 +246,7 @@ export default function FundAccountPage() {
       {/* Cancelled Subscription Banner */}
       {isCancelled && !cancelled && (
         <Alert variant="warning">
-          <AlertCircle className="h-4 w-4" />
+          <Icon name="AlertCircle" size={16} />
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
             <span>Your subscription is currently inactive.</span>
             <Button
@@ -268,7 +268,7 @@ export default function FundAccountPage() {
       {/* Monthly Funding Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
+          <Icon name="Wallet" size={20} />
           Monthly Funding
         </h2>
         <UsdFundingTierSlider
@@ -282,7 +282,7 @@ export default function FundAccountPage() {
       {/* Subscription History Section */}
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <History className="h-5 w-5" />
+          <Icon name="History" size={20} />
           Subscription History
         </h2>
         <SubscriptionHistory className="w-full" />

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import UsdAllocationDisplay from '../../components/payments/UsdAllocationDisplay';
 import { UsdAllocationBreakdown } from '../../components/payments/UsdAllocationBreakdown';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Wallet, TrendingUp, Calendar, FileText } from 'lucide-react';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useAllocationInterval } from '../../contexts/AllocationIntervalContext';
 import { AllocationIntervalModal } from '../../components/payments/AllocationIntervalModal';
@@ -355,7 +355,7 @@ export default function SpendPage() {
         {!hasBalance ? (
           /* No funding state */
           <div className="text-center space-y-4 py-8">
-            <Wallet className="h-12 w-12 mx-auto text-muted-foreground" />
+            <Icon name="Wallet" size={48} className="mx-auto text-muted-foreground" />
             <div>
               <h3 className="text-xl font-semibold mb-2">No Account Funding</h3>
               <p className="text-muted-foreground mb-4">
@@ -364,7 +364,7 @@ export default function SpendPage() {
             </div>
             <Button asChild variant="success">
               <Link href="/settings/fund-account">
-                <Wallet className="h-4 w-4 mr-2" />
+                <Icon name="Wallet" size={16} className="mr-2" />
                 Fund Account
               </Link>
             </Button>

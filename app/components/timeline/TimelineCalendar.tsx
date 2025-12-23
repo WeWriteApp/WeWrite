@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
@@ -160,7 +160,7 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
           onClick={goToPreviousMonth}
           disabled={loading}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <Icon name="ChevronLeft" size={16} />
         </Button>
 
         <div className="flex items-center gap-4">
@@ -182,7 +182,7 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
           onClick={goToNextMonth}
           disabled={loading}
         >
-          <ChevronRight className="h-4 w-4" />
+          <Icon name="ChevronRight" size={16} />
         </Button>
       </div>
 

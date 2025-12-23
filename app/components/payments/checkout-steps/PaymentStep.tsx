@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useStripe, useElements, PaymentElement, AddressElement } from '@stripe/react-stripe-js';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
-import { Loader2, CreditCard, Shield, CheckCircle, ChevronDown, ChevronUp, Plus, Check, Trash2, Smartphone, Building2 } from 'lucide-react';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { PricingDisplay } from '../PricingDisplay';
 import { useAuth } from '../../../providers/AuthProvider';
@@ -250,13 +250,13 @@ export function PaymentStep({
   const getPaymentMethodIcon = (method: PaymentMethod) => {
     switch (method.type) {
       case 'card':
-        return <CreditCard className="w-4 h-4" />;
+        return <Icon name="CreditCard" size={16} />;
       case 'us_bank_account':
-        return <Building2 className="w-4 h-4" />;
+        return <Icon name="Building2" size={16} />;
       case 'sepa_debit':
-        return <Building2 className="w-4 h-4" />;
+        return <Icon name="Building2" size={16} />;
       default:
-        return <CreditCard className="w-4 h-4" />;
+        return <Icon name="CreditCard" size={16} />;
     }
   };
 
@@ -387,7 +387,7 @@ export function PaymentStep({
         <div className="lg:col-span-2">
           <Card>
             <CardContent className="p-8 text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <Icon name="Loader" className="mx-auto mb-4" />
               <p className="text-muted-foreground">Setting up secure payment...</p>
             </CardContent>
           </Card>
@@ -420,14 +420,14 @@ export function PaymentStep({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
+                <Icon name="CreditCard" size={20} />
                 Payment Method
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingPaymentMethods ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <Icon name="Loader" className="mr-2" />
                   <span className="text-sm text-muted-foreground">Loading payment methods...</span>
                 </div>
               ) : existingPaymentMethods.length > 0 ? (
@@ -450,7 +450,7 @@ export function PaymentStep({
                       className="flex-1"
                       onClick={() => handlePaymentMethodToggle(false)}
                     >
-                      <Plus className="w-4 h-4 mr-1" />
+                      <Icon name="Plus" size={16} className="mr-1" />
                       Add New Payment
                     </Button>
                   </div>
@@ -493,7 +493,7 @@ export function PaymentStep({
                             </div>
                             <div className="flex items-center gap-2">
                               {selectedExistingMethod === method.id && (
-                                <Check className="w-4 h-4 text-primary" />
+                                <Icon name="Check" size={16} className="text-primary" />
                               )}
                               {/* Delete button */}
                               <Button
@@ -508,9 +508,9 @@ export function PaymentStep({
                                 disabled={deletingPaymentMethod === method.id}
                               >
                                 {deletingPaymentMethod === method.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <Icon name="Loader" />
                                 ) : (
-                                  <Trash2 className="w-4 h-4" />
+                                  <Icon name="Trash2" size={16} />
                                 )}
                               </Button>
                             </div>
@@ -604,13 +604,13 @@ export function PaymentStep({
                   <span className="flex items-center gap-2">
                     Billing Address
                     {billingAddressComplete && (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <Icon name="CheckCircle" size={16} className="text-green-600" />
                     )}
                   </span>
                   {billingAddressCollapsed ? (
-                    <ChevronDown className="w-4 h-4" />
+                    <Icon name="ChevronDown" size={16} />
                   ) : (
-                    <ChevronUp className="w-4 h-4" />
+                    <Icon name="ChevronUp" size={16} />
                   )}
                 </CardTitle>
                 {billingAddressCollapsed && billingAddressComplete && customerLocation && (
@@ -658,7 +658,7 @@ export function PaymentStep({
           <Card className="bg-muted/50">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-green-600 mt-0.5" />
+                <Icon name="Shield" size={20} className="text-green-600 mt-0.5" />
                 <div className="text-sm">
                   <p className="font-medium mb-1">Secure Payment Processing</p>
                   <p className="text-muted-foreground">
@@ -679,22 +679,22 @@ export function PaymentStep({
           >
             {isProcessing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Icon name="Loader" className="mr-2" />
                 Processing Payment...
               </>
             ) : isCalculatingTax ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Icon name="Loader" className="mr-2" />
                 Calculating Tax...
               </>
             ) : !formValid ? (
               <>
-                <CreditCard className="w-4 h-4 mr-2" />
+                <Icon name="CreditCard" size={16} className="mr-2" />
                 {useExistingPayment ? 'Select Payment Method' : 'Complete Payment Information'}
               </>
             ) : (
               <>
-                <CheckCircle className="w-4 h-4 mr-2" />
+                <Icon name="CheckCircle" size={16} className="mr-2" />
                 {useExistingPayment ? 'Subscribe with Saved Payment' : 'Complete Subscription'}
               </>
             )}

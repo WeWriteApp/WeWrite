@@ -390,10 +390,10 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const pageId = params.id;
+    const pageId = (await params).id;
     
     // Require authentication for updates
     const currentUserId = await getUserIdFromRequest(request);

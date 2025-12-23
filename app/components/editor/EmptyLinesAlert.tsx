@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 
@@ -42,7 +42,7 @@ export default function EmptyLinesAlert({
             {/* Warning content */}
             <div className="flex items-center space-x-3 min-w-0 flex-1">
               <div className="flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <Icon name="AlertTriangle" size={20} className="text-amber-600 dark:text-amber-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
@@ -67,7 +67,7 @@ export default function EmptyLinesAlert({
                 onClick={onDeleteAllEmptyLines}
                 className="gap-2 h-8 px-3 text-xs sm:text-sm border-theme-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Icon name="Trash2" size={24} className="h-3.5 w-3.5" />
                 Delete Empty Lines
               </Button>
             </div>

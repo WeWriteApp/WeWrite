@@ -2279,6 +2279,43 @@ textarea.wewrite-title-input {
   padding-right: 1rem !important;
 }
 
+textarea.wewrite-title-input.wewrite-input-error {
+  border-color: oklch(var(--destructive)) !important;
+}
+
+textarea.wewrite-title-input.wewrite-input-error:focus {
+  border-color: oklch(var(--destructive)) !important;
+  box-shadow: 0 0 0 1px oklch(var(--destructive)) !important;
+}
+
+textarea.wewrite-title-input.wewrite-input-warning {
+  border-color: oklch(var(--warning)) !important;
+}
+
+textarea.wewrite-title-input.wewrite-input-warning:focus {
+  border-color: oklch(var(--warning)) !important;
+  box-shadow: 0 0 0 1px oklch(var(--warning)) !important;
+}
+
+/* General textarea error/warning styles */
+textarea.wewrite-input.wewrite-input-error {
+  border-color: oklch(var(--destructive)) !important;
+}
+
+textarea.wewrite-input.wewrite-input-error:focus {
+  border-color: oklch(var(--destructive)) !important;
+  box-shadow: 0 0 0 1px oklch(var(--destructive)) !important;
+}
+
+textarea.wewrite-input.wewrite-input-warning {
+  border-color: oklch(var(--warning)) !important;
+}
+
+textarea.wewrite-input.wewrite-input-warning:focus {
+  border-color: oklch(var(--warning)) !important;
+  box-shadow: 0 0 0 1px oklch(var(--warning)) !important;
+}
+
 /* ===== GLOBAL GLASSMORPHIC INPUT SYSTEM ===== */
 
 /**
@@ -2365,6 +2402,51 @@ textarea.wewrite-title-input {
 .wewrite-input:disabled {
   opacity: 0.5 !important;
   cursor: not-allowed !important;
+}
+
+/* Error and warning states for inputs */
+.wewrite-input.wewrite-input-error {
+  border: 1px solid oklch(var(--destructive)) !important;
+  background-color: oklch(var(--destructive) / 0.08) !important;
+}
+
+.wewrite-input.wewrite-input-error:focus,
+.wewrite-input.wewrite-input-error:focus-visible,
+.wewrite-input.wewrite-input-error:focus-within,
+.wewrite-input.wewrite-input-error.wewrite-active-input {
+  border: 1px solid oklch(var(--destructive)) !important;
+  background-color: oklch(var(--destructive) / 0.12) !important;
+  box-shadow: 0 0 0 3px oklch(var(--destructive) / 0.1) !important;
+}
+
+.wewrite-input.wewrite-input-error:hover {
+  background-color: oklch(var(--destructive) / 0.1) !important;
+}
+
+.wewrite-input.wewrite-input-error:active {
+  background-color: oklch(var(--destructive) / 0.15) !important;
+}
+
+.wewrite-input.wewrite-input-warning {
+  border: 1px solid oklch(var(--warning)) !important;
+  background-color: oklch(var(--warning) / 0.08) !important;
+}
+
+.wewrite-input.wewrite-input-warning:focus,
+.wewrite-input.wewrite-input-warning:focus-visible,
+.wewrite-input.wewrite-input-warning:focus-within,
+.wewrite-input.wewrite-input-warning.wewrite-active-input {
+  border: 1px solid oklch(var(--warning)) !important;
+  background-color: oklch(var(--warning) / 0.12) !important;
+  box-shadow: 0 0 0 3px oklch(var(--warning) / 0.1) !important;
+}
+
+.wewrite-input.wewrite-input-warning:hover {
+  background-color: oklch(var(--warning) / 0.1) !important;
+}
+
+.wewrite-input.wewrite-input-warning:active {
+  background-color: oklch(var(--warning) / 0.15) !important;
 }
 
 /* Override browser autofill styling - Use accent-alpha instead of browser's blue */

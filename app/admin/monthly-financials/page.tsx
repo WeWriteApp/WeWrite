@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { useAdminData } from '../../providers/AdminDataProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Loader, RefreshCw, Calendar, DollarSign, TrendingUp, Users, AlertCircle, Info, CheckCircle, AlertTriangle, Database, HelpCircle, CreditCard, Banknote, Bell, Filter } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import {
   SideDrawer,
@@ -50,7 +50,7 @@ function InfoTooltip({ text }: { text: string }) {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+        <Icon name="HelpCircle" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
       </span>
       {isVisible && (
         <div
@@ -315,7 +315,7 @@ export default function MonthlyFinancialsPage() {
   if (authLoading || !user || !user.email || !isAdmin(user.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader className="h-8 w-8 animate-spin text-foreground" />
+        <Icon name="Loader" className="text-foreground" />
       </div>
     );
   }
@@ -331,7 +331,7 @@ export default function MonthlyFinancialsPage() {
               size="sm"
               onClick={() => router.push('/admin')}
             >
-              <ChevronLeft className="h-4 w-4 mr-2" />
+              <Icon name="ChevronLeft" size={16} className="mr-2" />
               Back
             </Button>
 
@@ -343,7 +343,7 @@ export default function MonthlyFinancialsPage() {
               onClick={fetchData}
               disabled={isLoading}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              <Icon name="RefreshCw" size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
@@ -355,7 +355,7 @@ export default function MonthlyFinancialsPage() {
         {error && (
           <div className="wewrite-card bg-destructive/10 border-destructive/20">
             <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
+              <Icon name="AlertCircle" size={20} />
               <span>{error}</span>
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function MonthlyFinancialsPage() {
             {data.debug && (data.debug.environment === 'development' || data.debug.stripeMode === 'TEST') && (
               <div className="wewrite-card border border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0 text-yellow-600" />
+                  <Icon name="AlertTriangle" size={20} className="mt-0.5 flex-shrink-0 text-yellow-600" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">Development Environment Detected</h3>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
@@ -410,7 +410,7 @@ export default function MonthlyFinancialsPage() {
             {data.realtimeBalanceBreakdown && (
               <div className="wewrite-card border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                 <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="h-6 w-6 text-primary" />
+                  <Icon name="DollarSign" size={24} className="text-primary" />
                   <h2 className="text-xl font-bold">Real-Time Balance</h2>
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                     Live
@@ -463,11 +463,11 @@ export default function MonthlyFinancialsPage() {
                     <div className="text-xs text-muted-foreground mt-1">
                       {data.realtimeBalanceBreakdown.hasSufficientFunds ? (
                         <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                          <CheckCircle className="h-3 w-3" /> Sufficient funds for all payouts
+                          <Icon name="CheckCircle" size={12} /> Sufficient funds for all payouts
                         </span>
                       ) : (
                         <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                          <AlertCircle className="h-3 w-3" /> Insufficient funds warning
+                          <Icon name="AlertCircle" size={12} /> Insufficient funds warning
                         </span>
                       )}
                     </div>
@@ -534,7 +534,7 @@ export default function MonthlyFinancialsPage() {
             {/* Fund Flow Model Explanation */}
             <div className="wewrite-card border">
               <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <Icon name="Info" size={20} className="mt-0.5 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold">Monthly Bulk Processing Model</h3>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -548,7 +548,7 @@ export default function MonthlyFinancialsPage() {
             <div className="wewrite-card">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+                  <Icon name="Calendar" size={20} />
                   <h2 className="text-xl font-bold">Current Month: {formatMonth(data.currentMonth.data.month)}</h2>
                 </div>
                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted">
@@ -630,7 +630,7 @@ export default function MonthlyFinancialsPage() {
             {data.stripeBalance && (
               <div className="wewrite-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="h-5 w-5" />
+                  <Icon name="DollarSign" size={20} />
                   <h2 className="text-xl font-bold">Stripe Balance</h2>
                 </div>
 
@@ -655,7 +655,7 @@ export default function MonthlyFinancialsPage() {
             {data.stripeSubscriptions && (
               <div className="wewrite-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <Users className="h-5 w-5" />
+                  <Icon name="Users" size={20} />
                   <h2 className="text-xl font-bold">Active Subscriptions (from Stripe)</h2>
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
                     Source of Truth
@@ -778,7 +778,7 @@ export default function MonthlyFinancialsPage() {
             {/* Writer Earnings - from subscriber allocations */}
             <div className="wewrite-card">
               <div className="flex items-center gap-2 mb-4">
-                <DollarSign className="h-5 w-5" />
+                <Icon name="DollarSign" size={20} />
                 <h2 className="text-xl font-bold">Writer Earnings</h2>
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
                   {data.writerEarnings?.length || 0} writers with earnings
@@ -971,9 +971,9 @@ export default function MonthlyFinancialsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     {data.reconciliation.isInSync ? (
-                      <CheckCircle className="h-5 w-5" />
+                      <Icon name="CheckCircle" size={20} />
                     ) : (
-                      <AlertTriangle className="h-5 w-5" />
+                      <Icon name="AlertTriangle" size={20} />
                     )}
                     <h2 className="text-xl font-bold">Data Reconciliation</h2>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${data.reconciliation.isInSync
@@ -991,12 +991,12 @@ export default function MonthlyFinancialsPage() {
                     >
                       {isSyncing ? (
                         <>
-                          <Loader className="h-4 w-4 mr-2 animate-spin" />
+                          <Icon name="Loader" />
                           Syncing...
                         </>
                       ) : (
                         <>
-                          <RefreshCw className="h-4 w-4 mr-2" />
+                          <Icon name="RefreshCw" size={16} className="mr-2" />
                           Sync with Stripe
                         </>
                       )}
@@ -1095,7 +1095,7 @@ export default function MonthlyFinancialsPage() {
             {data.dataSources && (
               <div className="wewrite-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <Database className="h-5 w-5" />
+                  <Icon name="Database" size={20} />
                   <h2 className="text-xl font-bold">Data Sources</h2>
                 </div>
 
@@ -1119,7 +1119,7 @@ export default function MonthlyFinancialsPage() {
             {/* Historical Data Table */}
             <div className="wewrite-card">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="h-5 w-5" />
+                <Icon name="TrendingUp" size={20} />
                 <h2 className="text-xl font-bold">Historical Monthly Data</h2>
               </div>
 
@@ -1182,7 +1182,7 @@ export default function MonthlyFinancialsPage() {
             {/* Historical Chart Placeholder */}
             <div className="wewrite-card">
               <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="h-5 w-5" />
+                <Icon name="TrendingUp" size={20} />
                 <h2 className="text-xl font-bold">Monthly Trends</h2>
               </div>
 
@@ -1250,7 +1250,7 @@ export default function MonthlyFinancialsPage() {
           <SideDrawerBody>
             {loadingUserData ? (
               <div className="flex items-center justify-center py-12">
-                <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Icon name="Loader" className="text-muted-foreground" />
               </div>
             ) : selectedUserData ? (
               <div className="space-y-4 text-sm">
@@ -1307,7 +1307,7 @@ export default function MonthlyFinancialsPage() {
 
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <CreditCard className="h-4 w-4 text-blue-400" />
+                    <Icon name="CreditCard" size={16} className="text-blue-400" />
                     <span className="font-medium">Subscription</span>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
@@ -1323,7 +1323,7 @@ export default function MonthlyFinancialsPage() {
 
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Banknote className="h-4 w-4 text-emerald-400" />
+                    <Icon name="Banknote" size={16} className="text-emerald-400" />
                     <span className="font-medium">Payouts</span>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">

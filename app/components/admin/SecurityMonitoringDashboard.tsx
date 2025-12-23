@@ -8,26 +8,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
-  Shield, 
-  AlertTriangle, 
-  Eye, 
-  Users, 
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  RefreshCw,
-  Download,
-  Settings,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle
-} from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
 
 interface SecurityMetrics {
@@ -213,7 +198,7 @@ export function SecurityMonitoringDashboard() {
             variant="secondary"
             size="sm"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <Icon name="RefreshCw" size={16} className={`mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button
@@ -221,7 +206,7 @@ export function SecurityMonitoringDashboard() {
             variant="secondary"
             size="sm"
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Icon name="Download" size={16} className="mr-2" />
             Export Report
           </Button>
         </div>
@@ -241,7 +226,7 @@ export function SecurityMonitoringDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Fraud Detection</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <Icon name="Shield" size={16} className="text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics.fraudDetection.activeAlerts}</div>
@@ -260,7 +245,7 @@ export function SecurityMonitoringDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Compliance</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <Icon name="CheckCircle" size={16} className="text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics.compliance.overallScore}%</div>
@@ -279,7 +264,7 @@ export function SecurityMonitoringDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Audit Trail</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
+              <Icon name="Eye" size={16} className="text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics.auditTrail.last24Hours}</div>
@@ -298,7 +283,7 @@ export function SecurityMonitoringDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">User Security</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Icon name="Users" size={16} className="text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics.userSecurity.verifiedUsers}</div>

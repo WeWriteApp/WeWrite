@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Clock } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { useAuth } from '../../providers/AuthProvider';
@@ -91,7 +91,7 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
       <Card className="w-full">
         <CardContent className="p-6">
           <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <Icon name="Loader" size={24} />
           </div>
         </CardContent>
       </Card>
@@ -107,7 +107,7 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-primary" />
+            <Icon name="UserPlus" size={20} className="text-primary" />
             <h3 className="font-semibold">Follow Users</h3>
           </div>
           <Button
@@ -116,7 +116,7 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
             onClick={onDismiss}
             className="h-8 w-8 p-0"
           >
-            <X className="h-4 w-4" />
+            <Icon name="X" size={16} />
           </Button>
         </div>
 
@@ -137,7 +137,7 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
               {/* Recent Pages */}
               <div className="mb-3">
                 <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
+                  <Icon name="Clock" size={12} />
                   Recent pages
                 </p>
                 <div className="space-y-1">
@@ -161,7 +161,7 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
                 size="sm"
               >
                 {followingLoading[suggestion.id] ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <Icon name="Loader" size={16} />
                 ) : followingStates[suggestion.id] ? (
                   'Following'
                 ) : (

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { MapPin, X } from 'lucide-react';
 
 import MapView from './MapView';
 
@@ -60,7 +60,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ location, onChange, compact = fal
             }`}
             title={compact ? (location ? 'Edit Location' : 'Add Location') : ""}
           >
-            <MapPin className="h-4 w-4 flex-shrink-0" />
+            <Icon name="MapPin" size={16} className="flex-shrink-0" />
             {!compact && (
               <span className="text-sm font-medium">{location ? 'Edit Location' : 'Add Location'}</span>
             )}
@@ -83,12 +83,12 @@ const MapEditor: React.FC<MapEditorProps> = ({ location, onChange, compact = fal
             <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
               {tempLocation ? (
                 <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" />
+                  <Icon name="MapPin" size={16} className="text-primary" />
                   Location set to {tempLocation.lat.toFixed(6)}, {tempLocation.lng.toFixed(6)}
                 </p>
               ) : (
                 <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+                  <Icon name="MapPin" size={16} />
                   Search for a location, use your current location, or tap on the map to set a location
                 </p>
               )}
@@ -101,7 +101,7 @@ const MapEditor: React.FC<MapEditorProps> = ({ location, onChange, compact = fal
                   className="gap-2"
                   size="sm"
                 >
-                  <X className="h-4 w-4" />
+                  <Icon name="X" size={16} />
                   Remove Location
                 </Button>
               )}

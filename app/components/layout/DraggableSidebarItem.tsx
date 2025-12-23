@@ -3,11 +3,11 @@ import React, { useRef, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { LucideIcon, GripVertical } from 'lucide-react';
+import { Icon, IconName } from '@/components/ui/Icon';
 
 interface DraggableSidebarItemProps {
   id: string;
-  icon: LucideIcon;
+  icon: IconName;
   label: string;
   href?: string;
   onClick?: () => void;
@@ -18,7 +18,6 @@ interface DraggableSidebarItemProps {
   children?: React.ReactNode;
   isDragEnabled?: boolean;
   showContent?: boolean;
-  isCompact?: boolean;
 }
 
 interface DragItem {
@@ -28,17 +27,15 @@ interface DragItem {
 }
 
 /**
- * Clean sidebar item component
- * 
- * Architecture:
- * - Collapsed: 40x40 button centered in 64px sidebar (12px margin each side)
- * - Expanded: Full width button with 12px horizontal padding
- * - Icon stays at exact same X position in both states
- * - Label fades in/out with max-width animation
+ * Simple sidebar navigation item with drag-and-drop support.
+ *
+ * Layout (collapsed sidebar = 72px with 16px padding = 40px content area):
+ * - Collapsed: 40x40 button, centered
+ * - Expanded: Full width button with icon + label
  */
 const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
   id,
-  icon: Icon,
+  icon: iconName,
   label,
   onClick,
   onMouseEnter,
@@ -51,9 +48,11 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
 
-  if (!id || !Icon || !label) return null;
+  if (!id || !iconName || !label) return null;
 
+  // Drag and drop setup
   const [{ handlerId }, drop] = useDrop({
     accept: 'sidebar-item',
     collect(monitor) {
@@ -95,73 +94,76 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
   return (
     <div
       ref={ref}
-      className={cn("relative group h-10", isDragging && "opacity-40")}
+      className={cn(
+        "relative group overflow-visible",
+        // Collapsed: shrink to fit button, Expanded: full width
+        showContent ? "w-full" : "w-10",
+        isDragging && "opacity-40"
+      )}
       data-handler-id={handlerId}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => { setIsHovered(false); setIsPressed(false); }}
     >
-      {/*
-        Button structure:
-        - Always h-10 (40px) tall
-        - Collapsed: w-10 (40px), centered via mx-auto on parent or flex justify-center
-        - Expanded: full width with internal padding
-      */}
       <button
         onClick={() => onClick?.()}
         onMouseEnter={onMouseEnter}
+        onMouseDown={() => setIsPressed(true)}
+        onMouseUp={() => setIsPressed(false)}
         className={cn(
-          "h-10 flex items-center rounded-lg cursor-pointer border-0",
-          "transition-all duration-200 ease-out",
-          // Collapsed: square button, Expanded: full width with left padding to align icon
-          showContent
-            ? "w-full pl-3 pr-2 bg-transparent"
-            : "w-10 justify-center bg-transparent",
-          // Active state - accent color background and text
-          isActive && "bg-accent/15 text-accent",
-          // Non-active states - hover and click feedback
+          // Base styles - overflow-visible to prevent icon clipping during hover animation
+          "h-10 flex items-center rounded-lg cursor-pointer border-0 bg-transparent overflow-visible",
+          "transition-colors duration-150",
+          // Width: collapsed = 40px square, expanded = full width
+          showContent ? "w-full px-3" : "w-10 justify-center",
+          // Active state
+          isActive && [
+            "bg-accent-15 text-accent",
+            "hover:bg-accent-25"
+          ],
+          // Inactive state
           !isActive && [
             "text-muted-foreground",
-            // Hover state - subtle background
-            "hover:text-foreground hover:bg-muted/60 dark:hover:bg-muted/40",
-            // Active/pressed state - darker background with slight scale
-            "active:bg-muted active:scale-[0.98] active:duration-75"
+            "hover:text-foreground hover:bg-muted"
           ]
         )}
         title={!showContent ? label : undefined}
         aria-label={label}
       >
-        {/* Icon - always 20x20, centered in its space, with hover animation */}
+        {/* Icon - uses display:flex via Icon component's span wrapper */}
         <motion.div
-          whileHover={{ scale: 1.15, y: -1 }}
-          whileTap={{ scale: 0.9 }}
-          animate={isActive ? { scale: 1.05 } : { scale: 1 }}
-          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          className="flex-shrink-0 flex items-center justify-center overflow-visible"
+          style={{ width: 20, height: 20 }}
+          animate={{
+            scale: isPressed ? 0.9 : isHovered ? 1.1 : 1,
+          }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
         >
-          <Icon className={cn(
-            "w-5 h-5 flex-shrink-0",
-            isActive && "text-accent"
-          )} />
+          <Icon
+            name={iconName}
+            size={20}
+            weight="regular"
+            className={isActive ? "text-accent" : undefined}
+          />
         </motion.div>
-        
-        {/* Label - animated width and opacity */}
-        <span 
-          className={cn(
-            "text-sm font-medium truncate whitespace-nowrap overflow-hidden",
-            "transition-all duration-300 ease-out",
-            showContent 
-              ? "ml-3 opacity-100 w-auto max-w-[160px]" 
-              : "ml-0 opacity-0 w-0 max-w-0"
-          )}
-        >
-          {label}
-        </span>
-        
+
+        {/* Label - only when expanded */}
+        {showContent && (
+          <span className="ml-3 text-sm font-medium truncate leading-5">
+            {label}
+          </span>
+        )}
+
+        {/* Status indicators (children) */}
         {children}
       </button>
-      
-      {/* Drag handle */}
+
+      {/* Drag handle - expanded + hovered only */}
       {showContent && isHovered && isDragEnabled && (
-        <GripVertical className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
+        <Icon
+          name="GripVertical"
+          size={16}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/40"
+        />
       )}
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 import { useLandingColors, LIGHTNESS, CHROMA } from '../LandingColorContext';
 
 /**
@@ -26,6 +26,7 @@ export default function GraphFeatureCard({
   const fullscreenGraphRef = useRef<any>(null);
   const [isInView, setIsInView] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [animationStarted, setAnimationStarted] = useState(false);
   const { hue, isDark } = useLandingColors();
 
   // Mount check for portal
@@ -103,6 +104,9 @@ export default function GraphFeatureCard({
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsInView(entry.isIntersecting);
+        if (entry.isIntersecting && !animationStarted) {
+          setAnimationStarted(true);
+        }
       },
       { threshold: 0.1 }
     );
@@ -112,7 +116,7 @@ export default function GraphFeatureCard({
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [animationStarted]);
 
   // Initialize preview 3D force graph
   useEffect(() => {
@@ -192,6 +196,9 @@ export default function GraphFeatureCard({
           });
           const sphere = new THREE.Mesh(geometry, material);
           sphere.userData.nodeId = node.id;
+          sphere.userData.originalScale = 1;
+          sphere.userData.animationDelay = node.level * 200 + Math.random() * 300; // Staggered delay based on level
+          sphere.scale.setScalar(0); // Start at scale 0
           group.add(sphere);
 
           node.__sphereMesh = sphere;
@@ -200,6 +207,9 @@ export default function GraphFeatureCard({
           const fontSize = isCenter ? 24 : node.level === 1 ? 18 : 16;
           const textSprite = createTextSprite(node.title, textColor, fontSize, isCenter);
           textSprite.position.y = size + 10;
+          textSprite.userData.originalScale = 1;
+          textSprite.userData.animationDelay = node.level * 200 + Math.random() * 300 + 100; // Text appears slightly after sphere
+          textSprite.scale.setScalar(0); // Start at scale 0
           group.add(textSprite);
 
           return group;
@@ -226,6 +236,69 @@ export default function GraphFeatureCard({
 
       graphRef.current = Graph;
 
+      // Add pop-in animation for nodes
+      const animateNodes = () => {
+        if (!graphRef.current) return;
+
+        const graphData = graphRef.current.graphData();
+        if (!graphData || !graphData.nodes) return;
+
+        const currentTime = Date.now();
+        let hasActiveAnimations = false;
+
+        graphData.nodes.forEach((node: any) => {
+          if (node.__sphereMesh && node.__sphereMesh.userData) {
+            const mesh = node.__sphereMesh;
+            const delay = mesh.userData.animationDelay;
+            const elapsed = currentTime - (graphRef.current._animationStartTime || currentTime);
+
+            if (elapsed > delay) {
+              const progress = Math.min((elapsed - delay) / 600, 1); // 600ms animation duration
+
+              if (progress < 1) {
+                hasActiveAnimations = true;
+                // Bounce easing function
+                const bounceProgress = 1 - Math.pow(1 - progress, 3);
+                // Add overshoot and settle
+                const scale = bounceProgress * (1 + 0.3 * Math.sin(progress * Math.PI * 2));
+                mesh.scale.setScalar(Math.min(scale, 1));
+              } else {
+                mesh.scale.setScalar(1);
+              }
+            } else {
+              hasActiveAnimations = true;
+            }
+          }
+
+          // Animate text sprites
+          if (node.__threeObj && node.__threeObj.children) {
+            node.__threeObj.children.forEach((child: any) => {
+              if (child.userData && child.userData.animationDelay) {
+                const delay = child.userData.animationDelay;
+                const elapsed = currentTime - (graphRef.current._animationStartTime || currentTime);
+
+                if (elapsed > delay) {
+                  const progress = Math.min((elapsed - delay) / 400, 1); // 400ms for text
+                  const bounceProgress = 1 - Math.pow(1 - progress, 2);
+                  const scale = bounceProgress * (1 + 0.2 * Math.sin(progress * Math.PI * 1.5));
+                  child.scale.setScalar(Math.min(scale, 1));
+                }
+              }
+            });
+          }
+        });
+
+        if (hasActiveAnimations) {
+          requestAnimationFrame(animateNodes);
+        }
+      };
+
+      // Start animation after a brief delay
+      graphRef.current._animationStartTime = Date.now() + 300; // 300ms delay before starting
+      setTimeout(() => {
+        requestAnimationFrame(animateNodes);
+      }, 300);
+
       let angle = 0;
       const distance = 200;
       const animate = () => {
@@ -249,7 +322,7 @@ export default function GraphFeatureCard({
         graphRef.current = null;
       }
     };
-  }, [isInView, isDark]);
+  }, [isInView, isDark, animationStarted]);
 
   // Update colors when hue changes
   useEffect(() => {
@@ -468,7 +541,7 @@ export default function GraphFeatureCard({
           className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
           aria-label="Close fullscreen"
         >
-          <X className="h-5 w-5" />
+          <Icon name="X" size={20} />
         </button>
       </div>,
       document.body

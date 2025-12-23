@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, MapPin } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import MapPicker from '../../../components/map/MapPicker';
 import SubscriptionGate from '../../../components/subscription/SubscriptionGate';
@@ -117,7 +117,7 @@ function LocationViewContent() {
               onClick={handleBack}
               className="hover:bg-muted"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <Icon name="ArrowLeft" size={16} />
             </Button>
             <div>
               <h1 className="text-lg font-semibold text-foreground">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { AlertTriangle, CreditCard, RefreshCw, Copy, ChevronDown, ExternalLink } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
@@ -126,7 +126,7 @@ export function PaymentErrorDisplay({
   if (compact) {
     return (
       <Alert variant="destructive" className={cn('', className)}>
-        <AlertTriangle className="h-4 w-4" />
+        <Icon name="AlertTriangle" size={16} />
         <AlertTitle className="flex items-center justify-between">
           {errorDetails.title}
           {getSeverityBadge()}
@@ -141,7 +141,7 @@ export function PaymentErrorDisplay({
               disabled={isRetrying}
               className="gap-2"
             >
-              <RefreshCw className={cn("h-3 w-3", isRetrying && "animate-spin")} />
+              <Icon name="RefreshCw" size={12} className={cn(isRetrying && "animate-spin")} />
               {isRetrying ? 'Retrying...' : 'Try Again'}
             </Button>
           )}
@@ -156,7 +156,7 @@ export function PaymentErrorDisplay({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-full bg-background shadow-sm')}>
-              <CreditCard className={cn('h-5 w-5', colors.icon)} />
+              <Icon name="CreditCard" size={20} className={colors.icon} />
             </div>
             <div>
               <CardTitle className={cn('text-lg', colors.text)}>
@@ -197,7 +197,7 @@ export function PaymentErrorDisplay({
               disabled={isRetrying}
               className="gap-2"
             >
-              <RefreshCw className={cn("h-3 w-3", isRetrying && "animate-spin")} />
+              <Icon name="RefreshCw" size={12} className={cn(isRetrying && "animate-spin")} />
               {isRetrying ? 'Retrying Payment...' : 'Try Payment Again'}
             </Button>
           )}
@@ -208,7 +208,7 @@ export function PaymentErrorDisplay({
             onClick={() => window.open('/settings/subscription', '_blank')}
             className="gap-2"
           >
-            <ExternalLink className="h-3 w-3" />
+            <Icon name="ExternalLink" size={12} />
             Update Payment Method
           </Button>
         </div>
@@ -222,8 +222,8 @@ export function PaymentErrorDisplay({
                 size="sm"
                 className="gap-2 text-xs p-0 h-auto"
               >
-                <ChevronDown className={cn(
-                  "h-3 w-3 transition-transform",
+                <Icon name="ChevronDown" size={12} className={cn(
+                  "transition-transform",
                   isDetailsOpen && "rotate-180"
                 )} />
                 {isDetailsOpen ? 'Hide' : 'Show'} Technical Details
@@ -241,7 +241,7 @@ export function PaymentErrorDisplay({
                     onClick={handleCopyError}
                     className="gap-1 h-auto p-1 text-xs"
                   >
-                    <Copy className="h-3 w-3" />
+                    <Icon name="Copy" size={12} />
                     Copy
                   </Button>
                 </div>

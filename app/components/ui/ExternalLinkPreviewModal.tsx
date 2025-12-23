@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
-import { X, ExternalLink, Users, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
@@ -164,7 +164,7 @@ export function ExternalLinkPreviewModal({
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-theme-medium">
               <div className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <Icon name="ExternalLink" size={16} className="text-muted-foreground" />
                 <h3 className="text-lg font-semibold">External Link</h3>
               </div>
               <Button
@@ -174,7 +174,7 @@ export function ExternalLinkPreviewModal({
                 onClick={onClose}
                 aria-label="Close"
               >
-                <X className="h-4 w-4" />
+                <Icon name="X" size={16} />
               </Button>
             </div>
 
@@ -196,7 +196,7 @@ export function ExternalLinkPreviewModal({
               {/* Related Pages Section */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Icon name="Users" size={16} className="text-muted-foreground" />
                   <h4 className="text-sm font-medium">
                     {filterByUserId && filterByUsername
                       ? `${filterByUsername}'s pages linking here`
@@ -207,7 +207,7 @@ export function ExternalLinkPreviewModal({
                 
                 {loadingRelated ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Icon name="Loader" />
                     Loading...
                   </div>
                 ) : relatedPages.length > 0 ? (
@@ -245,7 +245,7 @@ export function ExternalLinkPreviewModal({
                 Back
               </Button>
               <Button variant="default" onClick={handleVisitLink}>
-                <ExternalLink className="h-4 w-4 mr-2" />
+                <Icon name="ExternalLink" size={16} className="mr-2" />
                 Visit link
               </Button>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { Icon } from '@/components/ui/Icon';
 import { getMapTileConfig } from '../../../utils/mapConfig';
 import { useLandingColors, LIGHTNESS, CHROMA } from '../LandingColorContext';
 
@@ -169,7 +170,7 @@ export default function MapFeatureCard() {
       {/* Loading state */}
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
-          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <Icon name="Loader" size={16} />
         </div>
       )}
 

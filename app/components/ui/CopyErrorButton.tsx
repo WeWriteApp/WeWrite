@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
+import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
-import { Copy, Check } from 'lucide-react';
 import { useClipboard } from '../../hooks/useClipboard';
 
 interface CopyErrorButtonProps {
@@ -63,12 +63,12 @@ export function CopyErrorButton({
     >
       {copied ? (
         <>
-          <Check className="h-3 w-3" />
+          <Icon name="Check" size={12} />
           Copied!
         </>
       ) : (
         <>
-          <Copy className="h-3 w-3" />
+          <Icon name="Copy" size={12} />
           Copy Error
         </>
       )}
