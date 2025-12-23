@@ -129,10 +129,9 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         title={!showContent ? label : undefined}
         aria-label={label}
       >
-        {/* Icon - uses display:flex via Icon component's span wrapper */}
+        {/* Icon - Icon component now handles its own sizing */}
         <motion.div
-          className="flex-shrink-0 flex items-center justify-center overflow-visible"
-          style={{ width: 20, height: 20 }}
+          className="flex-shrink-0 overflow-visible"
           animate={{
             scale: isPressed ? 0.9 : isHovered ? 1.1 : 1,
           }}

@@ -531,17 +531,23 @@ export const Icon = forwardRef<HTMLSpanElement, IconProps>(
     // Support weight="fill" for solid icons (adds fill to make icons solid)
     const isFilled = weight === "fill";
 
+    const numericSize = typeof size === "number" ? size : 24;
+
     return (
       <span
         ref={ref}
-        className={`inline-flex items-center justify-center ${className}`}
+        className={`inline-flex items-center justify-center flex-shrink-0 ${className}`}
         onClick={onClick}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
-        style={style}
+        style={{
+          width: numericSize,
+          height: numericSize,
+          ...style,
+        }}
       >
         <LucideIcon
-          size={typeof size === "number" ? size : 24}
+          size={numericSize}
           color={color}
           className={color ? undefined : "text-current"}
           fill={isFilled ? "currentColor" : "none"}
