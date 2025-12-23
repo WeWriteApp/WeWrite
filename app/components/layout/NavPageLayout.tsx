@@ -2,7 +2,12 @@
 
 import React, { Suspense } from "react";
 import { Icon } from '@/components/ui/Icon';
-import { RESPONSIVE_PADDING_CLASSES } from "../../constants/layout";
+import {
+  RESPONSIVE_PADDING_CLASSES,
+  HEADER_HEIGHTS,
+  HEADER_BODY_GAP,
+  getHeaderClearance,
+} from "../../constants/layout";
 import { useAuth } from "../../providers/AuthProvider";
 
 export interface NavPageLayoutProps {
@@ -14,6 +19,21 @@ export interface NavPageLayoutProps {
   maxWidth?: string;
   /** When true, reduces top padding for pages where logged-out users don't have a floating header */
   reducedPaddingForLoggedOut?: boolean;
+  /**
+   * Specify which header type this page uses. This automatically calculates
+   * the correct top padding including banner stack height + header height + gap.
+   *
+   * Options: 'userProfile' | 'financial' | 'contentPage'
+   *
+   * @example
+   * <NavPageLayout header="userProfile">...</NavPageLayout>
+   */
+  header?: keyof typeof HEADER_HEIGHTS;
+  /**
+   * @deprecated Use `header` prop instead for cleaner API.
+   * Custom header height in pixels - includes the gap to body content.
+   */
+  headerHeight?: number;
 }
 
 /**
@@ -36,13 +56,30 @@ export default function NavPageLayout({
   loading = false,
   loadingFallback,
   maxWidth, // deprecated but kept for backwards compatibility
-  reducedPaddingForLoggedOut = false
+  reducedPaddingForLoggedOut = false,
+  header,
+  headerHeight
 }: NavPageLayoutProps) {
   const { user } = useAuth();
 
-  // For logged-out users on pages that opt-in, use reduced top padding (pt-6)
-  // since there's no floating financial header to clear
-  const topPaddingClass = reducedPaddingForLoggedOut && !user ? 'pt-6' : 'pt-24';
+  // Calculate the effective header clearance
+  // Priority: header prop > headerHeight prop > default behavior
+  const effectiveHeaderClearance = header
+    ? getHeaderClearance(header)
+    : headerHeight;
+
+  // Determine top padding:
+  // - header/headerHeight: use custom padding based on page's own header
+  // - reducedPaddingForLoggedOut && !user: pt-6 (no floating header for logged-out)
+  // - default: pt-24 (standard clearance for financial header ~96px)
+  const topPaddingClass = effectiveHeaderClearance !== undefined
+    ? ''
+    : (reducedPaddingForLoggedOut && !user ? 'pt-6' : 'pt-24');
+
+  // Custom padding style when header type or headerHeight is provided
+  const topPaddingStyle = effectiveHeaderClearance !== undefined
+    ? { paddingTop: `calc(var(--banner-stack-height, 0px) + ${effectiveHeaderClearance}px)` }
+    : undefined;
 
   const defaultLoadingFallback = (
     <div className="flex items-center justify-center min-h-[200px] w-full">
@@ -53,7 +90,10 @@ export default function NavPageLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Content area with padding - max-width is handled by SidebarLayout */}
-      <div className={`${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 ${topPaddingClass} ${className}`}>
+      <div
+        className={`${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 ${topPaddingClass} ${className}`}
+        style={topPaddingStyle}
+      >
         {/* Content loads progressively below header */}
         {loading ? (
           loadingFallback || defaultLoadingFallback

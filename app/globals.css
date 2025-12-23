@@ -3957,22 +3957,44 @@ button.bg-transparent[type] {
   color-scheme: light dark;
 }
 
-/* Sticky tabs styling */
+/* Sticky tabs styling - integrates with banner-header-body layout system
+ *
+ * The sticky tabs system positions tabs below the header stack:
+ * - Banners stack at top (--banner-stack-height CSS var)
+ * - Header is fixed at top: var(--banner-stack-height)
+ * - Sticky tabs are fixed at top: var(--banner-stack-height) + header height
+ *
+ * Use data-header-height attribute on the element to specify header height,
+ * defaults to 56px (UserProfileHeader height).
+ */
 #profile-tabs-header {
   position: relative;
-  z-index: var(--z-fixed-header);
+  z-index: calc(var(--z-fixed-header) - 1);
   transition: all 0.2s ease-in-out;
+  /* CSS custom property for header height, can be overridden via data attribute or inline style */
+  --sticky-tabs-header-height: 56px;
 }
 
 .sticky-tabs {
   position: fixed !important;
-  top: 0;
+  /* Position below banners + header */
+  top: calc(var(--banner-stack-height, 0px) + var(--sticky-tabs-header-height, 56px));
   left: 0;
   right: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background-color: oklch(var(--background));
   animation: slideDown 0.2s ease-out;
-  z-index: var(--z-fixed-header);
+  z-index: calc(var(--z-fixed-header) - 1);
+  /* Respect sidebar on desktop - use CSS variable set by JS */
+  margin-left: var(--sidebar-width, 0px);
+}
+
+/* Desktop: respect sidebar width */
+@media (min-width: 768px) {
+  .sticky-tabs {
+    left: var(--sidebar-width, 0px);
+    margin-left: 0;
+  }
 }
 
 .dark .sticky-tabs {
@@ -4215,6 +4237,26 @@ button.bg-transparent[type] {
 .leaflet-control-container,
 .leaflet-control {
   z-index: 10 !important;
+}
+
+/* Custom map marker icon - reset divIcon defaults */
+.custom-marker-icon {
+  background: transparent !important;
+  border: none !important;
+  width: 24px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.custom-marker-icon svg {
+  display: block;
+  width: 24px;
+  height: 36px;
+}
+/* Override Leaflet's default divIcon styles */
+.leaflet-div-icon.custom-marker-icon {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Enable text selection on mobile devices while disabling native context menu */

@@ -737,9 +737,10 @@ export const pageLinkedTemplate: EmailTemplate = {
     linkedPageTitle: 'My Awesome Article',
     linkerUsername: 'JaneSmith',
     linkerPageTitle: 'Related Thoughts on Writing',
+    linkerPageId: 'abc123',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle, emailSettingsToken }) => wrapEmail('Page Linked', `
+  generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle, linkerPageId, emailSettingsToken }) => wrapEmail('Page Linked', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Your Page Was Linked! 🔗</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -750,8 +751,8 @@ export const pageLinkedTemplate: EmailTemplate = {
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app" style="${emailStyles.button}">
-          View on WeWrite
+        <a href="https://getwewrite.app/${linkerPageId || ''}" style="${emailStyles.button}">
+          View Their Page
         </a>
       </div>
     </div>
@@ -921,40 +922,47 @@ export const firstPageActivationTemplate: EmailTemplate = {
   name: 'Write Your First Page',
   description: 'Sent to new users who haven\'t written a page yet to encourage them to start',
   category: 'engagement',
-  subject: 'Ready to write your first page on WeWrite?',
+  subject: 'Your story is waiting to be told',
   sampleData: {
     username: 'JohnDoe',
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ username, emailSettingsToken }) => wrapEmail('Write Your First Page', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Ready to start writing, ${username || 'there'}?</h2>
-      <p class="dark-text">You've just joined WeWrite—welcome! Now comes the fun part: writing your first page.</p>
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Hey ${username || 'there'}, we're so glad you're here!</h2>
 
-      <p class="dark-text">On WeWrite, you can write about literally anything. A thought you had this morning. A recipe you love. Something you're learning. A memory. An opinion. There are no rules—just start typing.</p>
+      <p class="dark-text" style="font-size: 16px;">Welcome to WeWrite. You've taken the first step—now let's take the next one together.</p>
 
-      <div class="dark-card-inner" style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 20px; margin: 24px 0;">
-        <p class="dark-text" style="margin: 0 0 12px 0; font-size: 15px; color: #333;">
-          <strong>Ideas to get you started:</strong>
+      <p class="dark-text">Writing your first page might feel like a big moment, but here's a secret: <strong>it doesn't need to be perfect</strong>. In fact, it doesn't need to be anything in particular. Some of our favorite pages are just a single thought, a quick memory, or a question someone was pondering.</p>
+
+      <div class="dark-card-inner" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin: 24px 0;">
+        <p class="dark-text" style="margin: 0 0 16px 0; font-size: 15px; font-weight: 600; color: #334155;">
+          Not sure where to start? Try one of these:
         </p>
-        <ul class="dark-text-muted" style="padding-left: 18px; margin: 0; color: #555;">
-          <li style="margin-bottom: 8px;">Introduce yourself—who are you and what do you care about?</li>
-          <li style="margin-bottom: 8px;">Share something you learned recently</li>
-          <li style="margin-bottom: 8px;">Write about a place, person, or thing that matters to you</li>
-          <li style="margin-bottom: 8px;">Just start with a single sentence and see where it goes</li>
+        <ul class="dark-text-muted" style="padding-left: 20px; margin: 0; color: #475569;">
+          <li style="margin-bottom: 10px;">📝 <strong>Introduce yourself</strong> — Who are you? What lights you up?</li>
+          <li style="margin-bottom: 10px;">💡 <strong>Share something you learned</strong> — Big or small, someone out there needs to hear it</li>
+          <li style="margin-bottom: 10px;">❤️ <strong>Write about something you love</strong> — A place, a person, a hobby, a memory</li>
+          <li style="margin-bottom: 10px;">✨ <strong>Just start typing</strong> — One sentence is all it takes. See where it goes.</li>
         </ul>
       </div>
 
-      <p class="dark-text">The best part? <strong>Every page you write can earn you real money</strong> when subscribers allocate their monthly budget to support your work. But that only happens if you write something first.</p>
+      <p class="dark-text">Here's the beautiful thing about WeWrite: <strong>every page you write can earn you real money</strong>. When readers discover and support your work, you get paid. No minimums, no hoops to jump through. Just write something honest, and let the rest unfold.</p>
 
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/new" style="${emailStyles.button}">
-          Write Your First Page
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://getwewrite.app/new" style="${emailStyles.button}; font-size: 16px; padding: 14px 36px;">
+          Write Your First Page →
         </a>
       </div>
 
-      <p class="dark-text-muted" style="${emailStyles.muted}; text-align: center;">
-        It only takes a minute to get started. We can't wait to read what you write.
+      <div class="dark-card-inner" style="background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; margin: 24px 0; text-align: center;">
+        <p class="dark-text-muted" style="margin: 0; font-size: 14px; color: #6b7280;">
+          💬 <em>Got questions or just want to say hi? Reply to this email—we read every message.</em>
+        </p>
+      </div>
+
+      <p class="dark-text-muted" style="${emailStyles.muted}; text-align: center; margin-top: 24px;">
+        We can't wait to read what you write. Your voice matters here.
       </p>
     </div>
   `, { emailSettingsToken, emailType: 'first-page-activation' }),

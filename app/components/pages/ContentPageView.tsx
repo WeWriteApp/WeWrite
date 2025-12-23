@@ -263,6 +263,27 @@ export default function ContentPageView({
     }
   }, [isNewPageMode, isScrollReady]);
 
+  // Handle location update from URL params (after returning from location picker)
+  useEffect(() => {
+    const updatedLocationParam = searchParams?.get('updatedLocation');
+    if (updatedLocationParam) {
+      try {
+        const newLocation = updatedLocationParam ? JSON.parse(decodeURIComponent(updatedLocationParam)) : null;
+        setLocation(newLocation);
+        // Also update the page object if it exists
+        if (page) {
+          setPage({ ...page, location: newLocation });
+        }
+        // Clean up the URL by removing the param (use replace to avoid adding to history)
+        const url = new URL(window.location.href);
+        url.searchParams.delete('updatedLocation');
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {
+        // Failed to parse location param - ignore
+      }
+    }
+  }, [searchParams, page]);
+
   // PERFORMANCE: Hydrate from server-side pre-fetched data
   // This eliminates the client-side fetch waterfall for page loads
   useEffect(() => {

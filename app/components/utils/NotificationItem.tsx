@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../../lib/utils';
@@ -14,6 +14,42 @@ import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { updateNotificationCriticality, type NotificationCriticality } from '../../services/notificationsApi';
 import { auth } from '../../firebase/config';
 import { useAuth } from '../../providers/AuthProvider';
+
+/**
+ * Get icon and color for each notification type
+ */
+function getNotificationTypeIcon(type: string): { icon: IconName; color: string } {
+  switch (type) {
+    case 'follow':
+      return { icon: 'UserPlus', color: 'text-blue-500' };
+    case 'link':
+      return { icon: 'Link', color: 'text-purple-500' };
+    case 'append':
+      return { icon: 'FileText', color: 'text-green-500' };
+    case 'email_verification':
+      return { icon: 'Mail', color: 'text-orange-500' };
+    case 'allocation_threshold':
+      return { icon: 'Percent', color: 'text-amber-500' };
+    case 'payment_failed':
+    case 'payment_failed_warning':
+    case 'payment_failed_final':
+      return { icon: 'CreditCard', color: 'text-red-500' };
+    case 'group_invite':
+      return { icon: 'Users', color: 'text-indigo-500' };
+    case 'payout_initiated':
+      return { icon: 'Send', color: 'text-blue-500' };
+    case 'payout_processing':
+      return { icon: 'Clock', color: 'text-amber-500' };
+    case 'payout_completed':
+      return { icon: 'CheckCircle', color: 'text-green-500' };
+    case 'payout_failed':
+      return { icon: 'AlertTriangle', color: 'text-red-500' };
+    case 'system_announcement':
+      return { icon: 'Megaphone', color: 'text-primary' };
+    default:
+      return { icon: 'Bell', color: 'text-muted-foreground' };
+  }
+}
 
 /**
  * NotificationItem Component
@@ -79,8 +115,12 @@ export default function NotificationItem({ notification }) {
     // Navigate to the appropriate page
     if (notification.type === 'follow' && notification.targetPageId) {
       router.push(`/${notification.targetPageId}`);
-    } else if (notification.type === 'link' && notification.targetPageId) {
-      router.push(`/${notification.targetPageId}`);
+    } else if (notification.type === 'link') {
+      // Navigate to the source page (the page that contains the link), not the target page
+      const sourcePageId = notification.metadata?.sourcePageId || notification.sourcePageId;
+      if (sourcePageId) {
+        router.push(`/${sourcePageId}`);
+      }
     } else if (notification.type === 'append') {
       // For append notifications, navigate to the source page
       if (notification.sourcePageId) {
@@ -96,6 +136,19 @@ export default function NotificationItem({ notification }) {
       // For group invitations, navigate to the group page
       if (notification.groupId) {
         router.push(`/group/${notification.groupId}`);
+      }
+    } else if (notification.type === 'payout_initiated' || notification.type === 'payout_processing' || notification.type === 'payout_completed' || notification.type === 'payout_failed') {
+      // For payout notifications, navigate to earnings page
+      router.push('/settings/earnings');
+    } else if (notification.type === 'allocation_threshold') {
+      // For allocation threshold notifications, navigate to fund account page
+      router.push('/settings/fund-account');
+    } else if (notification.type === 'system_announcement') {
+      // For system announcements, navigate to the action URL if provided
+      if (notification.metadata?.actionUrl?.startsWith('/')) {
+        router.push(notification.metadata.actionUrl);
+      } else if (notification.metadata?.actionUrl) {
+        window.open(notification.metadata.actionUrl, '_blank');
       }
     }
   };
@@ -469,6 +522,138 @@ export default function NotificationItem({ notification }) {
           </div>
         );
 
+      case 'payout_initiated':
+        return (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1 text-foreground">
+              {notification.title || 'Payout Initiated'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `Your payout of $${((notification.metadata?.amountCents || 0) / 100).toFixed(2)} has been initiated and is being processed.`}
+            </p>
+            {notification.metadata?.amountCents && (
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
+                <span>Amount: ${(notification.metadata.amountCents / 100).toFixed(2)}</span>
+                {notification.metadata?.expectedArrival && (
+                  <span>Expected: {new Date(notification.metadata.expectedArrival).toLocaleDateString()}</span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                router.push('/settings/earnings');
+              }}
+              className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+            >
+              View Earnings
+            </button>
+          </div>
+        );
+
+      case 'payout_processing':
+        return (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1 text-foreground">
+              {notification.title || 'Payout Processing'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `Your payout of $${((notification.metadata?.amountCents || 0) / 100).toFixed(2)} is being processed by your bank.`}
+            </p>
+            {notification.metadata?.amountCents && (
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
+                <span>Amount: ${(notification.metadata.amountCents / 100).toFixed(2)}</span>
+                {notification.metadata?.expectedArrival && (
+                  <span>Expected: {new Date(notification.metadata.expectedArrival).toLocaleDateString()}</span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'payout_completed':
+        return (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1 text-green-600 dark:text-green-500">
+              {notification.title || 'Payout Completed'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `Your payout of $${((notification.metadata?.amountCents || 0) / 100).toFixed(2)} has been deposited to your bank account.`}
+            </p>
+            {notification.metadata?.amountCents && (
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
+                <span>Amount: ${(notification.metadata.amountCents / 100).toFixed(2)}</span>
+                {notification.metadata?.completedAt && (
+                  <span>Completed: {new Date(notification.metadata.completedAt).toLocaleDateString()}</span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'payout_failed':
+        return (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1 text-destructive">
+              {notification.title || 'Payout Failed'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `Your payout of $${((notification.metadata?.amountCents || 0) / 100).toFixed(2)} failed. Please check your bank account details.`}
+            </p>
+            {notification.metadata?.amountCents && (
+              <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
+                <span>Amount: ${(notification.metadata.amountCents / 100).toFixed(2)}</span>
+                {notification.metadata?.failureReason && (
+                  <span>Reason: {notification.metadata.failureReason}</span>
+                )}
+              </div>
+            )}
+            {!notification.read && (
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    router.push('/settings/earnings');
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Update Bank Details
+                </button>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'system_announcement':
+        return (
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium mb-1 text-primary">
+              {notification.title || 'Announcement'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || 'New platform update available.'}
+            </p>
+            {notification.metadata?.actionUrl && !notification.read && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (notification.metadata?.actionUrl?.startsWith('/')) {
+                    router.push(notification.metadata.actionUrl);
+                  } else if (notification.metadata?.actionUrl) {
+                    window.open(notification.metadata.actionUrl, '_blank');
+                  }
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {notification.metadata?.actionLabel || 'Learn More'}
+              </button>
+            )}
+          </div>
+        );
+
       default:
         // For unknown notification types, provide more context based on available data
         return (
@@ -513,13 +698,23 @@ export default function NotificationItem({ notification }) {
     >
       <div className="flex justify-between items-start">
         <div className="flex items-center flex-1">
-          {/* Blue dot indicator for unread notifications - vertically centered */}
-          <div className="flex-shrink-0 mr-3 flex items-center h-full">
-            {isUnread ? (
-              <div className="w-2 h-2 bg-primary rounded-full" style={{ backgroundColor: '#1768FF' }}></div>
-            ) : (
-              <div className="w-2 h-2 bg-gray-300 rounded-full opacity-30"></div>
-            )}
+          {/* Notification type icon with unread indicator */}
+          <div className="flex-shrink-0 mr-3 flex items-center h-full relative">
+            {(() => {
+              const { icon, color } = getNotificationTypeIcon(notification.type);
+              return (
+                <div className="relative">
+                  <Icon name={icon} size={20} className={cn(color, isUnread ? 'opacity-100' : 'opacity-50')} />
+                  {/* Unread dot overlay */}
+                  {isUnread && (
+                    <div
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-background"
+                      style={{ backgroundColor: '#1768FF' }}
+                    />
+                  )}
+                </div>
+              );
+            })()}
           </div>
           <div className="flex-1">
             {renderNotificationContent()}

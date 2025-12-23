@@ -96,7 +96,13 @@ export default function SameTitlePages({
     return null; // Don't show on error
   }
 
-  // Show card even when empty (with empty state)
+  // If owner and no other users have written about this topic, hide completely
+  // (Owner doesn't need to see "no one else wrote about this" on their own page)
+  if (isOwner && pages.length === 0) {
+    return null;
+  }
+
+  // Show card when there are pages, or when viewing someone else's page (show "Write your own" button)
   return (
     <div className={`wewrite-card ${className}`}>
       <div className="flex items-center justify-between mb-3">

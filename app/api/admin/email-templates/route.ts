@@ -15,6 +15,7 @@ import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 // This is needed because cron job IDs don't always match template IDs
 const CRON_TO_TEMPLATE_MAP: Record<string, string> = {
   'username-reminder': 'choose-username',
+  'first-page-activation': 'first-page-activation',
   'email-verification-reminder': 'verification-reminder',
   // Cron jobs that process data but don't send user-facing emails
   // Map to generic/system templates for preview purposes

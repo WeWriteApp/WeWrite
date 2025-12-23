@@ -26,6 +26,14 @@ import {
   SideDrawerDescription,
 } from "../../components/ui/side-drawer";
 import { Button } from "../../components/ui/button";
+import { Checkbox } from "../../components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 
 type FinancialInfo = {
   hasSubscription: boolean;
@@ -213,10 +221,8 @@ export default function AdminUsersPage() {
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
-  const [showColumnConfig, setShowColumnConfig] = useState(false);
-  // Drag state for column reordering in dropdown
-  const [columnDragId, setColumnDragId] = useState<string | null>(null);
-  const [columnDragOverId, setColumnDragOverId] = useState<string | null>(null);
+  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -507,34 +513,23 @@ export default function AdminUsersPage() {
     }
   }, [columns, visibleColumns.length]);
 
-  const moveColumn = (fromId: string, toId: string) => {
-    setVisibleColumns((prev) => {
-      const from = prev.indexOf(fromId);
-      const to = prev.indexOf(toId);
-      if (from === -1 || to === -1 || from === to) return prev;
-      const next = [...prev];
-      next.splice(from, 1);
-      next.splice(to, 0, fromId);
-      return next;
-    });
-  };
-
-  const moveColumnStep = (id: string, dir: "up" | "down") => {
-    setVisibleColumns((prev) => {
-      const idx = prev.indexOf(id);
-      if (idx === -1) return prev;
-      const swapWith = dir === "up" ? idx - 1 : idx + 1;
-      if (swapWith < 0 || swapWith >= prev.length) return prev;
-      const next = [...prev];
-      [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
-      return next;
-    });
-  };
-
   const toggleColumn = (id: string) => {
     setVisibleColumns((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
+  };
+
+  const reorderColumn = (fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setVisibleColumns((prev) => {
+      const fromIndex = prev.indexOf(fromId);
+      const toIndex = prev.indexOf(toId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+      const newOrder = [...prev];
+      newOrder.splice(fromIndex, 1);
+      newOrder.splice(toIndex, 0, fromId);
+      return newOrder;
+    });
   };
 
   const activeColumns = columns.filter((c) => visibleColumns.includes(c.id));
@@ -1064,69 +1059,99 @@ export default function AdminUsersPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
           />
-          <div className="relative">
-            <Button variant="outline" size="sm" onClick={() => setShowColumnConfig((v) => !v)}>
-              Columns
-            </Button>
-            {showColumnConfig && (
-              <div className="absolute right-0 mt-2 z-50 rounded-lg border border-border/60 bg-popover p-3 shadow-lg w-56 space-y-2">
-                <div className="text-sm font-medium">Visible columns</div>
-                <div className="flex flex-col gap-2 max-h-72 overflow-auto">
-                  {visibleColumns.map((colId) => {
-                    const col = columns.find((c) => c.id === colId);
-                    if (!col) return null;
-                    return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Icon name="Columns3" size={16} className="mr-2" />
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="flex items-center justify-between">
+                <span>Visible columns</span>
+                <span className="text-xs text-muted-foreground font-normal">Drag to reorder</span>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="max-h-80 overflow-auto py-1">
+                {/* Visible columns - draggable and in order */}
+                {visibleColumns.map((colId) => {
+                  const col = columns.find((c) => c.id === colId);
+                  if (!col) return null;
+                  return (
+                    <div
+                      key={col.id}
+                      draggable
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        setDraggedColumnId(col.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (draggedColumnId && draggedColumnId !== col.id) {
+                          setDragOverColumnId(col.id);
+                        }
+                      }}
+                      onDragLeave={() => {
+                        setDragOverColumnId(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (draggedColumnId && draggedColumnId !== col.id) {
+                          reorderColumn(draggedColumnId, col.id);
+                        }
+                        setDraggedColumnId(null);
+                        setDragOverColumnId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedColumnId(null);
+                        setDragOverColumnId(null);
+                      }}
+                      className={`
+                        flex items-center gap-2 px-2 py-1.5 rounded-md cursor-grab active:cursor-grabbing
+                        transition-all duration-150
+                        ${draggedColumnId === col.id ? 'opacity-50 scale-95' : ''}
+                        ${dragOverColumnId === col.id ? 'bg-accent/50 ring-2 ring-primary/30' : 'hover:bg-accent/50'}
+                      `}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Icon name="GripVertical" size={14} className="text-muted-foreground flex-shrink-0" />
+                      <Checkbox
+                        checked={true}
+                        onCheckedChange={() => toggleColumn(col.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className="text-sm flex-1">{col.label}</span>
+                    </div>
+                  );
+                })}
+
+                {/* Hidden columns section */}
+                {columns.filter(c => !visibleColumns.includes(c.id)).length > 0 && (
+                  <>
+                    <DropdownMenuSeparator className="my-2" />
+                    <div className="px-2 py-1 text-xs text-muted-foreground">Hidden columns</div>
+                    {columns.filter(c => !visibleColumns.includes(c.id)).map((col) => (
                       <div
                         key={col.id}
-                        className={`flex items-center justify-between gap-2 text-xs px-2 py-1 rounded hover:bg-muted/50 ${
-                          columnDragOverId === col.id ? 'ring-1 ring-primary' : ''
-                        } ${columnDragId === col.id ? 'opacity-60' : ''}`}
-                        draggable
-                        onDragStart={() => setColumnDragId(col.id)}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = "move";
-                          setColumnDragOverId(col.id);
-                        }}
-                        onDrop={() => {
-                          if (columnDragId && columnDragId !== col.id) {
-                            moveColumn(columnDragId, col.id);
-                          }
-                          setColumnDragId(null);
-                          setColumnDragOverId(null);
-                        }}
-                        onDragEnd={() => {
-                          setColumnDragId(null);
-                          setColumnDragOverId(null);
-                        }}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent/50 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={visibleColumns.includes(col.id)}
-                            onChange={() => toggleColumn(col.id)}
-                          />
-                          {col.label}
-                        </label>
-                        <Icon name="GripVertical" size={12} className="text-muted-foreground cursor-grab" />
+                        <div className="w-[14px]" /> {/* Spacer for alignment */}
+                        <Checkbox
+                          checked={false}
+                          onCheckedChange={() => toggleColumn(col.id)}
+                        />
+                        <span className="text-sm text-muted-foreground flex-1">{col.label}</span>
                       </div>
-                    );
-                  })}
-                  {/* Hidden columns appear below for toggling visibility */}
-                  {columns.filter(c => !visibleColumns.includes(c.id)).map((col) => (
-                    <label key={col.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-muted/50">
-                      <input
-                        type="checkbox"
-                        checked={visibleColumns.includes(col.id)}
-                        onChange={() => toggleColumn(col.id)}
-                      />
-                      {col.label}
-                    </label>
-                  ))}
-                </div>
+                    ))}
+                  </>
+                )}
               </div>
-            )}
-          </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
           {status && (

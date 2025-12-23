@@ -251,8 +251,8 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
 
     if (error) {
       await logEmailSend({
-        templateId: 'notification',
-        templateName: 'Notification',
+        templateId: 'generic-notification',
+        templateName: 'Generic Notification',
         recipientEmail: to,
         recipientUserId: userId,
         recipientUsername: username,
@@ -265,8 +265,8 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
     }
 
     await logEmailSend({
-      templateId: 'notification',
-      templateName: 'Notification',
+      templateId: 'generic-notification',
+      templateName: 'Generic Notification',
       recipientEmail: to,
       recipientUserId: userId,
       recipientUsername: username,
@@ -340,7 +340,7 @@ export const sendPayoutSetupReminder = async (options: {
 
     if (error) {
       await logEmailSend({
-        templateId: 'payout-reminder',
+        templateId: 'payout-setup-reminder',
         templateName: 'Payout Setup Reminder',
         recipientEmail: options.to,
         recipientUserId: options.userId,
@@ -354,7 +354,7 @@ export const sendPayoutSetupReminder = async (options: {
     }
 
     await logEmailSend({
-      templateId: 'payout-reminder',
+      templateId: 'payout-setup-reminder',
       templateName: 'Payout Setup Reminder',
       recipientEmail: options.to,
       recipientUserId: options.userId,
@@ -620,8 +620,8 @@ export const sendSecurityAlert = async (options: {
 
     if (error) {
       await logEmailSend({
-        templateId: 'security-alert',
-        templateName: 'Security Alert',
+        templateId: 'account-security',
+        templateName: 'Account Security',
         recipientEmail: options.to,
         recipientUserId: options.userId,
         recipientUsername: options.username,
@@ -635,8 +635,8 @@ export const sendSecurityAlert = async (options: {
     }
 
     await logEmailSend({
-      templateId: 'security-alert',
-      templateName: 'Security Alert',
+      templateId: 'account-security',
+      templateName: 'Account Security',
       recipientEmail: options.to,
       recipientUserId: options.userId,
       recipientUsername: options.username,

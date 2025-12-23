@@ -42,15 +42,10 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
       {/* Fixed header with back/logo/share */}
       <UserProfileHeader username={profile.username} />
 
-      {/* Content area - padding top to account for fixed UserProfileHeader height + banner stack */}
-      <div
-        className="space-y-4"
-        style={{ paddingTop: 'calc(var(--banner-stack-height, 0px) + 56px)' }}
-      >
-        {/* Profile header - separate card */}
-        <div className="wewrite-card pb-4">
-          {/* Username row */}
-          <div className="flex flex-col items-center">
+      {/* BODY: TOP SECTION - Profile info card */}
+      <div className="wewrite-card pb-4">
+        {/* Username row */}
+        <div className="flex flex-col items-center">
           <div className="flex items-center justify-center gap-2 mb-3">
             <UsernameBadge
               userId={profile.uid}
@@ -63,32 +58,27 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
             />
           </div>
 
-            {/* Action buttons - responsive horizontal/vertical layout */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-2">
-              {/* Follow button - only show for other users */}
-              {!isCurrentUser && (
-                <UserFollowButton
-                  userId={profile.uid}
-                  username={profile.username}
-                  size="md"
-                  variant="outline"
-                  className="w-full sm:w-auto min-w-[140px] h-10"
-                />
-              )}
-            </div>
+          {/* Action buttons - responsive horizontal/vertical layout */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-2">
+            {/* Follow button - only show for other users */}
+            {!isCurrentUser && (
+              <UserFollowButton
+                userId={profile.uid}
+                username={profile.username}
+                size="md"
+                variant="outline"
+                className="w-full sm:w-auto min-w-[140px] h-10"
+              />
+            )}
           </div>
-
-          {/* Profile Stats with sparklines */}
-          <UserProfileStats userId={profile.uid} createdAt={profile.createdAt} />
         </div>
 
-
-
-
-
-        {/* Profile tabs and content - outside of card */}
-        <UserProfileTabs profile={profile} />
+        {/* Profile Stats with sparklines */}
+        <UserProfileStats userId={profile.uid} createdAt={profile.createdAt} />
       </div>
+
+      {/* Tabs and tab content */}
+      <UserProfileTabs profile={profile} />
 
       {/* Floating allocation bar - only show on other people's pages */}
       {!isCurrentUser && (

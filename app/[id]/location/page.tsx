@@ -46,12 +46,34 @@ function LocationPickerContent() {
         // Error parsing location data
       }
     }
+
+    // Get canEdit param directly from URL
+    const canEditParam = searchParams.get('canEdit');
+    if (canEditParam === 'true') {
+      setIsOwner(true);
+    }
+
+    // Get title param from URL
+    const titleParam = searchParams.get('title');
+    if (titleParam) {
+      setPageTitle(decodeURIComponent(titleParam));
+    }
   }, [searchParams]);
 
-  // Fetch page data to get title and ownership info
+  // Fetch page data only if we don't have title from URL params
+  // The canEdit and title params from URL are the source of truth - they come from
+  // the component that knows about the current user's permissions
   useEffect(() => {
     async function fetchPageData() {
       if (!pageId) {
+        setLoading(false);
+        return;
+      }
+
+      // Only fetch if we don't already have the title from URL params
+      const titleParam = searchParams.get('title');
+      if (titleParam) {
+        // We already have title and canEdit from URL params, no need to fetch
         setLoading(false);
         return;
       }
@@ -60,19 +82,23 @@ function LocationPickerContent() {
         const response = await fetch(`/api/pages/${pageId}?userId=dev_admin_user`);
         if (response.ok) {
           const pageData = await response.json();
-          setPageTitle(pageData.title || 'Untitled');
+          // Only set title if we don't already have one from URL params
+          if (!pageTitle) {
+            setPageTitle(pageData.title || 'Untitled');
+          }
 
-          // Check if current user is the owner by checking if we can edit
-          // For dev environment, assume dev_admin_user is always the owner
-          const currentUser = await fetch('/api/auth/session');
-          if (currentUser.ok) {
-            const sessionData = await currentUser.json();
-            const isPageOwner = sessionData.user?.uid === pageData.userId;
-            setIsOwner(isPageOwner);
-          } else {
-            // In dev environment, if no session, assume dev_admin_user for pages owned by dev_admin_user
-            const isDevPage = pageData.userId === 'dev_admin_user';
-            setIsOwner(isDevPage);
+          // Only check ownership if canEdit wasn't passed in URL
+          const canEditParam = searchParams.get('canEdit');
+          if (!canEditParam) {
+            const currentUser = await fetch('/api/auth/session');
+            if (currentUser.ok) {
+              const sessionData = await currentUser.json();
+              const isPageOwner = sessionData.user?.uid === pageData.userId;
+              setIsOwner(isPageOwner);
+            } else {
+              const isDevPage = pageData.userId === 'dev_admin_user';
+              setIsOwner(isDevPage);
+            }
           }
         }
       } catch (error) {
@@ -83,7 +109,7 @@ function LocationPickerContent() {
     }
 
     fetchPageData();
-  }, [pageId]);
+  }, [pageId, searchParams, pageTitle]);
 
   const handleSave = async (location: Location | null) => {
     if (!pageId) {
@@ -108,15 +134,20 @@ function LocationPickerContent() {
 
       await response.json();
 
-      // Navigate back to the page and refresh to show updated location
-      router.push(returnPath);
+      // Navigate back to the page with the new location in URL params for immediate update
+      // The page will read this and update state before the refresh completes
+      const locationParam = location ? encodeURIComponent(JSON.stringify(location)) : '';
+      const separator = returnPath.includes('?') ? '&' : '?';
+      router.push(`${returnPath}${separator}updatedLocation=${locationParam}`);
       // Force a refresh to reload the page data with the new location
       setTimeout(() => {
         router.refresh();
       }, 100);
     } catch (error) {
-      // Still navigate back even if save failed
-      router.push(returnPath);
+      console.error('Failed to save location:', error);
+      // Show error to user via alert (could be improved with toast)
+      alert(error instanceof Error ? error.message : 'Failed to save location. Please try again.');
+      // Do NOT navigate back on error - let user try again
     }
   };
 

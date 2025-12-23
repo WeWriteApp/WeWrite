@@ -236,7 +236,8 @@ async function createLinkNotifications(
                         username: targetUsername,
                         linkedPageTitle: targetPageData.title || 'Untitled',
                         linkerUsername: sourceUsername,
-                        linkerPageTitle: sourcePageTitle
+                        linkerPageTitle: sourcePageTitle,
+                        linkerPageId: sourcePageId
                       },
                       userId: targetUserId
                     })

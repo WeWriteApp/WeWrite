@@ -1,0 +1,183 @@
+/**
+ * First Page Activation Email Cron Job
+ *
+ * Sends reminder emails to users who haven't written their first page yet.
+ * Run daily via Vercel cron to encourage new users to start writing.
+ *
+ * Add to vercel.json:
+ * {
+ *   "crons": [{
+ *     "path": "/api/cron/first-page-activation",
+ *     "schedule": "0 13 * * *"
+ *   }]
+ * }
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
+import { sendTemplatedEmail } from '../../../services/emailService';
+import { randomUUID } from 'crypto';
+
+export const maxDuration = 120; // 2 minute timeout
+
+/**
+ * GET handler for Vercel cron jobs
+ */
+export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
+  try {
+    // Verify cron access
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    const cronApiKey = process.env.CRON_API_KEY;
+
+    const isAuthorized =
+      (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+      (cronApiKey && authHeader === `Bearer ${cronApiKey}`);
+
+    if (!isAuthorized && process.env.NODE_ENV === 'production') {
+      console.warn('[FIRST PAGE ACTIVATION] Unauthorized access attempt');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    console.log('[FIRST PAGE ACTIVATION] Starting first page activation email processing');
+
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+    }
+
+    const db = admin.firestore();
+    const rtdb = admin.database();
+
+    // Calculate date range - users who signed up 2-7 days ago
+    // We give them 2 days to explore before sending this reminder
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+    // Find users who signed up recently
+    const usersSnapshot = await db.collection(getCollectionName('users'))
+      .where('createdAt', '>=', oneWeekAgo)
+      .where('createdAt', '<=', twoDaysAgo)
+      .limit(200)
+      .get();
+
+    console.log(`[FIRST PAGE ACTIVATION] Found ${usersSnapshot.size} recent users to check`);
+
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+    let hasPages = 0;
+    let alreadySent = 0;
+    let optedOut = 0;
+
+    for (const userDoc of usersSnapshot.docs) {
+      try {
+        const userData = userDoc.data();
+        const userId = userDoc.id;
+
+        // Skip users without email
+        if (!userData.email) {
+          skipped++;
+          continue;
+        }
+
+        // Skip users who already received this reminder
+        if (userData.firstPageActivationSent) {
+          alreadySent++;
+          continue;
+        }
+
+        // Skip users who opted out of engagement emails
+        if (userData.emailPreferences?.engagement === false) {
+          optedOut++;
+          continue;
+        }
+
+        // Check if user has any pages in RTDB
+        const userPagesRef = rtdb.ref(`pages`);
+        const userPagesSnapshot = await userPagesRef
+          .orderByChild('authorId')
+          .equalTo(userId)
+          .limitToFirst(1)
+          .once('value');
+
+        if (userPagesSnapshot.exists()) {
+          // User already has pages, skip them
+          hasPages++;
+          continue;
+        }
+
+        // Generate email settings token for one-click unsubscribe
+        const emailSettingsToken = userData.emailSettingsToken || randomUUID();
+
+        // If user doesn't have an email settings token, save it
+        if (!userData.emailSettingsToken) {
+          await userDoc.ref.update({
+            emailSettingsToken
+          });
+        }
+
+        // Send the first page activation email
+        const result = await sendTemplatedEmail({
+          templateId: 'first-page-activation',
+          to: userData.email,
+          data: {
+            username: userData.username || userData.displayName || 'there',
+            emailSettingsToken
+          },
+          userId
+        });
+
+        if (result.success) {
+          // Mark that we sent the reminder
+          await userDoc.ref.update({
+            firstPageActivationSent: true,
+            firstPageActivationSentAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          sent++;
+        } else {
+          failed++;
+        }
+
+        // Rate limit
+        if (sent % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+      } catch (userError) {
+        console.error(`[FIRST PAGE ACTIVATION] Error processing user ${userDoc.id}:`, userError);
+        failed++;
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[FIRST PAGE ACTIVATION] Completed in ${duration}ms - Sent: ${sent}, Has Pages: ${hasPages}, Already Sent: ${alreadySent}, Opted Out: ${optedOut}, Skipped: ${skipped}, Failed: ${failed}`);
+
+    return NextResponse.json({
+      success: true,
+      summary: {
+        totalChecked: usersSnapshot.size,
+        sent,
+        hasPages,
+        alreadySent,
+        optedOut,
+        skipped,
+        failed,
+        durationMs: duration
+      }
+    });
+
+  } catch (error) {
+    console.error('[FIRST PAGE ACTIVATION] Error:', error);
+    return NextResponse.json({
+      error: 'Failed to process first page activation emails',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}

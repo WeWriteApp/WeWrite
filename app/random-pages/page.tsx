@@ -10,6 +10,11 @@ import { Button } from '../components/ui/button';
 import { RandomPagesSkeleton } from '../components/ui/skeleton-loaders';
 import { useFeatureFlags } from '../contexts/FeatureFlagContext';
 import { toast } from '../components/ui/use-toast';
+import {
+  SegmentedControl,
+  SegmentedControlList,
+  SegmentedControlTrigger,
+} from '../components/ui/segmented-control';
 
 /**
  * Random Pages Full Page Experience
@@ -25,6 +30,14 @@ export default function RandomPagesPage() {
   const { isEnabled } = useFeatureFlags();
   const lineFeaturesEnabled = isEnabled('line_numbers');
   const [mounted, setMounted] = useState(false);
+  // View mode: 'cards' (default) or 'list' (dense wrapped pills)
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('randomPages_viewMode');
+      return saved === 'list' ? 'list' : 'cards';
+    }
+    return 'cards';
+  });
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(() => {
     // Initialize from localStorage if available
@@ -66,8 +79,10 @@ export default function RandomPagesPage() {
 
     // Load preferences from localStorage on mount
     if (typeof window !== 'undefined') {
-      const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
-      if (lineFeaturesEnabled && savedDenseModePreference === 'true') {
+      // Load view mode and sync with denseMode
+      const savedViewMode = localStorage.getItem('randomPages_viewMode');
+      if (savedViewMode === 'list') {
+        setViewMode('list');
         setDenseMode(true);
       }
 
@@ -79,20 +94,43 @@ export default function RandomPagesPage() {
     }
   }, []);
 
-  // Handle dense mode toggle change
-  const handleDenseModeToggle = () => {
-    if (!lineFeaturesEnabled) return;
-    const newValue = !denseMode;
-    setDenseMode(newValue);
+  // Handle view mode change from segmented controller
+  const handleViewModeChange = (mode: string) => {
+    const newMode = mode as 'cards' | 'list';
+    setViewMode(newMode);
+    const newDenseMode = newMode === 'list';
+    setDenseMode(newDenseMode);
 
     // Persist to localStorage
     if (typeof window !== 'undefined') {
-      localStorage.setItem('randomPages_denseMode', String(newValue));
+      localStorage.setItem('randomPages_viewMode', newMode);
+      localStorage.setItem('randomPages_denseMode', String(newDenseMode));
+    }
+
+    // Trigger display mode change event for RandomPages component
+    const denseModeEvent = new CustomEvent('randomPagesDenseModeChange', {
+      detail: { denseMode: newDenseMode }
+    });
+    window.dispatchEvent(denseModeEvent);
+  };
+
+  // Handle dense mode toggle change (kept for filter drawer compatibility)
+  const handleDenseModeToggle = () => {
+    if (!lineFeaturesEnabled) return;
+    const newDenseMode = !denseMode;
+    const newViewMode = newDenseMode ? 'list' : 'cards';
+    setDenseMode(newDenseMode);
+    setViewMode(newViewMode);
+
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('randomPages_denseMode', String(newDenseMode));
+      localStorage.setItem('randomPages_viewMode', newViewMode);
     }
 
     // Trigger display mode change event
     const denseModeEvent = new CustomEvent('randomPagesDenseModeChange', {
-      detail: { denseMode: newValue }
+      detail: { denseMode: newDenseMode }
     });
     window.dispatchEvent(denseModeEvent);
   };
@@ -247,6 +285,20 @@ export default function RandomPagesPage() {
 
           {/* Controls */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* View Mode Segmented Control */}
+            <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
+              <SegmentedControlList className="h-8 w-[120px]">
+                <SegmentedControlTrigger value="cards" className="text-xs px-2">
+                  <Icon name="Grid3X3" size={14} className="mr-1" />
+                  Cards
+                </SegmentedControlTrigger>
+                <SegmentedControlTrigger value="list" className="text-xs px-2">
+                  <Icon name="List" size={14} className="mr-1" />
+                  List
+                </SegmentedControlTrigger>
+              </SegmentedControlList>
+            </SegmentedControl>
+
             {/* Shuffle Button */}
             <Button
               variant="secondary"

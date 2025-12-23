@@ -35,6 +35,7 @@ const createIconComponent = (name: IconName) => {
 const Wallet = createIconComponent('Wallet');
 const Coins = createIconComponent('DollarSign'); // Using DollarSign as Coins equivalent
 const DollarSign = createIconComponent('DollarSign');
+const Landmark = createIconComponent('Landmark');
 const User = createIconComponent('User');
 const Palette = createIconComponent('Palette');
 const Bell = createIconComponent('Bell');
@@ -81,7 +82,7 @@ const BASE_SECTIONS: SettingsSection[] = [
   {
     id: 'earnings',
     title: 'Get paid',
-    icon: DollarSign,
+    icon: Landmark,
     href: '/settings/earnings',
     requiresPayments: true
   },

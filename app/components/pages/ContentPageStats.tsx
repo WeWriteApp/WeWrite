@@ -178,17 +178,35 @@ export default function ContentPageStats({
     router.push(`/${pageId}/versions`);
   };
 
-  // Handle loading state
+  // Loading state - show cards with titles and loader in body with min-height to prevent layout shift
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-muted/50 rounded-lg p-4 animate-pulse">
-            <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
-            <div className="h-8 bg-muted rounded w-3/4 mb-2"></div>
-            <div className="h-12 bg-muted rounded w-full"></div>
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Views Card Loading - min-height matches loaded state */}
+        <div className="wewrite-card min-h-[52px]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon name="Eye" size={20} className="text-muted-foreground" />
+              <span className="text-sm font-medium">Views</span>
+            </div>
+            <div className="flex items-center">
+              <Icon name="Loader" size={20} />
+            </div>
           </div>
-        ))}
+        </div>
+
+        {/* Recent Edits Card Loading - min-height accounts for potential diff preview */}
+        <div className="wewrite-card min-h-[52px]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon name="Clock" size={20} className="text-muted-foreground" />
+              <span className="text-sm font-medium">Recent Edits</span>
+            </div>
+            <div className="flex items-center">
+              <Icon name="Loader" size={20} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -220,41 +238,43 @@ export default function ContentPageStats({
   return (
     <div className={`mt-8 grid grid-cols-1 ${gridCols} gap-4`}>
       {/* Views Card */}
-      <div className="wewrite-card flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Icon name="Eye" size={20} className="text-muted-foreground" />
-          <span className="text-sm font-medium">Views</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <div className="h-8 w-16 relative">
-              {showSparklines && (
-                <SimpleSparkline
-                  data={stats.viewData.length > 0 ? stats.viewData : Array(24).fill(0)}
-                  height={30}
-                  color={accentColorValue}
-                />
-              )}
-            </div>
-            <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
+      <div className="wewrite-card min-h-[52px]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon name="Eye" size={20} className="text-muted-foreground" />
+            <span className="text-sm font-medium">Views</span>
           </div>
 
-          <div
-            className="text-sm font-medium px-2 py-1 rounded-md"
-            style={{
-              backgroundColor: accentColorValue,
-              color: pillTextColor
-            }}
-          >
-            <AnimatedNumber value={stats.totalViews + (includeCurrentView ? 1 : 0)} />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <div className="h-8 w-16 relative">
+                {showSparklines && (
+                  <SimpleSparkline
+                    data={stats.viewData.length > 0 ? stats.viewData : Array(24).fill(0)}
+                    height={30}
+                    color={accentColorValue}
+                  />
+                )}
+              </div>
+              <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
+            </div>
+
+            <div
+              className="text-sm font-medium px-2 py-1 rounded-md"
+              style={{
+                backgroundColor: accentColorValue,
+                color: pillTextColor
+              }}
+            >
+              <AnimatedNumber value={stats.totalViews + (includeCurrentView ? 1 : 0)} />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Recent Changes Card */}
       <div
-        className="wewrite-card cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors flex flex-col gap-3"
+        className="wewrite-card min-h-[52px] cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors flex flex-col gap-3"
         onClick={handleViewActivity}
       >
         {/* Header with icon, title, and stats */}
@@ -352,7 +372,7 @@ export default function ContentPageStats({
 
       {/* Supporters Card - only show if data is provided */}
       {hasSupporters && (
-        <div className="wewrite-card flex items-center justify-between">
+        <div className="wewrite-card min-h-[52px] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Icon name="Heart" size={20} className="text-muted-foreground" />
             <span className="text-sm font-medium">Supporters</span>

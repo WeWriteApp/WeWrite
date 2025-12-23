@@ -507,6 +507,28 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* System Diagram */}
+            <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">System Diagram</h3>
+                <Icon name="Network" size={16} className="text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Visual overview of system architecture, component layers, and data flows for architectural decisions.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/system-diagram')}
+                >
+                  <Icon name="Network" size={16} />
+                  View System Diagram
+                </Button>
+              </div>
+            </div>
+
             {/* Background Images Management */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">

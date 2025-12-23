@@ -32,7 +32,36 @@ interface MapPickerProps {
   onZoomChange?: (zoom: number) => void;
   disableZoom?: boolean;
   allowPanning?: boolean;
+  originalLocation?: Location | null;
+  accentColor?: string;
 }
+
+// Helper function to create a custom colored marker icon
+const createColoredMarkerIcon = (L: any, color: string, isGhost: boolean = false): any => {
+  const opacity = isGhost ? 0.5 : 1;
+  const strokeColor = isGhost ? '#666' : '#fff';
+  const circleFill = isGhost ? '#888' : '#fff';
+
+  // Create SVG as a data URL for better browser compatibility
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="24" height="36"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24c0-6.627-5.373-12-12-12z" fill="${color}" fill-opacity="${opacity}" stroke="${strokeColor}" stroke-width="1.5"/><circle cx="12" cy="12" r="5" fill="${circleFill}" fill-opacity="${opacity}"/></svg>`;
+
+  const encodedSvg = encodeURIComponent(svg);
+  const dataUrl = `data:image/svg+xml,${encodedSvg}`;
+
+  return L.icon({
+    iconUrl: dataUrl,
+    iconSize: [24, 36],
+    iconAnchor: [12, 36],
+    popupAnchor: [0, -36]
+  });
+};
+
+// Get accent color from CSS variable
+const getAccentColorFromCSS = (): string => {
+  if (typeof window === 'undefined') return '#2563EB';
+  const style = getComputedStyle(document.documentElement);
+  return style.getPropertyValue('--accent-color').trim() || '#2563EB';
+};
 
 const MapPicker: React.FC<MapPickerProps> = ({
   location,
@@ -41,18 +70,24 @@ const MapPicker: React.FC<MapPickerProps> = ({
   readOnly = false,
   showControls = true,
   className = '',
-  initialZoom = 10,
+  initialZoom,
   onZoomChange,
   disableZoom = false,
   allowPanning = true,
+  originalLocation,
+  accentColor,
 }) => {
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const originalMarkerRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
+
+  // Get the actual accent color to use
+  const effectiveAccentColor = accentColor || getAccentColorFromCSS();
 
   // Store initial zoom in a ref so it doesn't cause re-renders
   const initialZoomRef = useRef(initialZoom);
@@ -195,13 +230,35 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
         // Use centralized map view logic
         const mapView = getDefaultMapView(location);
-        const zoom = initialZoomRef.current || mapView.zoom;
+        // Use initialZoom if provided, otherwise use mapView.zoom from config
+        const zoom = initialZoomRef.current !== undefined ? initialZoomRef.current : mapView.zoom;
 
         map.setView(mapView.center, zoom);
 
+        // Get current accent color for markers
+        const currentAccentColor = accentColor || getAccentColorFromCSS();
+
+        // Add original location marker (grey/ghost) if provided and different from current location
+        if (originalLocation) {
+          const isLocationDifferent = !location ||
+            originalLocation.lat !== location.lat ||
+            originalLocation.lng !== location.lng;
+
+          if (isLocationDifferent) {
+            const ghostIcon = createColoredMarkerIcon(L, '#888888', true);
+            const originalMarker = L.marker([originalLocation.lat, originalLocation.lng], {
+              icon: ghostIcon,
+              interactive: false // Not clickable/draggable
+            }).addTo(map);
+            originalMarkerRef.current = originalMarker;
+          }
+        }
+
         // Add marker if location exists
         if (location) {
-          const marker = L.marker([location.lat, location.lng]).addTo(map);
+          // Use accent-colored marker
+          const accentIcon = createColoredMarkerIcon(L, currentAccentColor, false);
+          const marker = L.marker([location.lat, location.lng], { icon: accentIcon }).addTo(map);
           markerRef.current = marker;
 
           // Make marker draggable if not read-only
@@ -236,9 +293,21 @@ const MapPicker: React.FC<MapPickerProps> = ({
               map.removeLayer(markerRef.current);
             }
 
-            // Add new marker
-            const marker = L.marker([lat, lng]).addTo(map);
+            // Add new marker with accent color
+            const clickAccentColor = accentColor || getAccentColorFromCSS();
+            const accentIcon = createColoredMarkerIcon(L, clickAccentColor, false);
+            const marker = L.marker([lat, lng], { icon: accentIcon }).addTo(map);
             markerRef.current = marker;
+
+            // If there's an original location and we just placed the first marker, show the ghost
+            if (originalLocation && !originalMarkerRef.current) {
+              const ghostIcon = createColoredMarkerIcon(L, '#888888', true);
+              const originalMarker = L.marker([originalLocation.lat, originalLocation.lng], {
+                icon: ghostIcon,
+                interactive: false
+              }).addTo(map);
+              originalMarkerRef.current = originalMarker;
+            }
 
             // Make marker draggable
             marker.dragging.enable();
@@ -319,6 +388,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         markerRef.current = null;
+        originalMarkerRef.current = null;
         mapInitializedRef.current = false;
       }
     };
@@ -326,7 +396,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
   // Handle location changes - only update marker, not map view
   useEffect(() => {
-    if (!mapInstanceRef.current || !location) return;
+    if (!mapInstanceRef.current || !location || !L) return;
 
     const map = mapInstanceRef.current;
 
@@ -334,7 +404,10 @@ const MapPicker: React.FC<MapPickerProps> = ({
     if (markerRef.current) {
       markerRef.current.setLatLng([location.lat, location.lng]);
     } else {
-      const marker = L.marker([location.lat, location.lng]).addTo(map);
+      // Create new accent-colored marker
+      const currentAccentColor = accentColor || getAccentColorFromCSS();
+      const accentIcon = createColoredMarkerIcon(L, currentAccentColor, false);
+      const marker = L.marker([location.lat, location.lng], { icon: accentIcon }).addTo(map);
       markerRef.current = marker;
 
       if (!readOnly && onChange) {
@@ -353,7 +426,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
         });
       }
     }
-  }, [location, readOnly, onChange]);
+  }, [location, readOnly, onChange, accentColor]);
 
   const handleCenterOnLocation = () => {
     if (location && mapInstanceRef.current) {

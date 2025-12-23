@@ -246,4 +246,59 @@ export function SkeletonCard({ className }: { className?: string }) {
   );
 }
 
+/**
+ * StatsCardSkeleton - Skeleton for stats cards with icon, label, sparkline and value
+ * Used in ContentPageStats and similar components
+ */
+export function StatsCardSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn(
+      "wewrite-card flex items-center justify-between animate-pulse",
+      className
+    )}>
+      {/* Left side: icon + label */}
+      <div className="flex items-center gap-2">
+        <div className="h-5 w-5 bg-muted rounded" />
+        <div className="h-4 bg-muted rounded w-16" />
+      </div>
+      {/* Right side: sparkline + value pill */}
+      <div className="flex items-center gap-2">
+        <div className="h-8 w-16 bg-muted rounded" />
+        <div className="h-6 w-10 bg-muted rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * StatsCarouselSkeleton - Skeleton for horizontal scrolling stats carousel
+ * Used in UserProfileStats and similar components
+ */
+export function StatsCarouselSkeleton({
+  count = 4,
+  className
+}: {
+  count?: number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("overflow-hidden rounded-xl", className)}>
+      <div className="flex gap-2">
+        {Array.from({ length: count }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 px-3 py-2 rounded-xl bg-muted animate-pulse flex-shrink-0"
+          >
+            <div className="flex flex-col">
+              <div className="h-3 w-12 bg-muted-foreground/20 rounded mb-1" />
+              <div className="h-4 w-8 bg-muted-foreground/20 rounded" />
+            </div>
+            <div className="w-12 h-5 bg-muted-foreground/10 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default LoadingState;

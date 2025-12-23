@@ -210,6 +210,7 @@ export default function ContentPageFooter({
                   canEdit={isOwner}
                   onLocationChange={onLocationChange}
                   pageId={page.id}
+                  pageTitle={page.title}
                 />
               )}
             </div>

@@ -71,22 +71,30 @@ export default function UsdFundingTierSlider({
   const [checkoutDrawerOpen, setCheckoutDrawerOpen] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<'update' | 'cancel' | null>(null);
+  const hasAppliedTopoff = useRef(false);
 
   const currentSubscriptionAmount = currentSubscription?.amount || 0;
 
-  // Reset editing state when subscription changes
+  // Reset editing state when subscription changes (but not if defaultExpanded)
   useEffect(() => {
-    setIsEditing(false);
-    setCustomAmount('');
-    setCustomError('');
-  }, [currentSubscriptionAmount]);
-
-  // Initialize customAmount when defaultExpanded is true
-  useEffect(() => {
-    if (defaultExpanded && currentSubscriptionAmount > 0 && !customAmount) {
-      setCustomAmount(currentSubscriptionAmount.toFixed(2));
+    if (!defaultExpanded) {
+      setIsEditing(false);
+      setCustomAmount('');
+      setCustomError('');
     }
-  }, [defaultExpanded, currentSubscriptionAmount]);
+  }, [currentSubscriptionAmount, defaultExpanded]);
+
+  // Handle defaultExpanded prop - when true, expand edit mode and set amount to +$10
+  // This runs when defaultExpanded is true AND we have a valid subscription amount
+  useEffect(() => {
+    if (defaultExpanded && currentSubscriptionAmount > 0 && !hasAppliedTopoff.current) {
+      hasAppliedTopoff.current = true;
+      setIsEditing(true);
+      const topoffAmount = currentSubscriptionAmount + 10;
+      setCustomAmount(topoffAmount.toFixed(2));
+      onAmountSelect(topoffAmount);
+    }
+  }, [defaultExpanded, currentSubscriptionAmount, onAmountSelect]);
 
   // Focus input when entering edit mode
   useEffect(() => {

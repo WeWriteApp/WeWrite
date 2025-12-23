@@ -24,6 +24,8 @@ interface FullPageErrorProps {
   onRetry?: () => void;
   /** Additional error info for debugging */
   errorInfo?: any;
+  /** Embedded mode - removes full-screen container for design system previews */
+  embedded?: boolean;
 }
 
 interface ErrorDetails {
@@ -53,7 +55,8 @@ export default function FullPageError({
   showGoHome = true,
   showTryAgain = true,
   onRetry,
-  errorInfo
+  errorInfo,
+  embedded = false
 }: FullPageErrorProps) {
   const [copied, setCopied] = useState(false);
   const [formattedErrorText, setFormattedErrorText] = useState("");
@@ -229,6 +232,67 @@ ${errorInfo ? `Additional Info:\n${JSON.stringify(errorInfo, null, 2)}` : ''}
       handleGoHome();
     }
   };
+
+  // In embedded mode, just render the card without full-screen container
+  if (embedded) {
+    return (
+      <div className="max-w-md w-full wewrite-card p-8 rounded-lg shadow-lg text-center mx-auto">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
+            <Icon name="AlertCircle" size={32} className="text-amber-600 dark:text-amber-400" />
+          </div>
+        </div>
+
+        <h1 className="text-4xl font-bold mb-4">{title}</h1>
+        <p className="text-lg text-muted-foreground mb-8">{message}</p>
+
+        <div className="flex flex-col gap-4 mb-6">
+          {showTryAgain && (
+            <Button
+              size="lg"
+              className="gap-2 w-full"
+              onClick={handleTryAgain}
+            >
+              <Icon name="RefreshCw" size={20} />
+              Try again
+            </Button>
+          )}
+
+          {showGoHome && (
+            <Button
+              variant="secondary"
+              size="lg"
+              className="gap-2 w-full"
+              onClick={handleGoHome}
+            >
+              <Icon name="Home" size={20} />
+              Go Home
+            </Button>
+          )}
+        </div>
+
+        {/* Error Details Section - always expanded */}
+        {(error || formattedErrorText) && (
+          <div className="w-full">
+            <div className="bg-muted p-3 rounded-md mb-3 text-left">
+              <pre className="whitespace-pre-wrap text-xs overflow-auto max-h-48">
+                {formattedErrorText}
+              </pre>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2 w-full"
+              onClick={copyToClipboard}
+            >
+              <Icon name="Copy" size={16} />
+              {copied ? "Copied!" : "Copy Error"}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background relative">

@@ -282,6 +282,50 @@ export async function GET(request: NextRequest) {
         break;
       }
 
+      case 'first-page-activation': {
+        // Users who signed up 2-7 days ago and haven't written their first page
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+        const usersSnapshot = await db.collection(usersCollectionName)
+          .where('createdAt', '>=', oneWeekAgo)
+          .where('createdAt', '<=', twoDaysAgo)
+          .limit(50)
+          .get();
+
+        const rtdb = admin.database();
+
+        for (const doc of usersSnapshot.docs) {
+          const data = doc.data();
+          if (!data.email) continue;
+          if (data.firstPageActivationSent) continue;
+          if (data.emailPreferences?.engagement === false) continue;
+
+          // Check if user has any pages in RTDB
+          const userPagesSnapshot = await rtdb.ref('pages')
+            .orderByChild('authorId')
+            .equalTo(doc.id)
+            .limitToFirst(1)
+            .once('value');
+
+          if (userPagesSnapshot.exists()) continue;
+
+          const createdAt = data.createdAt?.toDate?.() || data.createdAt;
+          const daysAgo = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000) : 0;
+
+          recipients.push({
+            userId: doc.id,
+            email: data.email,
+            username: data.username,
+            type: 'no-first-page',
+            reason: `Signed up ${daysAgo} days ago, no pages yet`
+          });
+        }
+        break;
+      }
+
       default:
         return NextResponse.json({
           success: true,

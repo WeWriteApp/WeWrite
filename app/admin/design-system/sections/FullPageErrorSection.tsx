@@ -23,15 +23,14 @@ export function FullPageErrorSection({ id }: { id: string }) {
       </StateDemo>
 
       <StateDemo label="Interactive Component">
-        <div className="w-full border rounded-lg overflow-hidden bg-background">
-          <FullPageError
-            error={new Error("This is a demo error message for testing purposes. The component displays error details, provides action buttons, and allows copying error info to clipboard.")}
-            title="Something went wrong"
-            message="We're sorry, but there was an error loading this page."
-            showGoBack={false}
-            onRetry={() => alert('Try Again clicked!')}
-          />
-        </div>
+        <FullPageError
+          error={new Error("This is a demo error message for testing purposes. The component displays error details, provides action buttons, and allows copying error info to clipboard.")}
+          title="Something went wrong"
+          message="We're sorry, but there was an error loading this page."
+          showGoBack={false}
+          onRetry={() => alert('Try Again clicked!')}
+          embedded={true}
+        />
       </StateDemo>
 
       <StateDemo label="Props">

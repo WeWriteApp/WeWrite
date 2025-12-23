@@ -12,6 +12,7 @@ import { BordersSeparatorsSection } from './BordersSeparatorsSection';
 import { ButtonSection } from './ButtonSection';
 import { CardSection } from './CardSection';
 import { ColorSystemSection } from './ColorSystemSection';
+import { ContentPageSection } from './ContentPageSection';
 import { ColorTokenReferenceSection } from './ColorTokenReferenceSection';
 import { DrawersModalsSection } from './DrawersModalsSection';
 import { MenuDropdownSection } from './MenuDropdownSection';
@@ -52,6 +53,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'card', label: 'Card', component: CardSection },
   { id: 'color-system', label: 'Color System Controls', component: ColorSystemSection },
   { id: 'color-token-reference', label: 'Color Token Reference', component: ColorTokenReferenceSection },
+  { id: 'content-page', label: 'Content Page', component: ContentPageSection },
   { id: 'drawers-modals', label: 'Drawers & Modals', component: DrawersModalsSection },
   { id: 'menu-dropdown', label: 'Menu (Dropdown)', component: MenuDropdownSection },
   { id: 'menu-sidebar', label: 'Menu (Sidebar)', component: MenuSidebarSection },

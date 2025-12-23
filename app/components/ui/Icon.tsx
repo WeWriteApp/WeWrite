@@ -91,6 +91,7 @@ import {
   CheckCircle as CheckCircleIcon,
   RefreshCw,
   RotateCcw,
+  Undo2,
   DollarSign,
   Banknote,
   Save,
@@ -179,7 +180,7 @@ export type IconName =
   | "Plus" | "Minus" | "Check" | "CheckCheck" | "CheckCircle" | "CheckCircle2"
   | "Edit" | "Edit2" | "Edit3" | "Pencil" | "PenLine"
   | "Save" | "Trash" | "Trash2" | "Copy" | "Download" | "Upload"
-  | "Share" | "Share2" | "Send" | "Reply" | "Refresh" | "RefreshCw" | "RotateCcw"
+  | "Share" | "Share2" | "Send" | "Reply" | "Refresh" | "RefreshCw" | "RotateCcw" | "Undo2"
   // Status & Feedback
   | "Info" | "Warning" | "Error" | "Success"
   | "AlertCircle" | "AlertTriangle" | "HelpCircle"
@@ -297,6 +298,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Refresh: RefreshCw,
   RefreshCw: RefreshCw,
   RotateCcw: RotateCcw,
+  Undo2: Undo2,
 
   // Status & Feedback
   Info: Info,

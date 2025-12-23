@@ -100,11 +100,11 @@ export function getDefaultMapView(location?: { lat: number; lng: number; zoom?: 
       zoom: location.zoom || 15
     };
   }
-  
-  // Default to world view
+
+  // Default to world view centered on US Central timezone (Kansas/Missouri area)
   return {
-    center: [20, 0] as [number, number], // Slightly north to show more land
-    zoom: 2
+    center: [39, -95] as [number, number],
+    zoom: 1
   };
 }
 

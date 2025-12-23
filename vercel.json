@@ -25,6 +25,10 @@
       "schedule": "0 10 * * 1"
     },
     {
+      "path": "/api/cron/first-page-activation",
+      "schedule": "0 13 * * *"
+    },
+    {
       "path": "/api/cron/username-reminder",
       "schedule": "0 14 * * *"
     },

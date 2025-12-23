@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { PillLink } from '../utils/PillLink';
 import { getBacklinks, BacklinkSummary } from '../../firebase/database/backlinks';
+import Link from 'next/link';
 
 interface WhatLinksHereProps {
   pageId: string;
@@ -11,11 +12,22 @@ interface WhatLinksHereProps {
   className?: string;
 }
 
+/**
+ * Helper to check if a username is valid for display
+ * Returns false for empty, null, undefined, "anonymous", "unknown", etc.
+ */
+function isValidUsername(username: string | null | undefined): boolean {
+  if (!username) return false;
+  const invalidUsernames = ['anonymous', 'unknown', 'undefined', 'null', ''];
+  return !invalidUsernames.includes(username.toLowerCase().trim());
+}
+
 export default function WhatLinksHere({ pageId, pageTitle, className = "" }: WhatLinksHereProps) {
   const [backlinks, setBacklinks] = useState<BacklinkSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Default to expanded so users can immediately see what links here
+  const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
     const fetchBacklinks = async () => {
@@ -39,7 +51,7 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-3">
-          <Icon name="ArrowLeft" size={16} className="text-muted-foreground" />
+          <Icon name="Link2" size={16} className="text-muted-foreground" />
           <h3 className="text-sm font-medium">What links here</h3>
         </div>
         <div className="space-y-2">
@@ -55,7 +67,7 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
     return (
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center gap-2 mb-3">
-          <Icon name="ArrowLeft" size={16} className="text-muted-foreground" />
+          <Icon name="Link2" size={16} className="text-muted-foreground" />
           <h3 className="text-sm font-medium">What links here</h3>
         </div>
         <p className="text-sm text-muted-foreground">{error}</p>
@@ -63,18 +75,9 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
     );
   }
 
+  // Hide completely when no backlinks - no need to show empty state
   if (backlinks.length === 0) {
-    return (
-      <div className={`wewrite-card ${className}`}>
-        <div className="flex items-center gap-2 mb-3">
-          <Icon name="ArrowLeft" size={16} className="text-muted-foreground" />
-          <h3 className="text-sm font-medium">What links here</h3>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          No pages link to this page yet.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -84,7 +87,7 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
         className="w-full flex items-center justify-between text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Icon name="ArrowLeft" size={16} className="text-muted-foreground" />
+          <Icon name="Link2" size={16} className="text-muted-foreground" />
           <span className="font-medium">What links here ({backlinks.length})</span>
         </div>
         {isExpanded ? (
@@ -105,10 +108,13 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
               >
                 {backlink.title}
               </PillLink>
-              {backlink.username && (
-                <span className="text-xs text-muted-foreground ml-2">
+              {isValidUsername(backlink.username) && (
+                <Link
+                  href={`/users/${backlink.username}`}
+                  className="text-xs text-muted-foreground hover:text-foreground ml-2 transition-colors"
+                >
                   @{backlink.username}
-                </span>
+                </Link>
               )}
             </div>
           ))}

@@ -45,5 +45,43 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+	<!-- Privacy Usage Descriptions -->
+	<key>NSCameraUsageDescription</key>
+	<string>WeWrite needs camera access to take photos for your pages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WeWrite needs photo library access to add images to your pages.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>WeWrite needs permission to save images to your photo library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WeWrite uses your location to add location data to your pages.</string>
+
+	<!-- Push Notifications -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- App Transport Security - Allow secure connections -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
+
+	<!-- URL Schemes for deep linking -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.wewrite.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>wewrite</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -145,7 +145,18 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
 // Valid tabs for user profile
 const VALID_PROFILE_TABS = ["bio", "pages", "recent-edits", "timeline", "graph", "map", "external-links"];
 
-export default function UserProfileTabs({ profile }) {
+interface UserProfileTabsProps {
+  profile: {
+    uid: string;
+    username?: string;
+    tier?: string;
+    subscriptionStatus?: string;
+    subscriptionAmount?: number;
+    createdAt?: string;
+  };
+}
+
+export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
   // Use query param based tab navigation (migrates from old hash-based URLs)
   const { activeTab, setActiveTab: setActiveTabFromHook } = useTabNavigation({
     defaultTab: 'bio',
@@ -314,8 +325,8 @@ export default function UserProfileTabs({ profile }) {
       const tabElement = document.querySelector(`[data-value="${tabValue}"]`);
       if (!tabElement) return;
 
-      // Find the scrollable container
-      const scrollContainer = document.querySelector('.overflow-x-auto');
+      // Find the scrollable container - specifically target the tabs container, not other carousels
+      const scrollContainer = document.querySelector('#profile-tabs-header .overflow-x-auto');
       if (!scrollContainer) return;
 
       // Get the positions and dimensions
@@ -387,54 +398,9 @@ export default function UserProfileTabs({ profile }) {
 
   // Removed unfollow all function
 
-  // Use useEffect to handle sticky tabs
-  React.useEffect(() => {
-    // Store the original position of the tabs
-    let tabsOriginalTop = 0;
-    let tabsHeight = 0;
-    let isSticky = false;
-
-    const handleScroll = () => {
-      const tabsElement = document.getElementById('profile-tabs-header');
-      const contentContainer = document.getElementById('tabs-content-container');
-      if (!tabsElement || !contentContainer) return;
-
-      // Get the original position on first scroll if not already set
-      if (tabsOriginalTop === 0) {
-        const tabsRect = tabsElement.getBoundingClientRect();
-        tabsOriginalTop = tabsRect.top + window.scrollY;
-        tabsHeight = tabsRect.height;
-      }
-
-      // Check if we've scrolled past the original position of the tabs
-      const scrollPosition = window.scrollY;
-
-      if (scrollPosition >= tabsOriginalTop && !isSticky) {
-        // We've scrolled past the tabs, make them sticky
-        tabsElement.classList.add('sticky-tabs');
-        contentContainer.style.paddingTop = `${tabsHeight}px`;
-        isSticky = true;
-      } else if (scrollPosition < tabsOriginalTop && isSticky) {
-        // We've scrolled back up, remove sticky
-        tabsElement.classList.remove('sticky-tabs');
-        contentContainer.style.paddingTop = '0';
-        isSticky = false;
-      }
-    };
-
-    // Initial check after a short delay to ensure DOM is ready
-    setTimeout(() => {
-      const tabsElement = document.getElementById('profile-tabs-header');
-      if (tabsElement) {
-        const tabsRect = tabsElement.getBoundingClientRect();
-        tabsOriginalTop = tabsRect.top + window.scrollY;
-        tabsHeight = tabsRect.height;
-      }
-    }, 100);
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // Sticky tabs are now handled via CSS using position: sticky
+  // The tabs stick to the bottom of the header stack (banner + header)
+  // See globals.css .sticky-tabs for the CSS implementation
 
   // Use useEffect to scroll the active tab into view when the component mounts or active tab changes
   React.useEffect(() => {
@@ -445,14 +411,17 @@ export default function UserProfileTabs({ profile }) {
   }, [activeTab]);
 
   return (
-    <div className="mt-6">
-      <Tabs
-        defaultValue="bio"
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="w-full"
-      >
-        <div id="profile-tabs-header" className="relative border-b border-neutral-30 mb-4 z-10">
+    <Tabs
+      defaultValue="bio"
+      value={activeTab}
+      onValueChange={handleTabChange}
+      className="w-full"
+    >
+        {/* Tabs header - sticky below page header */}
+        <div
+          id="profile-tabs-header"
+          className="sticky top-0 border-b border-border bg-background z-40"
+        >
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
               {/* Bio tab (first/default) */}
@@ -530,13 +499,10 @@ export default function UserProfileTabs({ profile }) {
 
             </TabsList>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-border/40"></div>
         </div>
 
-        <div
-          id="tabs-content-container"
-          className="mt-4"
-        >
+        {/* Tab content container */}
+        <div id="tabs-content-container" className="pt-4">
           <TabsContent
             value="recent-edits"
             className={`mt-0 transition-all duration-300 ${
@@ -742,7 +708,6 @@ export default function UserProfileTabs({ profile }) {
           {/* Groups tab content removed - groups feature has been completely removed */}
 
         </div>
-      </Tabs>
-    </div>
+    </Tabs>
   );
 }

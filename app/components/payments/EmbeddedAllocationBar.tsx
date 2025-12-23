@@ -34,7 +34,6 @@ import { AllocationAmountDisplay } from './AllocationAmountDisplay';
 import { useAllocationState } from '../../hooks/useAllocationState';
 import { useAllocationActions } from '../../hooks/useAllocationActions';
 import { EmbeddedAllocationBarProps, CompositionBarData } from '../../types/allocation';
-import { getLoggedOutPageAllocation, getUserPageAllocation } from '../../utils/simulatedUsd';
 import { UsdAllocationModal } from './UsdAllocationModal';
 import { CompositionBar } from './CompositionBar';
 
@@ -123,18 +122,13 @@ export function EmbeddedAllocationBar({
       // For demo balance: we need to calculate the bar segments correctly
       // The key insight: "other pages" should NEVER change when we allocate to "this page"
       //
-      // The context's allocatedUsdCents includes the allocation for this page.
-      // To get "other pages", we subtract the OPTIMISTIC current page value (not localStorage).
+      // The context's allocatedUsdCents includes ALL allocations (other pages + this page).
+      // To get "other pages", we subtract the current page's allocation (using optimistic value).
       const contextAllocatedCents = currentBalance.allocatedUsdCents;
 
-      // Get the saved (non-optimistic) allocation for this page from localStorage
-      const savedCurrentPageCents = !user?.uid ?
-        getLoggedOutPageAllocation(pageId) :
-        getUserPageAllocation(user.uid, pageId);
-
-      // Calculate other pages as: total allocated (from context) minus saved this page value
-      // This gives us the "other pages" total which should remain constant
-      const otherPagesCents = Math.max(0, contextAllocatedCents - savedCurrentPageCents);
+      // Calculate other pages as: total allocated (from context) minus CURRENT (optimistic) this page value
+      // This ensures "other pages" remains constant when we change "this page" allocation
+      const otherPagesCents = Math.max(0, contextAllocatedCents - currentPageCents);
 
       // Split current page allocation into funded and overfunded portions
       const availableFundsForCurrentPage = Math.max(0, totalCents - otherPagesCents);

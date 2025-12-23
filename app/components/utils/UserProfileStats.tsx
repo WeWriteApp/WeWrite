@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { StatsCarouselSkeleton } from '../ui/LoadingState';
 
 interface UserProfileStatsProps {
   userId: string;
@@ -85,8 +86,8 @@ function StatItem({
   sparkline: number[] | null;
 }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-neutral-alpha-5 flex-shrink-0">
-      <div className="flex flex-col min-w-0">
+    <div className="inline-flex items-center gap-3 px-3 py-2 rounded-xl bg-neutral-alpha-5" style={{ flexShrink: 0, minWidth: 'max-content' }}>
+      <div className="flex flex-col">
         <span className="text-xs text-muted-foreground whitespace-nowrap">{label}</span>
         <span className="text-sm font-medium whitespace-nowrap">{value}</span>
       </div>
@@ -101,9 +102,6 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [needsScroll, setNeedsScroll] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -147,68 +145,63 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
     return formatRelativeTime(dateString);
   }, [stats?.createdAt, initialCreatedAt]);
 
-  // Check if content overflows and needs scrolling
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [needsCarousel, setNeedsCarousel] = useState(false);
+
+  // Check if content overflows container (needs carousel)
+  const checkOverflow = useCallback(() => {
+    if (!containerRef.current || !contentRef.current) return;
+
+    const containerWidth = containerRef.current.clientWidth;
+    // Get width of the inner content wrapper (original items only)
+    const contentWidth = contentRef.current.offsetWidth;
+
+    // Only enable carousel if content overflows container
+    setNeedsCarousel(contentWidth > containerWidth);
+  }, []);
+
+  // Check overflow on mount and resize
   useEffect(() => {
-    if (isLoading || error || !stats || !scrollRef.current || !contentRef.current) return;
+    if (isLoading || error || !stats) return;
 
-    const checkOverflow = () => {
-      const container = scrollRef.current;
-      const content = contentRef.current;
-      if (!container || !content) return;
+    // Initial check after render
+    const timeoutId = setTimeout(checkOverflow, 50);
 
-      // Check if content is wider than container
-      const contentWidth = content.scrollWidth;
-      const containerWidth = container.clientWidth;
-      setNeedsScroll(contentWidth > containerWidth);
+    // Listen for resize
+    window.addEventListener('resize', checkOverflow);
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkOverflow);
     };
+  }, [isLoading, error, stats, checkOverflow]);
 
-    // Check initially and on resize
-    checkOverflow();
-    const resizeObserver = new ResizeObserver(checkOverflow);
-    resizeObserver.observe(scrollRef.current);
-
-    return () => resizeObserver.disconnect();
-  }, [isLoading, error, stats]);
-
-  // JS-based infinite scroll animation - only runs when needsScroll is true
+  // Auto-scroll with seamless infinite loop (only when carousel is needed)
   useEffect(() => {
-    if (isLoading || error || !stats || !scrollRef.current || !needsScroll) return;
+    if (isLoading || error || !stats || !scrollContainerRef.current || !needsCarousel) return;
 
-    const scrollContainer = scrollRef.current;
+    const scrollContainer = scrollContainerRef.current;
     let animationId: number;
-    let isPausedLocal = false;
 
-    // Get the width of just the original content (first set of items)
-    // We need to measure the actual content width, not scrollWidth which includes duplicates
-    const contentElement = contentRef.current;
-    if (!contentElement) return;
-
-    const originalContentWidth = contentElement.scrollWidth;
+    // Content is duplicated when needsCarousel, so original width is half
+    const originalContentWidth = scrollContainer.scrollWidth / 2;
     const scrollSpeed = 0.3;
 
     const scroll = () => {
-      if (scrollContainer && !isPausedLocal) {
+      if (scrollContainer) {
         scrollContainer.scrollLeft += scrollSpeed;
 
-        // Seamless infinite loop - reset when we've scrolled past the original content
-        // Add a small buffer to prevent visual glitch
-        if (scrollContainer.scrollLeft >= originalContentWidth + 8) { // 8px = gap-2
+        // Seamless loop - reset when scrolled through one full set
+        if (scrollContainer.scrollLeft >= originalContentWidth) {
           scrollContainer.scrollLeft = 0;
         }
       }
       animationId = requestAnimationFrame(scroll);
     };
 
-    // Handle pause on interaction
-    const handlePause = () => {
-      isPausedLocal = true;
-      setTimeout(() => { isPausedLocal = false; }, 3000);
-    };
-
-    scrollContainer.addEventListener('mouseenter', handlePause);
-    scrollContainer.addEventListener('touchstart', handlePause);
-
-    // Start scrolling after brief delay
+    // Start after brief delay to ensure content is rendered
     const timeoutId = setTimeout(() => {
       animationId = requestAnimationFrame(scroll);
     }, 100);
@@ -216,81 +209,69 @@ export default function UserProfileStats({ userId, createdAt: initialCreatedAt }
     return () => {
       if (animationId) cancelAnimationFrame(animationId);
       if (timeoutId) clearTimeout(timeoutId);
-      scrollContainer.removeEventListener('mouseenter', handlePause);
-      scrollContainer.removeEventListener('touchstart', handlePause);
     };
-  }, [isLoading, error, stats, needsScroll]);
+  }, [isLoading, error, stats, needsCarousel]);
 
+  // Use design system StatsCarouselSkeleton for consistent loading state
   if (isLoading) {
-    return (
-      <div className="mt-4 overflow-hidden rounded-xl">
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-neutral-alpha-5 animate-pulse flex-shrink-0">
-              <div className="flex flex-col">
-                <div className="h-3 w-12 bg-neutral-alpha-20 rounded mb-1" />
-                <div className="h-4 w-8 bg-neutral-alpha-20 rounded" />
-              </div>
-              <div className="w-12 h-5 bg-neutral-alpha-10 rounded" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    return <StatsCarouselSkeleton count={4} className="mt-4" />;
   }
 
   if (error || !stats) {
     return null;
   }
 
-  // Build stat items - all time-based KPIs have sparklines
+  // Build stat items - order: Pages, Sponsors, Joined, Sponsoring
   const statItems = [
-    {
-      label: 'Sponsors',
-      value: stats.sponsorsCount.toString(),
-      sparkline: stats.sparklines.sponsors
-    },
-    {
-      label: 'Sponsoring',
-      value: stats.sponsoringCount.toString(),
-      sparkline: stats.sparklines.sponsoring
-    },
     {
       label: 'Pages',
       value: stats.pageCount.toString(),
       sparkline: stats.sparklines.pages
     },
     {
+      label: 'Sponsors',
+      value: stats.sponsorsCount.toString(),
+      sparkline: stats.sparklines.sponsors
+    },
+    {
       label: 'Joined',
       value: accountAge || 'Unknown',
       sparkline: null
+    },
+    {
+      label: 'Sponsoring',
+      value: stats.sponsoringCount.toString(),
+      sparkline: stats.sparklines.sponsoring
     }
   ];
 
+  // Render stat items as React elements for duplication
+  const statElements = statItems.map((stat) => (
+    <StatItem
+      key={stat.label}
+      label={stat.label}
+      value={stat.value}
+      sparkline={stat.sparkline}
+    />
+  ));
+
   return (
-    <div className="mt-4 overflow-hidden rounded-xl">
+    <div className="mt-4 overflow-hidden rounded-xl" ref={containerRef}>
       <div
-        ref={scrollRef}
-        className={`flex gap-2 overflow-x-auto ${!needsScroll ? 'justify-center' : ''}`}
+        ref={scrollContainerRef}
+        className={`flex gap-2 overflow-x-auto scrollbar-hide ${!needsCarousel ? 'justify-center' : ''}`}
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
         }}
       >
-        {/* Original content - wrapped in ref for measurement */}
-        <div ref={contentRef} className="flex gap-2 flex-shrink-0">
-          {statItems.map((stat) => (
-            <StatItem
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              sparkline={stat.sparkline}
-            />
-          ))}
+        {/* Original content wrapped for measurement */}
+        <div ref={contentRef} className="flex gap-2" style={{ flexShrink: 0 }}>
+          {statElements}
         </div>
-        {/* Duplicate for seamless infinite scrolling - only rendered when needed */}
-        {needsScroll && (
-          <div className="flex gap-2 flex-shrink-0">
+        {/* Duplicate content for seamless infinite scrolling - only when carousel is needed */}
+        {needsCarousel && (
+          <div className="flex gap-2" style={{ flexShrink: 0 }}>
             {statItems.map((stat) => (
               <StatItem
                 key={`${stat.label}-dup`}
