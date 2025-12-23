@@ -42,6 +42,7 @@ export default function FundAccountPage() {
   const success = searchParams.get('success') === 'true';
   const updateSubscriptionId = searchParams.get('update');
   const updateAmount = searchParams.get('amount');
+  const topoff = searchParams.get('topoff') === 'true';
 
   // Load current subscription using the same API as settings page
   useEffect(() => {
@@ -276,6 +277,7 @@ export default function FundAccountPage() {
           onAmountSelect={setSelectedAmount}
           currentSubscription={effectiveSubscription}
           showCurrentOption={true}
+          defaultExpanded={topoff}
         />
       </div>
 

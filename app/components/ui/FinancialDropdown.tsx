@@ -225,7 +225,7 @@ export function FinancialDropdown({
                   size="sm"
                   onClick={() => {
                     closeDropdown();
-                    router.push('/settings/fund-account');
+                    router.push('/settings/fund-account?topoff=true');
                   }}
                   className="w-full"
                 >

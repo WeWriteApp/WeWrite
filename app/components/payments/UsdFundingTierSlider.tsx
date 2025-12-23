@@ -22,6 +22,7 @@ interface UsdFundingTierSliderProps {
     tier?: string;
   } | null;
   showCurrentOption?: boolean;
+  defaultExpanded?: boolean;
 }
 
 // Define the 5 fixed slider positions with labels
@@ -57,12 +58,13 @@ export default function UsdFundingTierSlider({
   selectedAmount,
   onAmountSelect,
   currentSubscription,
-  showCurrentOption = false
+  showCurrentOption = false,
+  defaultExpanded = false
 }: UsdFundingTierSliderProps) {
   const { user } = useAuth();
   const { usdBalance, refreshUsdBalance } = useUsdBalance();
   const { hasActiveSubscription } = useSubscription();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(defaultExpanded);
   const [customAmount, setCustomAmount] = useState('');
   const [customError, setCustomError] = useState('');
   const customInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +80,13 @@ export default function UsdFundingTierSlider({
     setCustomAmount('');
     setCustomError('');
   }, [currentSubscriptionAmount]);
+
+  // Initialize customAmount when defaultExpanded is true
+  useEffect(() => {
+    if (defaultExpanded && currentSubscriptionAmount > 0 && !customAmount) {
+      setCustomAmount(currentSubscriptionAmount.toFixed(2));
+    }
+  }, [defaultExpanded, currentSubscriptionAmount]);
 
   // Focus input when entering edit mode
   useEffect(() => {
@@ -248,7 +257,7 @@ export default function UsdFundingTierSlider({
               <span className="text-sm font-medium">Current Plan</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-primary">
+              <span className="text-sm font-semibold text-foreground">
                 {formatUsdCents(currentTierInfo.usdCents)}/month
               </span>
             </div>
@@ -317,6 +326,7 @@ export default function UsdFundingTierSlider({
                       value={customAmount}
                       onChange={(e) => handleCustomAmountChange(e.target.value)}
                       leftIcon={<Icon name="DollarSign" size={16} />}
+                      rightIcon={<span className="text-muted-foreground text-sm font-medium">USD</span>}
                       className={`text-center text-lg font-semibold ${customError ? 'border-destructive' : ''}`}
                     />
                   </div>
@@ -350,10 +360,16 @@ export default function UsdFundingTierSlider({
                   </div>
                 )}
 
-                {/* USD info */}
-                <div className="text-xs text-muted-foreground text-center">
-                  All amounts are in USD
-                </div>
+                {/* Comparison to current subscription */}
+                {currentSubscriptionAmount > 0 && selectedAmount !== currentSubscriptionAmount && (
+                  <div className={`text-xs text-center font-medium ${
+                    selectedAmount > currentSubscriptionAmount
+                      ? 'text-green-600'
+                      : 'text-orange-600'
+                  }`}>
+                    {selectedAmount > currentSubscriptionAmount ? '+' : ''}${(selectedAmount - currentSubscriptionAmount).toFixed(0)} {selectedAmount > currentSubscriptionAmount ? 'over' : 'under'} current subscription of ${currentSubscriptionAmount}
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex gap-3">
