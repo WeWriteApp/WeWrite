@@ -239,9 +239,9 @@ export default function UsdFundingTierSlider({
 
   return (
     <div className="space-y-4">
-      {/* Current subscription indicator with edit button */}
+      {/* Current subscription card - expands to show edit controls */}
       {showCurrentOption && currentSubscription && currentTierInfo && (
-        <div className="wewrite-card space-y-3">
+        <div className="wewrite-card space-y-3 transition-all duration-300 ease-in-out">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon name="User" size={16} className="text-muted-foreground" />
@@ -266,45 +266,36 @@ export default function UsdFundingTierSlider({
             </div>
           )}
 
-          {/* Edit button (shown when not editing) */}
-          {isActiveSubscriber && !isEditing && (
-            <Button
-              variant="outline"
-              onClick={handleEditClick}
-              className="w-full"
-            >
-              <Icon name="Edit" size={16} className="mr-2" />
-              Edit subscription
-            </Button>
-          )}
-        </div>
-      )}
-
-      {/* Username Preview */}
-      {user?.username && user?.uid && (
-        <div className="wewrite-card">
-          <p className="text-sm text-muted-foreground mb-3 text-center">Your username will appear as:</p>
-          <div className="flex items-center justify-center gap-2">
-            <UsernameBadge
-              userId={user.uid}
-              username={user.username}
-              subscriptionStatus={hasActiveSubscription ? 'active' : 'inactive'}
-              subscriptionAmount={selectedAmount}
-              size="md"
-              showBadge={true}
-              variant="link"
-              onClick={(e) => e.preventDefault()}
-            />
+          {/* Edit button - animate out when editing */}
+          <div
+            className={`grid transition-all duration-200 ease-out ${
+              isActiveSubscriber && !isEditing
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <Button
+                variant="outline"
+                onClick={handleEditClick}
+                className="w-full"
+              >
+                <Icon name="Edit" size={16} className="mr-2" />
+                Edit subscription
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Funding Selection Card - only show for active subscribers when editing, or for new subscribers */}
-      {(isEditing || !isActiveSubscriber) && (
-      <div className="wewrite-card space-y-4">
-        {/* Active Subscriber Edit Mode */}
-        {isActiveSubscriber && isEditing && (
-              <div className="space-y-4">
+          {/* Edit controls - expand inside the current plan card with height animation */}
+          <div
+            className={`grid transition-all duration-200 ease-out ${
+              isActiveSubscriber && isEditing
+                ? 'grid-rows-[1fr] opacity-100'
+                : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-4 pt-3 border-t border-border">
                 {/* Amount input row */}
                 <div className="flex items-center gap-2">
                   <Button
@@ -398,92 +389,110 @@ export default function UsdFundingTierSlider({
                   Cancel subscription
                 </Button>
               </div>
-        )}
-
-        {/* New Subscriber View: Slider + Subscribe Button */}
-        {!isActiveSubscriber && (
-          <div className="space-y-4">
-            {/* Slider */}
-            <div className="space-y-2">
-              <div className="relative">
-                <div className="w-full h-2 bg-muted rounded-full relative overflow-hidden">
-                  <div
-                    className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${(getSliderIndex() / (SLIDER_TIERS.length - 1)) * 100}%` }}
-                  />
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max={SLIDER_TIERS.length - 1}
-                  value={getSliderIndex()}
-                  onChange={(e) => handleSliderSelect(parseInt(e.target.value))}
-                  className="absolute top-0 left-0 w-full h-2 appearance-none cursor-pointer slider"
-                  style={{ background: 'transparent' }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground px-1">
-                {SLIDER_TIERS.map((tier, index) => (
-                  <span key={index} className="text-center">
-                    {tier.label}
-                  </span>
-                ))}
-              </div>
             </div>
-
-            {/* Custom amount input for Above $30 */}
-            {selectedAmount > 30 && (
-              <div className="space-y-2">
-                <Input
-                  ref={customInputRef}
-                  type="text"
-                  placeholder="Enter amount above $30"
-                  value={customAmount}
-                  onChange={(e) => {
-                    setCustomAmount(e.target.value);
-                    const parsed = parseDollarInputToCents(e.target.value);
-                    if (parsed !== null) {
-                      const dollars = parsed / 100;
-                      if (dollars > 30 && dollars <= 1000) {
-                        onAmountSelect(dollars);
-                        setCustomError('');
-                      } else if (dollars <= 30) {
-                        setCustomError('Amount must be above $30');
-                      } else {
-                        setCustomError('Maximum is $1000/month');
-                      }
-                    }
-                  }}
-                  leftIcon={<Icon name="DollarSign" size={16} />}
-                  className={customError ? 'border-destructive' : ''}
-                />
-                {customError && (
-                  <p className="text-sm text-destructive">{customError}</p>
-                )}
-              </div>
-            )}
-
-            {/* Subscribe button */}
-            {selectedAmount > 0 && (
-              <Button
-                onClick={() => setCheckoutDrawerOpen(true)}
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
-              >
-                Subscribe at ${selectedAmount}/month
-              </Button>
-            )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* USD info (only shown for new subscribers, active subscribers see it inline) */}
-        {!isActiveSubscriber && (
+      {/* Username Preview */}
+      {user?.username && user?.uid && (
+        <div className="wewrite-card">
+          <p className="text-sm text-muted-foreground mb-3 text-center">Your username will appear as:</p>
+          <div className="flex items-center justify-center gap-2">
+            <UsernameBadge
+              userId={user.uid}
+              username={user.username}
+              subscriptionStatus={hasActiveSubscription ? 'active' : 'inactive'}
+              subscriptionAmount={selectedAmount}
+              size="md"
+              showBadge={true}
+              variant="link"
+              onClick={(e) => e.preventDefault()}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Funding Selection Card - only show for NEW subscribers */}
+      {!isActiveSubscriber && (
+        <div className="wewrite-card space-y-4">
+          {/* Slider */}
+          <div className="space-y-2">
+            <div className="relative">
+              <div className="w-full h-2 bg-muted rounded-full relative overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
+                  style={{ width: `${(getSliderIndex() / (SLIDER_TIERS.length - 1)) * 100}%` }}
+                />
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={SLIDER_TIERS.length - 1}
+                value={getSliderIndex()}
+                onChange={(e) => handleSliderSelect(parseInt(e.target.value))}
+                className="absolute top-0 left-0 w-full h-2 appearance-none cursor-pointer slider"
+                style={{ background: 'transparent' }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground px-1">
+              {SLIDER_TIERS.map((tier, index) => (
+                <span key={index} className="text-center">
+                  {tier.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom amount input for Above $30 */}
+          {selectedAmount > 30 && (
+            <div className="space-y-2">
+              <Input
+                ref={customInputRef}
+                type="text"
+                placeholder="Enter amount above $30"
+                value={customAmount}
+                onChange={(e) => {
+                  setCustomAmount(e.target.value);
+                  const parsed = parseDollarInputToCents(e.target.value);
+                  if (parsed !== null) {
+                    const dollars = parsed / 100;
+                    if (dollars > 30 && dollars <= 1000) {
+                      onAmountSelect(dollars);
+                      setCustomError('');
+                    } else if (dollars <= 30) {
+                      setCustomError('Amount must be above $30');
+                    } else {
+                      setCustomError('Maximum is $1000/month');
+                    }
+                  }
+                }}
+                leftIcon={<Icon name="DollarSign" size={16} />}
+                className={customError ? 'border-destructive' : ''}
+              />
+              {customError && (
+                <p className="text-sm text-destructive">{customError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Subscribe button */}
+          {selectedAmount > 0 && (
+            <Button
+              onClick={() => setCheckoutDrawerOpen(true)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              Subscribe at ${selectedAmount}/month
+            </Button>
+          )}
+
+          {/* USD info */}
           <div className="text-xs text-muted-foreground bg-muted/30 rounded p-2">
             <p>
               All amounts are in USD. Payments processed securely via Stripe.
             </p>
           </div>
-        )}
-      </div>
+        </div>
       )}
 
       {/* Confirmation Modal */}
