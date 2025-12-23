@@ -314,7 +314,6 @@ function SidebarContent({
         style={{
           top: 'var(--email-banner-height, 0px)',
           height: 'calc(100vh - var(--email-banner-height, 0px))',
-          overflow: 'visible',
         }}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
@@ -324,9 +323,9 @@ function SidebarContent({
           - Fixed 16px padding on all sides
           - Collapsed: 72px total width = 16px + 40px button + 16px
           - This ensures buttons never touch edges and rounded corners are visible
-          - All containers use overflow-visible to prevent icon clipping
+          - Nav section is scrollable when content overflows
         */}
-        <div className="flex flex-col h-full p-4" style={{ overflow: 'visible' }}>
+        <div className="flex flex-col h-full p-4 overflow-hidden">
 
           {/* Header */}
           <div className="flex items-center h-10 mb-4">
@@ -355,11 +354,11 @@ function SidebarContent({
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 scrollbar-hide" style={{ overflow: 'visible' }}>
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
             <div className={cn(
               "flex flex-col gap-1",
               !showContent && "items-center"
-            )} style={{ overflow: 'visible' }}>
+            )}>
               {completeSidebarOrder
                 .filter((itemId, i, arr) => arr.indexOf(itemId) === i)
                 .map((itemId, index) => {
