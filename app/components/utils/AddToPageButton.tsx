@@ -3,9 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
-import Modal from '../ui/modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from '../ui/dialog';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
-import SearchResultsDisplay from '../search/SearchResultsDisplay';
 
 import { useAuth } from '../../providers/AuthProvider';
 import { appendPageReference, getPageById } from '../../utils/apiClient';
@@ -61,57 +66,6 @@ const checkRateLimit = (userId: string): boolean => {
   }
 };
 
-// Audit logging function
-const logAppendOperation = (
-  userId: string,
-  sourcePageId: string,
-  targetPageId: string,
-  success: boolean,
-  error?: string
-): void => {
-  const logEntry = {
-    timestamp: new Date().toISOString(),
-    userId,
-    action: 'append_page',
-    sourcePageId,
-    targetPageId,
-    success,
-    error: error || null,
-    userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown'
-  };
-
-  // In a production environment, this would go to a proper logging service:
-  // await fetch('/api/audit-log', { method: 'POST', body: JSON.stringify(logEntry) });
-};
-
-/**
- * WeWrite Page Button Consistency Fix - Enhanced AddToPageButton Component
- *
- * Enhanced AddToPageButton component that supports external state management
- * to enable consistent functionality between top navigation and bottom page buttons.
- *
- * Key Enhancements:
- * - External State Management: Supports isOpen and setIsOpen props for external control
- * - Conditional Rendering: hideButton prop allows modal-only usage
- * - Consistent Behavior: Same modal functionality regardless of trigger location
- * - Proper State Handling: Uses external state when provided, internal state otherwise
- *
- * Usage Patterns:
- * 1. Standalone Button (original behavior):
- *    <AddToPageButton page={page} />
- *
- * 2. External State Management (for top navigation):
- *    <AddToPageButton
- *      page={page}
- *      isOpen={isAddToPageOpen}
- *      setIsOpen={setIsAddToPageOpen}
- *      hideButton={true}
- *    />
- *
- * This enhancement enables the PageHeader component to use the same modal
- * functionality as the bottom page buttons, ensuring consistent user experience.
- */
-
 // TypeScript interfaces
 interface AddToPageButtonProps {
   page: Page;
@@ -138,9 +92,6 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   // Use external state if provided, otherwise use internal state
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
   const [isAdding, setIsAdding] = useState<boolean>(false);
-  const [selectedPage, setSelectedPage] = useState<SelectedPage | null>(null);
-  const [showSuccess, setShowSuccess] = useState<boolean>(false);
-  const [successTargetPage, setSuccessTargetPage] = useState<SelectedPage | null>(null);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -148,29 +99,15 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const setIsOpen = externalSetIsOpen || setInternalIsOpen;
 
-  const handleAddToPage = async (selected: SelectedPage): Promise<void> => {
-    if (!selected || !page) return;
-
-    // Store the selected page for the Insert button
-    setSelectedPage(selected);
-  };
-
-  const handleGoToTargetPage = (): void => {
-    if (successTargetPage) {
-      router.push(`/${successTargetPage.id}`);
-      handleClose();
+  const handleClose = (): void => {
+    if (!isAdding) {
+      setIsOpen(false);
     }
   };
 
-  const handleClose = (): void => {
-    setIsOpen(false);
-    setSelectedPage(null);
-    setShowSuccess(false);
-    setSuccessTargetPage(null);
-  };
-
-  const handleInsert = async (): Promise<void> => {
-    if (!selectedPage || !page) return;
+  // Handle page selection - immediately trigger the append operation
+  const handlePageSelect = async (selected: SelectedPage): Promise<void> => {
+    if (!selected || !page || !user) return;
 
     setIsAdding(true);
 
@@ -178,14 +115,16 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       // 1. Check rate limiting
       if (!checkRateLimit(user.uid)) {
         toast.error(ERROR_MESSAGES.rate_limit_exceeded);
+        setIsAdding(false);
         return;
       }
 
       // 2. Fetch the target page to check permissions and validate
-      const { pageData: targetPageData, error: fetchError } = await getPageById(selectedPage.id);
-      
+      const { pageData: targetPageData, error: fetchError } = await getPageById(selected.id);
+
       if (fetchError || !targetPageData) {
         toast.error(ERROR_MESSAGES.page_not_found);
+        setIsAdding(false);
         return;
       }
 
@@ -193,20 +132,23 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       const canEdit = canUserEditPage(user, targetPageData);
       if (!canEdit) {
         toast.error(ERROR_MESSAGES.permission_denied);
+        setIsAdding(false);
         return;
       }
 
       // 4. Validate source page content size
       const sourceContent = page.content || [];
       const contentString = typeof sourceContent === 'string' ? sourceContent : JSON.stringify(sourceContent);
-      
+
       if (contentString.length > MAX_CONTENT_SIZE) {
         toast.error(ERROR_MESSAGES.content_too_large);
+        setIsAdding(false);
         return;
       }
 
       if (Array.isArray(sourceContent) && sourceContent.length > MAX_CONTENT_BLOCKS) {
         toast.error(ERROR_MESSAGES.too_many_blocks);
+        setIsAdding(false);
         return;
       }
 
@@ -214,30 +156,23 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       const sourcePageData = {
         id: page.id,
         title: page.title || 'Untitled Page',
-        userId: page.userId // Include the user ID for notification
+        content: page.content,
+        userId: page.userId
       };
 
       // 6. Append the current page reference to the selected page
-      const result = await appendPageReference(selectedPage.id, sourcePageData, user.uid);
+      const result = await appendPageReference(selected.id, sourcePageData, user.uid);
 
       if (result) {
-        // Log successful operation
-        logAppendOperation(user.uid, page.id, selectedPage.id, true);
-
-        // Show success state instead of redirecting immediately
-        setSuccessTargetPage(selectedPage);
-        setShowSuccess(true);
-        setSelectedPage(null);
+        // Close the dialog and redirect to the target page
+        setIsOpen(false);
+        toast.success(`Added "${page.title}" to "${selected.title}"`);
+        router.push(`/${selected.id}`);
       } else {
-        // Log failed operation
-        logAppendOperation(user.uid, page.id, selectedPage.id, false, 'Append operation returned false');
         toast.error(ERROR_MESSAGES.unknown_error);
       }
     } catch (error: any) {
       console.error("Error adding page:", error);
-
-      // Log failed operation with error details
-      logAppendOperation(user.uid, page.id, selectedPage.id, false, error.message || 'Unknown error');
 
       // Provide specific error messages based on error type
       let errorMessage = ERROR_MESSAGES.unknown_error;
@@ -256,21 +191,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
     }
   };
 
-
-
-  // Keyboard navigation support
-  const handleKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key === 'Escape') {
-      handleClose();
-    } else if (event.key === 'Enter' && selectedPage && !isAdding) {
-      event.preventDefault();
-      handleInsert();
-    }
-  };
-
   if (!user || !page) return null;
-
-  // Always show the button, even for the page owner
 
   return (
     <>
@@ -282,103 +203,50 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
           onClick={() => setIsOpen(true)}
           disabled={isAdding}
           aria-label={`Add "${page?.title || 'this page'}" to another page`}
-          aria-describedby="add-to-page-description"
         >
-          {isAdding ? (
-            <>
-              <Icon name="Loader" size={20} className="mr-1" />
-              <span>Adding...</span>
-            </>
-          ) : (
-            <>
-              <Icon name="Copy" size={20} />
-              <span>Add this page to another page</span>
-            </>
-          )}
+          <Icon name="Copy" size={20} />
+          <span>Add this page to another page</span>
         </Button>
       )}
 
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title={showSuccess ? 'Page Added Successfully' : 'Add selected text to page'}
-        className="sm:max-w-md w-[95vw] sm:w-full rounded-lg border-theme-strong bg-card"
-        showCloseButton={true}
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => !isAdding && setIsOpen(open)}
+        hashId="add-to-page"
       >
+        <DialogContent showCloseButton className="max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Add to another page</DialogTitle>
+          </DialogHeader>
 
-          {showSuccess ? (
-            // Success state
-            <div className="flex-1 py-4 text-center">
-              <div className="mb-4">
-                <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-3">
-                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  "{page?.title || 'This page'}" has been successfully added to "{successTargetPage?.title}".
-                </p>
-              </div>
+          <DialogBody className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
+            </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button
-                  onClick={handleGoToTargetPage}
-                  className="rounded-2xl font-medium"
-                  size="lg"
-                >
-                  Go to {successTargetPage?.title}
-                </Button>
-                <Button
-                  onClick={handleClose}
-                  variant="secondary"
-                  className="rounded-2xl font-medium"
-                  size="lg"
-                >
-                  Close
-                </Button>
+            {isAdding ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Icon name="Loader" size={32} className="text-primary mb-3" />
+                <p className="text-sm text-muted-foreground">Adding page...</p>
               </div>
-            </div>
-          ) : (
-            // Search state
-            <>
-              <div className="flex-1 overflow-y-auto py-4">
-                <p
-                  id="add-to-page-description"
-                  className="text-sm text-muted-foreground mb-4"
-                >
-                  Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
-                </p>
-                <AddToPageSearch onSelect={handleAddToPage} />
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-muted-foreground/30">
-                <Button
-                  onClick={handleInsert}
-                  disabled={!selectedPage || isAdding}
-                  className="w-full sm:w-auto rounded-2xl font-medium"
-                  size="lg"
-                  aria-label={selectedPage ? `Add content to ${selectedPage.title}` : 'Select a page first'}
-                  aria-describedby="add-to-page-description"
-                >
-                  {isAdding ? (
-                    <>
-                      <Icon name="Loader" size={20} className="mr-1" />
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    'Add Content'
-                  )}
-                </Button>
-              </div>
-            </>
-          )}
-      </Modal>
+            ) : (
+              <AddToPageSearch onSelect={handlePageSelect} disabled={isAdding} />
+            )}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
 
 // Search component for Add to Page functionality
-const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
+const AddToPageSearch = ({
+  onSelect,
+  disabled
+}: {
+  onSelect: (page: SelectedPage) => void;
+  disabled?: boolean;
+}) => {
   const { user } = useAuth();
   const userId = user?.uid;
   const [recentPages, setRecentPages] = useState<any[]>([]);
@@ -431,10 +299,6 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
     page.userId === userId || page.isEditable
   ) || [];
 
-  const handlePageSelect = (page: any) => {
-    onSelect(page);
-  };
-
   // Determine what to show: search results if there's a query, otherwise recent pages
   const showSearchResults = currentQuery && currentQuery.trim().length > 0;
   const pagesToShow = showSearchResults ? editableSearchPages : recentPages;
@@ -445,8 +309,9 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
       <input
         type="text"
         placeholder="Search your pages..."
-        className="w-full px-3 py-2 border border-input rounded-md"
+        className="w-full px-3 py-2 border border-input rounded-md bg-background"
         onChange={(e) => performSearch(e.target.value)}
+        disabled={disabled}
         aria-label="Search for pages to add content to"
       />
 
@@ -468,8 +333,9 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
           {pagesToShow.map((page) => (
             <button
               key={page.id}
-              onClick={() => handlePageSelect(page)}
-              className="w-full text-left p-3 rounded-md border border-input hover:bg-accent transition-colors break-words whitespace-normal"
+              onClick={() => onSelect(page)}
+              disabled={disabled}
+              className="w-full text-left p-3 rounded-md border border-input hover:bg-accent transition-colors break-words whitespace-normal disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="font-medium break-words whitespace-normal">{page.title || 'Untitled'}</div>
               {page.username && (
