@@ -340,18 +340,11 @@ export default function AdminUsersPage() {
       sortable: true,
       minWidth: 100,
       render: (u) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 px-2 text-xs gap-1"
-          onClick={() => setToggleAdminUser(u)}
-        >
-          {u.isAdmin ? (
-            <Badge variant="success-secondary">Admin</Badge>
-          ) : (
-            <Badge variant="outline-static">Not admin</Badge>
-          )}
-        </Button>
+        u.isAdmin ? (
+          <Badge variant="success-secondary">Admin</Badge>
+        ) : (
+          <Badge variant="outline-static">Not admin</Badge>
+        )
       )
     },
     {
@@ -1545,7 +1538,7 @@ export default function AdminUsersPage() {
                     <div className="text-muted-foreground">Admin</div>
                     <button
                       onClick={() => setToggleAdminUser(selectedUser)}
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity group"
                       title={selectedUser.isAdmin ? "Click to remove admin" : "Click to make admin"}
                     >
                       {selectedUser.isAdmin ? (
@@ -1553,6 +1546,7 @@ export default function AdminUsersPage() {
                       ) : (
                         <Badge variant="outline-static">Not admin</Badge>
                       )}
+                      <Icon name="Pencil" size={14} className="text-muted-foreground group-hover:text-foreground transition-colors" />
                     </button>
                   </div>
                   <div>
