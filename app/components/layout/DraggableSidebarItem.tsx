@@ -129,9 +129,10 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
         title={!showContent ? label : undefined}
         aria-label={label}
       >
-        {/* Icon - Icon component now handles its own sizing */}
+        {/* Icon - centered with explicit dimensions */}
         <motion.div
-          className="flex-shrink-0 overflow-visible"
+          className="flex-shrink-0 flex items-center justify-center overflow-visible"
+          style={{ width: 20, height: 20 }}
           animate={{
             scale: isPressed ? 0.9 : isHovered ? 1.1 : 1,
           }}
@@ -147,7 +148,7 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
 
         {/* Label - only when expanded */}
         {showContent && (
-          <span className="ml-3 text-sm font-medium truncate leading-5">
+          <span className="ml-3 text-sm font-medium truncate">
             {label}
           </span>
         )}

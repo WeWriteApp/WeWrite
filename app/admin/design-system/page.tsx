@@ -92,8 +92,9 @@ export default function DesignSystemPage() {
                 className={cn(
                   "block px-2 py-1.5 text-sm rounded-md transition-all duration-150",
                   // Active state - use custom bg-accent-* classes (not Tailwind's bg-accent/*)
+                  // Note: no font-medium to avoid width changes causing text wrap on click
                   isActive && [
-                    "bg-accent-15 text-accent font-medium",
+                    "bg-accent-15 text-accent",
                     "hover:bg-accent-25",
                     "active:bg-accent-35 active:scale-[0.98]"
                   ],

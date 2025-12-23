@@ -17,6 +17,11 @@ import {
   AnimatedIconWrapper,
 } from '../ui/animated-icons';
 import { Button } from '../ui/button';
+import {
+  SegmentedControl,
+  SegmentedControlList,
+  SegmentedControlTrigger,
+} from '../ui/segmented-control';
 import { cn } from '../../lib/utils';
 
 // Icon usage counts across the codebase (generated from search)
@@ -404,17 +409,50 @@ const ALL_ICONS: IconDefinition[] = [
   },
 ];
 
+type ViewMode = 'list' | 'grid';
+type SortField = 'name' | 'usage';
+type SortDirection = 'asc' | 'desc';
+
 export default function IconsShowcase() {
   const [animateAll, setAnimateAll] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [sortField, setSortField] = useState<SortField>('usage');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Count animated icons
   const animatedCount = ALL_ICONS.filter(i => i.animated).length;
   const totalCount = ALL_ICONS.length;
 
+  // Sort icons based on current sort settings
+  const sortedIcons = [...ALL_ICONS].sort((a, b) => {
+    if (sortField === 'name') {
+      const comparison = a.name.localeCompare(b.name);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    } else {
+      // Sort by usage - put 0 usage at the end when sorting desc
+      if (sortDirection === 'desc') {
+        if (a.usageCount === 0 && b.usageCount > 0) return 1;
+        if (b.usageCount === 0 && a.usageCount > 0) return -1;
+      }
+      const comparison = a.usageCount - b.usageCount;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    }
+  });
+
+  // Toggle sort
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'usage' ? 'desc' : 'asc');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button
           size="sm"
           variant={animateAll ? "default" : "outline"}
@@ -422,58 +460,125 @@ export default function IconsShowcase() {
         >
           {animateAll ? "Stop Animations" : "Play All Animations"}
         </Button>
+
+        {/* View Mode Toggle - Segmented Control */}
+        <SegmentedControl value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+          <SegmentedControlList className="w-auto">
+            <SegmentedControlTrigger value="list" className="gap-1.5 px-3">
+              <Icon name="List" size={14} />
+              List
+            </SegmentedControlTrigger>
+            <SegmentedControlTrigger value="grid" className="gap-1.5 px-3">
+              <Icon name="Grid3X3" size={14} />
+              Grid
+            </SegmentedControlTrigger>
+          </SegmentedControlList>
+        </SegmentedControl>
+
         <span className="text-sm text-muted-foreground">
           {animatedCount}/{totalCount} icons have animated variants
         </span>
       </div>
 
-      {/* Icon Matrix */}
-      <div className="border border-border rounded-lg overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-[1fr,80px,80px,80px] bg-muted/50 border-b border-border">
-          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground">Icon Name</div>
-          <div className="px-2 py-2 text-xs font-semibold text-muted-foreground text-center">Usage</div>
-          <div className="px-2 py-2 text-xs font-semibold text-muted-foreground text-center">Static</div>
-          <div className="px-2 py-2 text-xs font-semibold text-muted-foreground text-center">Animated</div>
-        </div>
-
-        {/* Icon Rows */}
-        <div className="divide-y divide-border">
-          {ALL_ICONS.map((icon) => (
+      {/* Grid View */}
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+          {sortedIcons.map((icon) => (
             <div
               key={icon.name}
-              className="grid grid-cols-[1fr,80px,80px,80px] items-center hover:bg-muted/30 transition-colors"
+              className="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+              title={`${icon.name} (${icon.usageCount} uses)`}
             >
-              {/* Name */}
-              <div className="px-4 py-2 text-sm font-mono">{icon.name}</div>
-
-              {/* Usage Count */}
-              <div className="px-2 py-2 flex items-center justify-center">
-                <span className="text-xs font-mono text-muted-foreground">{icon.usageCount}</span>
-              </div>
-
-              {/* Static (regular weight) */}
-              <div className="px-2 py-2 flex items-center justify-center">
-                <Icon name={icon.name} size={20} weight="regular" />
-              </div>
-
-              {/* Animated */}
-              <div className="px-2 py-2 flex items-center justify-center">
-                {icon.animated ? (
-                  <motion.div
-                    animate={animateAll ? { scale: [1, 1.1, 1] } : {}}
-                    transition={{ repeat: animateAll ? Infinity : 0, duration: 1 }}
-                  >
-                    {icon.animated({ isActive: animateAll })}
-                  </motion.div>
-                ) : (
-                  <span className="text-muted-foreground/40">—</span>
+              <div className="relative">
+                <Icon name={icon.name} size={24} weight="regular" />
+                {icon.animated && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" title="Has animation" />
                 )}
               </div>
+              <span className="text-[10px] text-muted-foreground text-center truncate w-full group-hover:text-foreground">
+                {icon.name}
+              </span>
+              <span className={cn(
+                "text-[9px] font-mono",
+                icon.usageCount === 0 ? "text-muted-foreground/30" : "text-muted-foreground/60"
+              )}>
+                {icon.usageCount}
+              </span>
             </div>
           ))}
         </div>
-      </div>
+      )}
+
+      {/* List View - Icon Matrix */}
+      {viewMode === 'list' && (
+        <div className="border border-border rounded-lg overflow-hidden">
+          {/* Header */}
+          <div className="grid grid-cols-[1fr,80px,80px,80px] bg-muted/50 border-b border-border">
+            <button
+              onClick={() => handleSort('name')}
+              className="px-4 py-2 text-xs font-semibold text-muted-foreground text-left hover:text-foreground flex items-center gap-1"
+            >
+              Icon Name
+              {sortField === 'name' && (
+                <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+              )}
+            </button>
+            <button
+              onClick={() => handleSort('usage')}
+              className="px-2 py-2 text-xs font-semibold text-muted-foreground text-center hover:text-foreground flex items-center justify-center gap-1"
+            >
+              Usage
+              {sortField === 'usage' && (
+                <Icon name={sortDirection === 'asc' ? 'ChevronUp' : 'ChevronDown'} size={12} />
+              )}
+            </button>
+            <div className="px-2 py-2 text-xs font-semibold text-muted-foreground text-center">Static</div>
+            <div className="px-2 py-2 text-xs font-semibold text-muted-foreground text-center">Animated</div>
+          </div>
+
+          {/* Icon Rows */}
+          <div className="divide-y divide-border">
+            {sortedIcons.map((icon) => (
+              <div
+                key={icon.name}
+                className="grid grid-cols-[1fr,80px,80px,80px] items-center hover:bg-muted/30 transition-colors"
+              >
+                {/* Name */}
+                <div className="px-4 py-2 text-sm font-mono">{icon.name}</div>
+
+                {/* Usage Count */}
+                <div className="px-2 py-2 flex items-center justify-center">
+                  <span className={cn(
+                    "text-xs font-mono",
+                    icon.usageCount === 0 ? "text-muted-foreground/40" : "text-muted-foreground"
+                  )}>
+                    {icon.usageCount}
+                  </span>
+                </div>
+
+                {/* Static (regular weight) */}
+                <div className="px-2 py-2 flex items-center justify-center">
+                  <Icon name={icon.name} size={20} weight="regular" />
+                </div>
+
+                {/* Animated */}
+                <div className="px-2 py-2 flex items-center justify-center">
+                  {icon.animated ? (
+                    <motion.div
+                      animate={animateAll ? { scale: [1, 1.1, 1] } : {}}
+                      transition={{ repeat: animateAll ? Infinity : 0, duration: 1 }}
+                    >
+                      {icon.animated({ isActive: animateAll })}
+                    </motion.div>
+                  ) : (
+                    <span className="text-muted-foreground/40">—</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Animation Wrapper Demo */}
       <div className="space-y-3">

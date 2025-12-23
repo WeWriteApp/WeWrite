@@ -145,6 +145,12 @@ import {
   BookOpen,
   Wrench,
   FileStack,
+  TabletSmartphone,
+  Youtube,
+  Twitter,
+  Instagram,
+  BookText,
+  FolderPlus,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -214,7 +220,8 @@ export type IconName =
   | "ZoomIn" | "ZoomOut" | "Tags"
   | "Flame" | "Tablet" | "Sort"
   | "Flag" | "Ban" | "Wrench"
-  | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack";
+  | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack"
+  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "BookText" | "FolderPlus";
 
 // Icon props interface
 export interface IconProps {
@@ -432,6 +439,12 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   LayoutPanelLeft: Menu,
   ArrowUpDown: ArrowUp,
   FileStack: FileStack,
+  TabletSmartphone: TabletSmartphone,
+  Youtube: Youtube,
+  Twitter: Twitter,
+  Instagram: Instagram,
+  BookText: BookText,
+  FolderPlus: FolderPlus,
 };
 
 // Unified Icon Component

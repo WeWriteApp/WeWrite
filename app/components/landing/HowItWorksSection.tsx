@@ -196,14 +196,6 @@ export default function HowItWorksSection() {
               </p>
             </div>
           </div>
-
-          {/* Beta warning */}
-          <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 max-w-md mx-auto">
-            <Icon name="AlertTriangle" size={20} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              Payouts are currently in beta. Subscribe now to support creators once payouts go live!
-            </p>
-          </div>
         </div>
         </div>
       </div>

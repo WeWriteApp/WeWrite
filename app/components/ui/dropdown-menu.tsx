@@ -10,7 +10,19 @@ const DropdownContext = React.createContext<{
   open: boolean;
   setOpen: (open: boolean) => void;
   triggerRef: React.RefObject<HTMLElement> | null;
-}>({ open: false, setOpen: () => {}, triggerRef: null });
+  openDirection: OpenDirection;
+}>({ open: false, setOpen: () => {}, triggerRef: null, openDirection: "bottom-right" });
+
+/**
+ * Open direction determines where the dropdown opens FROM and how it's anchored:
+ * - "bottom-left": Opens downward, anchored to trigger's LEFT edge (dropdown's left = trigger's left)
+ * - "bottom-right": Opens downward, anchored to trigger's RIGHT edge (dropdown's right = trigger's right)
+ * - "top-left": Opens upward, anchored to trigger's LEFT edge
+ * - "top-right": Opens upward, anchored to trigger's RIGHT edge
+ *
+ * Legacy "align" prop is mapped: align="start" -> "bottom-left", align="end" -> "bottom-right"
+ */
+type OpenDirection = "bottom-left" | "bottom-right" | "top-left" | "top-right";
 
 const DropdownMenu = ({
   children,
@@ -48,7 +60,7 @@ const DropdownMenu = ({
   }, [open, handleSetOpen]);
 
   return (
-    <DropdownContext.Provider value={{ open, setOpen: handleSetOpen, triggerRef }}>
+    <DropdownContext.Provider value={{ open, setOpen: handleSetOpen, triggerRef, openDirection: "bottom-right" }}>
       <div className="relative inline-block">{children}</div>
     </DropdownContext.Provider>
   );
@@ -93,17 +105,6 @@ const DropdownMenuTrigger = ({ children, className, asChild, ...props }: any) =>
   );
 };
 
-/**
- * Open direction determines where the dropdown opens FROM and how it's anchored:
- * - "bottom-left": Opens downward, anchored to trigger's LEFT edge (dropdown's left = trigger's left)
- * - "bottom-right": Opens downward, anchored to trigger's RIGHT edge (dropdown's right = trigger's right)
- * - "top-left": Opens upward, anchored to trigger's LEFT edge
- * - "top-right": Opens upward, anchored to trigger's RIGHT edge
- *
- * Legacy "align" prop is mapped: align="start" -> "bottom-left", align="end" -> "bottom-right"
- */
-type OpenDirection = "bottom-left" | "bottom-right" | "top-left" | "top-right";
-
 const DropdownMenuContent = ({
   children,
   className,
@@ -121,15 +122,18 @@ const DropdownMenuContent = ({
 }) => {
   const { open, triggerRef } = React.useContext(DropdownContext);
   const [triggerRect, setTriggerRect] = React.useState<DOMRect | null>(null);
-  const [contentRect, setContentRect] = React.useState<DOMRect | null>(null);
   const [mounted, setMounted] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const [shouldRender, setShouldRender] = React.useState(false);
+  const [isPositioned, setIsPositioned] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
 
   // Resolve openDirection from legacy align prop or new openDirection prop
   const openDirection: OpenDirection = openDirectionProp ||
     (align === "start" ? "bottom-left" : "bottom-right");
+
+  const isBottom = openDirection.startsWith("bottom");
+  const isLeft = openDirection.endsWith("left");
 
   // Ensure we're mounted on client side
   React.useEffect(() => {
@@ -140,20 +144,15 @@ const DropdownMenuContent = ({
   React.useEffect(() => {
     if (open) {
       setShouldRender(true);
-      // Start enter animation after render - use double RAF for better reliability
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsAnimating(true);
-        });
-      });
+      setIsPositioned(false);
     } else {
       // Start exit animation
       setIsAnimating(false);
       // Remove from DOM after animation completes
       const timer = setTimeout(() => {
         setShouldRender(false);
-        setContentRect(null); // Reset content rect when closing
-      }, 200);
+        setIsPositioned(false);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [open]);
@@ -180,12 +179,21 @@ const DropdownMenuContent = ({
     }
   }, [shouldRender, open, triggerRef]);
 
-  // Measure content after render to get accurate width for right-aligned positioning
+  // Position and animate after content is rendered and measured
   React.useLayoutEffect(() => {
-    if (shouldRender && contentRef.current) {
-      setContentRect(contentRef.current.getBoundingClientRect());
+    if (shouldRender && contentRef.current && triggerRect && !isPositioned) {
+      // Force a reflow to ensure the element is rendered
+      contentRef.current.offsetHeight;
+
+      // Now mark as positioned and start animation
+      setIsPositioned(true);
+
+      // Start animation in next frame
+      requestAnimationFrame(() => {
+        setIsAnimating(true);
+      });
     }
-  }, [shouldRender, children]);
+  }, [shouldRender, triggerRect, isPositioned]);
 
   if (!shouldRender || !triggerRect || !mounted) return null;
 
@@ -194,91 +202,77 @@ const DropdownMenuContent = ({
     const gap = sideOffset;
     const viewportPadding = 8;
 
-    const isBottom = openDirection.startsWith("bottom");
-    const isLeft = openDirection.endsWith("left");
-
     let top: number;
-    let left: number;
-    let transformOrigin: string;
+    let left: number | undefined;
+    let right: number | undefined;
 
     // Vertical positioning
     if (isBottom) {
       top = triggerRect.bottom + gap;
     } else {
-      // For top, we need content height - use measured or estimate
-      const contentHeight = contentRect?.height || 200;
-      top = triggerRect.top - gap - contentHeight;
+      // For top positioning, we'll set top and let content grow upward
+      // Use a reasonable estimate initially, will be positioned correctly
+      top = triggerRect.top - gap;
     }
 
-    // Horizontal positioning - anchor to the appropriate edge
+    // Horizontal positioning using left/right for stable anchoring
     if (isLeft) {
-      // Left edge of dropdown aligns with left edge of trigger
-      left = triggerRect.left;
-      transformOrigin = isBottom ? "top left" : "bottom left";
+      // Left edge anchored to trigger's left edge
+      left = Math.max(viewportPadding, triggerRect.left);
     } else {
-      // Right edge of dropdown aligns with right edge of trigger
-      // We need the content width for this calculation
-      const contentWidth = contentRect?.width || 0;
-      if (contentWidth > 0) {
-        left = triggerRect.right - contentWidth;
-      } else {
-        // Fallback: just align to trigger right edge, will adjust after measure
-        left = triggerRect.right;
-      }
-      transformOrigin = isBottom ? "top right" : "bottom right";
-    }
-
-    // Viewport boundary checks
-    left = Math.max(viewportPadding, left);
-    if (contentRect?.width) {
-      const rightEdge = left + contentRect.width;
-      if (rightEdge > window.innerWidth - viewportPadding) {
-        left = window.innerWidth - contentRect.width - viewportPadding;
-      }
+      // Right edge anchored to trigger's right edge
+      right = Math.max(viewportPadding, window.innerWidth - triggerRect.right);
     }
 
     return {
       position: 'fixed' as const,
-      top,
+      top: isBottom ? top : undefined,
+      bottom: !isBottom ? (window.innerHeight - triggerRect.top + gap) : undefined,
       left,
+      right,
       zIndex: 99999,
-      transformOrigin
     };
   };
 
   const style = calculatePosition();
 
-  // Animation classes based on state and direction
-  // Uses only vertical translation (no scale) to prevent horizontal shift
-  const getAnimationClasses = () => {
-    const baseClasses = "transition-all duration-150 ease-out";
-    const isBottom = openDirection.startsWith("bottom");
-
-    // Slide direction: bottom-* slides down from above, top-* slides up from below
-    const translateClass = isBottom ? '-translate-y-2' : 'translate-y-2';
-
-    if (isAnimating) {
-      return `${baseClasses} opacity-100 translate-y-0`;
-    } else {
-      return `${baseClasses} opacity-0 ${translateClass}`;
+  // Count menu items for stagger calculation
+  let itemCount = 0;
+  React.Children.forEach(children, (child) => {
+    if (React.isValidElement(child)) {
+      const isMenuItem = child.type?.displayName === 'DropdownMenuItem' ||
+                        child.props?.className?.includes?.('cursor-default') ||
+                        child.props?.className?.includes?.('flex items-center');
+      if (isMenuItem) itemCount++;
     }
-  };
+  });
 
   // Add staggered animation delays to children
-  const animatedChildren = React.Children.map(children, (child, index) => {
+  // Items animate from trigger outward (first item closest to trigger animates first)
+  let currentItemIndex = 0;
+  const animatedChildren = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      // Check if it's a menu item by looking for the className pattern
-      const isMenuItem = child.props?.className?.includes?.('cursor-default') ||
-                        child.type?.displayName === 'DropdownMenuItem' ||
+      const isMenuItem = child.type?.displayName === 'DropdownMenuItem' ||
+                        child.props?.className?.includes?.('cursor-default') ||
                         child.props?.className?.includes?.('flex items-center');
 
       if (isMenuItem) {
-        const delay = index * 30; // Slightly longer delay for better effect
+        // For bottom menus: first item is closest to trigger (index 0 = no delay)
+        // For top menus: last item is closest to trigger (reverse the order)
+        const staggerIndex = isBottom ? currentItemIndex : (itemCount - 1 - currentItemIndex);
+        const delay = staggerIndex * 25;
+        currentItemIndex++;
+
+        // Items slide in Y direction only - from trigger direction
+        // Bottom menus: items start above (negative Y) and slide down
+        // Top menus: items start below (positive Y) and slide up
+        const startY = isBottom ? -8 : 8;
+
         return React.cloneElement(child, {
           style: {
             ...child.props.style,
             opacity: isAnimating ? 1 : 0,
-            transform: isAnimating ? 'translateY(0)' : 'translateY(-6px)',
+            transform: isAnimating ? 'translateY(0)' : `translateY(${startY}px)`,
             transition: `opacity 150ms ease-out ${delay}ms, transform 150ms ease-out ${delay}ms`
           }
         });
@@ -287,19 +281,29 @@ const DropdownMenuContent = ({
     return child;
   });
 
+  // Container animation - pure Y translation, no X movement
+  const containerStyle = {
+    ...style,
+    opacity: isPositioned ? (isAnimating ? 1 : 0) : 0,
+    transform: isPositioned
+      ? (isAnimating ? 'translateY(0)' : `translateY(${isBottom ? -8 : 8}px)`)
+      : 'translateY(0)',
+    transition: 'opacity 150ms ease-out, transform 150ms ease-out',
+    // Hide until positioned to prevent flash
+    visibility: isPositioned ? 'visible' as const : 'hidden' as const,
+  };
+
   const dropdownContent = (
     <div
       ref={contentRef}
       className={cn(
         // Use universal card system with floating variant and glassmorphism
-        // Note: wewrite-card already provides correct border via --card-border
         "wewrite-card wewrite-floating",
         "min-w-[12rem] overflow-hidden rounded-2xl shadow-2xl",
         "p-3",
-        getAnimationClasses(),
         className
       )}
-      style={style}
+      style={containerStyle}
       onClick={(e) => e.stopPropagation()}
       {...props}
     >

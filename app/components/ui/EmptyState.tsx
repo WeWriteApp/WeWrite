@@ -2,7 +2,14 @@
 
 import React from 'react';
 import { Icon, IconName } from '@/components/ui/Icon';
+import { Button } from './button';
 import { cn, wewriteCard } from '../../lib/utils';
+
+interface EmptyStateAction {
+  label: string;
+  onClick: () => void;
+  variant?: 'default' | 'outline' | 'ghost';
+}
 
 interface EmptyStateProps {
   icon: IconName;
@@ -10,6 +17,16 @@ interface EmptyStateProps {
   description: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  /**
+   * Variant styling:
+   * - 'default': Standard card with background
+   * - 'dotted': Blank/transparent background with dotted border
+   */
+  variant?: 'default' | 'dotted';
+  /**
+   * Optional action button for "create first item" type flows
+   */
+  action?: EmptyStateAction;
 }
 
 /**
@@ -23,34 +40,44 @@ export default function EmptyState({
   title,
   description,
   className,
-  size = 'md'
+  size = 'md',
+  variant = 'default',
+  action
 }: EmptyStateProps) {
   const sizeClasses = {
     sm: {
       container: '',
       iconSize: 24,
       title: 'text-sm font-medium',
-      description: 'text-xs'
+      description: 'text-xs',
+      buttonSize: 'sm' as const
     },
     md: {
       container: 'p-4', // Extra padding beyond card default
       iconSize: 32,
       title: 'text-base font-medium',
-      description: 'text-sm'
+      description: 'text-sm',
+      buttonSize: 'default' as const
     },
     lg: {
       container: 'p-8', // Extra padding beyond card default
       iconSize: 48,
       title: 'text-lg font-medium',
-      description: 'text-base'
+      description: 'text-base',
+      buttonSize: 'default' as const
     }
   };
 
   const classes = sizeClasses[size];
 
+  const variantClasses = {
+    default: wewriteCard('default'),
+    dotted: 'bg-transparent border-2 border-dashed border-border rounded-xl p-4'
+  };
+
   return (
     <div className={cn(
-      wewriteCard('default'),
+      variantClasses[variant],
       "text-center text-muted-foreground",
       classes.container,
       className
@@ -62,6 +89,16 @@ export default function EmptyState({
       <p className={classes.description}>
         {description}
       </p>
+      {action && (
+        <Button
+          variant={action.variant || 'default'}
+          size={classes.buttonSize}
+          onClick={action.onClick}
+          className="mt-4"
+        >
+          {action.label}
+        </Button>
+      )}
     </div>
   );
 }

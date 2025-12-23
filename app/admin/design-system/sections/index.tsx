@@ -12,7 +12,6 @@ import { BordersSeparatorsSection } from './BordersSeparatorsSection';
 import { ButtonSection } from './ButtonSection';
 import { CardSection } from './CardSection';
 import { ColorSystemSection } from './ColorSystemSection';
-import { ColorSystemShowcaseSection } from './ColorSystemShowcaseSection';
 import { ColorTokenReferenceSection } from './ColorTokenReferenceSection';
 import { DrawersModalsSection } from './DrawersModalsSection';
 import { MenuDropdownSection } from './MenuDropdownSection';
@@ -52,7 +51,6 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'button', label: 'Button', component: ButtonSection },
   { id: 'card', label: 'Card', component: CardSection },
   { id: 'color-system', label: 'Color System Controls', component: ColorSystemSection },
-  { id: 'color-system-showcase', label: 'Color System Showcase', component: ColorSystemShowcaseSection },
   { id: 'color-token-reference', label: 'Color Token Reference', component: ColorTokenReferenceSection },
   { id: 'drawers-modals', label: 'Drawers & Modals', component: DrawersModalsSection },
   { id: 'menu-dropdown', label: 'Menu (Dropdown)', component: MenuDropdownSection },

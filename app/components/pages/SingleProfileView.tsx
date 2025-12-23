@@ -42,8 +42,11 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
       {/* Fixed header with back/logo/share */}
       <UserProfileHeader username={profile.username} />
 
-      {/* Content area */}
-      <div className="space-y-4">
+      {/* Content area - padding top to account for fixed UserProfileHeader height + banner stack */}
+      <div
+        className="space-y-4"
+        style={{ paddingTop: 'calc(var(--banner-stack-height, 0px) + 56px)' }}
+      >
         {/* Profile header - separate card */}
         <div className="wewrite-card pb-4">
           {/* Username row */}

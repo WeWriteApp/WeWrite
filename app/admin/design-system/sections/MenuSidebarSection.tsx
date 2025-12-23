@@ -55,9 +55,10 @@ function SidebarItem({
       aria-label={label}
     >
       <motion.div
+        className="flex items-center justify-center"
+        style={{ width: 20, height: 20 }}
         animate={{
           scale: isPressed ? 0.9 : isHovered ? 1.15 : isActive ? 1.05 : 1,
-          y: isHovered && !isPressed ? -1 : 0
         }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
@@ -73,7 +74,7 @@ function SidebarItem({
 
       <span
         className={cn(
-          "text-sm font-medium truncate whitespace-nowrap overflow-hidden",
+          "text-sm font-medium truncate whitespace-nowrap overflow-hidden leading-5",
           "transition-all duration-300 ease-out",
           showContent
             ? "ml-3 opacity-100 w-auto max-w-[160px]"
