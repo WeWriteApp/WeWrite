@@ -1,38 +1,119 @@
 /**
  * Session API Endpoint
- * 
- * Uses Firebase REST API for Auth token verification (to avoid jose dependency issues)
- * Uses Firebase Admin SDK for Firestore operations (which work fine)
+ *
+ * Handles user session management with cookie-based authentication.
+ *
+ * Architecture:
+ * - GET: Validates existing session cookie, enriches with fresh Firestore data
+ * - POST: Creates new session after Firebase Auth login (called with ID token)
+ *
+ * Admin Detection:
+ * 1. Firestore user document: isAdmin === true OR role === 'admin'
+ * 2. Fallback: Email in ADMIN_EMAILS environment variable
+ *
+ * Note: Uses Firebase REST API for token verification to avoid jose dependency issues.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { getCollectionName } from '../../../utils/environmentConfig';
 import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
 import { isAdmin as isAdminByEmail } from '../../../utils/isAdmin';
 import { verifyIdToken } from '../../../lib/firebase-rest';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { DEV_TEST_USERS } from '../../../utils/testUsers';
 
-// Helper function to create error responses
+// =============================================================================
+// Response Helpers
+// =============================================================================
+
 function createErrorResponse(code: AuthErrorCode, message: string, status: number = 401): NextResponse {
-  const response: SessionResponse = {
-    isAuthenticated: false,
-    error: message
-  };
-  return NextResponse.json(response, { status });
+  return NextResponse.json({ isAuthenticated: false, error: message } as SessionResponse, { status });
 }
 
-// Helper function to create success responses
 function createSuccessResponse(user: User): NextResponse {
-  const response: SessionResponse = {
-    isAuthenticated: true,
-    user
-  };
-  return NextResponse.json(response);
+  console.log('[Session] Returning user with isAdmin:', user.isAdmin, 'for:', user.email);
+  return NextResponse.json({ isAuthenticated: true, user } as SessionResponse);
 }
 
-// GET endpoint - Check current session
+// =============================================================================
+// User Data Fetching
+// =============================================================================
+
+interface FirestoreUserData {
+  username?: string;
+  isAdmin?: boolean;
+  role?: string;
+  emailVerified?: boolean;
+  photoURL?: string;
+  createdAt?: string;
+}
+
+/**
+ * Fetch user data from Firestore
+ * Returns null if user doesn't exist or on error
+ */
+async function fetchUserFromFirestore(uid: string): Promise<FirestoreUserData | null> {
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.warn('[Session] Firebase Admin not available');
+      return null;
+    }
+
+    const db = admin.firestore();
+    const collectionName = getCollectionName('users');
+    const userDoc = await db.collection(collectionName).doc(uid).get();
+
+    if (!userDoc.exists) {
+      console.warn('[Session] User document not found in Firestore:', uid);
+      return null;
+    }
+
+    const data = userDoc.data() as FirestoreUserData;
+    console.log('[Session] Firestore user data for', uid, ':', {
+      hasUsername: !!data?.username,
+      isAdmin: data?.isAdmin,
+      role: data?.role,
+      emailVerified: data?.emailVerified,
+      collection: collectionName
+    });
+
+    return data;
+  } catch (error) {
+    console.error('[Session] Failed to fetch user from Firestore:', error);
+    return null;
+  }
+}
+
+/**
+ * Determine if user has admin access based on Firestore data and email allowlist
+ */
+function checkAdminStatus(firestoreData: FirestoreUserData | null, email: string): boolean {
+  // Check Firestore flags first
+  if (firestoreData?.isAdmin === true) {
+    console.log('[Session] Admin granted via Firestore isAdmin flag');
+    return true;
+  }
+  if (firestoreData?.role === 'admin') {
+    console.log('[Session] Admin granted via Firestore role field');
+    return true;
+  }
+
+  // Fallback to email allowlist (ADMIN_EMAILS env var)
+  if (isAdminByEmail(email)) {
+    console.log('[Session] Admin granted via ADMIN_EMAILS allowlist');
+    return true;
+  }
+
+  console.log('[Session] User is not an admin:', email);
+  return false;
+}
+
+// =============================================================================
+// GET - Validate existing session
+// =============================================================================
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -42,64 +123,16 @@ export async function GET(request: NextRequest) {
       return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'No active session');
     }
 
-    let user: User;
+    // Try to parse session cookie
+    let sessionData: { uid: string; email: string; username?: string; photoURL?: string; emailVerified?: boolean; createdAt?: string; lastLoginAt?: string; isAdmin?: boolean };
 
     try {
-      // Try parsing as JSON (standard format)
-      const sessionData = JSON.parse(sessionCookie.value);
-
-      // Validate session data
-      if (!sessionData.uid || !sessionData.email) {
-        return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session data');
-      }
-
-      // Build user object from session cookie
-      user = {
-        uid: sessionData.uid,
-        email: sessionData.email,
-        username: sessionData.username || '',
-        photoURL: sessionData.photoURL || null,
-        emailVerified: sessionData.emailVerified !== false,
-        createdAt: sessionData.createdAt || new Date().toISOString(),
-        lastLoginAt: sessionData.lastLoginAt || new Date().toISOString(),
-        isAdmin: sessionData.isAdmin === true
-      };
-
-      // Try to enrich from Firestore using firebase-admin (non-blocking)
-      // IMPORTANT: This is critical for emailVerified status to be updated after verification
-      try {
-        const admin = getFirebaseAdmin();
-        if (admin) {
-          const db = admin.firestore();
-          const userDocRef = db.collection(getCollectionName('users')).doc(user.uid);
-          const userDoc = await userDocRef.get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            if (userData?.username) {
-              user.username = userData.username;
-            }
-            if (userData?.isAdmin === true || userData?.role === 'admin') {
-              user.isAdmin = true;
-            }
-            // Always use Firestore's emailVerified as source of truth
-            // This ensures the banner hides after verification even if cookie is stale
-            if (userData?.emailVerified === true) {
-              user.emailVerified = true;
-            }
-          }
-        }
-      } catch (e) {
-        // Non-critical - continue with cookie data
-        console.warn('[Session] Failed to enrich user from Firestore:', e);
-      }
-
-    } catch (parseError) {
-      // Handle legacy format (dev users)
-      const cookieValue = sessionCookie.value;
-      const devUser = Object.values(DEV_TEST_USERS).find(u => u.uid === cookieValue);
-      
+      sessionData = JSON.parse(sessionCookie.value);
+    } catch {
+      // Handle legacy format (dev users only)
+      const devUser = Object.values(DEV_TEST_USERS).find(u => u.uid === sessionCookie.value);
       if (devUser) {
-        user = {
+        const user: User = {
           uid: devUser.uid,
           email: devUser.email,
           username: devUser.username,
@@ -107,17 +140,35 @@ export async function GET(request: NextRequest) {
           emailVerified: true,
           createdAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
-          isAdmin: devUser.isAdmin === true // Dev users have isAdmin flag
+          isAdmin: devUser.isAdmin === true
         };
-      } else {
-        return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
+        return createSuccessResponse(user);
       }
+      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
     }
 
-    // Fallback admin check by email allowlist
-    if (!user.isAdmin && isAdminByEmail(user.email)) {
-      user.isAdmin = true;
+    // Validate required session data
+    if (!sessionData.uid || !sessionData.email) {
+      console.warn('[Session] Invalid session data - missing uid or email');
+      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session data');
     }
+
+    console.log('[Session] GET - Processing session for:', sessionData.email, 'uid:', sessionData.uid);
+
+    // Fetch fresh data from Firestore to ensure we have latest admin status
+    const firestoreData = await fetchUserFromFirestore(sessionData.uid);
+
+    // Build user object with Firestore enrichment
+    const user: User = {
+      uid: sessionData.uid,
+      email: sessionData.email,
+      username: firestoreData?.username || sessionData.username || '',
+      photoURL: firestoreData?.photoURL || sessionData.photoURL || undefined,
+      emailVerified: firestoreData?.emailVerified ?? sessionData.emailVerified ?? true,
+      createdAt: firestoreData?.createdAt || sessionData.createdAt || new Date().toISOString(),
+      lastLoginAt: sessionData.lastLoginAt || new Date().toISOString(),
+      isAdmin: checkAdminStatus(firestoreData, sessionData.email)
+    };
 
     return createSuccessResponse(user);
 
@@ -127,7 +178,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST endpoint - Create session from ID token (called after login)
+// =============================================================================
+// POST - Create new session after login
+// =============================================================================
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -137,140 +191,97 @@ export async function POST(request: NextRequest) {
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'ID token is required');
     }
 
-    // Check if we should use dev auth system
+    // Check if we should use dev auth system (local development only)
     const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    let uid: string;
+    let email: string;
+    let emailVerified: boolean;
 
     if (useDevAuth) {
-      console.log('[Session] Dev auth mode: bypassing token verification');
+      // Dev mode: decode token without verification
+      console.log('[Session] POST - Dev auth mode: bypassing token verification');
 
-      try {
-        // In development mode, decode the token without verification
-        const tokenParts = idToken.split('.');
-        if (tokenParts.length !== 3) {
-          return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid token format');
-        }
-
-        const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
-        const uid = payload.user_id || payload.sub;
-
-        // Get user data from Firestore using firebase-admin
-        const admin = getFirebaseAdmin();
-        let userData: Record<string, any> | undefined;
-        if (admin) {
-          const db = admin.firestore();
-          const userDoc = await db.collection(getCollectionName('users')).doc(uid).get();
-          userData = userDoc.exists ? userDoc.data() : undefined;
-        }
-
-        const user: User = {
-          uid,
-          email: payload.email || userData?.email || '',
-          username: userData?.username || '',
-          photoURL: userData?.photoURL || payload.picture || undefined,
-          emailVerified: payload.email_verified || userData?.emailVerified || false,
-          createdAt: userData?.createdAt || new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-          isAdmin: userData?.isAdmin === true || userData?.role === 'admin'
-        };
-
-        // Fallback admin check by email allowlist (includes dev user check)
-        if (!user.isAdmin && isAdminByEmail(user.email)) {
-          user.isAdmin = true;
-        }
-
-        // Create session cookie
-        await createSessionCookie(user);
-
-        console.log('[Session] Dev auth session created for:', user.email);
-        return createSuccessResponse(user);
-
-      } catch (devError) {
-        console.error('[Session] Dev auth session creation failed:', devError);
-        return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Dev auth session creation failed');
+      const tokenParts = idToken.split('.');
+      if (tokenParts.length !== 3) {
+        return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid token format');
       }
-    }
 
-    // Production mode: verify ID token using REST API (to avoid jose dependency issues)
-    console.log('[Session] Verifying ID token via REST API...');
-    console.log('[Session] Firebase config check:', {
-      hasApiKey: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PID,
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV
-    });
+      const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+      uid = payload.user_id || payload.sub;
+      email = payload.email || '';
+      emailVerified = payload.email_verified || false;
+    } else {
+      // Production mode: verify ID token using REST API
+      console.log('[Session] POST - Verifying ID token via REST API...');
 
-    const verifyResult = await verifyIdToken(idToken);
-    
-    console.log('[Session] Token verification result:', {
-      success: verifyResult.success,
-      hasUid: !!verifyResult.uid,
-      error: verifyResult.error
-    });
-    
-    if (!verifyResult.success || !verifyResult.uid) {
-      console.error('[Session] Token verification failed:', verifyResult.error);
-      return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid ID token');
-    }
+      const verifyResult = await verifyIdToken(idToken);
 
-    console.log('[Session] Token verified for user:', verifyResult.uid);
-
-    // Get user data from Firestore using firebase-admin (NOT Auth - safe from jose issues)
-    let userData: Record<string, any> | undefined;
-    try {
-      const admin = getFirebaseAdmin();
-      if (admin) {
-        const db = admin.firestore();
-        const userDoc = await db.collection(getCollectionName('users')).doc(verifyResult.uid).get();
-        userData = userDoc.exists ? userDoc.data() : undefined;
+      if (!verifyResult.success || !verifyResult.uid) {
+        console.error('[Session] Token verification failed:', verifyResult.error);
+        return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid ID token');
       }
-    } catch (firestoreError) {
-      console.warn('[Session] Firestore lookup failed:', firestoreError);
+
+      uid = verifyResult.uid;
+      email = verifyResult.email || '';
+      emailVerified = verifyResult.emailVerified || false;
+      console.log('[Session] POST - Token verified for:', email);
     }
 
+    // Fetch user data from Firestore
+    const firestoreData = await fetchUserFromFirestore(uid);
+
+    // Build user object
     const user: User = {
-      uid: verifyResult.uid,
-      email: verifyResult.email || '',
-      username: userData?.username || '',
-      photoURL: userData?.photoURL || undefined,
-      emailVerified: verifyResult.emailVerified || false,
-      createdAt: userData?.createdAt || new Date().toISOString(),
+      uid,
+      email: email || firestoreData?.username || '',
+      username: firestoreData?.username || '',
+      photoURL: firestoreData?.photoURL || undefined,
+      emailVerified: firestoreData?.emailVerified ?? emailVerified,
+      createdAt: firestoreData?.createdAt || new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
-      isAdmin: userData?.isAdmin === true || userData?.role === 'admin'
+      isAdmin: checkAdminStatus(firestoreData, email)
     };
-
-    // Fallback admin check
-    if (!user.isAdmin && isAdminByEmail(user.email)) {
-      user.isAdmin = true;
-    }
 
     // Create session cookie
     await createSessionCookie(user);
 
-    // Update last login time using firebase-admin (non-blocking, best-effort)
-    try {
-      const admin = getFirebaseAdmin();
-      if (admin) {
-        const db = admin.firestore();
-        const now = new Date().toISOString();
-        await db.collection(getCollectionName('users')).doc(user.uid).update({
-          lastLogin: now, // For admin panel
-          lastLoginAt: now, // For other code that uses this field
-          lastActiveAt: now
-        });
-      }
-    } catch (e) {
-      console.warn('[Session] Failed to update last login time:', e);
-    }
+    // Update last login time in Firestore (best-effort)
+    await updateLastLoginTime(uid);
 
     // Create device session for tracking
-    await createUserSession(request, user.uid);
+    await createUserSession(request, uid);
 
-    console.log('[Session] Session created for:', user.email);
+    console.log('[Session] POST - Session created for:', user.email, 'isAdmin:', user.isAdmin);
     return createSuccessResponse(user);
 
   } catch (error) {
     console.error('[Session] Session creation error:', error);
     return createErrorResponse(AuthErrorCode.UNKNOWN_ERROR, 'Session creation failed', 500);
+  }
+}
+
+// =============================================================================
+// Session Cookie Management
+// =============================================================================
+
+/**
+ * Update last login timestamp in Firestore (best-effort, non-blocking)
+ */
+async function updateLastLoginTime(uid: string): Promise<void> {
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) return;
+
+    const db = admin.firestore();
+    const now = new Date().toISOString();
+
+    await db.collection(getCollectionName('users')).doc(uid).update({
+      lastLogin: now,
+      lastLoginAt: now,
+      lastActiveAt: now
+    });
+  } catch (error) {
+    console.warn('[Session] Failed to update last login time:', error);
   }
 }
 
