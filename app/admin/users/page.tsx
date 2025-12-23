@@ -1543,11 +1543,17 @@ export default function AdminUsersPage() {
                   </div>
                   <div>
                     <div className="text-muted-foreground">Admin</div>
-                    {selectedUser.isAdmin ? (
-                      <Badge variant="success-secondary">Admin</Badge>
-                    ) : (
-                      <Badge variant="outline-static">Not admin</Badge>
-                    )}
+                    <button
+                      onClick={() => setToggleAdminUser(selectedUser)}
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      title={selectedUser.isAdmin ? "Click to remove admin" : "Click to make admin"}
+                    >
+                      {selectedUser.isAdmin ? (
+                        <Badge variant="success-secondary">Admin</Badge>
+                      ) : (
+                        <Badge variant="outline-static">Not admin</Badge>
+                      )}
+                    </button>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Email verified</div>
