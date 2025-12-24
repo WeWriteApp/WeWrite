@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { getUserEmailFromId, getUserIdFromRequest } from '../../auth-helper';
-import { isAdminServer } from '../../admin-auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 type FeatureFlagMap = Record<string, boolean>;
 
@@ -49,17 +48,12 @@ async function getUserOverrides(adminDb: FirebaseFirestore.Firestore, userId: st
 }
 
 async function assertAdmin(request: NextRequest): Promise<{ ok: boolean; email?: string; status?: number; error?: string }> {
-  const userId = await getUserIdFromRequest(request);
-  if (!userId) {
-    return { ok: false, status: 401, error: 'Unauthorized' };
+  const adminCheck = await checkAdminPermissions(request);
+  if (!adminCheck.success) {
+    return { ok: false, status: 403, error: adminCheck.error || 'Admin access required' };
   }
 
-  const userEmail = await getUserEmailFromId(userId);
-  if (!userEmail || !isAdminServer(userEmail)) {
-    return { ok: false, status: 403, error: 'Admin access required' };
-  }
-
-  return { ok: true, email: userEmail };
+  return { ok: true, email: adminCheck.userEmail };
 }
 
 export async function GET(request: NextRequest) {

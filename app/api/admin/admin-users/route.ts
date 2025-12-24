@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { isAdminServer } from '../../admin-auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 interface AdminUser {
   id: string;
@@ -23,18 +23,10 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin!.firestore();
 
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user email to check admin status
-    const userRecord = await admin!.auth().getUser(userId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || !isAdminServer(userEmail)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     console.log('Loading admin users from Firestore via API...');
@@ -110,18 +102,10 @@ export async function POST(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin!.firestore();
 
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user email to check admin status
-    const userRecord = await admin!.auth().getUser(userId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || !isAdminServer(userEmail)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();

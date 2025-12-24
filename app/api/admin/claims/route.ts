@@ -16,52 +16,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { setAdminClaim, getAdminClaim, getAllAdmins, revokeUserTokens } from '../../../services/adminClaimsService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
-import { isAdmin as isAdminByEmail } from '../../../utils/isAdmin';
+import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+
+interface SessionData {
+  uid?: string;
+  email?: string;
+  isAdmin?: boolean;
+}
 
 /**
- * Verify the requesting user is an admin
+ * Verify the requesting user is an admin using session cookie
  */
 async function verifyAdminAccess(request: NextRequest): Promise<{ isAdmin: boolean; uid?: string; email?: string; error?: string }> {
-  // Get user email from middleware header or session cookie
-  const userEmail = request.headers.get('x-user-email');
-
-  if (!userEmail) {
+  // Get session data from cookie
+  const simpleSessionCookie = request.cookies.get('simpleUserSession')?.value;
+  if (!simpleSessionCookie) {
     return { isAdmin: false, error: 'Not authenticated' };
   }
 
-  // Check if user is admin by email allowlist first (backwards compat)
-  if (isAdminByEmail(userEmail)) {
-    return { isAdmin: true, email: userEmail };
+  let sessionData: SessionData;
+  try {
+    sessionData = JSON.parse(simpleSessionCookie);
+  } catch {
+    return { isAdmin: false, error: 'Invalid session' };
   }
 
-  // Check if user has admin claim in Firestore
-  const admin = getFirebaseAdmin();
-  if (!admin) {
-    return { isAdmin: false, error: 'Database not available' };
+  if (!sessionData.uid || !sessionData.email) {
+    return { isAdmin: false, error: 'Invalid session data' };
   }
 
-  const db = admin.firestore();
-  const usersSnapshot = await db.collection(getCollectionName('users'))
-    .where('email', '==', userEmail)
-    .limit(1)
-    .get();
-
-  if (usersSnapshot.empty) {
-    return { isAdmin: false, error: 'User not found' };
+  // Check session's isAdmin flag (set by /api/auth/session from Custom Claims + Firestore)
+  if (sessionData.isAdmin === true) {
+    return { isAdmin: true, uid: sessionData.uid, email: sessionData.email };
   }
 
-  const userData = usersSnapshot.docs[0].data();
-  const uid = usersSnapshot.docs[0].id;
-
-  if (userData.isAdmin === true) {
-    return { isAdmin: true, uid, email: userEmail };
-  }
-
-  // Check custom claim
-  const claimResult = await getAdminClaim(uid);
-  if (claimResult.isAdmin) {
-    return { isAdmin: true, uid, email: userEmail };
+  // In development, allow access for all authenticated users
+  const env = getEnvironmentType();
+  if (env === 'development') {
+    return { isAdmin: true, uid: sessionData.uid, email: sessionData.email };
   }
 
   return { isAdmin: false, error: 'Not authorized' };

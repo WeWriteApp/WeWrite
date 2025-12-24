@@ -2,26 +2,47 @@
  * Admin Authentication Helper
  * Provides authentication and authorization utilities for admin API endpoints
  *
- * Uses centralized admin configuration from adminConfig.ts
- * Admin lists are loaded from environment variables.
+ * Admin status is now determined by the session cookie's isAdmin flag,
+ * which is set by /api/auth/session using:
+ * 1. Firebase Custom Claims (most secure, cryptographically signed)
+ * 2. Firestore isAdmin/role fields
  */
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from './auth-helper';
-import { getAdminEmails, getAdminUserIds } from '../utils/adminConfig';
 import { getEnvironmentType } from '../utils/environmentConfig';
+
+interface SessionData {
+  uid?: string;
+  email?: string;
+  isAdmin?: boolean;
+}
+
+/**
+ * Get session data from session cookie
+ */
+function getSessionData(request: NextRequest): SessionData | null {
+  const simpleSessionCookie = request.cookies.get('simpleUserSession')?.value;
+  if (!simpleSessionCookie) return null;
+
+  try {
+    return JSON.parse(simpleSessionCookie) as SessionData;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Check if a user is an admin (server-side version)
- * Used for checking if the CURRENT REQUEST's user has admin access
+ * Uses the session cookie's isAdmin flag which is set by /api/auth/session
  * In development, grants access to all authenticated users for testing
  */
-export const isAdminServer = (userEmail?: string | null): boolean => {
-  if (!userEmail) return false;
+export const isAdminServer = (request: NextRequest): boolean => {
+  const sessionData = getSessionData(request);
+  if (!sessionData) return false;
 
-  // Check against centralized admin emails from environment
-  const adminEmails = getAdminEmails();
-  if (adminEmails.includes(userEmail)) {
+  // Check session's isAdmin flag (set by /api/auth/session from Custom Claims + Firestore)
+  if (sessionData.isAdmin === true) {
     return true;
   }
 
@@ -36,36 +57,20 @@ export const isAdminServer = (userEmail?: string | null): boolean => {
 
 /**
  * Check if a user record should be marked as admin
- * Used for displaying admin status in admin panels - does NOT use dev mode override
- * Only returns true if user is actually in the admin list
+ * Used for displaying admin status in admin panels
+ * This checks Firestore data, not session - used when listing users
+ *
+ * @deprecated Use Firestore isAdmin field directly instead
  */
-export const isUserRecordAdmin = (userEmail?: string | null): boolean => {
-  if (!userEmail) return false;
-
-  // Only check against actual admin emails - no dev mode shortcut
-  const adminEmails = getAdminEmails();
-  return adminEmails.includes(userEmail);
+export const isUserRecordAdmin = (_userEmail?: string | null): boolean => {
+  // This is deprecated - admin status should be read from Firestore isAdmin field directly
+  // Return false to indicate no email-based admin check
+  return false;
 };
 
 /**
- * Get user email from session cookie
- * This avoids using firebase-admin auth which causes jose dependency issues in Vercel
- */
-function getEmailFromSessionCookie(request: NextRequest): string | null {
-  const simpleSessionCookie = request.cookies.get('simpleUserSession')?.value;
-  if (!simpleSessionCookie) return null;
-
-  try {
-    const sessionData = JSON.parse(simpleSessionCookie);
-    return sessionData?.email || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Check admin permissions for API requests
- * Uses session cookie to get email - avoids firebase-admin auth (jose issues)
+ * Uses session cookie's isAdmin flag - set by /api/auth/session
  */
 export async function checkAdminPermissions(request: NextRequest): Promise<{success: boolean, error?: string, userEmail?: string}> {
   try {
@@ -75,34 +80,24 @@ export async function checkAdminPermissions(request: NextRequest): Promise<{succ
       return { success: false, error: 'Unauthorized - no user ID' };
     }
 
-    // Check if userId is in the admin user IDs list
-    const adminUserIds = getAdminUserIds();
-    if (adminUserIds.includes(userId)) {
-      console.log('🔐 [ADMIN AUTH] Admin access granted by user ID');
-      // Get email from session if available
-      const userEmail = getEmailFromSessionCookie(request);
-      return { success: true, userEmail: userEmail || undefined };
+    // Get session data
+    const sessionData = getSessionData(request);
+
+    // Check if session has isAdmin flag
+    if (sessionData?.isAdmin === true) {
+      console.log('🔐 [ADMIN AUTH] Admin access granted via session isAdmin flag');
+      return { success: true, userEmail: sessionData.email || undefined };
     }
 
-    // Get user email from session cookie (already verified when session was created)
-    const userEmail = getEmailFromSessionCookie(request);
-
-    if (!userEmail) {
-      // In development, allow access even without email
-      const env = getEnvironmentType();
-      if (env === 'development') {
-        console.log('🔧 [DEV MODE] Allowing admin access without email in development');
-        return { success: true, userEmail: undefined };
-      }
-      return { success: false, error: 'Unauthorized - no email in session' };
+    // In development, allow access for all authenticated users
+    const env = getEnvironmentType();
+    if (env === 'development') {
+      console.log('🔧 [DEV MODE] Allowing admin access in development');
+      return { success: true, userEmail: sessionData?.email || undefined };
     }
 
-    // Check if user is admin
-    if (!isAdminServer(userEmail)) {
-      return { success: false, error: 'Admin access required' };
-    }
-
-    return { success: true, userEmail };
+    // Not an admin
+    return { success: false, error: 'Admin access required' };
   } catch (error) {
     console.error('Error checking admin permissions:', error);
     return { success: false, error: 'Authentication error' };
