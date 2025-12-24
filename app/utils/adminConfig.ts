@@ -1,98 +1,73 @@
 /**
- * Centralized Admin Configuration
+ * Admin Configuration
  *
- * SINGLE SOURCE OF TRUTH for admin users in WeWrite.
- * All admin checks across the codebase should import from this file.
+ * @deprecated This file is mostly deprecated. Admin access is now controlled by:
+ * 1. Firebase Custom Claims (admin: true) - most secure
+ * 2. Firestore user document (isAdmin: true) - database-backed
  *
- * Admin lists are loaded from environment variables:
- * - ADMIN_EMAILS: Comma-separated list of admin email addresses
- * - ADMIN_USER_IDS: Comma-separated list of Firebase Auth UIDs (optional fallback)
+ * The session's isAdmin flag (set by /api/auth/session) should be the source of truth.
  *
- * SECURITY NOTES:
- * - Never commit actual admin emails/UIDs to git
- * - Set these in Vercel environment variables for production
- * - Set these in .env.local for local development (gitignored)
+ * Environment variable approach (ADMIN_EMAILS) has been removed for better security.
+ * To make someone an admin:
+ * - Set isAdmin: true on their Firestore user document, OR
+ * - Use /api/admin/claims to set Firebase Custom Claims
  */
 
 import { getEnvironmentType } from './environmentConfig';
 
 /**
- * Parse comma-separated environment variable into array
- */
-function parseEnvList(envVar: string | undefined): string[] {
-  if (!envVar) return [];
-  return envVar
-    .split(',')
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-}
-
-/**
- * Get admin emails from environment variable
- * Falls back to empty array if not configured (fail-secure)
+ * @deprecated No longer uses ADMIN_EMAILS env var.
+ * Returns empty array - admin status is now in Firestore/Custom Claims.
  */
 export function getAdminEmails(): string[] {
-  return parseEnvList(process.env.ADMIN_EMAILS);
+  return [];
 }
 
 /**
- * Get admin user IDs from environment variable
- * Falls back to empty array if not configured (fail-secure)
+ * @deprecated No longer uses ADMIN_USER_IDS env var.
+ * Returns empty array - admin status is now in Firestore/Custom Claims.
  */
 export function getAdminUserIds(): string[] {
-  return parseEnvList(process.env.ADMIN_USER_IDS);
+  return [];
 }
 
 /**
- * Check if an email is in the admin list
+ * @deprecated Always returns false in production.
+ * Admin status is determined by Firebase Custom Claims or Firestore isAdmin field.
  */
-export function isAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const adminEmails = getAdminEmails();
-  return adminEmails.includes(email);
+export function isAdminEmail(_email: string | null | undefined): boolean {
+  return false;
 }
 
 /**
- * Check if a user ID is in the admin list
+ * @deprecated Always returns false.
+ * Admin status is determined by Firebase Custom Claims or Firestore isAdmin field.
  */
-export function isAdminUserId(userId: string | null | undefined): boolean {
-  if (!userId) return false;
-  const adminUserIds = getAdminUserIds();
-  return adminUserIds.includes(userId);
+export function isAdminUserId(_userId: string | null | undefined): boolean {
+  return false;
 }
 
 /**
- * Check if a user is a production admin
- * Returns true only if the user's email is in ADMIN_EMAILS
- * This should be used for any operation that accesses production data
+ * @deprecated Always returns false in production.
+ * Use the session's isAdmin flag instead.
  */
-export function isProductionAdmin(email: string | null | undefined): boolean {
-  return isAdminEmail(email);
+export function isProductionAdmin(_email: string | null | undefined): boolean {
+  return false;
 }
 
 /**
  * Check if user has admin access in the current environment
  *
- * In development: ALL users are admins (but only for DEV_ collections)
- * In production: Only users in ADMIN_EMAILS have admin access
+ * @deprecated Use the session's isAdmin flag instead.
+ * This only returns true in development for local testing.
  *
- * @param email - User's email address
- * @param userId - User's Firebase Auth UID (optional fallback)
+ * In development: ALL users are admins (but only for DEV_ collections)
+ * In production: Returns false - admin status is in session cookie
  */
 export function hasAdminAccess(
-  email: string | null | undefined,
-  userId?: string | null
+  _email: string | null | undefined,
+  _userId?: string | null
 ): boolean {
-  // Check by email first (primary method)
-  if (isAdminEmail(email)) {
-    return true;
-  }
-
-  // Check by user ID (fallback)
-  if (isAdminUserId(userId)) {
-    return true;
-  }
-
   // In development, all authenticated users get admin access
   // They can only access DEV_ collections anyway
   const env = getEnvironmentType();
@@ -104,20 +79,10 @@ export function hasAdminAccess(
 }
 
 /**
- * Log admin configuration for debugging (sanitized)
- * Only logs count and first few characters of emails
+ * @deprecated No-op function, config logging removed.
  */
 export function logAdminConfig(): void {
-  const emails = getAdminEmails();
-  const userIds = getAdminUserIds();
-
-  console.log('[ADMIN CONFIG]', {
-    emailCount: emails.length,
-    userIdCount: userIds.length,
-    environment: getEnvironmentType(),
-    // Show sanitized preview (first 3 chars of each)
-    emailPreviews: emails.map(e => e.substring(0, 3) + '***'),
-  });
+  console.log('[ADMIN CONFIG] Admin access is now determined by Firebase Custom Claims and Firestore isAdmin field');
 }
 
 /**

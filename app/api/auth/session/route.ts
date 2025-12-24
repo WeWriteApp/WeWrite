@@ -7,9 +7,9 @@
  * - GET: Validates existing session cookie, enriches with fresh Firestore data
  * - POST: Creates new session after Firebase Auth login (called with ID token)
  *
- * Admin Detection:
- * 1. Firestore user document: isAdmin === true OR role === 'admin'
- * 2. Fallback: Email in ADMIN_EMAILS environment variable
+ * Admin Detection (in priority order):
+ * 1. Firebase Custom Claims (most secure, cryptographically signed)
+ * 2. Firestore user document: isAdmin === true OR role === 'admin'
  *
  * Note: Uses Firebase REST API for token verification to avoid jose dependency issues.
  */
@@ -18,10 +18,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
-import { isAdmin as isAdminByEmail } from '../../../utils/isAdmin';
 import { verifyIdToken } from '../../../lib/firebase-rest';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { DEV_TEST_USERS } from '../../../utils/testUsers';
+import { getAdminClaim } from '../../../services/adminClaimsService';
 
 // =============================================================================
 // Response Helpers
@@ -87,22 +87,30 @@ async function fetchUserFromFirestore(uid: string): Promise<FirestoreUserData | 
 }
 
 /**
- * Determine if user has admin access based on Firestore data and email allowlist
+ * Determine if user has admin access based on:
+ * 1. Firebase Custom Claims (most secure, cryptographically signed)
+ * 2. Firestore isAdmin/role fields
  */
-function checkAdminStatus(firestoreData: FirestoreUserData | null, email: string): boolean {
-  // Check Firestore flags first
+async function checkAdminStatus(uid: string, firestoreData: FirestoreUserData | null, email: string): Promise<boolean> {
+  // 1. Check Firebase Custom Claims first (most secure)
+  try {
+    const claimResult = await getAdminClaim(uid);
+    if (claimResult.isAdmin) {
+      console.log('[Session] Admin granted via Firebase Custom Claims');
+      return true;
+    }
+  } catch (error) {
+    console.warn('[Session] Error checking custom claims:', error);
+    // Continue to fallback checks
+  }
+
+  // 2. Check Firestore flags
   if (firestoreData?.isAdmin === true) {
     console.log('[Session] Admin granted via Firestore isAdmin flag');
     return true;
   }
   if (firestoreData?.role === 'admin') {
     console.log('[Session] Admin granted via Firestore role field');
-    return true;
-  }
-
-  // Fallback to email allowlist (ADMIN_EMAILS env var)
-  if (isAdminByEmail(email)) {
-    console.log('[Session] Admin granted via ADMIN_EMAILS allowlist');
     return true;
   }
 
@@ -158,6 +166,9 @@ export async function GET(request: NextRequest) {
     // Fetch fresh data from Firestore to ensure we have latest admin status
     const firestoreData = await fetchUserFromFirestore(sessionData.uid);
 
+    // Check admin status (includes custom claims check)
+    const isAdminUser = await checkAdminStatus(sessionData.uid, firestoreData, sessionData.email);
+
     // Build user object with Firestore enrichment
     const user: User = {
       uid: sessionData.uid,
@@ -167,7 +178,7 @@ export async function GET(request: NextRequest) {
       emailVerified: firestoreData?.emailVerified ?? sessionData.emailVerified ?? true,
       createdAt: firestoreData?.createdAt || sessionData.createdAt || new Date().toISOString(),
       lastLoginAt: sessionData.lastLoginAt || new Date().toISOString(),
-      isAdmin: checkAdminStatus(firestoreData, sessionData.email)
+      isAdmin: isAdminUser
     };
 
     return createSuccessResponse(user);
@@ -230,6 +241,9 @@ export async function POST(request: NextRequest) {
     // Fetch user data from Firestore
     const firestoreData = await fetchUserFromFirestore(uid);
 
+    // Check admin status (includes custom claims check)
+    const isAdminUser = await checkAdminStatus(uid, firestoreData, email);
+
     // Build user object
     const user: User = {
       uid,
@@ -239,7 +253,7 @@ export async function POST(request: NextRequest) {
       emailVerified: firestoreData?.emailVerified ?? emailVerified,
       createdAt: firestoreData?.createdAt || new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
-      isAdmin: checkAdminStatus(firestoreData, email)
+      isAdmin: isAdminUser
     };
 
     // Create session cookie

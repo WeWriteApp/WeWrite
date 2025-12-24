@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isAdmin } from "./app/utils/isAdmin";
 
 interface UserSession {
   emailVerified?: boolean;
   email?: string;
   uid?: string;
+  isAdmin?: boolean;
   [key: string]: any;
 }
 
@@ -13,6 +13,8 @@ interface AuthenticationState {
   isEmailVerified: boolean;
   hasFullAccess: boolean;
   userEmail?: string;
+  /** Admin flag from session cookie (Firestore isAdmin field) */
+  sessionIsAdmin?: boolean;
 }
 
 interface PathChecks {
@@ -33,15 +35,17 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
   const authenticatedCookie = request.cookies.get("authenticated")?.value === 'true';
   const userSessionCookie = request.cookies.get("userSession")?.value;
 
-  // Check email verification status from simpleUserSession cookie (new system)
+  // Check email verification status and admin flag from session cookies
   let isEmailVerified = true; // Default to true for backward compatibility
   let userEmail: string | undefined;
+  let sessionIsAdmin: boolean | undefined;
 
   if (simpleSessionCookie) {
     try {
       const userSession: UserSession = JSON.parse(simpleSessionCookie);
       isEmailVerified = userSession.emailVerified !== false; // Default to true if not specified
       userEmail = userSession.email;
+      sessionIsAdmin = userSession.isAdmin === true;
     } catch (error) {
       console.log('[Middleware] Error parsing simpleUserSession cookie:', error);
     }
@@ -51,6 +55,7 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
       const userSession: UserSession = JSON.parse(userSessionCookie);
       isEmailVerified = userSession.emailVerified !== false; // Default to true if not specified
       userEmail = userSession.email;
+      sessionIsAdmin = userSession.isAdmin === true;
     } catch (error) {
       console.log('[Middleware] Error parsing userSession cookie:', error);
     }
@@ -63,7 +68,8 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
     isAuthenticated,
     isEmailVerified,
     hasFullAccess: isAuthenticated && isEmailVerified,
-    userEmail
+    userEmail,
+    sessionIsAdmin
   };
 }
 
@@ -260,11 +266,14 @@ function handleAdminAccess(
 ): NextResponse | null {
   // For admin-only paths, check if the user is an admin
   if (pathChecks.requiresAdmin) {
-    const userEmail = auth.userEmail || request.cookies.get("user_email")?.value;
-    const adminStatus = isAdmin(userEmail);
+    // Admin status is determined by the session cookie's isAdmin flag
+    // This flag is set by /api/auth/session which checks:
+    // 1. Firebase Custom Claims (most secure, cryptographically signed)
+    // 2. Firestore isAdmin/role fields
+    const hasAdminAccess = auth.sessionIsAdmin === true;
 
     // If not an admin, redirect to home page
-    if (!adminStatus) {
+    if (!hasAdminAccess) {
       return NextResponse.redirect(new URL("/", request.url));
     }
   }

@@ -1,40 +1,42 @@
 /**
  * Admin Check Utilities
  *
- * Uses centralized admin configuration from adminConfig.ts
- * All admin emails/UIDs are loaded from environment variables.
+ * @deprecated This file is kept for backwards compatibility only.
+ * Admin checks should use the session's isAdmin flag which is set by
+ * /api/auth/session using Firebase Custom Claims + Firestore isAdmin field.
+ *
+ * In development: ALL users are admins (but only for dev collections)
+ * In production: Admin status is determined by Firebase Custom Claims or Firestore isAdmin field
  */
 
 import { getEnvironmentType } from './environmentConfig';
-import { isAdminEmail, isProductionAdmin as isProductionAdminConfig } from './adminConfig';
 
 /**
- * Check if a user is an admin
+ * Check if a user is an admin based on development environment only.
  *
- * In development: ALL users are admins (but only for dev collections)
- * In production: Only admin emails from ADMIN_EMAILS env var have access
+ * @deprecated Use the session's isAdmin flag instead. This function only
+ * returns true in development for local testing convenience.
+ *
+ * In production, always returns false - admin status is determined by:
+ * 1. Firebase Custom Claims (admin: true)
+ * 2. Firestore user document (isAdmin: true)
  */
-export const isAdmin = (userEmail: string | null | undefined): boolean => {
-  if (!userEmail) return false;
-
-  // Production admins always have access
-  if (isAdminEmail(userEmail)) {
-    return true;
-  }
-
+export const isAdmin = (_userEmail: string | null | undefined): boolean => {
   // In development, ALL users are admins (but scoped to DEV_ collections)
   const envType = getEnvironmentType();
   if (envType === 'development') {
     return true;
   }
 
+  // In production, admin is determined by Firebase Custom Claims or Firestore
+  // This function should NOT be the source of truth for production admin checks
   return false;
 };
 
 /**
- * Check if user is a production admin (has access to production data)
- * Use this for any admin operation that touches production collections
+ * @deprecated Use Firebase Custom Claims or Firestore isAdmin field instead.
+ * This always returns false in production.
  */
-export const isProductionAdmin = (userEmail: string | null | undefined): boolean => {
-  return isProductionAdminConfig(userEmail);
+export const isProductionAdmin = (_userEmail: string | null | undefined): boolean => {
+  return false;
 };
