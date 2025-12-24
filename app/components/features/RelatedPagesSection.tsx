@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { PillLink } from "../utils/PillLink";
-import { Icon } from '@/components/ui/Icon';
+import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
 import { useRelatedPagesV2, type RelatedPage } from '../../hooks/useRelatedPagesV2';
 
 interface RelatedPagesSectionProps {
@@ -34,8 +33,8 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     authorId: page?.userId,
     authorUsername: page?.username,
     excludePageIds: linkedPageIds,
-    limitByOthers: 8,
-    limitByAuthor: 5,
+    limitByOthers: 20, // Increased limit for load more functionality
+    limitByAuthor: 20,
   });
 
   // Set mounted state
@@ -53,59 +52,42 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     return null;
   }
 
+  // Convert related pages to PageLinkItem format
+  const relatedByOthersItems: PageLinkItem[] = relatedByOthers.map((relatedPage) => ({
+    id: relatedPage.id,
+    title: relatedPage.title || 'Untitled',
+    href: `/${relatedPage.id}`
+  }));
+
+  const relatedByAuthorItems: PageLinkItem[] = relatedByAuthor.map((relatedPage) => ({
+    id: relatedPage.id,
+    title: relatedPage.title || 'Untitled',
+    href: `/${relatedPage.id}`
+  }));
+
+  const authorName = authorUsername || page?.username || 'this author';
+
   return (
     <div className="space-y-4">
-      {/* Related Pages by Others - only show if loading or has results */}
-      {(loading || relatedByOthers.length > 0) && (
-        <div className="wewrite-card">
-          <div className="flex items-center gap-2 mb-3">
-            <Icon name="Users" size={16} className="text-muted-foreground" />
-            <h3 className="text-sm font-medium">Related pages by others</h3>
-          </div>
+      {/* Related Pages by Others */}
+      <PageLinksCard
+        icon="Users"
+        title="Related pages by others"
+        items={relatedByOthersItems}
+        loading={loading}
+        initialLimit={8}
+        hideWhenEmpty={true}
+      />
 
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon name="Loader" />
-              <span>Finding related content...</span>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {relatedByOthers.map((relatedPage) => (
-                <PillLink key={relatedPage.id} href={`/${relatedPage.id}`}>
-                  {relatedPage.title || "Untitled"}
-                </PillLink>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* More by Same Author - only show if loading or has results */}
-      {(loading || relatedByAuthor.length > 0) && (
-        <div className="wewrite-card">
-          <div className="flex items-center gap-2 mb-3">
-            <Icon name="User" size={16} className="text-muted-foreground" />
-            <h3 className="text-sm font-medium">
-              More by {authorUsername || page?.username || 'this author'}
-            </h3>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon name="Loader" />
-              <span>Loading author's pages...</span>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {relatedByAuthor.map((relatedPage) => (
-                <PillLink key={relatedPage.id} href={`/${relatedPage.id}`}>
-                  {relatedPage.title || "Untitled"}
-                </PillLink>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* More by Same Author */}
+      <PageLinksCard
+        icon="User"
+        title={`More by ${authorName}`}
+        items={relatedByAuthorItems}
+        loading={loading}
+        initialLimit={5}
+        hideWhenEmpty={true}
+      />
     </div>
   );
 }

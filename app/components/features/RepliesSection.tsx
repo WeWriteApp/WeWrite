@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '../../lib/utils';
 import { Icon } from '@/components/ui/Icon';
+import { PageLinksCardHeader } from '../ui/PageLinksCard';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
@@ -239,11 +240,13 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
   return (
     <div className={cn("wewrite-card", className)}>
       <div className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Icon name="MessageCircle" size={16} className="text-muted-foreground" />
-          <h3 className="font-semibold text-sm">Replies</h3>
-          <span className="text-xs text-muted-foreground">({counts.total})</span>
-        </div>
+        <PageLinksCardHeader
+          icon="MessageCircle"
+          title="Replies"
+          count={counts.total}
+          loading={loading}
+          className="mb-3"
+        />
 
         {/* Filter Buttons - only show if there are replies */}
         {counts.total > 0 && (

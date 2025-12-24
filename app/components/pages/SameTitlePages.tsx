@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -80,91 +81,74 @@ export default function SameTitlePages({
   // Handle "Write your own" click - navigate to new page with pre-filled title
   const handleWriteYourOwn = () => {
     if (pageTitle) {
-      // Navigate to new page creation with the title as a query param
       router.push(`/new?title=${encodeURIComponent(pageTitle)}`);
     } else {
       router.push('/new');
     }
   };
 
-  // Don't render if loading or error
-  if (loading) {
-    return null; // Don't show loading state to avoid layout shift
-  }
-
-  if (error) {
-    return null; // Don't show on error
-  }
-
   // If owner and no other users have written about this topic, hide completely
-  // (Owner doesn't need to see "no one else wrote about this" on their own page)
-  if (isOwner && pages.length === 0) {
+  if (isOwner && !loading && pages.length === 0) {
     return null;
   }
 
-  // Show card when there are pages, or when viewing someone else's page (show "Write your own" button)
+  // Convert to PageLinkItem format with extra data for custom rendering
+  const items: PageLinkItem[] = pages.map((page) => ({
+    id: page.pageId,
+    title: page.username || `user_${page.userId.substring(0, 6)}`,
+    userId: page.userId,
+    username: page.username,
+    subscriptionTier: page.subscriptionTier,
+    subscriptionStatus: page.subscriptionStatus,
+    subscriptionAmount: page.subscriptionAmount,
+    href: `/${page.pageId}`
+  }));
+
+  // Custom renderer for UsernameBadge
+  const renderUserBadge = (item: PageLinkItem) => (
+    <UsernameBadge
+      key={item.id}
+      userId={item.userId}
+      username={item.username || `user_${item.userId?.substring(0, 6)}`}
+      tier={item.subscriptionTier}
+      subscriptionStatus={item.subscriptionStatus}
+      subscriptionAmount={item.subscriptionAmount}
+      variant="pill"
+      pillVariant="secondary"
+      size="sm"
+      onClick={(e) => {
+        e.preventDefault();
+        router.push(`/${item.id}`);
+      }}
+    />
+  );
+
+  // Footer with "Write your own" button
+  const footerContent = !isOwner ? (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleWriteYourOwn}
+      className="gap-2"
+    >
+      <Icon name="PenLine" size={16} />
+      Write your own
+    </Button>
+  ) : undefined;
+
   return (
-    <div className={`wewrite-card ${className}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Icon name="Users" size={16} className="text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">
-            Others who wrote about this
-          </span>
-          {pages.length > 0 && (
-            <span className="text-xs text-muted-foreground/60">
-              ({pages.length})
-            </span>
-          )}
-        </div>
-      </div>
-
-      {pages.length > 0 ? (
-        <div className="flex flex-wrap gap-2 items-center">
-          {pages.map((page) => (
-            <UsernameBadge
-              key={page.pageId}
-              userId={page.userId}
-              username={page.username || `user_${page.userId.substring(0, 6)}`}
-              tier={page.subscriptionTier}
-              subscriptionStatus={page.subscriptionStatus}
-              subscriptionAmount={page.subscriptionAmount}
-              variant="pill"
-              pillVariant="secondary"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                router.push(`/${page.pageId}`);
-              }}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          No one else has written a page titled "{pageTitle}" yet.
-        </p>
-      )}
-
-      {pages.length > 10 && (
-        <div className="mt-2 text-xs text-muted-foreground">
-          Showing first 10 of {pages.length} users
-        </div>
-      )}
-
-      {/* Write your own button - only show for non-owners */}
-      {!isOwner && (
-        <div className="mt-3 pt-3 border-t border-border">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleWriteYourOwn}
-            className="gap-2"
-          >
-            <Icon name="PenLine" size={16} />
-            Write your own
-          </Button>
-        </div>
-      )}
-    </div>
+    <PageLinksCard
+      icon="Users"
+      title="Others who wrote about this"
+      items={items}
+      loading={loading}
+      error={error}
+      initialLimit={10}
+      className={className}
+      renderItem={renderUserBadge}
+      emptyMessage={`No one else has written a page titled "${pageTitle}" yet.`}
+      hideWhenEmpty={isOwner} // Hide when empty only for owners
+      footer={footerContent}
+    />
   );
 }
