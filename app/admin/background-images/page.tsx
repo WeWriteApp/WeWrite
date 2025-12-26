@@ -306,20 +306,8 @@ export default function AdminBackgroundImagesPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/admin')}
-              className="gap-2"
-            >
-              <Icon name="ArrowLeft" size={16} />
-              Back to Admin
-            </Button>
-          </div>
-          
+        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+        <div className="hidden lg:block mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Default Background Images</h1>
@@ -327,7 +315,7 @@ export default function AdminBackgroundImagesPage() {
                 Manage default background images available to all users
               </p>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <input
                 type="file"
@@ -351,6 +339,30 @@ export default function AdminBackgroundImagesPage() {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Upload Button - visible on mobile only */}
+        <div className="lg:hidden mb-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+            id="image-upload-mobile"
+            disabled={uploading}
+          />
+          <Button
+            onClick={() => document.getElementById('image-upload-mobile')?.click()}
+            disabled={uploading}
+            className="gap-2 w-full"
+          >
+            {uploading ? (
+              <Icon name="Loader" />
+            ) : (
+              <Icon name="Plus" size={16} />
+            )}
+            Upload Image
+          </Button>
         </div>
 
         {/* Images Grid */}

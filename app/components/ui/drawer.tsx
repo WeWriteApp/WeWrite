@@ -56,23 +56,31 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
           hasSetHashRef.current = true
         }
 
-        // Lock body scroll - lock BOTH html and body for robust scroll prevention
+        // Lock body scroll while preserving visual context
+        // Instead of using position: fixed (which resets visual scroll position),
+        // we use overflow: hidden on both html and body to prevent scrolling
+        // while keeping the content visually in place
         const scrollY = window.scrollY
-        document.documentElement.style.overflow = 'hidden'
-        document.body.style.position = 'fixed'
-        document.body.style.top = `-${scrollY}px`
-        document.body.style.left = '0'
-        document.body.style.right = '0'
-        document.body.style.width = '100%'
-        document.body.style.overflow = 'hidden'
         document.body.setAttribute('data-drawer-open', 'true')
         document.body.setAttribute('data-scroll-y', String(scrollY))
 
-        // Track analytics
+        // Use overflow hidden on html to prevent scrolling while preserving visual position
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+        // Prevent touch scrolling on mobile by adding touch-action
+        document.body.style.touchAction = 'none'
+        // Add overscroll-behavior to prevent pull-to-refresh and bounce effects
+        document.body.style.overscrollBehavior = 'none'
+
+        // Track analytics - use page view for navigation tracking
         if (analyticsId) {
           try {
             const { getAnalyticsService } = require('../../utils/analytics-service')
             const analytics = getAnalyticsService()
+            // Track as virtual page view so it appears in navigation reports
+            const virtualPath = `${window.location.pathname}#${hashId || analyticsId}`
+            analytics.trackPageView(virtualPath, `Drawer: ${analyticsId}`)
+            // Also track as event for backwards compatibility
             analytics.trackEvent({
               category: 'drawer',
               action: `drawer_opened`,
@@ -97,23 +105,15 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
           hasSetHashRef.current = false
         }
 
-        // Get the stored scroll position from data attribute (more reliable)
-        const storedScrollY = document.body.getAttribute('data-scroll-y')
-        const scrollY = storedScrollY ? parseInt(storedScrollY, 10) : 0
-
-        // Unlock body scroll - unlock BOTH html and body
+        // Unlock body scroll - restore all scroll-related styles
         document.documentElement.style.overflow = ''
-        document.body.style.position = ''
-        document.body.style.top = ''
-        document.body.style.left = ''
-        document.body.style.right = ''
-        document.body.style.width = ''
         document.body.style.overflow = ''
+        document.body.style.touchAction = ''
+        document.body.style.overscrollBehavior = ''
         document.body.removeAttribute('data-drawer-open')
         document.body.removeAttribute('data-scroll-y')
 
-        // Restore scroll position immediately
-        window.scrollTo(0, scrollY)
+        // Note: No need to restore scroll position since we preserved it visually
 
         // Track analytics
         if (analyticsId) {
@@ -145,22 +145,13 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
         const wasLocked = document.body.getAttribute('data-drawer-open') === 'true'
         if (!wasLocked) return
 
-        // Cleanup scroll lock on unmount - get scroll position first
-        const storedScrollY = document.body.getAttribute('data-scroll-y')
-        const scrollY = storedScrollY ? parseInt(storedScrollY, 10) : 0
-
+        // Cleanup scroll lock on unmount
         document.documentElement.style.overflow = ''
-        document.body.style.position = ''
-        document.body.style.top = ''
-        document.body.style.left = ''
-        document.body.style.right = ''
-        document.body.style.width = ''
         document.body.style.overflow = ''
+        document.body.style.touchAction = ''
+        document.body.style.overscrollBehavior = ''
         document.body.removeAttribute('data-drawer-open')
         document.body.removeAttribute('data-scroll-y')
-
-        // Restore scroll position
-        window.scrollTo(0, scrollY)
       }
     }, [open, hashId, analyticsId, onOpenChange])
 
@@ -224,19 +215,26 @@ interface DrawerContentProps
    * When true, the drawer can only be closed via explicit close actions.
    */
   disableSwipeDismiss?: boolean
+  /**
+   * Accessible title for screen readers.
+   * If not provided, a default "Drawer" title will be used.
+   * This is required by Radix Dialog for accessibility.
+   */
+  accessibleTitle?: string
 }
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
->(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, ...props }, ref) => {
+>(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, accessibleTitle = "Drawer", ...props }, ref) => {
   // Handle legacy noOverlay prop
   const shouldShowOverlay = noOverlay ? false : showOverlay
 
   // Determine overlay classes based on options
+  // Using 40% opacity for better visibility of background content
   const overlayClasses = cn(
     "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-    shouldShowOverlay && "bg-black/50",
+    shouldShowOverlay && "bg-black/40",
     blurOverlay && "backdrop-blur-sm",
     // If blur but no dark overlay, add slight tint
     blurOverlay && !shouldShowOverlay && "bg-white/30 dark:bg-black/30"
@@ -340,6 +338,8 @@ const DrawerContent = React.forwardRef<
           "backdrop-blur-xl",
           // Safe area support for bottom drawer
           "pb-safe",
+          // Extend background below to cover bounce overshoot
+          "after:absolute after:left-0 after:right-0 after:top-full after:h-32 after:bg-white/95 dark:after:bg-zinc-900/95",
           className
         )}
         style={{
@@ -351,6 +351,11 @@ const DrawerContent = React.forwardRef<
         tabIndex={-1}
         {...props}
       >
+        {/* Accessible title for screen readers - visually hidden */}
+        <DialogPrimitive.Title className="sr-only">
+          {accessibleTitle}
+        </DialogPrimitive.Title>
+
         <div
           ref={contentRef}
           className="flex flex-col h-full"
@@ -385,8 +390,8 @@ const DrawerHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      // Tighter header: relative for absolute close button positioning
-      "relative flex flex-col space-y-1 text-center px-4 pt-1 pb-3 flex-shrink-0",
+      // Header with reduced top padding, increased bottom padding for breathing room
+      "relative flex flex-col space-y-1 text-center px-4 pt-0 pb-4 flex-shrink-0",
       className
     )}
     {...props}

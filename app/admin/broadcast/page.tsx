@@ -266,21 +266,24 @@ export default function AdminBroadcastPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <FloatingHeader>
-        <div className="flex items-center gap-3">
-          <Link href="/admin/emails">
-            <Button variant="ghost" size="sm">
-              <Icon name="ArrowLeft" size={16} className="mr-2" />
-              Back to Emails
-            </Button>
-          </Link>
-          <div className="h-6 w-px bg-border" />
-          <Icon name="Megaphone" size={20} className="text-primary" />
-          <span className="font-semibold">Send Broadcast</span>
-        </div>
-      </FloatingHeader>
+      {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+      <div className="hidden lg:block">
+        <FloatingHeader>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/emails">
+              <Button variant="ghost" size="sm">
+                <Icon name="ArrowLeft" size={16} className="mr-2" />
+                Back to Emails
+              </Button>
+            </Link>
+            <div className="h-6 w-px bg-border" />
+            <Icon name="Megaphone" size={20} className="text-primary" />
+            <span className="font-semibold">Send Broadcast</span>
+          </div>
+        </FloatingHeader>
+      </div>
 
-      <div className="container max-w-6xl mx-auto px-4 pt-20 pb-12">
+      <div className="container max-w-6xl mx-auto px-4 pt-6 lg:pt-20 pb-12">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-card border rounded-lg p-4">

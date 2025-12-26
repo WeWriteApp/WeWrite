@@ -295,7 +295,7 @@ export default function AdminPage() {
                   variant="default"
                   size="sm"
                   className="gap-2 w-full"
-                  onClick={() => router.push('/admin/dashboard')}
+                  onClick={() => router.push('/admin/product-kpis')}
                 >
                   <Icon name="BarChart3" size={16} />
                   Open Product KPIs

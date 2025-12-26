@@ -65,12 +65,8 @@ export default function OnboardingTutorialAdmin() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-6">
-          <Link href="/admin" className="inline-flex items-center text-primary hover:text-primary/80 mb-4">
-            <Icon name="ChevronLeft" size={16} className="mr-1" />
-            Back to Admin
-          </Link>
+        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+        <div className="hidden lg:block mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">Onboarding Tutorial</h1>

@@ -9,6 +9,7 @@ import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { cn } from '../../lib/utils';
+import EmptyState from '../ui/EmptyState';
 
 interface PaymentMethod {
   type: string;
@@ -159,19 +160,16 @@ export function PaymentMethodsOverview() {
         )}
 
         {paymentMethods.length === 0 ? (
-          <div className="wewrite-card border border-dashed border-border/70 p-4 text-center space-y-3 shadow-none">
-            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
-              <Icon name="AlertTriangle" size={20} />
-              <p className="font-medium text-foreground">Add a payment method</p>
-              <p>Needed to fund your account and process subscriptions.</p>
-            </div>
-            <Button asChild>
-              <Link href="/settings/subscription">
-                <Icon name="Plus" size={16} className="mr-2" />
-                Add Payment Method
-              </Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon="CreditCard"
+            title="Add a payment method"
+            description="Needed to fund your account and process subscriptions."
+            action={{
+              label: "Add Payment Method",
+              onClick: () => window.location.href = '/settings/subscription',
+              variant: 'default'
+            }}
+          />
         ) : (
           <div className="space-y-3">
             {/* Primary Payment Method */}

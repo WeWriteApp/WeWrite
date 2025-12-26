@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getFirebaseAdmin } from "../../../firebase/firebaseAdmin";
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 // Validate a session by checking if the session cookie exists and is valid
-// Note: We trust the session cookie since it was created after successful Firebase Auth login
+// Also checks if the session has been revoked from another device
 export async function GET(request: NextRequest) {
   console.log("[validate-session] GET request received");
 
@@ -10,6 +12,7 @@ export async function GET(request: NextRequest) {
     // Get the session cookie
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("simpleUserSession");
+    const sessionIdCookie = cookieStore.get("sessionId");
 
     if (!sessionCookie?.value) {
       console.log("[validate-session] No session cookie found");
@@ -45,12 +48,81 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check if the session has been revoked (only if we have a sessionId)
+    let sessionRevoked = false;
+    let newDeviceDetected = false;
+
+    if (sessionIdCookie?.value) {
+      try {
+        const admin = getFirebaseAdmin();
+        if (admin) {
+          const db = admin.firestore();
+          const sessionDoc = await db
+            .collection(getCollectionName('userSessions'))
+            .doc(sessionIdCookie.value)
+            .get();
+
+          if (sessionDoc.exists) {
+            const data = sessionDoc.data();
+            if (data?.isActive === false) {
+              console.log("[validate-session] Session has been revoked");
+              sessionRevoked = true;
+            }
+          }
+
+          // Check if there are newer active sessions (new device login)
+          // This is informational only - we no longer log out the user
+          const newerSessions = await db
+            .collection(getCollectionName('userSessions'))
+            .where('userId', '==', sessionData.uid)
+            .where('isActive', '==', true)
+            .orderBy('createdAt', 'desc')
+            .limit(2)
+            .get();
+
+          if (newerSessions.docs.length > 1) {
+            const currentSessionCreatedAt = sessionDoc.exists
+              ? sessionDoc.data()?.createdAt
+              : null;
+
+            // Check if there's a session newer than the current one
+            for (const doc of newerSessions.docs) {
+              if (doc.id !== sessionIdCookie.value) {
+                const otherSessionCreatedAt = doc.data().createdAt;
+                if (otherSessionCreatedAt > currentSessionCreatedAt) {
+                  newDeviceDetected = true;
+                  console.log("[validate-session] New device login detected");
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[validate-session] Error checking session status:", error);
+        // Don't fail validation if we can't check revocation status
+      }
+    }
+
+    // If session was explicitly revoked, return invalid
+    if (sessionRevoked) {
+      return NextResponse.json(
+        {
+          valid: false,
+          reason: 'session_revoked',
+          error: "Your session was signed out from another device"
+        },
+        { status: 401 }
+      );
+    }
+
     console.log(`[validate-session] Session valid for user: ${sessionData.email}`);
 
     // Return the session data along with validation status
-    // We trust the cookie since it was created server-side after Firebase Auth verification
+    // Include newDeviceDetected flag so the client can show a notification
     return NextResponse.json({
       valid: true,
+      newDeviceDetected,
       user: {
         uid: sessionData.uid,
         email: sessionData.email,

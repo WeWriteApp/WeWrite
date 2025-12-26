@@ -39,7 +39,7 @@ export default function EmptyContentState({
       className={cn(
         "relative transition-all duration-200",
         isOwner ? (
-          wewriteCard('default', 'border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 cursor-pointer bg-muted/20 hover:bg-muted/30 p-2')
+          wewriteCard('default', 'empty-state-border hover:border-muted-foreground/50 cursor-pointer bg-muted/20 hover:bg-muted/30 p-2')
         ) : (
           wewriteCard('default')
         ),

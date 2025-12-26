@@ -315,7 +315,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
             </div>
 
             {/* Custom Amount Option */}
-            <div className="border-2 border-dashed border-border rounded-lg p-4">
+            <div className="empty-state-border rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h5 className="font-medium">Custom Amount</h5>

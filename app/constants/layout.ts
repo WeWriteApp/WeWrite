@@ -21,6 +21,54 @@
  */
 
 // ============================================================================
+// GLOBAL SIDEBAR WIDTHS
+// ============================================================================
+
+/**
+ * Desktop sidebar width constants.
+ * The global navigation sidebar (DesktopSidebar.tsx) uses these values.
+ *
+ * Any secondary sidebar (like admin panel, settings, etc.) should position
+ * itself AFTER the global sidebar using these values.
+ *
+ * CSS Variables:
+ * - --sidebar-content-offset: Set dynamically by SidebarProvider based on expanded state
+ * - --global-sidebar-collapsed: Always 72px (static)
+ * - --global-sidebar-expanded: Always 256px (static)
+ */
+export const GLOBAL_SIDEBAR_WIDTHS = {
+  /** Collapsed sidebar: 16px padding + 40px icon + 16px padding = 72px */
+  collapsed: 72,
+  /** Expanded sidebar width */
+  expanded: 256,
+} as const;
+
+/**
+ * Get the left offset for a secondary sidebar that should appear after the global sidebar.
+ * Use this for admin panels, settings panels, or any page with its own sidebar.
+ *
+ * @param isGlobalSidebarExpanded - Whether the global sidebar is expanded
+ * @returns CSS value for left position (e.g., "72px" or "256px")
+ *
+ * @example
+ * // In a fixed sidebar component:
+ * style={{ left: getSecondarySidebarOffset(isExpanded) }}
+ */
+export function getSecondarySidebarOffset(isGlobalSidebarExpanded: boolean): string {
+  return `${isGlobalSidebarExpanded ? GLOBAL_SIDEBAR_WIDTHS.expanded : GLOBAL_SIDEBAR_WIDTHS.collapsed}px`;
+}
+
+/**
+ * CSS calc expression for secondary sidebar left position.
+ * Uses the CSS variable set by SidebarProvider for reactive updates.
+ *
+ * @example
+ * // In CSS or inline styles:
+ * left: var(--sidebar-content-offset, 72px)
+ */
+export const SECONDARY_SIDEBAR_LEFT_OFFSET = 'var(--sidebar-content-offset, 72px)';
+
+// ============================================================================
 // CONTAINER WIDTHS
 // ============================================================================
 

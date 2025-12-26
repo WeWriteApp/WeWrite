@@ -15,6 +15,40 @@ interface PillLinkContextMenuProps {
   isDeleted?: boolean;
 }
 
+// Animated menu item component
+function AnimatedMenuItem({
+  children,
+  index,
+  isAnimating,
+  onClick,
+  className,
+}: {
+  children: React.ReactNode;
+  index: number;
+  isAnimating: boolean;
+  onClick: () => void;
+  className?: string;
+}) {
+  const delay = index * 25; // 25ms stagger between items
+
+  return (
+    <button
+      onClick={onClick}
+      className={className}
+      style={{
+        opacity: isAnimating ? 1 : 0,
+        transform: isAnimating ? 'translateY(0)' : 'translateY(-6px)',
+        transitionProperty: 'opacity, transform',
+        transitionDuration: '150ms',
+        transitionTimingFunction: 'ease-out',
+        transitionDelay: `${delay}ms`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function PillLinkContextMenu({
   isOpen,
   onClose,
@@ -27,12 +61,14 @@ export default function PillLinkContextMenu({
 }: PillLinkContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
 
   // Calculate position synchronously before showing
   useLayoutEffect(() => {
     if (!isOpen) {
       setIsVisible(false);
+      setIsAnimating(false);
       return;
     }
 
@@ -61,6 +97,13 @@ export default function PillLinkContextMenu({
     setAdjustedPosition({ x, y });
     // Show after position is calculated
     setIsVisible(true);
+
+    // Trigger staggered animation after a frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsAnimating(true);
+      });
+    });
   }, [isOpen, position, canEdit]);
 
   // Close menu when clicking outside
@@ -95,6 +138,9 @@ export default function PillLinkContextMenu({
   // Don't render anything if not open
   if (!isOpen) return null;
 
+  // Track menu item index for staggered animation
+  let itemIndex = 0;
+
   const menuContent = (
     <div
       ref={menuRef}
@@ -107,33 +153,39 @@ export default function PillLinkContextMenu({
         transition: 'opacity 75ms ease-out, transform 75ms ease-out',
       }}
     >
-          <button
-            onClick={() => {
-              console.log('🔵 CONTEXT_MENU: Go to link clicked');
-              onGoToLink();
-              onClose();
-            }}
-            className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors first:rounded-t-md"
-          >
-            <Icon name="ExternalLink" size={14} />
-            Go to link
-          </button>
-          
-          {canEdit && (
-            <button
-              onClick={() => {
-                onEditLink();
-                onClose();
-              }}
-              className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
-            >
-              <Icon name="Edit2" size={14} />
-              Edit link
-            </button>
-          )}
+      <AnimatedMenuItem
+        index={itemIndex++}
+        isAnimating={isAnimating}
+        onClick={() => {
+          console.log('🔵 CONTEXT_MENU: Go to link clicked');
+          onGoToLink();
+          onClose();
+        }}
+        className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors first:rounded-t-md"
+      >
+        <Icon name="ExternalLink" size={14} />
+        Go to link
+      </AnimatedMenuItem>
+
+      {canEdit && (
+        <AnimatedMenuItem
+          index={itemIndex++}
+          isAnimating={isAnimating}
+          onClick={() => {
+            onEditLink();
+            onClose();
+          }}
+          className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 transition-colors"
+        >
+          <Icon name="Edit2" size={14} />
+          Edit link
+        </AnimatedMenuItem>
+      )}
 
       {canEdit && isDeleted && onDeleteLink && (
-        <button
+        <AnimatedMenuItem
+          index={itemIndex++}
+          isAnimating={isAnimating}
           onClick={() => {
             onDeleteLink();
             onClose();
@@ -142,7 +194,7 @@ export default function PillLinkContextMenu({
         >
           <Icon name="Trash2" size={14} />
           Delete link
-        </button>
+        </AnimatedMenuItem>
       )}
     </div>
   );

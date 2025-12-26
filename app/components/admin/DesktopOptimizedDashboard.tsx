@@ -529,17 +529,16 @@ export function DesktopOptimizedDashboard({
 
   return (
     <div className="desktop-optimized-dashboard">
-      {/* Instructions */}
-      <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-        💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights. On mobile, pinch vertically to resize.
+      {/* Instructions - hidden on mobile */}
+      <div className="hidden md:block mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+        💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights.
       </div>
 
       {/* Dashboard Rows */}
       <div className="space-y-0">
         {dashboardRows.map((row, index) => (
-          <>
+          <React.Fragment key={row.id}>
             <DashboardRow
-              key={row.id}
               row={row}
               dateRange={dateRange}
               granularity={granularity}
@@ -548,16 +547,18 @@ export function DesktopOptimizedDashboard({
             />
             {/* Separator line between graphs */}
             {index < dashboardRows.length - 1 && (
-              <div className="border-t border-accent-20 my-6" />
+              <div className="border-t border-accent-20 my-4 md:my-6" />
             )}
-          </>
+          </React.Fragment>
         ))}
       </div>
     </div>
   );
 }
 
-// Individual dashboard row component - horizontal layout with info on left, chart on right
+// Individual dashboard row component
+// Desktop: horizontal layout with info on left, chart on right
+// Mobile: KPIs stacked horizontally above chart for more chart space
 function DashboardRow({
   row,
   dateRange,
@@ -587,52 +588,93 @@ function DashboardRow({
   return (
     <div
       data-row-id={row.id}
-      className="py-4 flex items-center gap-4"
-      style={{ minHeight: height }}
+      className="py-2"
     >
-      {/* Left side: Icon, Title, Stats - fixed width */}
-      <div className="flex items-center gap-3 w-64 flex-shrink-0">
-        <div className="p-2 rounded-lg" style={{ backgroundColor: `${row.color}20`, color: row.color }}>
-          {row.icon}
-        </div>
-        <div className="min-w-0">
-          <h3 className="font-semibold text-base truncate">{row.title}</h3>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-medium">Total: {currentValue}</span>
+      {/* Mobile: Dense layout - title row with stats, then full-width chart */}
+      <div className="md:hidden flex flex-col gap-1">
+        {/* Title row - compact */}
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-medium text-sm truncate text-foreground">{row.title}</h3>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="font-semibold text-sm">{currentValue}</span>
             {trend && (
-              <div className={`flex items-center gap-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {trend.isPositive ? <Icon name="TrendingUp" size={12} /> : <Icon name="TrendingDown" size={12} />}
-                <span className="text-xs">{trend.percentage}%</span>
-              </div>
+              <span className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                {trend.isPositive ? '↗' : '↘'} {trend.percentage}%
+              </span>
             )}
+            {/* Status indicator */}
+            {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
+            {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
+            {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
           </div>
         </div>
 
-        {/* Status indicator */}
-        <div className="flex items-center ml-auto">
-          {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
-          {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
-          {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+        {/* Chart - full width on mobile, edge to edge */}
+        <div className="w-full -mx-4 md:-mx-6 px-0" style={{ height: height, minHeight: height, width: 'calc(100% + 2rem)' }}>
+          {loading ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="loader"></div>
+            </div>
+          ) : error ? (
+            <div className="h-full flex items-center justify-center text-red-500 text-sm">
+              Error loading data
+            </div>
+          ) : normalizedData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+              No data available
+            </div>
+          ) : (
+            <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} />
+          )}
         </div>
       </div>
 
-      {/* Right side: Chart - flexible width */}
-      <div className="flex-1" style={{ height: height }}>
-        {loading ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="loader"></div>
+      {/* Desktop: Horizontal layout with info on left, chart on right */}
+      <div className="hidden md:flex items-center gap-4" style={{ minHeight: height }}>
+        {/* Left side: Icon, Title, Stats - fixed width */}
+        <div className="flex items-center gap-3 w-64 flex-shrink-0">
+          <div className="p-2 rounded-lg" style={{ backgroundColor: `${row.color}20`, color: row.color }}>
+            {row.icon}
           </div>
-        ) : error ? (
-          <div className="h-full flex items-center justify-center text-red-500 text-sm">
-            Error loading data
+          <div className="min-w-0">
+            <h3 className="font-semibold text-base truncate">{row.title}</h3>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="font-medium">Total: {currentValue}</span>
+              {trend && (
+                <div className={`flex items-center gap-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  {trend.isPositive ? <Icon name="TrendingUp" size={12} /> : <Icon name="TrendingDown" size={12} />}
+                  <span className="text-xs">{trend.percentage}%</span>
+                </div>
+              )}
+            </div>
           </div>
-        ) : normalizedData.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-            No data available
+
+          {/* Status indicator */}
+          <div className="flex items-center ml-auto">
+            {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
+            {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
+            {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
           </div>
-        ) : (
-          <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} />
-        )}
+        </div>
+
+        {/* Right side: Chart - flexible width */}
+        <div className="flex-1 min-w-0" style={{ height: height, minHeight: height }}>
+          {loading ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="loader"></div>
+            </div>
+          ) : error ? (
+            <div className="h-full flex items-center justify-center text-red-500 text-sm">
+              Error loading data
+            </div>
+          ) : normalizedData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+              No data available
+            </div>
+          ) : (
+            <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} />
+          )}
+        </div>
       </div>
     </div>
   );

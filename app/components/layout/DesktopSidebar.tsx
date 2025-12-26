@@ -204,7 +204,7 @@ function SidebarContent({
   const showContent = isExpanded || isHovering;
   const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
   const isUserAdmin = user?.isAdmin === true;
-  const isAdminDashboard = pathname === '/admin/dashboard';
+  const isAdminDashboard = pathname === '/admin/product-kpis';
 
   // Settings warning status
   const criticalSettingsStatus = (() => {

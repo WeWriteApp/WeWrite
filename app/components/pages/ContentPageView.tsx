@@ -22,10 +22,11 @@ import AllocationBar from "../payments/AllocationBar";
 
 // PERFORMANCE: Lazy-load below-the-fold components to reduce initial bundle size
 // These components are heavy and not needed for initial page render
+// Loading fallbacks hidden in print via no-print class
 const RelatedPagesSection = dynamic(() => import("../features/RelatedPagesSection"), {
   ssr: false,
   loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
       <div className="h-5 w-32 bg-muted rounded mb-3" />
       <div className="flex flex-wrap gap-2">
         {[1, 2, 3].map(i => <div key={i} className="h-8 w-24 bg-muted rounded-full" />)}
@@ -37,7 +38,7 @@ const RelatedPagesSection = dynamic(() => import("../features/RelatedPagesSectio
 const RepliesSection = dynamic(() => import("../features/RepliesSection"), {
   ssr: false,
   loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
       <div className="h-5 w-24 bg-muted rounded mb-3" />
       <div className="space-y-2">
         {[1, 2].map(i => <div key={i} className="h-12 bg-muted rounded" />)}
@@ -49,7 +50,7 @@ const RepliesSection = dynamic(() => import("../features/RepliesSection"), {
 const PageGraphView = dynamic(() => import("./PageGraphView"), {
   ssr: false,
   loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
       <div className="h-5 w-36 bg-muted rounded mb-3" />
       <div className="h-48 bg-muted rounded" />
     </div>
@@ -59,7 +60,7 @@ const PageGraphView = dynamic(() => import("./PageGraphView"), {
 const WhatLinksHere = dynamic(() => import("./WhatLinksHere"), {
   ssr: false,
   loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse">
+    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
       <div className="h-5 w-32 bg-muted rounded mb-3" />
       <div className="flex flex-wrap gap-2">
         {[1, 2, 3].map(i => <div key={i} className="h-6 w-20 bg-muted rounded-full" />)}
@@ -1654,12 +1655,14 @@ export default function ContentPageView({
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}
 
           {isPreviewingDeleted && page && (
-            <DeletedPageBanner
-              pageId={pageId}
-              pageTitle={page.title || 'Untitled'}
-              deletedAt={page.deletedAt}
-              daysLeft={page.deletedAt ? Math.max(0, 30 - Math.floor((Date.now() - new Date(page.deletedAt).getTime()) / (1000 * 60 * 60 * 24))) : 30}
-            />
+            <div className="no-print">
+              <DeletedPageBanner
+                pageId={pageId}
+                pageTitle={page.title || 'Untitled'}
+                deletedAt={page.deletedAt}
+                daysLeft={page.deletedAt ? Math.max(0, 30 - Math.floor((Date.now() - new Date(page.deletedAt).getTime()) / (1000 * 60 * 60 * 24))) : 30}
+              />
+            </div>
           )}
 
           {/* Full-width header area */}
@@ -1713,9 +1716,9 @@ export default function ContentPageView({
                               onLinkSuggestionsLoadingChange={setIsLoadingSuggestions}
                             />
 
-                            {/* Dense mode toggle below content - only show in view mode */}
+                            {/* Dense mode toggle below content - only show in view mode (hidden in print) */}
                             {!canEdit && (
-                              <div className="flex justify-center pt-4">
+                              <div className="flex justify-center pt-4 no-print">
                                 <DenseModeToggle />
                               </div>
                             )}
@@ -1733,8 +1736,8 @@ export default function ContentPageView({
               </TextSelectionProvider>
             </div>
 
-            {/* Page Footer with actions - tight spacing */}
-            <div className="mt-4">
+            {/* Page Footer with actions - tight spacing (hidden in print) */}
+            <div className="mt-4 no-print">
               <ContentPageFooter
               page={memoizedPage}
               content={editorState}
@@ -1765,9 +1768,9 @@ export default function ContentPageView({
 
             {/* Page Actions for non-owners are now rendered inside ContentPageFooter */}
 
-            {/* Page Connections and Related Pages - show for all pages */}
+            {/* Page Connections and Related Pages - show for all pages (hidden in print) */}
             {page && (
-              <div className="px-4 space-y-4">
+              <div className="px-4 space-y-4 no-print">
                 {/* Page Graph View */}
                 <PageGraphView
                   pageId={page.id}
@@ -1840,9 +1843,9 @@ export default function ContentPageView({
               </div>
             )}
 
-            {/* Delete button - positioned at the very bottom for page owners */}
+            {/* Delete button - positioned at the very bottom for page owners (hidden in print) */}
             {page && canEdit && (
-              <div className="mt-8 mb-6 px-4">
+              <div className="mt-8 mb-6 px-4 no-print">
                 <Button
                   variant="destructive"
                   size="lg"
@@ -1856,22 +1859,26 @@ export default function ContentPageView({
             )}
           </div>
 
-          {/* Allocation Bar - Only shows on other users' pages */}
+          {/* Allocation Bar - Only shows on other users' pages (hidden in print) */}
           {page && (
+            <div className="no-print">
             <AllocationBar
               pageId={page.id}
               pageTitle={page.title}
               authorId={page.userId}
               visible={true}
             />
+            </div>
           )}
 
-          {/* Empty Lines Alert - Shows when page is editable and there are empty lines */}
+          {/* Empty Lines Alert - Shows when page is editable and there are empty lines (hidden in print) */}
           {canEdit && !showVersion && !showDiff && (
-            <EmptyLinesAlert
-              emptyLinesCount={emptyLinesCount}
-              onDeleteAllEmptyLines={handleDeleteAllEmptyLines}
-            />
+            <div className="no-print">
+              <EmptyLinesAlert
+                emptyLinesCount={emptyLinesCount}
+                onDeleteAllEmptyLines={handleDeleteAllEmptyLines}
+              />
+            </div>
           )}
 
 

@@ -223,7 +223,7 @@ export function TierComparison({
       </div>
 
       {/* Custom Tier Option */}
-      <Card className="border-2 border-dashed border-theme-medium">
+      <Card className="empty-state-border">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             <Icon name="DollarSign" size={20} />

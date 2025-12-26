@@ -112,30 +112,78 @@ export async function GET(request: NextRequest) {
       dateMap.set(bucket, { payouts: 0, payoutCount: 0 });
     });
 
-    // Query payouts within the date range
-    const payoutsQuery = db.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
-      .where('requestedAt', '>=', admin.firestore.Timestamp.fromDate(startDateObj))
-      .where('requestedAt', '<=', admin.firestore.Timestamp.fromDate(endDateObj))
-      .where('status', '==', 'completed');
+    // Query all payouts and filter in memory
+    // This avoids Firestore index requirements and handles documents with missing fields
+    const payoutsSnapshot = await db.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS)).get();
 
-    const payoutsSnapshot = await payoutsQuery.get();
-    
-    console.log(`[ADMIN] Found ${payoutsSnapshot.size} completed payouts in date range`);
+    console.log(`[ADMIN] Found ${payoutsSnapshot.size} total payouts in collection`);
 
-    // Process payouts and group by time period
+    // Process payouts and group by time period (filter by date range and completed status in memory)
+    let completedCount = 0;
+    let inRangeCount = 0;
     payoutsSnapshot.docs.forEach(doc => {
       const payout = doc.data();
-      const payoutDate = payout.requestedAt.toDate();
+
+      // Filter by status in memory
+      if (payout.status !== 'completed') {
+        return;
+      }
+
+      // Parse date from various formats
+      let payoutDate: Date | null = null;
+      if (payout.requestedAt) {
+        if (typeof payout.requestedAt.toDate === 'function') {
+          payoutDate = payout.requestedAt.toDate();
+        } else if (payout.requestedAt._seconds) {
+          payoutDate = new Date(payout.requestedAt._seconds * 1000);
+        } else if (typeof payout.requestedAt === 'string' || typeof payout.requestedAt === 'number') {
+          payoutDate = new Date(payout.requestedAt);
+        }
+      } else if (payout.createdAt) {
+        // Fallback to createdAt if requestedAt doesn't exist
+        if (typeof payout.createdAt.toDate === 'function') {
+          payoutDate = payout.createdAt.toDate();
+        } else if (payout.createdAt._seconds) {
+          payoutDate = new Date(payout.createdAt._seconds * 1000);
+        } else if (typeof payout.createdAt === 'string' || typeof payout.createdAt === 'number') {
+          payoutDate = new Date(payout.createdAt);
+        }
+      } else if (payout.completedAt) {
+        // Fallback to completedAt
+        if (typeof payout.completedAt.toDate === 'function') {
+          payoutDate = payout.completedAt.toDate();
+        } else if (payout.completedAt._seconds) {
+          payoutDate = new Date(payout.completedAt._seconds * 1000);
+        } else if (typeof payout.completedAt === 'string' || typeof payout.completedAt === 'number') {
+          payoutDate = new Date(payout.completedAt);
+        }
+      }
+
+      // Skip if no valid date
+      if (!payoutDate || isNaN(payoutDate.getTime())) {
+        return;
+      }
+
+      completedCount++;
+
+      // Filter by date range in memory
+      if (payoutDate < startDateObj || payoutDate > endDateObj) {
+        return;
+      }
+      inRangeCount++;
+
       const amount = payout.amountCents ? payout.amountCents / 100 : payout.amount || 0;
-      
+
       const dateKey = getDateKey(payoutDate, timeConfig.granularityType);
       const existing = dateMap.get(dateKey);
-      
+
       if (existing) {
         existing.payouts += amount;
         existing.payoutCount += 1;
       }
     });
+
+    console.log(`[ADMIN] Filtered to ${completedCount} completed payouts, ${inRangeCount} in date range`);
 
     // Convert to chart data format
     let cumulativePayouts = 0;

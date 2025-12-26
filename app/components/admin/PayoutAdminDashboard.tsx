@@ -184,7 +184,7 @@ export default function PayoutAdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Icon name="RefreshCw" size={32} className="animate-spin" />
+        <Icon name="Loader" size={32} className="text-muted-foreground" />
       </div>
     );
   }

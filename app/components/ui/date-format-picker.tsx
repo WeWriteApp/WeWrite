@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from './button';
 import { cn } from '../../lib/utils';
@@ -10,19 +10,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem
 } from './dropdown-menu';
-import { useAuth } from '../../providers/AuthProvider';
-// TODO: Move these constants to global store or utils
 import {
   DATE_FORMATS,
-  DATE_FORMAT_DESCRIPTIONS,
-  DateFormatType
+  DateFormatType,
+  useDateFormat
 } from '../../contexts/DateFormatContext';
 
 interface DateFormatPickerProps {
   currentDate?: string; // YYYY-MM-DD format for preview
   className?: string;
-  isOpen?: boolean;
-  onClose?: () => void;
   trigger?: React.ReactNode;
 }
 
@@ -31,21 +27,14 @@ interface DateFormatPickerProps {
  *
  * A dropdown that allows users to select their preferred date format.
  * Shows a preview of how the current date would look in each format.
+ * Uses the centralized DropdownMenu for consistent animations.
  */
 export function DateFormatPicker({
   currentDate = '2025-06-02', // Default preview date
   className,
-  isOpen: controlledIsOpen,
-  onClose,
   trigger
 }: DateFormatPickerProps) {
   const { dateFormat, setDateFormat } = useDateFormat();
-  const [internalIsOpen, setInternalIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Use controlled state if provided, otherwise use internal state
-  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
-  const setIsOpen = onClose ? (open: boolean) => !open && onClose() : setInternalIsOpen;
 
   // Create a preview date object - parse safely to avoid timezone offset issues
   const previewDate = (() => {
@@ -66,20 +55,6 @@ export function DateFormatPicker({
       return new Date(2025, 5, 5); // June 5, 2025
     }
   })();
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen, setIsOpen]);
 
   // Generate preview text for each format
   const getPreviewText = (format: DateFormatType): string => {
@@ -140,63 +115,45 @@ export function DateFormatPicker({
 
   const handleFormatSelect = (format: DateFormatType) => {
     setDateFormat(format);
-    setIsOpen(false);
-  };
-
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
   };
 
   return (
-    <div className={cn("relative", className)} ref={dropdownRef}>
-      {/* Trigger */}
-      <div onClick={toggleDropdown}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         {trigger || (
           <Button
             variant="secondary"
-            className="justify-between w-full"
+            className={cn("justify-between w-full", className)}
           >
             <span>{getPreviewText(dateFormat)}</span>
-            <Icon name="ChevronDown" size={16} className={cn(
-              "transition-transform",
-              isOpen && "rotate-180"
-            )} />
+            <Icon name="ChevronDown" size={16} className="opacity-50" />
           </Button>
         )}
-      </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]">
+        {Object.values(DATE_FORMATS).map((format) => {
+          const isSelected = dateFormat === format;
+          const previewText = getPreviewText(format);
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 wewrite-card border border-neutral-20 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-          <div className="p-2 space-y-1">
-            {Object.values(DATE_FORMATS).map((format) => {
-              const isSelected = dateFormat === format;
-              const previewText = getPreviewText(format);
-              const description = DATE_FORMAT_DESCRIPTIONS[format];
-
-              return (
-                <button
-                  key={format}
-                  onClick={() => handleFormatSelect(format)}
-                  className={cn(
-                    "w-full flex items-center justify-between p-3 rounded-md transition-colors text-left",
-                    isSelected
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-primary/5 text-foreground"
-                  )}
-                >
-                  <div className="font-medium text-sm">
-                    {previewText}
-                  </div>
-                  {isSelected && (
-                    <Icon name="Check" size={16} className="text-primary" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+          return (
+            <DropdownMenuItem
+              key={format}
+              onClick={() => handleFormatSelect(format)}
+              className={cn(
+                "flex items-center justify-between cursor-pointer",
+                isSelected && "bg-primary/10"
+              )}
+            >
+              <span className={cn("font-medium", isSelected && "text-primary")}>
+                {previewText}
+              </span>
+              {isSelected && (
+                <Icon name="Check" size={16} className="text-primary" />
+              )}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

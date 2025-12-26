@@ -33,13 +33,13 @@ const createIconComponent = (name: IconName) => {
 };
 
 const Wallet = createIconComponent('Wallet');
-const Coins = createIconComponent('DollarSign'); // Using DollarSign as Coins equivalent
-const DollarSign = createIconComponent('DollarSign');
-const Landmark = createIconComponent('Landmark');
+const Flame = createIconComponent('Flame'); // Burn rate for spending
+const DollarSign = createIconComponent('DollarSign'); // Get paid in dollars
 const User = createIconComponent('User');
 const Palette = createIconComponent('Palette');
 const Bell = createIconComponent('Bell');
 const Mail = createIconComponent('Mail');
+const Shield = createIconComponent('Shield');
 const Trash2 = createIconComponent('Trash2');
 const SettingsIcon = createIconComponent('Settings');
 
@@ -75,14 +75,14 @@ const BASE_SECTIONS: SettingsSection[] = [
   {
     id: 'spend',
     title: 'Manage Spending',
-    icon: Coins,
+    icon: Flame,
     href: '/settings/spend',
     requiresPayments: true
   },
   {
     id: 'earnings',
     title: 'Get paid',
-    icon: Landmark,
+    icon: DollarSign,
     href: '/settings/earnings',
     requiresPayments: true
   },
@@ -109,6 +109,12 @@ const BASE_SECTIONS: SettingsSection[] = [
     title: 'Email Preferences',
     icon: Mail,
     href: '/settings/email-preferences'
+  },
+  {
+    id: 'security',
+    title: 'Security',
+    icon: Shield,
+    href: '/settings/security'
   },
   {
     id: 'deleted',

@@ -287,7 +287,7 @@ export default function AdminDashboardPage() {
       }
     } else {
       console.log('❌ [Admin Dashboard] No user, redirecting to login');
-      router.push('/auth/login?redirect=/admin/dashboard');
+      router.push('/auth/login?redirect=/admin/product-kpis');
     }
   }, [user, authLoading, router]);
 
@@ -309,42 +309,20 @@ export default function AdminDashboardPage() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-background">
-        {/* Clean Header with Back Button and Centered Title */}
-        <div className="border-b-only bg-card">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/admin#tools')}
-              >
-                <Icon name="ChevronLeft" size={16} className="mr-2" />
-                Back
-              </Button>
-
-              <h1 className="text-2xl font-bold">Admin Product KPIs</h1>
-
-              {/* Options Controls */}
-              {!dashboardLoading && (
-                <div className="flex items-center gap-2">
-                  {/* Options Button - toggle options bar */}
-                  <Button
-                    variant={isOptionsBarExpanded ? "default" : "outline"}
-                    onClick={handleToggleOptionsBar}
-                    className="gap-2"
-                  >
-                    <Icon name="Filter" size={16} />
-                    Options
-                  </Button>
-                </div>
-              )}
-
-              {/* Loading state placeholder for options button */}
-              {dashboardLoading && (
-                <div className="h-9 w-20 bg-muted animate-pulse rounded"></div>
-              )}
-            </div>
-          </div>
+        {/* Options Button - single button at top for both mobile and desktop */}
+        <div className="px-4 py-3 border-b">
+          {!dashboardLoading ? (
+            <Button
+              variant={isOptionsBarExpanded ? "default" : "outline"}
+              onClick={handleToggleOptionsBar}
+              className="gap-2"
+            >
+              <Icon name="Filter" size={16} />
+              Options
+            </Button>
+          ) : (
+            <div className="h-9 w-20 bg-muted animate-pulse rounded"></div>
+          )}
         </div>
 
         {/* Collapsible Options Bar */}
@@ -380,7 +358,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="py-6 px-6">
+        <div className="py-4 px-4 md:py-6 md:px-6">
           <UnifiedErrorBoundary>
             {(() => {
               if (dashboardLoading) {

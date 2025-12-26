@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { motion } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
+import EmptyState from "../ui/EmptyState";
 
 const PageSkeletons = ({ count = 8 }) => {
   return (
@@ -142,25 +143,22 @@ const ContentPageTabs = () => {
     return null;
   }
 
-  const EmptyState = ({ message }) => (
-    <div className="flex justify-center">
-      <div className="relative bg-background border-2 border-dashed border-border/40 rounded-[24px] p-8 max-w-md w-full text-center">
-        <div className="text-foreground text-xl mb-4">
-          {message}
-        </div>
-        <Link href="/pages/new">
-          <Button className="rounded-full">
-            <Icon name="Plus" size={16} className="mr-2" />
-            Create a new page
-          </Button>
-        </Link>
-      </div>
-    </div>
+  const PageEmptyState = ({ message }: { message: string }) => (
+    <EmptyState
+      icon="FileText"
+      title={message}
+      description="Start creating to see your pages here"
+      action={{
+        label: "Create a new page",
+        onClick: () => window.location.href = '/pages/new',
+        variant: 'default'
+      }}
+    />
   );
 
   const PageList = ({ pageList, emptyMessage }) => {
     if (!pageList || pageList.length === 0) {
-      return <EmptyState message={emptyMessage} />;
+      return <PageEmptyState message={emptyMessage} />;
     }
 
     return (

@@ -184,6 +184,7 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
   const pageId = unwrappedParams.id;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
                  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.getwewrite.app');
+  const fallbackImageUrl = `${baseUrl}/${pageId}/opengraph-image`;
 
   return {
     title: 'WeWrite - The social wiki where every page is a fundraiser',
@@ -194,11 +195,20 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
       url: `${baseUrl}/${pageId}`,
       siteName: 'WeWrite',
       type: 'article',
+      images: [
+        {
+          url: fallbackImageUrl,
+          width: 1200,
+          height: 630,
+          alt: 'WeWrite - The social wiki where every page is a fundraiser'
+        }
+      ]
     },
     twitter: {
       card: 'summary_large_image',
       title: 'WeWrite - The social wiki where every page is a fundraiser',
       description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.',
+      images: [fallbackImageUrl]
     }
   };
 }

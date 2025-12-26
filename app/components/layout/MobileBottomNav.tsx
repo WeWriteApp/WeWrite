@@ -26,6 +26,7 @@ import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 import NavDragLayer from './NavDragLayer';
 import { shouldShowNavigation } from '../../constants/layout';
+import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
 
 // Helper function to detect iOS devices
 const isIOSDevice = (): boolean => {
@@ -61,6 +62,7 @@ export default function MobileBottomNav() {
   const { unifiedOrder, moveItem, resetOrder, clearCache, getToolbarItems, getOverflowItems } = useUnifiedMobileNav();
   const { trackNavigationEvent } = useWeWriteAnalytics();
   const { handleNavigationFocus } = useNavigationPreloader();
+  const { openDrawer, isGlobalDrawerActive, drawerConfig } = useGlobalDrawer();
 
   // Detect touch device for DnD backend
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -86,6 +88,7 @@ export default function MobileBottomNav() {
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isToolbarEditMode, setIsToolbarEditMode] = useState(false);
   const [originalOrder, setOriginalOrder] = useState<string[] | null>(null);
+
 
   // Navigation optimization
   const {
@@ -281,8 +284,18 @@ export default function MobileBottomNav() {
     },
     settings: {
       icon: 'Settings',
-      onClick: () => { handleClose(); navigateIfNeeded('settings', '/settings'); },
-      isActive: isRouteActive('/settings'),
+      onClick: () => {
+        handleClose();
+        if (isGlobalDrawerActive) {
+          openDrawer('settings');
+        } else {
+          navigateIfNeeded('settings', '/settings');
+        }
+      },
+      // On mobile: active when drawer is open; On desktop: active when on settings path
+      isActive: isGlobalDrawerActive
+        ? drawerConfig.type === 'settings'
+        : (isRouteActive('/settings') || pathname?.startsWith('/settings') || false),
       ariaLabel: 'Settings',
       label: 'Settings',
       children: criticalSettingsStatus === 'warning' ? (
@@ -305,8 +318,18 @@ export default function MobileBottomNav() {
     },
     admin: {
       icon: 'Shield',
-      onClick: () => { handleClose(); navigateIfNeeded('admin', '/admin'); },
-      isActive: isRouteActive('/admin'),
+      onClick: () => {
+        handleClose();
+        if (isGlobalDrawerActive) {
+          openDrawer('admin');
+        } else {
+          navigateIfNeeded('admin', '/admin');
+        }
+      },
+      // On mobile: active when drawer is open; On desktop: active when on admin path
+      isActive: isGlobalDrawerActive
+        ? drawerConfig.type === 'admin'
+        : isRouteActive('/admin'),
       ariaLabel: 'Admin Dashboard',
       label: 'Admin',
     },
@@ -360,11 +383,11 @@ export default function MobileBottomNav() {
   );
 
   return (
-    <DndProvider backend={dndBackend} options={isTouchDevice ? touchBackendOptions : undefined}>
-      {/* Custom drag layer for ghost preview */}
-      {isToolbarEditMode && <NavDragLayer />}
-      
-      <FixedPortal>
+      <DndProvider backend={dndBackend} options={isTouchDevice ? touchBackendOptions : undefined}>
+        {/* Custom drag layer for ghost preview */}
+        {isToolbarEditMode && <NavDragLayer />}
+
+        <FixedPortal>
         {/* Backdrop - closes on any touch/click outside the toolbar */}
         {isExpanded && (
           <div

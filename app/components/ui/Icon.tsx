@@ -152,6 +152,12 @@ import {
   Instagram,
   BookText,
   FolderPlus,
+  Printer,
+  MailWarning,
+  Coins,
+  LayoutGrid,
+  EyeOff,
+  Grid2X2,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -222,7 +228,8 @@ export type IconName =
   | "Flame" | "Tablet" | "Sort"
   | "Flag" | "Ban" | "Wrench"
   | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack"
-  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "BookText" | "FolderPlus";
+  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "BookText" | "FolderPlus"
+  | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff";
 
 // Icon props interface
 export interface IconProps {
@@ -333,7 +340,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
 
   // Media & Files
   Eye: Eye,
-  EyeOff: Eye,
+  EyeOff: EyeOff,
   Search: Search,
   Filter: Funnel,
   Image: Image,
@@ -447,6 +454,11 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Instagram: Instagram,
   BookText: BookText,
   FolderPlus: FolderPlus,
+  Printer: Printer,
+  MailWarning: MailWarning,
+  Coins: Coins,
+  LayoutGrid: LayoutGrid,
+  Grid2X2: Grid2X2,
 };
 
 // Unified Icon Component

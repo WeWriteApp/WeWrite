@@ -15,7 +15,7 @@ const ReactFlowComponent = dynamic(
     loading: () => (
       <div className="w-full h-full flex items-center justify-center bg-muted/20">
         <div className="text-center">
-          <Icon name="Loader2" size={32} className="animate-spin text-primary mx-auto mb-2" />
+          <Icon name="Loader" size={32} className="text-primary mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Loading diagram...</p>
         </div>
       </div>
@@ -49,13 +49,9 @@ export default function SystemDiagramPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <div className="py-4 px-4 border-b bg-background flex-shrink-0">
+      {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+      <div className="hidden lg:block py-4 px-4 border-b bg-background flex-shrink-0">
         <div className="container mx-auto max-w-6xl">
-          <Link href="/admin" className="inline-flex items-center text-primary hover:text-primary/80 mb-2">
-            <Icon name="ChevronLeft" size={16} className="mr-2" />
-            Back to Admin
-          </Link>
           <div className="flex items-center gap-3">
             <Icon name="Network" size={28} className="text-primary" />
             <div>

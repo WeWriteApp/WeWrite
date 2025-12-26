@@ -10,26 +10,24 @@ export function EmptyStateSection({ id }: { id: string }) {
       id={id}
       title="Empty State"
       path="app/components/ui/EmptyState.tsx"
-      description="Standardized empty state component for consistent messaging when content is unavailable"
+      description="Standardized empty state component for consistent messaging when content is unavailable. All empty states use a unified dotted border style."
     >
-      <StateDemo label="Variant Styles">
+      <StateDemo label="Default Style">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
           <div>
-            <p className="text-xs text-muted-foreground mb-2">Default (card background)</p>
+            <p className="text-xs text-muted-foreground mb-2">Basic empty state</p>
             <EmptyState
               icon="Inbox"
               title="No messages"
               description="When you receive messages, they'll appear here."
-              variant="default"
             />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-2">Dotted (transparent with dashed border)</p>
+            <p className="text-xs text-muted-foreground mb-2">With different icon</p>
             <EmptyState
               icon="Plus"
               title="No items yet"
               description="Add your first item to get started."
-              variant="dotted"
             />
           </div>
         </div>
@@ -38,7 +36,7 @@ export function EmptyStateSection({ id }: { id: string }) {
       <StateDemo label="With Action Button">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
           <div>
-            <p className="text-xs text-muted-foreground mb-2">Default variant with action</p>
+            <p className="text-xs text-muted-foreground mb-2">Default button</p>
             <EmptyState
               icon="FileText"
               title="No pages yet"
@@ -50,12 +48,11 @@ export function EmptyStateSection({ id }: { id: string }) {
             />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-2">Dotted variant with action</p>
+            <p className="text-xs text-muted-foreground mb-2">Outline button variant</p>
             <EmptyState
               icon="Upload"
               title="No uploads"
               description="Drag and drop files here or click to upload."
-              variant="dotted"
               action={{
                 label: "Upload Files",
                 onClick: () => alert('Upload clicked!'),
@@ -98,42 +95,18 @@ export function EmptyStateSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Dotted Variant Sizes">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Small dotted</p>
-            <EmptyState
-              icon="Image"
-              title="No image"
-              description="Add an image to enhance your content."
-              size="sm"
-              variant="dotted"
-            />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Medium dotted</p>
-            <EmptyState
-              icon="Link"
-              title="No links"
-              description="Add external links to reference sources."
-              size="md"
-              variant="dotted"
-            />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Large dotted with action</p>
-            <EmptyState
-              icon="FolderPlus"
-              title="Create your first project"
-              description="Projects help you organize your pages and collaborate with others."
-              size="lg"
-              variant="dotted"
-              action={{
-                label: "New Project",
-                onClick: () => alert('New project!')
-              }}
-            />
-          </div>
+      <StateDemo label="Large Size with Action">
+        <div className="max-w-md mx-auto">
+          <EmptyState
+            icon="FolderPlus"
+            title="Create your first project"
+            description="Projects help you organize your pages and collaborate with others."
+            size="lg"
+            action={{
+              label: "New Project",
+              onClick: () => alert('New project!')
+            }}
+          />
         </div>
       </StateDemo>
 
@@ -154,6 +127,18 @@ export function EmptyStateSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
+      <StateDemo label="CSS Class: empty-state-border">
+        <div className="space-y-4 w-full">
+          <p className="text-sm text-muted-foreground">
+            All empty states use the <code className="bg-muted px-1 rounded">empty-state-border</code> CSS class
+            for consistent dashed borders. This class can also be used on custom components:
+          </p>
+          <div className="empty-state-border rounded-lg p-6 text-center">
+            <p className="text-sm text-muted-foreground">Custom element with empty-state-border class</p>
+          </div>
+        </div>
+      </StateDemo>
+
       <StateDemo label="Props">
         <div className="space-y-2 text-sm w-full">
           <div className="flex gap-2 items-center">
@@ -171,10 +156,6 @@ export function EmptyStateSection({ id }: { id: string }) {
           <div className="flex gap-2 items-center">
             <code className="px-2 py-1 bg-muted rounded text-xs">size?: 'sm' | 'md' | 'lg'</code>
             <span className="text-muted-foreground">- Optional. Controls padding and text size (default: 'md')</span>
-          </div>
-          <div className="flex gap-2 items-center">
-            <code className="px-2 py-1 bg-muted rounded text-xs">variant?: 'default' | 'dotted'</code>
-            <span className="text-muted-foreground">- Optional. Visual style (default: 'default')</span>
           </div>
           <div className="flex gap-2 items-center">
             <code className="px-2 py-1 bg-muted rounded text-xs">action?: {'{label, onClick, variant?}'}</code>

@@ -356,7 +356,7 @@ export function UserManagement() {
       {/* Users Table */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Icon name="RefreshCw" size={24} className="animate-spin mr-2" />
+          <Icon name="Loader" size={24} className="text-muted-foreground mr-2" />
           <span>Loading users...</span>
         </div>
       ) : (

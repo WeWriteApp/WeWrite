@@ -41,21 +41,14 @@ export default function MobileOnboardingPreviewPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-7xl">
-        <header className="border-b-subtle bg-background px-4 py-3 mb-6 flex items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
+        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+        <header className="hidden lg:flex border-b-subtle bg-background px-4 py-3 mb-6 items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
           <div>
             <h1 className="text-2xl font-bold leading-tight">Capacitor App Onboarding</h1>
             <p className="text-muted-foreground">
               Preview iOS and Android onboarding flows side by side
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/admin')}
-            className="h-10 w-10"
-          >
-            <Icon name="X" size={20} />
-          </Button>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

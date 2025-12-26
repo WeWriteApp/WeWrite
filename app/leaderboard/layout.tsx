@@ -8,11 +8,20 @@ export const metadata: Metadata = {
     title: 'WeWrite Leaderboards',
     description: 'See the top writers and most popular content on WeWrite.',
     type: 'website',
+    images: [
+      {
+        url: 'https://www.getwewrite.app/leaderboard/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'WeWrite Leaderboards'
+      }
+    ]
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'WeWrite Leaderboards',
     description: 'See the top writers and most popular content on WeWrite.',
+    images: ['https://www.getwewrite.app/leaderboard/opengraph-image']
   },
   alternates: {
     canonical: 'https://www.getwewrite.app/leaderboard',

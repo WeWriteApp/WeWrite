@@ -346,7 +346,7 @@ export default function EmailPreferencesPage() {
           </section>
 
           {/* Unsubscribe All */}
-          <section className="bg-muted/50 rounded-lg border border-dashed p-6">
+          <section className="bg-muted/50 rounded-lg empty-state-border p-6">
             <p className="text-sm text-muted-foreground text-center">
               Need to unsubscribe from everything? You can{' '}
               <button

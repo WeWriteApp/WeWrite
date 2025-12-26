@@ -754,16 +754,9 @@ function AdminEmailsPageContent() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-7xl">
-        {/* Regular Header (not floating) */}
-        <header className="border-b bg-background px-4 py-3 mb-6 flex items-start justify-between gap-3 lg:px-0 lg:py-4 lg:border-b-0">
+        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+        <header className="hidden lg:flex border-b bg-background px-4 py-3 mb-6 items-start justify-between gap-3 lg:px-0 lg:py-4 lg:border-b-0">
           <div>
-            <button
-              className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => router.push('/admin')}
-            >
-              <Icon name="ArrowLeft" size={16} className="mr-1" />
-              Back to Admin
-            </button>
             <h1 className="text-2xl font-semibold leading-tight flex items-center gap-2">
               <Icon name="Bell" size={24} />
               Notifications
@@ -780,14 +773,11 @@ function AdminEmailsPageContent() {
               href="https://resend.com/emails"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <Icon name="ExternalLink" size={16} />
               Resend Dashboard
             </a>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.push('/')}>
-              <Icon name="X" size={20} />
-            </Button>
           </div>
         </header>
 

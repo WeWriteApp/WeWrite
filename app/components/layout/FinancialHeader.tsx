@@ -198,7 +198,7 @@ export default function FinancialHeader({
         <Badge
           variant="secondary"
           className="cursor-pointer bg-secondary/50 hover:bg-secondary/80 transition-colors text-sm"
-          onClick={() => router.push('/settings/spend')}
+          onClick={() => navigateToSettings('spend', router)}
           title="Loading balance..."
         >
           <Icon name="Loader" className="mr-1 flex-shrink-0" />

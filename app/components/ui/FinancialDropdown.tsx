@@ -7,10 +7,46 @@ import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { Button } from './button';
+import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
 
 /**
- * Simple Financial Dropdown - Clean implementation
+ * Simple Financial Dropdown - Clean implementation with staggered animations
  */
+
+/**
+ * AnimatedRow - A row that animates in with staggered delay
+ */
+interface AnimatedRowProps {
+  children: React.ReactNode;
+  index: number;
+  isAnimating: boolean;
+  className?: string;
+}
+
+function AnimatedRow({ children, index, isAnimating, className }: AnimatedRowProps) {
+  const delay = index * 30; // 30ms stagger between items
+
+  return (
+    <div
+      className={cn("transition-all ease-out", className)}
+      style={{
+        opacity: isAnimating ? 1 : 0,
+        transform: isAnimating ? 'translateY(0)' : 'translateY(-6px)',
+        transitionDuration: '150ms',
+        transitionDelay: `${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Context to pass animation state to child components
+const FinancialDropdownAnimationContext = React.createContext<{ isAnimating: boolean }>({ isAnimating: false });
+
+export function useFinancialDropdownAnimation() {
+  return React.useContext(FinancialDropdownAnimationContext);
+}
 
 interface FinancialDropdownProps {
   trigger: React.ReactNode;
@@ -52,7 +88,9 @@ export function FinancialDropdown({
   demoMessage = 'Demo Mode: Sign up to use real funds!'
 }: FinancialDropdownProps) {
   const router = useRouter();
+  const { openDrawer, isGlobalDrawerActive } = useGlobalDrawer();
   const [isOpen, setIsOpen] = useState(false);
+
   const [isAnimating, setIsAnimating] = useState(false); // For enter animation
   const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -183,29 +221,30 @@ export function FinancialDropdown({
 
   // Dropdown content to be portaled
   const dropdownContent = position && (
-    <div
-      ref={dropdownRef}
-      className="fixed w-[260px] transition-all duration-150 ease-out"
-      style={{
-        top: position.top,
-        left: position.left,
-        zIndex: 99999,
-        opacity: isAnimating ? 1 : 0,
-        transform: isAnimating ? 'translateY(0)' : 'translateY(-8px)',
-      }}
-    >
-      {/* WeWrite card with glassmorphic passthrough blur */}
-      <div className="wewrite-card card-80">
-        <div className="text-sm font-medium text-foreground mb-3 text-center">
-          {title}
-        </div>
+    <FinancialDropdownAnimationContext.Provider value={{ isAnimating }}>
+      <div
+        ref={dropdownRef}
+        className="fixed w-[260px] transition-all duration-150 ease-out"
+        style={{
+          top: position.top,
+          left: position.left,
+          zIndex: 99999,
+          opacity: isAnimating ? 1 : 0,
+          transform: isAnimating ? 'translateY(0)' : 'translateY(-8px)',
+        }}
+      >
+        {/* WeWrite card with glassmorphic passthrough blur */}
+        <div className="wewrite-card card-80">
+          <AnimatedRow index={0} isAnimating={isAnimating} className="text-sm font-medium text-foreground mb-3 text-center">
+            {title}
+          </AnimatedRow>
 
-        <div className="mb-3">
-          {content}
-        </div>
+          <div className="mb-3">
+            {content}
+          </div>
 
         {showNavigationButton && (
-          <>
+          <AnimatedRow index={5} isAnimating={isAnimating}>
             <div className="border-t border-border my-3" />
             <div className="space-y-2">
               <Button
@@ -225,7 +264,13 @@ export function FinancialDropdown({
                   size="sm"
                   onClick={() => {
                     closeDropdown();
-                    router.push('/settings/fund-account?topoff=true');
+                    // On mobile, use drawer system with topoff parameter in subPath
+                    // On desktop, use normal path navigation
+                    if (isGlobalDrawerActive) {
+                      openDrawer('settings', 'fund-account?topoff=true');
+                    } else {
+                      router.push('/settings/fund-account?topoff=true');
+                    }
                   }}
                   className="w-full"
                 >
@@ -233,20 +278,21 @@ export function FinancialDropdown({
                 </Button>
               )}
             </div>
-          </>
+          </AnimatedRow>
         )}
 
         {/* Demo mode notice */}
         {isDemo && (
-          <>
+          <AnimatedRow index={6} isAnimating={isAnimating}>
             <div className="border-t border-border my-3" />
             <div className="text-xs text-muted-foreground bg-gray-100/50 dark:bg-white/5 p-2 rounded text-center">
               {demoMessage}
             </div>
-          </>
+          </AnimatedRow>
         )}
+        </div>
       </div>
-    </div>
+    </FinancialDropdownAnimationContext.Provider>
   );
 
   return (
@@ -276,30 +322,31 @@ export function SpendBreakdown({
   allocatedUsdCents,
   availableUsdCents
 }: SpendBreakdownProps) {
+  const { isAnimating } = useFinancialDropdownAnimation();
   const isOutOfFunds = availableUsdCents === 0;
   const isOverspent = allocatedUsdCents > totalUsdCents;
   const overspentAmount = isOverspent ? allocatedUsdCents - totalUsdCents : 0;
 
   return (
     <div className="space-y-2 text-sm">
-      <div className="flex justify-between">
+      <AnimatedRow index={1} isAnimating={isAnimating} className="flex justify-between">
         <span className="text-muted-foreground">Monthly subscription:</span>
         <span className="font-medium">{formatUsdCents(totalUsdCents)}</span>
-      </div>
-      <div className="flex justify-between">
+      </AnimatedRow>
+      <AnimatedRow index={2} isAnimating={isAnimating} className="flex justify-between">
         <span className="text-muted-foreground">Allocated:</span>
         <span className={`font-medium ${(isOutOfFunds || isOverspent) ? 'text-orange-600' : 'text-primary'}`}>
           {formatUsdCents(allocatedUsdCents)}
         </span>
-      </div>
-      <div className="flex justify-between">
+      </AnimatedRow>
+      <AnimatedRow index={3} isAnimating={isAnimating} className="flex justify-between">
         <span className="text-muted-foreground">{isOverspent ? 'Overspent:' : 'Available:'}</span>
         <span className={`font-medium ${(isOutOfFunds || isOverspent) ? 'text-orange-500' : 'text-green-600'}`}>
           {isOverspent ? formatUsdCents(overspentAmount) : (isOutOfFunds ? 'Out' : formatUsdCents(availableUsdCents))}
         </span>
-      </div>
-      
-      <div className="mt-3">
+      </AnimatedRow>
+
+      <AnimatedRow index={4} isAnimating={isAnimating} className="mt-3">
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div className="h-full flex gap-0.5">
             {allocatedUsdCents > 0 && totalUsdCents > 0 && (
@@ -319,7 +366,7 @@ export function SpendBreakdown({
             )}
           </div>
         </div>
-      </div>
+      </AnimatedRow>
     </div>
   );
 }
@@ -331,45 +378,47 @@ export function EarningsBreakdown({
   monthlyChange = 0,
   onRefresh
 }: EarningsBreakdownProps) {
-  const router = useRouter();
+  const { isAnimating } = useFinancialDropdownAnimation();
 
   return (
     <div className="space-y-3 text-sm">
-      <div className="flex justify-between items-center">
+      <AnimatedRow index={1} isAnimating={isAnimating} className="flex justify-between items-center">
         <span className="text-muted-foreground">Pending:</span>
         <span className="font-medium text-green-600">{formatUsdCents(pendingEarnings * 100)}</span>
-      </div>
+      </AnimatedRow>
 
-      <div className="flex justify-between items-center">
+      <AnimatedRow index={2} isAnimating={isAnimating} className="flex justify-between items-center">
         <span className="text-muted-foreground">Last month:</span>
         <span className="font-medium">{formatUsdCents(lastMonthEarnings * 100)}</span>
-      </div>
+      </AnimatedRow>
 
-      <div className="flex justify-between items-center">
+      <AnimatedRow index={3} isAnimating={isAnimating} className="flex justify-between items-center">
         <span className="text-muted-foreground">Lifetime:</span>
         <span className="font-medium">{formatUsdCents(totalEarnings * 100)}</span>
-      </div>
+      </AnimatedRow>
 
       {totalEarnings === 0 && (
-        <div className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t">
+        <AnimatedRow index={4} isAnimating={isAnimating} className="text-xs text-muted-foreground text-center mt-4 pt-3 border-t">
           Start writing pages to earn from supporters
-        </div>
+        </AnimatedRow>
       )}
 
       {/* Beta warning card */}
-      <div className="mt-4 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30">
-        <div className="flex items-start gap-2">
-          <Icon name="AlertCircle" size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-medium text-amber-600 dark:text-amber-400">
-              Earnings are in beta
-            </div>
-            <div className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-              Payouts are not yet available. We're working on it!
+      <AnimatedRow index={totalEarnings === 0 ? 5 : 4} isAnimating={isAnimating}>
+        <div className="mt-4 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30">
+          <div className="flex items-start gap-2">
+            <Icon name="AlertCircle" size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                Earnings are in beta
+              </div>
+              <div className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                Payouts are not yet available. We're working on it!
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AnimatedRow>
     </div>
   );
 }

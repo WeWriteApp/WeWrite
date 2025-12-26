@@ -203,7 +203,7 @@ export const PlatformAccountConfig: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Icon name="RefreshCw" size={32} className="animate-spin" />
+        <Icon name="Loader" size={32} className="text-muted-foreground" />
         <span className="ml-2">Loading platform configuration...</span>
       </div>
     );

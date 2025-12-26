@@ -4,6 +4,12 @@ import * as React from "react"
 import { Icon } from '@/components/ui/Icon';
 import { cn } from "../../lib/utils"
 
+// Animation context for staggered item animations
+const SelectAnimationContext = React.createContext<{ isAnimating: boolean; getItemIndex: () => number }>({
+  isAnimating: false,
+  getItemIndex: () => 0
+});
+
 // SIMPLE select - no Radix UI, just basic dropdown
 const SelectContext = React.createContext<{
   value: string;
@@ -89,21 +95,53 @@ const SelectContent = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
   const { open } = React.useContext(SelectContext);
+  const [isAnimating, setIsAnimating] = React.useState(false);
+
+  // Trigger animation after mount
+  React.useEffect(() => {
+    if (open) {
+      // Small delay to ensure DOM is ready
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+    }
+  }, [open]);
+
+  // Item index counter using ref to avoid stale closures
+  const itemIndexRef = React.useRef(0);
+
+  // Reset counter when dropdown opens
+  React.useEffect(() => {
+    if (open) {
+      itemIndexRef.current = 0;
+    }
+  }, [open]);
+
+  const getItemIndex = React.useCallback(() => {
+    return itemIndexRef.current++;
+  }, []);
 
   if (!open) return null;
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        "absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
-        className
-      )}
-      onClick={(e) => e.stopPropagation()}
-      {...props}
-    >
-      {children}
-    </div>
+    <SelectAnimationContext.Provider value={{ isAnimating, getItemIndex }}>
+      <div
+        ref={ref}
+        className={cn(
+          "absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md transition-opacity duration-150",
+          isAnimating ? "opacity-100" : "opacity-0",
+          className
+        )}
+        onClick={(e) => e.stopPropagation()}
+        {...props}
+      >
+        {children}
+      </div>
+    </SelectAnimationContext.Provider>
   );
 });
 SelectContent.displayName = "SelectContent";
@@ -113,16 +151,31 @@ const SelectItem = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement> & { value: string }
 >(({ className, children, value: itemValue, ...props }, ref) => {
   const { value, setValue } = React.useContext(SelectContext);
+  const { isAnimating, getItemIndex } = React.useContext(SelectAnimationContext);
   const isSelected = value === itemValue;
+
+  // Get unique index for this item on first render
+  const indexRef = React.useRef<number>(-1);
+  if (indexRef.current === -1) {
+    indexRef.current = getItemIndex();
+  }
+
+  const delay = indexRef.current * 25; // 25ms stagger between items
 
   return (
     <div
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-all ease-out",
         isSelected && "bg-accent text-accent-foreground",
         className
       )}
+      style={{
+        opacity: isAnimating ? 1 : 0,
+        transform: isAnimating ? 'translateY(0)' : 'translateY(-6px)',
+        transitionDuration: '150ms',
+        transitionDelay: `${delay}ms`,
+      }}
       onClick={() => setValue(itemValue)}
       {...props}
     >

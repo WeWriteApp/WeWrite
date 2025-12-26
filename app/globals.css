@@ -36,6 +36,9 @@
 /* Import unified content display styles */
 @import './styles/content-display.css';
 
+/* Import editor styles for paragraph spacing and text view styling */
+@import './components/editor-styles.css';
+
 /* Global background & typography baseline */
 html, body {
   @apply min-h-screen bg-background text-foreground;
@@ -2969,6 +2972,30 @@ body::before {
   border: 1px solid oklch(var(--border));
 }
 
+/* Empty state dotted border - 2px wide, 2px dash, 4px gap, neutral-alpha-20
+   Uses SVG background-image with stroke-dasharray for custom dash pattern with rounded corners
+   Reference: https://kovart.github.io/dashed-border-generator/ */
+.empty-state-border {
+  border: none;
+  position: relative;
+  border-radius: var(--radius);
+  /* Light mode: 2px stroke, 2px dash, 4px gap */
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='8' ry='8' stroke='rgba(0,0,0,0.2)' stroke-width='2' stroke-dasharray='2%2c 4' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e");
+}
+
+.dark .empty-state-border {
+  /* Dark mode: 2px stroke, 2px dash, 4px gap */
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='8' ry='8' stroke='rgba(255,255,255,0.2)' stroke-width='2' stroke-dasharray='2%2c 4' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e");
+}
+
+:root[data-accent-color="high-contrast"] .empty-state-border {
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='8' ry='8' stroke='rgba(0,0,0,0.35)' stroke-width='2' stroke-dasharray='2%2c 4' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e");
+}
+
+:root[data-accent-color="high-contrast"].dark .empty-state-border {
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='8' ry='8' stroke='rgba(255,255,255,0.35)' stroke-width='2' stroke-dasharray='2%2c 4' stroke-dashoffset='0' stroke-linecap='butt'/%3e%3c/svg%3e");
+}
+
 /* High contrast mode border styles - only apply higher contrast in high contrast mode */
 :root[data-accent-color="high-contrast"] .border-theme-light {
   border: 1px solid oklch(var(--border) / 0.4);
@@ -4381,6 +4408,53 @@ button.bg-transparent[type] {
   }
 }
 
+/* Mobile Admin Page Styling (in drawer) */
+.mobile-admin-page {
+  padding: 1rem;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Override desktop-specific styles in mobile admin pages */
+/* Hide all desktop-only elements in mobile drawer */
+.mobile-admin-page .hidden.md\:block,
+.mobile-admin-page .hidden.md\:flex,
+.mobile-admin-page .hidden.lg\:block,
+.mobile-admin-page .hidden.lg\:flex {
+  display: none !important;
+}
+
+/* Show all mobile-specific elements in mobile drawer */
+/* Use flex for elements that have both md:hidden and flex classes */
+.mobile-admin-page .md\:hidden {
+  display: flex !important;
+}
+
+.mobile-admin-page .lg\:hidden {
+  display: flex !important;
+}
+
+/* Make admin grids stack on mobile */
+.mobile-admin-page .grid {
+  grid-template-columns: 1fr !important;
+}
+
+/* Reduce admin page padding in drawer */
+.mobile-admin-page .p-6 {
+  padding: 0.5rem;
+}
+
+.mobile-admin-page .p-8 {
+  padding: 0.75rem;
+}
+
+/* Make tables horizontally scrollable */
+.mobile-admin-page table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
 /* Pending page link styling */
 .pending-page {
   opacity: 0.7;
@@ -4490,33 +4564,6 @@ button.bg-transparent[type] {
 @keyframes slideOutRight {
   from { transform: translateX(0); opacity: 1; }
   to { transform: translateX(100%); opacity: 0; }
-}
-
-/* Drawer animations with bouncy effect */
-@keyframes drawer-slide-up {
-  0% {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  70% {
-    transform: translateY(-2%);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes drawer-slide-down {
-  0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(100%);
-    opacity: 0;
-  }
 }
 
 @keyframes slideDown {
@@ -4719,5 +4766,270 @@ button.bg-transparent[type] {
 @media (prefers-reduced-motion: reduce) {
   .landing-blob {
     animation: none !important;
+  }
+}
+
+/* ================================
+   PRINT STYLES
+   ================================
+   Clean print layout for content pages.
+   Hides navigation, footer, and interactive elements.
+   Optimized for US Letter and A4 paper sizes.
+*/
+
+@media print {
+  /* Reset page defaults */
+  @page {
+    size: auto;
+    margin: 0.75in 1in;
+  }
+
+  /* Force white background and black text */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Hide non-essential UI elements */
+  header,
+  footer,
+  nav,
+  aside,
+  .no-print,
+  .sidebar,
+  .mobile-bottom-nav,
+  .desktop-sidebar,
+  .financial-header,
+  .allocation-bar,
+  .floating-header,
+  .sticky-header,
+  .related-pages-section,
+  .replies-section,
+  .page-graph-view,
+  .what-links-here,
+  .content-page-footer,
+  .content-page-actions,
+  .sponsorship-card,
+  [data-radix-popper-content-wrapper],
+  button:not(.print-visible),
+  .btn,
+  .button,
+  .animate-pulse,
+  .skeleton,
+  [data-loading],
+  .loading,
+  /* Hide fixed position navigation elements */
+  [class*="fixed"][class*="bottom-0"],
+  [class*="fixed"][class*="left-0"][class*="top-0"],
+  /* Hide portals and overlays */
+  [data-radix-portal],
+  .fixed-portal,
+  /* Hide toast notifications */
+  [data-sonner-toaster],
+  .toast-container {
+    display: none !important;
+  }
+
+  /* Show print-specific elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Page content styling */
+  .print-content,
+  .content-page-content,
+  main {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Page title styling */
+  .print-title,
+  h1,
+  [data-page-title] {
+    font-size: 24pt !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.25in !important;
+    color: black !important;
+    page-break-after: avoid;
+  }
+
+  /* Hide editable title input in print, show static text */
+  textarea[placeholder*="title"],
+  input[type="text"][placeholder*="title"] {
+    border: none !important;
+    background: none !important;
+    resize: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    font-size: 24pt !important;
+    font-weight: 700 !important;
+    color: black !important;
+  }
+
+  /* Hide dropdown menus and interactive elements in header */
+  [data-radix-menu-content],
+  [data-radix-dropdown-menu-content],
+  .dropdown-menu,
+  .settings-menu {
+    display: none !important;
+  }
+
+  /* Author/metadata line */
+  .print-meta {
+    font-size: 10pt !important;
+    color: #666 !important;
+    margin-bottom: 0.5in !important;
+    border-bottom: 1px solid #ccc !important;
+    padding-bottom: 0.25in !important;
+  }
+
+  /* Body text */
+  p, .prose p {
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+    margin-bottom: 0.75em !important;
+    orphans: 3;
+    widows: 3;
+    color: black !important;
+  }
+
+  /* Headings */
+  h2, h3, h4 {
+    page-break-after: avoid;
+    margin-top: 1em !important;
+    color: black !important;
+  }
+
+  h2 {
+    font-size: 18pt !important;
+    font-weight: 600 !important;
+  }
+
+  h3 {
+    font-size: 14pt !important;
+    font-weight: 600 !important;
+  }
+
+  /* Links - show URL in brackets for print */
+  a[href]:not(.no-print-url)::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666;
+  }
+
+  /* Internal links - don't show URL */
+  a[href^="/"]:after,
+  a[href^="#"]:after {
+    content: none !important;
+  }
+
+  /* Page links inline styling */
+  .page-link,
+  .internal-link {
+    color: black !important;
+    text-decoration: underline !important;
+    font-weight: 500 !important;
+  }
+
+  .page-link::after,
+  .internal-link::after {
+    content: none !important;
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Blockquotes */
+  blockquote {
+    border-left: 3px solid #666 !important;
+    padding-left: 0.5in !important;
+    margin-left: 0 !important;
+    font-style: italic !important;
+    color: #333 !important;
+  }
+
+  /* Code blocks */
+  pre, code {
+    font-size: 10pt !important;
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+  }
+
+  /* Lists */
+  ul, ol {
+    margin-left: 0.25in !important;
+  }
+
+  li {
+    margin-bottom: 0.25em !important;
+  }
+
+  /* Tables */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 0.1in !important;
+    font-size: 10pt !important;
+  }
+
+  th {
+    background: #f5f5f5 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* WeWrite footer branding for print */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9pt;
+    color: #999;
+    padding: 0.25in 0;
+  }
+
+  /* Ensure backgrounds don't print (save ink) */
+  * {
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Cards/containers - remove borders and shadows */
+  .wewrite-card,
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
   }
 }

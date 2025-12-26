@@ -1,19 +1,25 @@
 /**
  * URL Configuration Utility
- * 
+ *
  * Provides consistent URL resolution across all environments.
  * Handles fallbacks for different environment variable configurations.
  */
 
 /**
+ * The canonical production URL for the application.
+ * This should be used for any emails, verification links, etc. that target production users.
+ */
+export const PRODUCTION_URL = 'https://getwewrite.app';
+
+/**
  * Get the base URL for the application with proper fallbacks
- * 
+ *
  * Priority order:
  * 1. NEXT_PUBLIC_APP_URL (primary environment variable)
  * 2. NEXT_PUBLIC_BASE_URL (legacy fallback)
  * 3. VERCEL_URL (Vercel deployment URL)
  * 4. Default production URL
- * 
+ *
  * @returns The base URL for the current environment
  */
 export function getBaseUrl(): string {
@@ -33,7 +39,7 @@ export function getBaseUrl(): string {
   }
 
   // Default production URL
-  return 'https://wewrite.app';
+  return PRODUCTION_URL;
 }
 
 /**

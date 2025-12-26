@@ -56,23 +56,35 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
     if (userData) {
       const username = userData.username || 'User';
 
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app';
+      const profileImageUrl = `${baseUrl}/u/${username}/opengraph-image`;
+
       return {
         title: `${username} on WeWrite`,
         description: `${username}'s profile on WeWrite`,
         openGraph: {
           title: `${username} on WeWrite`,
           description: `${username}'s profile on WeWrite`,
-          url: `${process.env.NEXT_PUBLIC_BASE_URL}/u/${username}`,
+          url: `${baseUrl}/u/${username}`,
           siteName: 'WeWrite',
           type: 'profile',
+          images: [
+            {
+              url: profileImageUrl,
+              width: 1200,
+              height: 630,
+              alt: `${username}'s profile on WeWrite`
+            }
+          ]
         },
         twitter: {
-          card: 'summary',
+          card: 'summary_large_image',
           title: `${username} on WeWrite`,
           description: `${username}'s profile on WeWrite`,
+          images: [profileImageUrl]
         },
         alternates: {
-          canonical: `${process.env.NEXT_PUBLIC_BASE_URL}/u/${username}`,
+          canonical: `${baseUrl}/u/${username}`,
         },
       };
     }

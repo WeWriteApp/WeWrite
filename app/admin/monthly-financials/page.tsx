@@ -322,19 +322,10 @@ export default function MonthlyFinancialsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card">
+      {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+      <div className="hidden lg:block border-b bg-card">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/admin')}
-            >
-              <Icon name="ChevronLeft" size={16} className="mr-2" />
-              Back
-            </Button>
-
             <h1 className="text-2xl font-bold">Monthly Financials</h1>
 
             <Button
@@ -348,6 +339,20 @@ export default function MonthlyFinancialsPage() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Refresh Button */}
+      <div className="lg:hidden px-4 py-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchData}
+          disabled={isLoading}
+          className="w-full"
+        >
+          <Icon name="RefreshCw" size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       <div className="py-6 px-6 max-w-7xl mx-auto space-y-6">

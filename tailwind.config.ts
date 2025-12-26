@@ -8,6 +8,7 @@
 
 import type { Config } from "tailwindcss";
 import plugin from "tailwindcss/plugin";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
   content: [
@@ -192,6 +193,8 @@ const config: Config = {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'slide-up-fade': 'slide-up-fade 0.3s ease-out forwards',
+        'dialog-in': 'dialog-in 0.2s ease-out forwards',
+        'dialog-out': 'dialog-out 0.15s ease-in forwards',
       },
       keyframes: {
         'gradient-x': {
@@ -233,10 +236,29 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'dialog-in': {
+          '0%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'dialog-out': {
+          '0%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+          '100%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
+        },
+        // Drawer animations (bottom sheet style with subtle bounce)
+        'drawer-slide-up': {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '70%': { transform: 'translateY(-2%)', opacity: '1' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'drawer-slide-down': {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(100%)', opacity: '0' },
+        },
       },
     },
   },
   plugins: [
+    tailwindcssAnimate,
     plugin(function({ addUtilities }) {
       addUtilities({
         '.scrollbar-hide': {

@@ -131,17 +131,13 @@ export default function FeatureFlagsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-4xl">
-        <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
+        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+        <div className="hidden lg:flex mb-6 items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold leading-tight">Feature Flags</h1>
             <p className="text-muted-foreground">Admin-only preview controls</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10">
-              <Icon name="ArrowLeft" size={20} />
-            </Button>
-          </div>
-        </FloatingHeader>
+        </div>
 
         <div className="pt-24 lg:pt-0 space-y-6">
           {/* Line Numbers Feature Flag */}

@@ -287,14 +287,14 @@ export default function RandomPagesPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* View Mode Segmented Control */}
             <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
-              <SegmentedControlList className="h-8 w-[120px]">
-                <SegmentedControlTrigger value="cards" className="text-xs px-2">
-                  <Icon name="Grid3X3" size={14} className="mr-1" />
-                  Cards
+              <SegmentedControlList className="h-9">
+                <SegmentedControlTrigger value="cards" className="text-xs px-3 gap-1.5">
+                  <Icon name="Square" size={14} />
+                  <span className="hidden sm:inline">Detailed</span>
                 </SegmentedControlTrigger>
-                <SegmentedControlTrigger value="list" className="text-xs px-2">
-                  <Icon name="List" size={14} className="mr-1" />
-                  List
+                <SegmentedControlTrigger value="list" className="text-xs px-3 gap-1.5">
+                  <Icon name="LayoutGrid" size={14} />
+                  <span className="hidden sm:inline">Dense</span>
                 </SegmentedControlTrigger>
               </SegmentedControlList>
             </SegmentedControl>

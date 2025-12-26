@@ -10,19 +10,18 @@ interface Props {
   description?: string;
 }
 
+/**
+ * AdminSubpageHeader - Desktop-only header for admin subpages
+ *
+ * On mobile, the admin drawer header handles navigation (back button, title).
+ * This header is hidden on mobile (< lg breakpoint) to avoid redundancy.
+ */
 export function AdminSubpageHeader({ title, description }: Props) {
   const router = useRouter();
 
   return (
-    <header className="border-b bg-background px-4 py-3 flex items-start justify-between gap-3 lg:px-0 lg:py-4 lg:border-b-0">
+    <header className="hidden lg:flex border-b bg-background px-4 py-3 items-start justify-between gap-3 lg:px-0 lg:py-4 lg:border-b-0">
       <div>
-        <button
-          className="mb-2 inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => router.push("/admin")}
-        >
-          <Icon name="ChevronLeft" size={16} className="mr-1" />
-          Back to Admin
-        </button>
         <h1 className="text-2xl font-semibold leading-tight">{title}</h1>
         {description && <p className="text-muted-foreground mt-1">{description}</p>}
       </div>

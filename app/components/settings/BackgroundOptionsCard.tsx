@@ -308,7 +308,7 @@ export default function BackgroundOptionsCard() {
                     )}
                   </>
                 ) : (
-                  <div className="wewrite-card bg-muted/30 border-dashed border-2 border-muted-foreground/20">
+                  <div className="wewrite-card bg-muted/30 empty-state-border">
                     <div className="p-6 text-center space-y-3">
                       <div className="text-muted-foreground">
                         <Icon name="Lock" size={48} className="mx-auto mb-3 opacity-50" />

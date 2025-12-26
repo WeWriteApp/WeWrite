@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { formatCurrency } from '../../utils/formatCurrency';
+import EmptyState from '../ui/EmptyState';
 
 interface PayoutRecord {
   id: string;
@@ -327,18 +328,14 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
           <span className="ml-2">Loading payout history...</span>
         </div>
       ) : filteredPayouts.length === 0 ? (
-        <Card className="border-theme-strong border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <Icon name="TrendingUp" size={48} className="text-muted-foreground mb-4" />
-            <h4 className="text-lg font-medium mb-2">No Payouts Found</h4>
-            <p className="text-muted-foreground text-center">
-              {statusFilter === 'all'
-                ? "You haven't received any payouts yet. Start earning tokens to see your payout history here."
-                : `No payouts found with status "${statusFilter}".`
-              }
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon="TrendingUp"
+          title="No Payouts Found"
+          description={statusFilter === 'all'
+            ? "You haven't received any payouts yet. Start earning tokens to see your payout history here."
+            : `No payouts found with status "${statusFilter}".`
+          }
+        />
       ) : (
         <>
           {/* Desktop Table */}

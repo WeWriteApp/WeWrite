@@ -97,6 +97,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/settings/spend': 'Spending Dashboard',
   '/settings/reset-password': 'Change Password',
   '/settings/email-preferences': 'Email Preferences',
+  '/settings/security': 'Security Settings',
   '/settings/subscription': 'Subscription Settings',
   '/settings/subscription/checkout': 'Subscription Checkout',
   '/settings/subscription/success': 'Subscription Success',
@@ -108,7 +109,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
 
   // Admin pages
   '/admin': 'Admin Dashboard',
-  '/admin/dashboard': 'Admin Dashboard',
+  '/admin/product-kpis': 'Admin Product KPIs',
   '/admin/users': 'Admin: Users',
   '/admin/emails': 'Admin: Emails',
   '/admin/notifications': 'Admin: Notifications',

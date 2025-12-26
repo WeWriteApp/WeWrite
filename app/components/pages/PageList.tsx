@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import EmptyState from "../ui/EmptyState";
 import {
   Table,
   TableBody,
@@ -75,22 +76,16 @@ const PageListSkeleton = ({ mode = "wrapped", count = 8 }) => {
 };
 
 const DefaultEmptyState = ({ createButtonHref = "/new", createButtonText = "Create a page" }) => (
-  <div className="flex justify-center">
-    <div className="relative bg-background border-2 border-dashed border-border/40 rounded-[24px] p-8 max-w-md w-full text-center">
-      <div className="text-foreground text-xl mb-4">
-        No pages found
-      </div>
-      <div className="text-muted-foreground mb-6">
-        Create your first page to start writing
-      </div>
-      <Button variant="secondary" size="sm" asChild>
-        <Link href={createButtonHref} className="flex items-center gap-2">
-          <Icon name="Plus" size={16} />
-          {createButtonText}
-        </Link>
-      </Button>
-    </div>
-  </div>
+  <EmptyState
+    icon="FileText"
+    title="No pages found"
+    description="Create your first page to start writing"
+    action={{
+      label: createButtonText,
+      onClick: () => window.location.href = createButtonHref,
+      variant: 'default'
+    }}
+  />
 );
 
 export default function PageList({

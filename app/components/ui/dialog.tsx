@@ -176,16 +176,11 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Position centered - use CSS custom property for animation
-        "fixed left-[50%] top-[50%] z-[1100] flex flex-col w-[85%] max-w-lg translate-x-[-50%] rounded-2xl",
-        // Slide up animation from bottom
-        "duration-300 ease-out",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        "data-[state=closed]:slide-out-to-bottom-8 data-[state=open]:slide-in-from-bottom-8",
-        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-        // Center vertically with translate
-        "-translate-y-1/2",
+        // Position centered using inset + margin auto (avoids transform conflicts)
+        "fixed inset-0 z-[1100] flex flex-col w-[85%] max-w-lg m-auto h-fit rounded-2xl",
+        // Subtle slide up + fade animation
+        "transition-all duration-200 ease-out",
+        "data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out",
         // Frosted glass effect: mostly opaque white with subtle blur
         "border border-border shadow-lg",
         "bg-white/95 dark:bg-zinc-900/95",

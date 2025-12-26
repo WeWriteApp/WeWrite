@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { PRODUCTION_URL } from '../../../utils/urlConfig';
 import { randomUUID } from 'crypto';
 import { sendTemplatedEmail } from '../../../services/emailService';
 
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     // Get base URL for verification links
     const envType = getEnvironmentType();
     const baseUrl = envType === 'production'
-      ? 'https://getwewrite.app'
+      ? PRODUCTION_URL
       : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     for (const userDoc of usersSnapshot.docs) {

@@ -29,8 +29,10 @@ export function MultiSelect({
   searchPlaceholder = "Search...",
   className = "",
   onSearch,
-  loading = false}: MultiSelectProps) {
+  loading = false
+}: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +42,20 @@ export function MultiSelect({
       item.label.toLowerCase().includes(searchQuery.toLowerCase()) &&
       !selectedItems.some((selected) => selected.id === item.id)
   );
+
+  // Trigger staggered animation when dropdown opens
+  useEffect(() => {
+    if (isOpen) {
+      // Small delay to ensure DOM is ready
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsAnimating(true);
+        });
+      });
+    } else {
+      setIsAnimating(false);
+    }
+  }, [isOpen]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -103,28 +119,45 @@ export function MultiSelect({
       </div>
 
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-popover border-theme-medium rounded-md shadow-md max-h-60 overflow-auto">
+        <div
+          className="absolute z-10 w-full mt-1 bg-popover border-theme-medium rounded-md shadow-md max-h-60 overflow-auto transition-opacity duration-150"
+          style={{
+            opacity: isAnimating ? 1 : 0,
+          }}
+        >
           {loading ? (
-            <div className="p-2 text-center text-muted-foreground flex justify-center"><div className="loader"></div></div>
+            <div className="p-2 text-center text-muted-foreground flex justify-center">
+              <Icon name="Loader" size={20} />
+            </div>
           ) : filteredItems.length === 0 ? (
             <div className="p-2 text-center text-muted-foreground">No results found</div>
           ) : (
             <ul>
-              {filteredItems.map((item) => (
-                <li
-                  key={item.id}
-                  className="px-2 py-1.5 hover:bg-accent cursor-pointer flex items-center gap-2"
-                  onClick={() => {
-                    onItemSelect(item);
-                    setSearchQuery("");
-                  }}
-                >
-                  <span className="w-5 h-5 flex items-center justify-center">
-                    <Icon name="Check" size={16} className="opacity-0" />
-                  </span>
-                  {item.label}
-                </li>
-              ))}
+              {filteredItems.map((item, index) => {
+                const delay = index * 25; // 25ms stagger between items
+
+                return (
+                  <li
+                    key={item.id}
+                    className="px-2 py-1.5 hover:bg-accent cursor-pointer flex items-center gap-2 transition-all ease-out"
+                    style={{
+                      opacity: isAnimating ? 1 : 0,
+                      transform: isAnimating ? 'translateY(0)' : 'translateY(-6px)',
+                      transitionDuration: '150ms',
+                      transitionDelay: `${delay}ms`,
+                    }}
+                    onClick={() => {
+                      onItemSelect(item);
+                      setSearchQuery("");
+                    }}
+                  >
+                    <span className="w-5 h-5 flex items-center justify-center">
+                      <Icon name="Check" size={16} className="opacity-0" />
+                    </span>
+                    {item.label}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { sendVerificationEmail } from '../../../services/emailService';
+import { PRODUCTION_URL } from '../../../utils/urlConfig';
 
 interface VerificationRequest {
   email: string;
@@ -100,9 +101,11 @@ export async function POST(request: NextRequest) {
     const verificationToken = randomUUID();
 
     // Determine the base URL for the verification link
+    // Check for X-Force-Production-Data header (sent by admin panel when viewing prod data)
+    const forceProductionData = request.headers.get('x-force-production-data') === 'true';
     const envType = getEnvironmentType();
-    const baseUrl = envType === 'production' 
-      ? 'https://getwewrite.app'
+    const baseUrl = (envType === 'production' || forceProductionData)
+      ? PRODUCTION_URL
       : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     // Create verification link

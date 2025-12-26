@@ -31,7 +31,7 @@ export default function SidebarLayout({ children, className }: SidebarLayoutProp
   const pathname = usePathname();
 
   // Check if we're on admin pages (should be full-width content, no max-width constraint)
-  const isAdminPage = pathname === '/admin/dashboard' || pathname?.startsWith('/admin');
+  const isAdminPage = pathname === '/admin/product-kpis' || pathname?.startsWith('/admin');
 
   // Check if we're on settings pages (has its own layout with fixed height/scroll)
   const isSettingsPage = pathname?.startsWith('/settings');

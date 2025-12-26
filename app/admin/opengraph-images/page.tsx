@@ -367,22 +367,13 @@ export default function OpenGraphImagesPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="py-6 px-4 container mx-auto max-w-7xl">
-        <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/admin')}
-              className="h-10 w-10"
-            >
-              <Icon name="ArrowLeft" size={20} />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold leading-tight">OpenGraph Images</h1>
-              <p className="text-muted-foreground text-sm">
-                Preview all OG image designs
-              </p>
-            </div>
+        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
+        <div className="hidden lg:flex mb-6 items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold leading-tight">OpenGraph Images</h1>
+            <p className="text-muted-foreground text-sm">
+              Preview all OG image designs
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex border border-border rounded-lg p-0.5">
@@ -413,7 +404,7 @@ export default function OpenGraphImagesPage() {
               Refresh
             </Button>
           </div>
-        </FloatingHeader>
+        </div>
 
         <div className="pt-24 lg:pt-0">
           <p className="text-muted-foreground mb-6">
@@ -473,6 +464,321 @@ export default function OpenGraphImagesPage() {
                 <div className="text-xs text-muted-foreground mt-1">ID: {lookupPageData.id} • Sponsors: {lookupPageData.sponsorCount || 0}</div>
               </div>
             )}
+          </div>
+
+          {/* Social Media Platform Previews Section */}
+          <div className="wewrite-card mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Icon name="Share2" size={20} className="text-muted-foreground" />
+              <h3 className="text-lg font-semibold">Social Media Platform Previews</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              See how your OG images appear on different social platforms. {lookupPageData ? `Showing: "${lookupPageData.title}"` : 'Using sample content page. Look up a specific page above to preview it.'}
+            </p>
+
+            {/* Platform Preview Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Twitter/X Preview */}
+              <div className="border border-border rounded-xl p-4 bg-[#15202b]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-xs font-bold text-black">X</div>
+                  <span className="text-sm font-medium text-white">X / Twitter</span>
+                  <Badge variant="secondary-static" size="sm" className="ml-auto">Large Card</Badge>
+                </div>
+                <div className="bg-[#192734] rounded-xl overflow-hidden border border-gray-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={`twitter-preview-${refreshKey}`}
+                    src={lookupPageData
+                      ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                      : buildPreviewUrl('/api/og', {
+                          title: 'The Future of AI in Education',
+                          author: 'sarah_chen',
+                          content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                          sponsors: '12',
+                        })
+                    }
+                    alt="Twitter preview"
+                    className="w-full object-cover"
+                    style={{ aspectRatio: '1200/628' }}
+                  />
+                  <div className="p-3">
+                    <p className="text-gray-400 text-xs mb-1">getwewrite.app</p>
+                    <p className="text-white text-sm font-medium line-clamp-1">
+                      {lookupPageData?.title || 'The Future of AI in Education'}
+                    </p>
+                    <p className="text-gray-400 text-xs line-clamp-2 mt-0.5">
+                      {lookupPageData ? `A page by @${lookupPageData.authorUsername || lookupPageData.username}` : 'A page by @sarah_chen'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Facebook Preview */}
+              <div className="border border-border rounded-xl p-4 bg-[#18191a]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-full bg-[#1877f2] flex items-center justify-center text-xs font-bold text-white">f</div>
+                  <span className="text-sm font-medium text-white">Facebook</span>
+                </div>
+                <div className="bg-[#242526] rounded-lg overflow-hidden border border-gray-600">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={`facebook-preview-${refreshKey}`}
+                    src={lookupPageData
+                      ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                      : buildPreviewUrl('/api/og', {
+                          title: 'The Future of AI in Education',
+                          author: 'sarah_chen',
+                          content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                          sponsors: '12',
+                        })
+                    }
+                    alt="Facebook preview"
+                    className="w-full object-cover"
+                    style={{ aspectRatio: '1200/630' }}
+                  />
+                  <div className="p-3">
+                    <p className="text-gray-400 text-[11px] uppercase tracking-wide mb-1">GETWEWRITE.APP</p>
+                    <p className="text-white text-sm font-semibold line-clamp-2">
+                      {lookupPageData?.title || 'The Future of AI in Education'}
+                    </p>
+                    <p className="text-gray-400 text-xs line-clamp-1 mt-1">
+                      {lookupPageData ? `A page by @${lookupPageData.authorUsername || lookupPageData.username}` : 'A page by @sarah_chen'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instagram DM Preview */}
+              <div className="border border-border rounded-xl p-4 bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-lg bg-white flex items-center justify-center text-xs font-bold text-pink-600">IG</div>
+                  <span className="text-sm font-medium text-white">Instagram DM</span>
+                  <Badge variant="secondary-static" size="sm" className="ml-auto bg-white/20 text-white border-white/30">Link Sticker</Badge>
+                </div>
+                <div className="bg-black/40 backdrop-blur rounded-xl p-3">
+                  <div className="bg-[#262626] rounded-2xl overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      key={`instagram-preview-${refreshKey}`}
+                      src={lookupPageData
+                        ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                        : buildPreviewUrl('/api/og', {
+                            title: 'The Future of AI in Education',
+                            author: 'sarah_chen',
+                            content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                            sponsors: '12',
+                          })
+                      }
+                      alt="Instagram DM preview"
+                      className="w-full object-cover"
+                      style={{ aspectRatio: '1200/630' }}
+                    />
+                    <div className="p-3 flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">
+                          {lookupPageData?.title || 'The Future of AI in Education'}
+                        </p>
+                        <p className="text-gray-400 text-xs">getwewrite.app</p>
+                      </div>
+                      <Icon name="ExternalLink" size={14} className="text-gray-400 shrink-0" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-white/70 text-xs mt-2 text-center">
+                  Note: Instagram uses Facebook's crawler. If images don't appear, clear cache with Facebook Sharing Debugger.
+                </p>
+              </div>
+
+              {/* LinkedIn Preview */}
+              <div className="border border-border rounded-xl p-4 bg-[#0a66c2]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded bg-white flex items-center justify-center text-xs font-bold text-[#0a66c2]">in</div>
+                  <span className="text-sm font-medium text-white">LinkedIn</span>
+                </div>
+                <div className="bg-white rounded-lg overflow-hidden shadow-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={`linkedin-preview-${refreshKey}`}
+                    src={lookupPageData
+                      ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                      : buildPreviewUrl('/api/og', {
+                          title: 'The Future of AI in Education',
+                          author: 'sarah_chen',
+                          content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                          sponsors: '12',
+                        })
+                    }
+                    alt="LinkedIn preview"
+                    className="w-full object-cover"
+                    style={{ aspectRatio: '1200/628' }}
+                  />
+                  <div className="p-3">
+                    <p className="text-[#000000e6] text-sm font-semibold line-clamp-2">
+                      {lookupPageData?.title || 'The Future of AI in Education'}
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">getwewrite.app</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Discord Preview */}
+              <div className="border border-border rounded-xl p-4 bg-[#36393f]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-full bg-[#5865f2] flex items-center justify-center text-xs font-bold text-white">D</div>
+                  <span className="text-sm font-medium text-white">Discord</span>
+                </div>
+                <div className="border-l-4 border-[#5865f2] bg-[#2f3136] rounded-r-lg p-3">
+                  <p className="text-[#00b0f4] text-xs font-medium mb-1">getwewrite.app</p>
+                  <p className="text-white text-sm font-semibold mb-2 line-clamp-1">
+                    {lookupPageData?.title || 'The Future of AI in Education'}
+                  </p>
+                  <p className="text-gray-400 text-xs mb-2 line-clamp-2">
+                    {lookupPageData ? `A page by @${lookupPageData.authorUsername || lookupPageData.username}` : 'A page by @sarah_chen'}
+                  </p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={`discord-preview-${refreshKey}`}
+                    src={lookupPageData
+                      ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                      : buildPreviewUrl('/api/og', {
+                          title: 'The Future of AI in Education',
+                          author: 'sarah_chen',
+                          content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                          sponsors: '12',
+                        })
+                    }
+                    alt="Discord preview"
+                    className="w-full rounded object-cover"
+                    style={{ maxWidth: '400px', aspectRatio: '1200/630' }}
+                  />
+                </div>
+              </div>
+
+              {/* Slack Preview */}
+              <div className="border border-border rounded-xl p-4 bg-[#1a1d21]">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded bg-gradient-to-br from-[#e01e5a] via-[#36c5f0] to-[#2eb67d] flex items-center justify-center text-xs font-bold text-white">#</div>
+                  <span className="text-sm font-medium text-white">Slack</span>
+                </div>
+                <div className="border-l-4 border-gray-500 bg-[#222529] rounded-r p-3">
+                  <div className="flex gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      key={`slack-preview-${refreshKey}`}
+                      src={lookupPageData
+                        ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                        : buildPreviewUrl('/api/og', {
+                            title: 'The Future of AI in Education',
+                            author: 'sarah_chen',
+                            content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                            sponsors: '12',
+                          })
+                      }
+                      alt="Slack preview"
+                      className="w-20 h-20 rounded object-cover shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#1264a3] text-sm font-bold hover:underline cursor-pointer line-clamp-1">
+                        {lookupPageData?.title || 'The Future of AI in Education'}
+                      </p>
+                      <p className="text-gray-400 text-xs line-clamp-2 mt-1">
+                        {lookupPageData ? `A page by @${lookupPageData.authorUsername || lookupPageData.username}` : 'A page by @sarah_chen'}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-2">getwewrite.app</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* iMessage Preview */}
+              <div className="border border-border rounded-xl p-4 bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed] lg:col-span-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-5 h-5 rounded-full bg-[#34c759] flex items-center justify-center text-xs">💬</div>
+                  <span className="text-sm font-medium text-gray-800">iMessage / SMS</span>
+                </div>
+                <div className="max-w-md mx-auto">
+                  <div className="bg-[#007aff] rounded-2xl rounded-br-md p-3 text-white text-sm inline-block">
+                    Check out this page!
+                  </div>
+                  <div className="mt-2">
+                    <div className="bg-white rounded-2xl rounded-bl-md overflow-hidden shadow-sm border border-gray-200 inline-block max-w-sm">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        key={`imessage-preview-${refreshKey}`}
+                        src={lookupPageData
+                          ? `/${lookupPageData.id}/opengraph-image?t=${refreshKey}`
+                          : buildPreviewUrl('/api/og', {
+                              title: 'The Future of AI in Education',
+                              author: 'sarah_chen',
+                              content: 'Exploring how artificial intelligence is transforming learning experiences for students worldwide.',
+                              sponsors: '12',
+                            })
+                        }
+                        alt="iMessage preview"
+                        className="w-full object-cover"
+                        style={{ aspectRatio: '1200/630' }}
+                      />
+                      <div className="p-3">
+                        <p className="text-gray-900 text-sm font-medium line-clamp-2">
+                          {lookupPageData?.title || 'The Future of AI in Education'}
+                        </p>
+                        <p className="text-gray-500 text-xs mt-1">getwewrite.app</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Debugging Tools */}
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Icon name="Wrench" size={14} className="text-muted-foreground" />
+                Debugging Tools
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href="https://developers.facebook.com/tools/debug/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1877f2] text-white text-xs rounded-full hover:bg-[#166fe5] transition-colors"
+                >
+                  <span>Facebook Debugger</span>
+                  <Icon name="ExternalLink" size={12} />
+                </a>
+                <a
+                  href="https://cards-dev.twitter.com/validator"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs rounded-full hover:bg-gray-800 transition-colors"
+                >
+                  <span>Twitter Card Validator</span>
+                  <Icon name="ExternalLink" size={12} />
+                </a>
+                <a
+                  href="https://www.linkedin.com/post-inspector/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0a66c2] text-white text-xs rounded-full hover:bg-[#004182] transition-colors"
+                >
+                  <span>LinkedIn Inspector</span>
+                  <Icon name="ExternalLink" size={12} />
+                </a>
+                <a
+                  href={`https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(lookupPageData ? `https://www.getwewrite.app/${lookupPageData.id}` : 'https://www.getwewrite.app')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-full hover:bg-primary/90 transition-colors"
+                >
+                  <Icon name="RefreshCw" size={12} />
+                  <span>Debug {lookupPageData ? 'This Page' : 'Homepage'}</span>
+                </a>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Use these tools to clear cached OG images and verify your meta tags are correct. Instagram uses Facebook's crawler, so the Facebook Debugger works for Instagram too.
+              </p>
+            </div>
           </div>
 
           {viewMode === 'grid' ? (
@@ -1220,6 +1526,57 @@ export default function OpenGraphImagesPage() {
                   <li>Title should be truncated to 3 lines max with overflow: hidden</li>
                   <li>Test with Facebook Debugger and Twitter Card Validator after changes</li>
                 </ul>
+              </div>
+
+              {/* Facebook & Instagram Sharing */}
+              <div>
+                <h4 className="text-md font-semibold mb-2 text-primary">Facebook & Instagram Best Practices</h4>
+                <div className="text-sm text-muted-foreground space-y-3">
+                  <p>
+                    Instagram uses Facebook's crawler for link previews in DMs and stories. Follow these guidelines to ensure images appear correctly:
+                  </p>
+
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    <p className="font-medium text-blue-400 mb-2">Required Meta Tags</p>
+                    <p className="mb-2">Always specify image dimensions to avoid the "images are processed asynchronously" error:</p>
+                    <div className="bg-muted/50 rounded p-2 font-mono text-xs space-y-1">
+                      <p><span className="text-green-400">og:image</span> - Full URL to the image</p>
+                      <p><span className="text-green-400">og:image:width</span> - 1200 (required for immediate availability)</p>
+                      <p><span className="text-green-400">og:image:height</span> - 630 (required for immediate availability)</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                    <p className="font-medium text-yellow-400 mb-2">Precaching New URLs</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Facebook caches OG images indefinitely until manually cleared</li>
+                      <li>New URLs should have <code className="bg-muted px-1 rounded">og:image:width</code> and <code className="bg-muted px-1 rounded">og:image:height</code> specified</li>
+                      <li>Use the Facebook Sharing Debugger to "Scrape Again" and refresh the cache</li>
+                      <li>This also clears Instagram's cache since they share the same crawler</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                    <p className="font-medium text-purple-400 mb-2">Troubleshooting</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><strong>Image not showing:</strong> Use Facebook Sharing Debugger → click "Scrape Again"</li>
+                      <li><strong>"Processing asynchronously" error:</strong> Add og:image:width and og:image:height meta tags</li>
+                      <li><strong>Wrong image:</strong> Clear cache with Facebook Debugger, wait ~24 hours for full propagation</li>
+                      <li><strong>Instagram DM not showing preview:</strong> The sender must be following the recipient, or both accounts must be public</li>
+                    </ul>
+                  </div>
+
+                  <p className="text-xs">
+                    Reference: <a
+                      href="https://developers.facebook.com/docs/sharing/best-practices/#precaching"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Facebook Sharing Best Practices - Pre-caching Images
+                    </a>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

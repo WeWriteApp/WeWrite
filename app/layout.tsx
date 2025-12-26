@@ -21,7 +21,10 @@ import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
 import { PWAProvider } from "./providers/PWAProvider"
 import { BannerProvider } from "./providers/BannerProvider"
+import { PreviousRouteProvider } from "./providers/PreviousRouteProvider"
+import { GlobalDrawerProvider } from "./providers/GlobalDrawerProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
+import GlobalDrawerRenderer from "./components/layout/GlobalDrawerRenderer"
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
@@ -99,8 +102,9 @@ export const viewport = {
 }
 
 export default function RootLayout({
-  children}: {
-  children: React.ReactNode
+  children,
+}: {
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -225,15 +229,21 @@ export default function RootLayout({
                         <MobileProvider>
                           <DataProvider>
                             <AllAppProviders>
-                              <SessionAuthInitializer>
-                                <SessionMonitor />
-                                <AutomaticUpdateManager />
-                                <ScrollRestorationDisabler />
-                                <GlobalLandingBlobs />
-                                <GlobalNavigation>
-                                  {children}
-                                </GlobalNavigation>
-                              </SessionAuthInitializer>
+                              <PreviousRouteProvider>
+                                <GlobalDrawerProvider>
+                                  <SessionAuthInitializer>
+                                    <SessionMonitor />
+                                    <AutomaticUpdateManager />
+                                    <ScrollRestorationDisabler />
+                                    <GlobalLandingBlobs />
+                                    <GlobalNavigation>
+                                      {children}
+                                    </GlobalNavigation>
+                                    {/* Global drawer overlay for settings/admin on mobile */}
+                                    <GlobalDrawerRenderer />
+                                  </SessionAuthInitializer>
+                                </GlobalDrawerProvider>
+                              </PreviousRouteProvider>
                             </AllAppProviders>
                           </DataProvider>
                         </MobileProvider>
