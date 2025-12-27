@@ -161,6 +161,7 @@
     "@radix-ui/react-radio-group": "^1.3.7",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slider": "^1.3.5",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.3.0",
     "@tanstack/react-query": "^5.84.1",
