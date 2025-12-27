@@ -16,12 +16,21 @@ export interface EmailLogEntry {
   recipientUserId?: string;
   recipientUsername?: string;
   subject: string;
-  status: 'sent' | 'failed' | 'bounced' | 'delivered' | 'scheduled';
+  status: 'sent' | 'failed' | 'bounced' | 'delivered' | 'scheduled' | 'complained' | 'opened' | 'clicked' | 'delayed';
   resendId?: string;
   errorMessage?: string;
   metadata?: Record<string, any>;
   sentAt: string;
   createdAt: string;
+  // Webhook-updated fields
+  lastWebhookEvent?: string;
+  lastWebhookAt?: string;
+  bounceReason?: string;
+  bounceType?: string;
+  complaintType?: string;
+  openedAt?: string;
+  clickedAt?: string;
+  clickedLink?: string;
 }
 
 export interface GroupedTemplates {

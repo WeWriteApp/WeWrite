@@ -837,11 +837,15 @@ function AdminEmailsPageContent() {
                             // Build tooltip content
                             const tooltipParts: string[] = [`Status: ${log.status}`];
                             if (log.errorMessage) tooltipParts.push(`Error: ${log.errorMessage}`);
+                            if (log.bounceReason) tooltipParts.push(`Bounce: ${log.bounceReason}`);
                             if (log.resendId) tooltipParts.push(`Resend ID: ${log.resendId}`);
                             if (log.metadata?.scheduledAt) tooltipParts.push(`Scheduled for: ${new Date(log.metadata.scheduledAt).toLocaleString()}`);
+                            if (log.openedAt) tooltipParts.push(`Opened: ${new Date(log.openedAt).toLocaleString()}`);
+                            if (log.clickedAt) tooltipParts.push(`Clicked: ${new Date(log.clickedAt).toLocaleString()}`);
+                            if (log.lastWebhookEvent) tooltipParts.push(`Last event: ${log.lastWebhookEvent}`);
                             const tooltip = tooltipParts.join('\n');
 
-                            if (log.status === 'sent' || log.status === 'delivered') {
+                            if (log.status === 'delivered') {
                               return (
                                 <span title={tooltip} className="cursor-help">
                                   <Icon
@@ -851,13 +855,43 @@ function AdminEmailsPageContent() {
                                   />
                                 </span>
                               );
+                            } else if (log.status === 'sent') {
+                              return (
+                                <span title={tooltip} className="cursor-help">
+                                  <Icon
+                                    name="Send"
+                                    size={14}
+                                    className="text-blue-500 flex-shrink-0"
+                                  />
+                                </span>
+                              );
                             } else if (log.status === 'scheduled') {
                               return (
                                 <span title={tooltip} className="cursor-help">
                                   <Icon
                                     name="Clock"
                                     size={14}
-                                    className="text-blue-500 flex-shrink-0"
+                                    className="text-blue-400 flex-shrink-0"
+                                  />
+                                </span>
+                              );
+                            } else if (log.status === 'opened') {
+                              return (
+                                <span title={tooltip} className="cursor-help">
+                                  <Icon
+                                    name="Eye"
+                                    size={14}
+                                    className="text-purple-500 flex-shrink-0"
+                                  />
+                                </span>
+                              );
+                            } else if (log.status === 'clicked') {
+                              return (
+                                <span title={tooltip} className="cursor-help">
+                                  <Icon
+                                    name="MousePointerClick"
+                                    size={14}
+                                    className="text-indigo-500 flex-shrink-0"
                                   />
                                 </span>
                               );
@@ -868,6 +902,26 @@ function AdminEmailsPageContent() {
                                     name="MailWarning"
                                     size={14}
                                     className="text-orange-500 flex-shrink-0"
+                                  />
+                                </span>
+                              );
+                            } else if (log.status === 'complained') {
+                              return (
+                                <span title={tooltip} className="cursor-help">
+                                  <Icon
+                                    name="Flag"
+                                    size={14}
+                                    className="text-red-400 flex-shrink-0"
+                                  />
+                                </span>
+                              );
+                            } else if (log.status === 'delayed') {
+                              return (
+                                <span title={tooltip} className="cursor-help">
+                                  <Icon
+                                    name="Timer"
+                                    size={14}
+                                    className="text-yellow-500 flex-shrink-0"
                                   />
                                 </span>
                               );
