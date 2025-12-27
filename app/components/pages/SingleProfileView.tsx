@@ -84,7 +84,7 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
       {!isCurrentUser && (
         <AllocationBar
           pageId={profile.uid}
-          pageTitle={`@${profile.username || 'User'}`}
+          pageTitle={profile.username || 'User'}
           authorId={profile.uid}
           visible={true}
           variant="user"

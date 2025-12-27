@@ -244,9 +244,24 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
       const analytics = getAnalyticsService();
 
       if (action === 'open' || action === 'navigate') {
-        // Track as virtual page view
+        // Track as virtual page view with human-readable titles
         const virtualPath = subPath ? `${window.location.pathname}#${type}/${subPath}` : `${window.location.pathname}#${type}`;
-        analytics.trackPageView(virtualPath, `Drawer: ${type}${subPath ? ` - ${subPath}` : ''}`);
+
+        // Format the title nicely: "Settings" or "Admin: product-kpis" -> "Admin: Product KPIs"
+        let pageTitle: string;
+        if (type === 'settings') {
+          pageTitle = subPath
+            ? `Settings: ${subPath.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`
+            : 'Settings';
+        } else if (type === 'admin') {
+          pageTitle = subPath
+            ? `Admin: ${subPath.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`
+            : 'Admin Panel';
+        } else {
+          pageTitle = subPath ? `${type}: ${subPath}` : type;
+        }
+
+        analytics.trackPageView(virtualPath, pageTitle);
       }
 
       analytics.trackEvent({

@@ -16,6 +16,11 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  // Safelist dynamically generated classes that might be purged
+  safelist: [
+    '!text-white',
+    '!text-black',
+  ],
   darkMode: 'class',
   theme: {
     extend: {

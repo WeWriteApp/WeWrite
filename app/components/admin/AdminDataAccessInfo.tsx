@@ -49,7 +49,7 @@ export function AdminDataAccessInfo() {
           <h3 className="text-lg font-semibold">Data Access Information</h3>
         </div>
         <div className="flex items-center justify-center py-4">
-          <div className="loader"></div>
+          <Icon name="Loader" size={24} />
         </div>
       </div>
     );

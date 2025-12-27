@@ -180,7 +180,7 @@ export default function EmailPreferencesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="py-6 px-4 container mx-auto max-w-2xl">
+      <div className="py-6 px-4 container mx-auto max-w-2xl lg:max-w-3xl">
         <FloatingHeader className="fixed-header-sidebar-aware px-4 py-3 mb-6 flex items-center justify-between lg:relative lg:top-0 lg:left-0 lg:right-0 lg:z-auto lg:mb-6 lg:px-0 lg:py-2">
           <div className="flex items-center gap-4">
             <Button

@@ -17,7 +17,7 @@ export interface EmailLogEntry {
   recipientUserId?: string;
   recipientUsername?: string;
   subject: string;
-  status: 'sent' | 'failed' | 'bounced' | 'delivered';
+  status: 'sent' | 'failed' | 'bounced' | 'delivered' | 'scheduled';
   resendId?: string;
   errorMessage?: string;
   metadata?: Record<string, any>;

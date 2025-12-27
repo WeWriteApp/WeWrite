@@ -8,7 +8,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext';
 import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from "../../components/ui/segmented-control";
 import { Button } from '../../components/ui/button';
 
-import SimpleEarningsDashboard from '../../components/payments/SimpleEarningsDashboard';
+import EarningsDashboard from '../../components/payments/EarningsDashboard';
 import EarningsBreakdownCard from '../../components/payments/EarningsBreakdownCard';
 import EarningsSourceBreakdown from '../../components/payments/EarningsSourceBreakdown';
 import EarningsHistoryChart from '../../components/payments/EarningsHistoryChart';
@@ -85,7 +85,7 @@ export default function EarningsPage() {
         </SegmentedControlContent>
 
         <SegmentedControlContent value="payouts" className="space-y-4 sm:space-y-6">
-          <SimpleEarningsDashboard />
+          <EarningsDashboard />
         </SegmentedControlContent>
       </SegmentedControl>
     </div>

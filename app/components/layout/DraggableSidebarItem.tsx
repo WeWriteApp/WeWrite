@@ -123,7 +123,7 @@ const DraggableSidebarItem: React.FC<DraggableSidebarItemProps> = ({
           // Inactive state
           !isActive && [
             "text-muted-foreground",
-            "hover:text-foreground hover:bg-muted"
+            "hover:text-foreground hover:bg-alpha-10"
           ]
         )}
         title={!showContent ? label : undefined}

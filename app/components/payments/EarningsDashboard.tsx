@@ -1,16 +1,9 @@
 'use client';
 
 /**
- * Simple Earnings Dashboard for WeWrite
- * 
- * SIMPLE, OBVIOUS IMPLEMENTATION - No complex patterns or fallbacks
- * 
- * This component replaces:
- * - PayoutsManager
- * - PayoutDashboard  
- * - WriterUsdDashboard
- * 
- * Single component that shows:
+ * Earnings Dashboard
+ *
+ * Unified earnings management component showing:
  * - Current earnings balance
  * - Request payout button
  * - Payout history
@@ -25,7 +18,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { useToast } from '../ui/use-toast';
 // Use API calls instead of complex services
-import { SimpleBankAccountManager } from './SimpleBankAccountManager';
+import { BankAccountManager } from './BankAccountManager';
 import { Progress } from '../ui/progress';
 import { PLATFORM_FEE_CONFIG } from '../../config/platformFee';
 
@@ -58,7 +51,7 @@ interface BankStatus {
   last4?: string;
 }
 
-export default function SimpleEarningsDashboard() {
+export default function EarningsDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -106,7 +99,7 @@ export default function SimpleEarningsDashboard() {
       setPayoutHistory(payouts);
 
     } catch (error) {
-      console.error('[SimpleEarningsDashboard] Error loading data:', error);
+      console.error('[EarningsDashboard] Error loading data:', error);
       toast({
         title: "Error",
         description: "Failed to load earnings data",
@@ -145,7 +138,7 @@ export default function SimpleEarningsDashboard() {
       }
 
     } catch (error) {
-      console.error('[SimpleEarningsDashboard] Error requesting payout:', error);
+      console.error('[EarningsDashboard] Error requesting payout:', error);
       toast({
         title: "Error",
         description: "An error occurred while requesting payout",
@@ -187,7 +180,7 @@ export default function SimpleEarningsDashboard() {
       // Use location.href instead of window.open for PWA compatibility
       window.location.href = data.url;
     } catch (error: any) {
-      console.error('[SimpleEarningsDashboard] Error creating account link:', error);
+      console.error('[EarningsDashboard] Error creating account link:', error);
       toast({
         title: 'Stripe link failed',
         description: error?.message || 'Unable to open Stripe account link.',

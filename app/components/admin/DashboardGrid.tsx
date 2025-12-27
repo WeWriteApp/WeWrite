@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { Icon } from '@/components/ui/Icon';
 
 // Import CSS for react-grid-layout
 import 'react-grid-layout/css/styles.css';
@@ -58,7 +59,7 @@ export function DashboardGrid({ children, layouts, onLayoutChange, isMobile }: D
   if (!mounted) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <div className="loader"></div>
+        <Icon name="Loader" size={24} />
       </div>
     );
   }

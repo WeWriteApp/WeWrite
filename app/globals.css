@@ -286,6 +286,44 @@ html, body {
 }
 
 /* ============================================
+   PILL LINK TOUCH DEVICE FIXES
+   Disable hover effects on touch devices to prevent sticky hover states
+   ============================================ */
+@media (hover: none) {
+  /* Disable hover scale and shadow for pill links on touch devices */
+  /* Target links with data-pill-style attribute (PillLink components) */
+  a[data-pill-style]:hover,
+  a[data-pill-style]:focus {
+    transform: none !important;
+    box-shadow: inherit !important;
+  }
+
+  /* Keep active state for touch feedback */
+  a[data-pill-style]:active {
+    transform: scale(0.95) !important;
+  }
+
+  /* Disable shiny hover effects on touch devices */
+  .pill-shiny-style:hover {
+    box-shadow: none !important;
+  }
+
+  .pill-shiny-style:hover::before {
+    animation: none !important;
+  }
+
+  /* Keep active shimmer for feedback */
+  .pill-shiny-style:active::before {
+    animation: shimmer 0.8s ease-in-out infinite;
+  }
+
+  /* Disable outline shiny hover effects */
+  .pill-outline-shiny-style:hover {
+    border-top-color: oklch(var(--accent-base) / 0.4) !important;
+  }
+}
+
+/* ============================================
    SHINY SHIMMER BASE SYSTEM
    Single source of truth for shimmer effects.
    All shiny components inherit from .shiny-shimmer-base
@@ -1504,43 +1542,6 @@ a.username-badge-link:has(.text-muted-foreground) {
   color: oklch(var(--muted-foreground));
 }
 
-/* Custom Spinner Animation */
-.loader {
-  color: oklch(var(--primary)); /* Blue in light mode (from primary color) */
-  font-size: 10px;
-  width: 1em;
-  height: 1em;
-  border-radius: 50%;
-  position: relative;
-  text-indent: -9999em;
-  animation: mulShdSpin 1.3s infinite linear;
-  transform: translateZ(0);
-}
-
-/* Larger version of the loader */
-.loader-lg {
-  font-size: 14px; /* Slightly smaller than before */
-}
-
-/* Medium version of the loader */
-.loader-md {
-  font-size: 10px; /* Smaller size as per user preference */
-}
-
-/* Small version of the loader */
-.loader-sm {
-  font-size: 6px;
-}
-
-/* Theme-specific loader colors */
-.loader {
-  color: oklch(var(--primary)); /* Blue in light mode (from primary color) */
-}
-
-.dark .loader {
-  color: white; /* White in dark mode as per user preference */
-}
-
 /* iOS-compatible keyboard toolbar styles - base styles applied inline */
 
 /* Dark mode adjustments */
@@ -1560,55 +1561,6 @@ a.username-badge-link:has(.text-muted-foreground) {
 /* Make sure the editor content is visible */
 .editable-container {
   min-height: 200px;
-}
-
-@keyframes mulShdSpin {
-  0%,
-  100% {
-    box-shadow: 0 -3em 0 0.2em,
-    2em -2em 0 0em, 3em 0 0 -1em,
-    2em 2em 0 -1em, 0 3em 0 -1em,
-    -2em 2em 0 -1em, -3em 0 0 -1em,
-    -2em -2em 0 0;
-  }
-  12.5% {
-    box-shadow: 0 -3em 0 0, 2em -2em 0 0.2em,
-    3em 0 0 0, 2em 2em 0 -1em, 0 3em 0 -1em,
-    -2em 2em 0 -1em, -3em 0 0 -1em,
-    -2em -2em 0 -1em;
-  }
-  25% {
-    box-shadow: 0 -3em 0 -0.5em,
-    2em -2em 0 0, 3em 0 0 0.2em,
-    2em 2em 0 0, 0 3em 0 -1em,
-    -2em 2em 0 -1em, -3em 0 0 -1em,
-    -2em -2em 0 -1em;
-  }
-  37.5% {
-    box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em,
-     3em 0em 0 0, 2em 2em 0 0.2em, 0 3em 0 0em,
-     -2em 2em 0 -1em, -3em 0em 0 -1em, -2em -2em 0 -1em;
-  }
-  50% {
-    box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em,
-     3em 0 0 -1em, 2em 2em 0 0em, 0 3em 0 0.2em,
-     -2em 2em 0 0, -3em 0em 0 -1em, -2em -2em 0 -1em;
-  }
-  62.5% {
-    box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em,
-     3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 0,
-     -2em 2em 0 0.2em, -3em 0 0 0, -2em -2em 0 -1em;
-  }
-  75% {
-    box-shadow: 0em -3em 0 -1em, 2em -2em 0 -1em,
-    3em 0em 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em,
-    -2em 2em 0 0, -3em 0em 0 0.2em, -2em -2em 0 0;
-  }
-  87.5% {
-    box-shadow: 0em -3em 0 0, 2em -2em 0 -1em,
-    3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em,
-    -2em 2em 0 0, -3em 0em 0 0, -2em -2em 0 0.2em;
-  }
 }
 
 /* Spring animation keyframes for feature cards */

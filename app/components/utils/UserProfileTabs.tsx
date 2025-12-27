@@ -10,7 +10,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
 import UserRecentEdits from "../features/UserRecentEdits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import useSimplePages from "../../hooks/useSimplePages";
+import useUserPages from "../../hooks/useUserPages";
 import { Input } from "../ui/input";
 
 import UserBioTab from './UserBioTab';
@@ -203,7 +203,7 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
     loadingMore,
     loadMore,
     totalPageCount
-  } = useSimplePages(profile?.uid, user?.uid, true, sortBy, sortDirection);
+  } = useUserPages(profile?.uid, user?.uid, true, sortBy, sortDirection);
 
   // 🚨 CRITICAL FIX: No local sorting needed - pages come pre-sorted from database
   // The API now handles sorting at the database level for the entire dataset

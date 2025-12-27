@@ -10,7 +10,7 @@ import type { Page } from '../types/database';
  */
 type PageData = Partial<Page> & { id: string; [key: string]: any };
 
-interface UseSimplePagesReturn {
+interface UseUserPagesReturn {
   loading: boolean;
   pages: PageData[];
   error: string | null;
@@ -29,18 +29,22 @@ const pagesCache = new Map<string, { data: PageData[], timestamp: number }>();
 const CACHE_TTL = 30000; // 30 seconds cache
 
 /**
- * CRITICAL FIX: Hook with proper sorting AND query volume optimization
- * - Fixes non-working sort changes
- * - Reduces redundant API calls with caching
+ * Hook to fetch a user's pages with sorting and pagination.
+ *
+ * Features:
+ * - Proper sorting with sort change support
+ * - Query volume optimization with caching
  * - Debounces rapid sort changes
+ * - Infinite scroll support
+ * - Automatic cache invalidation on page create/update/delete
  */
-const useSimplePages = (
+const useUserPages = (
   userId: string,
   currentUserId: string | null = null,
   isUserPage: boolean = false,
   initialSortBy: string = 'lastModified',
   initialSortDirection: string = 'desc'
-): UseSimplePagesReturn => {
+): UseUserPagesReturn => {
   const [loading, setLoading] = useState<boolean>(true);
   const [pages, setPages] = useState<PageData[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -283,4 +287,7 @@ const useSimplePages = (
   };
 };
 
-export default useSimplePages;
+export default useUserPages;
+
+// Backward compatibility alias
+export { useUserPages as useSimplePages };

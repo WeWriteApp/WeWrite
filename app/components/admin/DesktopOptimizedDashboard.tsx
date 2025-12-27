@@ -1,25 +1,26 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
 
-// Safe tooltip component that handles malformed data
-const SafeTooltip = ({ active, payload, label }: any) => {
+// Custom tooltip with better formatting
+const ChartTooltip = ({ active, payload, label, valueFormatter }: any) => {
   if (!active || !payload || !Array.isArray(payload) || payload.length === 0) {
     return null;
   }
 
   try {
     return (
-      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-        <p className="font-medium mb-2">{label || 'Data'}</p>
-        <div className="space-y-1">
+      <div className="bg-background border border-border rounded-lg px-3 py-2 shadow-lg text-sm">
+        <p className="text-muted-foreground text-xs mb-1">{label || 'Data'}</p>
+        <div className="space-y-0.5">
           {payload.map((entry: any, index: number) => {
             if (!entry || typeof entry.value === 'undefined') return null;
+            const formattedValue = valueFormatter ? valueFormatter(entry.value) : entry.value?.toLocaleString();
             return (
-              <p key={index} className="text-sm">
-                <span className="font-medium">{entry.name || entry.dataKey}:</span> {entry.value}
+              <p key={index} className="font-medium text-foreground">
+                {formattedValue}
               </p>
             );
           })}
@@ -27,16 +28,31 @@ const SafeTooltip = ({ active, payload, label }: any) => {
       </div>
     );
   } catch (error) {
-    console.error('Error in SafeTooltip:', error);
+    console.error('Error in ChartTooltip:', error);
     return null;
   }
 };
 
+/**
+ * Transform data to cumulative format
+ * Takes an array of data points and a key, returns the same array with cumulative values
+ */
+function transformToCumulative<T extends Record<string, any>>(data: T[], valueKey: string): T[] {
+  if (!Array.isArray(data) || data.length === 0) return data;
+
+  let runningTotal = 0;
+  return data.map(item => {
+    const value = typeof item[valueKey] === 'number' ? item[valueKey] : 0;
+    runningTotal += value;
+    return {
+      ...item,
+      [valueKey]: runningTotal
+    };
+  });
+}
+
 import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
-import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
-
-
 
 // Import all the analytics hooks
 import {
@@ -46,7 +62,6 @@ import {
   useContentChangesMetrics,
   usePWAInstallsMetrics,
   useVisitorMetrics,
-  usePlatformFeeMetrics,
   usePlatformRevenueMetrics,
   useFollowedUsersMetrics
 } from '../../hooks/useDashboardAnalytics';
@@ -61,11 +76,13 @@ interface DesktopOptimizedDashboardProps {
 interface DashboardRow {
   id: string;
   title: string;
-  icon: React.ReactNode;
-  color: string;
   hook: any;
+  valueKey: string; // The key used for the main value (for cumulative transformation)
   valueFormatter: (data: any[], stats?: any, metadata?: any) => string;
+  tooltipFormatter?: (value: number) => string;
   chartComponent: React.ComponentType<any>;
+  // If true, the hook natively supports cumulative mode via API
+  supportsNativeCumulative?: boolean;
 }
 
 // Default row height in pixels
@@ -162,248 +179,286 @@ export function DesktopOptimizedDashboard({
     };
   }, [globalHeight]);
 
-  // Define dashboard rows
+  // Check if cumulative mode is enabled
+  const isCumulative = globalFilters?.timeDisplayMode === 'cumulative';
+
+  // Define dashboard rows - all using accent color line charts
   const dashboardRows: DashboardRow[] = [
     {
       id: 'new-accounts',
-      title: 'New Accounts Created',
-      icon: <Icon name="Users" size={20} />,
-      color: '#3b82f6',
+      title: isCumulative ? 'Total Accounts (Cumulative)' : 'New Accounts Created',
       hook: (dateRange: DateRange, granularity: number) => useAccountsMetrics(dateRange, granularity),
+      valueKey: 'count',
       valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          // For cumulative, show the final total
+          return data[data.length - 1]?.count?.toLocaleString() || '0';
+        }
         const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
               dataKey="count"
-              fill="#3b82f6"
-              radius={[2, 2, 0, 0]}
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'new-pages',
-      title: 'Pages Created & Deleted',
-      icon: <Icon name="FileText" size={20} />,
-      color: '#10b981',
+      title: isCumulative ? 'Total Pages (Cumulative)' : 'Pages Created',
       hook: (dateRange: DateRange, granularity: number) => usePagesMetrics(dateRange, granularity),
+      valueKey: 'totalPages',
       valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.totalPages?.toLocaleString() || '0';
+        }
         const total = data.reduce((sum, item) => sum + (item.totalPages || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-            <XAxis 
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+            <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
-            <YAxis 
+            <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
-              dataKey="totalPages" 
-              fill="#10b981" 
-              radius={[2, 2, 0, 0]}
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
+              dataKey="totalPages"
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'content-changes',
-      title: 'Content Changes',
-      icon: <Icon name="Edit3" size={20} />,
-      color: '#f59e0b',
-      hook: (dateRange: DateRange, granularity: number) => useContentChangesMetrics(dateRange, granularity),
+      title: isCumulative ? 'Total Content Changes (Cumulative)' : 'Content Changes',
+      hook: (dateRange: DateRange, granularity: number) => {
+        const result = useContentChangesMetrics(dateRange, granularity);
+        // Pre-compute totalChanges so cumulative transformation works correctly
+        const dataWithTotal = Array.isArray(result.data) ? result.data.map(item => ({
+          ...item,
+          totalChanges: (item.charactersAdded || 0) + (item.charactersDeleted || 0)
+        })) : [];
+        return { ...result, data: dataWithTotal };
+      },
+      valueKey: 'totalChanges',
       valueFormatter: (data) => {
-        const total = data.reduce((sum, item) => sum + (item.charactersAdded || 0) + (item.charactersDeleted || 0), 0);
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.totalChanges?.toLocaleString() || '0';
+        }
+        const total = data.reduce((sum, item) => sum + (item.totalChanges || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar dataKey="charactersAdded" stackId="changes" fill="#10b981" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="charactersDeleted" stackId="changes" fill="#ef4444" radius={[0, 0, 0, 0]} />
-          </BarChart>
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
+              dataKey="totalChanges"
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
+            />
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'shares',
-      title: 'Content Shares',
-      icon: <Icon name="Share2" size={20} />,
-      color: '#8b5cf6',
+      title: isCumulative ? 'Total Shares (Cumulative)' : 'Content Shares',
       hook: (dateRange: DateRange, granularity: number) => useSharesMetrics(dateRange, granularity),
+      valueKey: 'successful',
       valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.successful?.toLocaleString() || '0';
+        }
         const total = data.reduce((sum, item) => sum + (item.successful || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
               dataKey="successful"
-              stackId="1"
-              fill="#8b5cf6"
-              radius={[2, 2, 0, 0]}
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-            <Bar
-              dataKey="aborted"
-              stackId="1"
-              fill="#ef4444"
-              radius={[0, 0, 0, 0]}
-            />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'pwa-installs',
-      title: 'PWA Installs',
-      icon: <Icon name="Smartphone" size={20} />,
-      color: '#06b6d4',
+      title: isCumulative ? 'Total PWA Installs (Cumulative)' : 'PWA Installs',
       hook: (dateRange: DateRange, granularity: number) => usePWAInstallsMetrics(dateRange, granularity),
+      valueKey: 'value',
       valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.value?.toLocaleString() || '0';
+        }
         const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
               dataKey="value"
-              fill="#06b6d4"
-              radius={[2, 2, 0, 0]}
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'visitors',
-      title: 'Visitors',
-      icon: <Icon name="Eye" size={20} />,
-      color: '#84cc16',
+      title: isCumulative ? 'Total Visitors (Cumulative)' : 'Visitors',
       hook: (dateRange: DateRange, granularity: number) => useVisitorMetrics(dateRange, granularity),
+      valueKey: 'total',
       valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.total?.toLocaleString() || '0';
+        }
         const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
               dataKey="total"
-              fill="#84cc16"
-              radius={[2, 2, 0, 0]}
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'platform-revenue',
-      title: 'Platform Revenue',
-      icon: <Icon name="DollarSign" size={20} />,
-      color: '#10b981',
-      hook: (dateRange: DateRange, granularity: number) => usePlatformRevenueMetrics(dateRange, granularity),
+      title: isCumulative ? 'Total Platform Revenue (Cumulative)' : 'Platform Revenue',
+      hook: (dateRange: DateRange, granularity: number, globalFilters?: any) =>
+        usePlatformRevenueMetrics(dateRange, granularity, globalFilters?.timeDisplayMode === 'cumulative'),
+      valueKey: 'totalRevenue',
+      supportsNativeCumulative: true,
       valueFormatter: (data, stats) => {
-        // Use stats if available, otherwise calculate from data
         const totalRevenue = stats?.totalRevenue || data.reduce((sum, item) => sum + (item.totalRevenue || 0), 0);
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -412,81 +467,90 @@ export function DesktopOptimizedDashboard({
           maximumFractionDigits: 0
         }).format(totalRevenue);
       },
-      chartComponent: ({ data, height }) => (
+      tooltipFormatter: (value: number) => `$${value.toLocaleString()}`,
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
               width={50}
               tickFormatter={(value) => `$${value}`}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
-              dataKey="revenue"
-              fill="#10b981"
-              radius={[2, 2, 0, 0]}
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
+              dataKey="totalRevenue"
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'followed-users',
-      title: 'User Follows',
-      icon: <Icon name="Users" size={20} />,
-      color: '#8b5cf6',
+      title: isCumulative ? 'Total User Follows (Cumulative)' : 'User Follows',
       hook: (dateRange: DateRange, granularity: number) => useFollowedUsersMetrics(dateRange, granularity),
+      valueKey: 'count',
       valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.count?.toLocaleString() || '0';
+        }
         const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height }) => (
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
-              width={40}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
+              width={30}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
               dataKey="count"
-              fill="#8b5cf6"
-              radius={[2, 2, 0, 0]}
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     },
     {
       id: 'payout-analytics',
-      title: 'Writer Payouts',
-      icon: <Icon name="DollarSign" size={20} />,
-      color: '#059669',
+      title: isCumulative ? 'Total Writer Payouts (Cumulative)' : 'Writer Payouts',
       hook: (dateRange: DateRange, granularity: number, globalFilters?: any) => {
-        return usePayoutAnalytics(dateRange, false);
+        return usePayoutAnalytics(dateRange, globalFilters?.timeDisplayMode === 'cumulative');
       },
+      valueKey: 'payouts',
+      supportsNativeCumulative: true,
       valueFormatter: (data, stats, metadata) => {
         const totalPayouts = metadata?.totalPayouts || 0;
         return new Intl.NumberFormat('en-US', {
@@ -496,32 +560,36 @@ export function DesktopOptimizedDashboard({
           maximumFractionDigits: 0
         }).format(totalPayouts);
       },
-      chartComponent: ({ data, height }) => (
+      tooltipFormatter: (value: number) => `$${value.toLocaleString()}`,
+      chartComponent: ({ data, height, tooltipFormatter }) => (
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
             <XAxis
               dataKey="date"
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              className="text-xs"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
+              interval="preserveStartEnd"
               width={60}
               tickFormatter={(value) => `$${value.toLocaleString()}`}
             />
-            <Tooltip content={<SafeTooltip />} />
-            <Bar
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Line
+              type="monotone"
               dataKey="payouts"
-              fill="#059669"
-              radius={[2, 2, 0, 0]}
+              stroke="oklch(var(--foreground))"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       )
     }
@@ -557,8 +625,7 @@ export function DesktopOptimizedDashboard({
 }
 
 // Individual dashboard row component
-// Desktop: horizontal layout with info on left, chart on right
-// Mobile: KPIs stacked horizontally above chart for more chart space
+// Full-width layout with title above chart
 function DashboardRow({
   row,
   dateRange,
@@ -574,129 +641,63 @@ function DashboardRow({
 }) {
   // Use the hook for this row
   const hookResult = row.hook(dateRange, granularity, globalFilters);
-  const { data, loading, error } = hookResult;
-  const normalizedData = Array.isArray(data) ? data : [];
-  const stats = hookResult.stats; // For platform fee metrics
-  const metadata = hookResult.metadata; // For payout analytics
+  const { data, loading, error, stats, metadata } = hookResult;
+  const rawData = Array.isArray(data) ? data : [];
 
-  // Calculate current value
-  const currentValue = normalizedData.length > 0 ? row.valueFormatter(normalizedData, stats, metadata) : '0';
+  // Check if cumulative mode is enabled
+  const isCumulative = globalFilters?.timeDisplayMode === 'cumulative';
 
-  // Calculate trend
-  const trend = calculateTrend(normalizedData);
+  // Apply cumulative transformation for rows that don't natively support it
+  const normalizedData = useMemo(() => {
+    if (!isCumulative || row.supportsNativeCumulative || rawData.length === 0) {
+      return rawData;
+    }
+    return transformToCumulative(rawData, row.valueKey);
+  }, [rawData, isCumulative, row.supportsNativeCumulative, row.valueKey]);
+
+  // Calculate the formatted total value
+  const formattedValue = useMemo(() => {
+    if (loading || normalizedData.length === 0) return null;
+    return row.valueFormatter(normalizedData, stats, metadata);
+  }, [normalizedData, loading, stats, metadata, row]);
 
   return (
     <div
       data-row-id={row.id}
       className="py-2"
     >
-      {/* Mobile: Dense layout - title row with stats, then full-width chart */}
-      <div className="md:hidden flex flex-col gap-1">
-        {/* Title row - compact */}
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-medium text-sm truncate text-foreground">{row.title}</h3>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="font-semibold text-sm">{currentValue}</span>
-            {trend && (
-              <span className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {trend.isPositive ? '↗' : '↘'} {trend.percentage}%
-              </span>
-            )}
-            {/* Status indicator */}
-            {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
-            {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
-            {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
-          </div>
+      {/* Title row with value on the right */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <h3 className="font-medium text-sm text-muted-foreground">{row.title}</h3>
+          {/* Status indicator */}
+          {loading && <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />}
+          {error && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />}
         </div>
-
-        {/* Chart - full width on mobile, edge to edge */}
-        <div className="w-full -mx-4 md:-mx-6 px-0" style={{ height: height, minHeight: height, width: 'calc(100% + 2rem)' }}>
-          {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="loader"></div>
-            </div>
-          ) : error ? (
-            <div className="h-full flex items-center justify-center text-red-500 text-sm">
-              Error loading data
-            </div>
-          ) : normalizedData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-              No data available
-            </div>
-          ) : (
-            <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} />
-          )}
-        </div>
+        {/* Value on the right */}
+        {formattedValue && !loading && (
+          <span className="text-sm font-semibold text-foreground">{formattedValue}</span>
+        )}
       </div>
 
-      {/* Desktop: Horizontal layout with info on left, chart on right */}
-      <div className="hidden md:flex items-center gap-4" style={{ minHeight: height }}>
-        {/* Left side: Icon, Title, Stats - fixed width */}
-        <div className="flex items-center gap-3 w-64 flex-shrink-0">
-          <div className="p-2 rounded-lg" style={{ backgroundColor: `${row.color}20`, color: row.color }}>
-            {row.icon}
+      {/* Chart - full width */}
+      <div className="w-full" style={{ height: height, minHeight: height }}>
+        {loading ? (
+          <div className="h-full flex items-center justify-center">
+            <Icon name="Loader" size={20} className="text-muted-foreground/50" />
           </div>
-          <div className="min-w-0">
-            <h3 className="font-semibold text-base truncate">{row.title}</h3>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="font-medium">Total: {currentValue}</span>
-              {trend && (
-                <div className={`flex items-center gap-1 ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {trend.isPositive ? <Icon name="TrendingUp" size={12} /> : <Icon name="TrendingDown" size={12} />}
-                  <span className="text-xs">{trend.percentage}%</span>
-                </div>
-              )}
-            </div>
+        ) : error ? (
+          <div className="h-full flex items-center justify-center text-red-500/70 text-sm">
+            Error loading data
           </div>
-
-          {/* Status indicator */}
-          <div className="flex items-center ml-auto">
-            {loading && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
-            {error && <div className="w-2 h-2 bg-red-500 rounded-full" />}
-            {!loading && !error && normalizedData.length > 0 && <div className="w-2 h-2 bg-green-500 rounded-full" />}
+        ) : normalizedData.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground/50 text-sm">
+            No data available
           </div>
-        </div>
-
-        {/* Right side: Chart - flexible width */}
-        <div className="flex-1 min-w-0" style={{ height: height, minHeight: height }}>
-          {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="loader"></div>
-            </div>
-          ) : error ? (
-            <div className="h-full flex items-center justify-center text-red-500 text-sm">
-              Error loading data
-            </div>
-          ) : normalizedData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-              No data available
-            </div>
-          ) : (
-            <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} />
-          )}
-        </div>
+        ) : (
+          <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} />
+        )}
       </div>
     </div>
   );
-}
-
-// Helper function to calculate trend
-function calculateTrend(data: any[]) {
-  if (!data || data.length < 2) return null;
-  
-  const midPoint = Math.floor(data.length / 2);
-  const firstHalf = data.slice(0, midPoint);
-  const secondHalf = data.slice(midPoint);
-  
-  const firstSum = firstHalf.reduce((sum, item) => sum + (item.count || item.value || item.total || 0), 0);
-  const secondSum = secondHalf.reduce((sum, item) => sum + (item.count || item.value || item.total || 0), 0);
-  
-  if (firstSum === 0) return null;
-  
-  const percentage = ((secondSum - firstSum) / firstSum * 100);
-  
-  return {
-    percentage: Math.abs(percentage).toFixed(1),
-    isPositive: percentage > 0
-  };
 }

@@ -192,7 +192,8 @@ export function GlobalDrawerRenderer() {
             handleClose();
           }
         }}
-        analyticsId={`global-${drawerConfig.type}-drawer`}
+        // Note: Analytics tracking is handled by GlobalDrawerProvider, not here
+        // to avoid duplicate page view tracking
       >
         <DrawerContent
           height={height}

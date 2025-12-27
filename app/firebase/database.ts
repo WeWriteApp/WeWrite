@@ -312,7 +312,7 @@ export const appendPageReference = async (
       lastModified: new Date().toISOString()
     });
 
-    // Cache invalidation is now handled by useSimplePages automatically
+    // Cache invalidation is now handled by useUserPages automatically
     // Notifications functionality removed
 
     return true;

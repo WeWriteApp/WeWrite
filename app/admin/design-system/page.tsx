@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { SidebarMenuItem } from '@/components/ui/sidebar-menu-item';
 import { useAuth } from '../../providers/AuthProvider';
 import { DESIGN_SYSTEM_SECTIONS, DESIGN_SYSTEM_NAV } from './sections';
 import { cn } from '../../lib/utils';
@@ -99,31 +100,21 @@ export default function DesignSystemPage() {
 
           {/* Components list */}
           <div className="space-y-0.5">
-            {DESIGN_SYSTEM_NAV.map((section) => {
-              const isActive = activeSection === section.id;
-              return (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  onClick={(e) => handleSmoothScroll(e, section.id)}
-                  className={cn(
-                    "block px-2 py-1.5 text-sm rounded-md transition-all duration-150",
-                    isActive && [
-                      "bg-primary/10 text-primary font-medium",
-                      "hover:bg-primary/15",
-                      "active:bg-primary/20 active:scale-[0.98]"
-                    ],
-                    !isActive && [
-                      "text-muted-foreground",
-                      "hover:text-foreground hover:bg-muted/50",
-                      "active:bg-muted active:scale-[0.98]"
-                    ]
-                  )}
-                >
-                  {section.label}
-                </a>
-              );
-            })}
+            {DESIGN_SYSTEM_NAV.map((section) => (
+              <SidebarMenuItem
+                key={section.id}
+                label={section.label}
+                isActive={activeSection === section.id}
+                href={`#${section.id}`}
+                onClick={(e) => {
+                  if (e) {
+                    e.preventDefault();
+                    handleSmoothScroll(e as React.MouseEvent<HTMLAnchorElement>, section.id);
+                  }
+                }}
+                size="compact"
+              />
+            ))}
           </div>
         </nav>
       </div>

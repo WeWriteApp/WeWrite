@@ -309,7 +309,7 @@ const expensiveValue = useMemo(
 ### Bank Account Status Enhancement (Completed)
 **Issue**: Users going through Stripe bank setup flow saw "Add Bank Account" button even after setup, when Stripe required additional verification (identity confirmation, etc.). This made users think they lost progress.
 
-**Solution**: Enhanced `SimpleBankAccountManager` component to handle all Stripe Connect account states:
+**Solution**: Enhanced `BankAccountManager` component to handle all Stripe Connect account states:
 - **Verified**: Green badge, "Edit Bank Connection" button
 - **Requires Action**: Red badge, "Continue Setup" button with detailed requirements list
 - **Pending**: Yellow badge, "Update Information" button with verification status
@@ -322,7 +322,7 @@ const expensiveValue = useMemo(
 - Enhanced UX with contextual button text and colors
 
 **Files Modified**:
-- `app/components/payments/SimpleBankAccountManager.tsx` - Enhanced status handling
+- `app/components/payments/BankAccountManager.tsx` - Enhanced status handling
 - Added helper functions for status display and requirement formatting
 
 ### Centralized Width Management System (Completed)

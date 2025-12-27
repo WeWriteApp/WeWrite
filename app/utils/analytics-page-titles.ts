@@ -233,7 +233,7 @@ function getAnalyticsPageTitleInternal(
   if (pathname.startsWith('/u/')) {
     const username = pathname.split('/')[2];
     if (username) {
-      return `User: @${username}`;
+      return `User: ${username}`;
     }
     return 'User Profile';
   }

@@ -136,23 +136,32 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
 
       if (forceProduction) {
         // SECURITY CHECK: Only allow production data override for admin routes
-        // Check the request path to ensure this is an admin API call
+        // Check multiple possible sources for the request path
         const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+        const nextUrl = headersList.get('next-url') || '';
         const referer = headersList.get('referer') || '';
 
+        // Debug: Log all header values for troubleshooting
+        console.log(`[Environment Config] Checking admin route - pathname: "${pathname}", next-url: "${nextUrl}", referer: "${referer}"`);
+
         // Allow if the request is to an admin API route
-        const isAdminApiRoute = pathname.startsWith('/api/admin/') || pathname.includes('/api/admin/');
+        // Check pathname (set by middleware), next-url (set by Next.js), and referer
+        const isAdminApiRoute = pathname.startsWith('/api/admin/') ||
+                                pathname.includes('/api/admin/') ||
+                                nextUrl.includes('/api/admin/');
 
         // Also check if the referer is from an admin page (for client-side requests)
+        // This is the most reliable check for browser-initiated requests
         const isFromAdminPage = referer.includes('/admin/') || referer.includes('/admin');
+
+        console.log(`[Environment Config] isAdminApiRoute: ${isAdminApiRoute}, isFromAdminPage: ${isFromAdminPage}`);
 
         if (!isAdminApiRoute && !isFromAdminPage) {
           console.warn('[Environment Config] ⚠️ SECURITY: X-Force-Production-Data header ignored for non-admin route');
-          console.warn(`[Environment Config] Pathname: ${pathname}, Referer: ${referer}`);
           return false;
         }
 
-        console.log('[Environment Config] Force production data header detected for admin route');
+        console.log('[Environment Config] ✓ Force production data header accepted for admin route');
       }
       return forceProduction;
     } catch (error) {
@@ -206,13 +215,16 @@ export const getCollectionName = (baseName: string): string => {
  */
 export const getCollectionNameAsync = async (baseName: string): Promise<string> => {
   // Check if we should force production collections via header
-  if (await shouldUseProductionCollectionsAsync()) {
-    console.log(`[Environment Config] Using production collection for ${baseName} due to X-Force-Production-Data header`);
+  const forceProduction = await shouldUseProductionCollectionsAsync();
+  if (forceProduction) {
+    console.log(`[Environment Config] Using production collection "${baseName}" (forced via header)`);
     return baseName; // Return base collection name (production data)
   }
 
   const prefix = getEnvironmentPrefix();
-  return `${prefix}${baseName}`;
+  const collectionName = `${prefix}${baseName}`;
+  console.log(`[Environment Config] Using collection "${collectionName}" (env prefix: "${prefix}")`);
+  return collectionName;
 };
 
 /**

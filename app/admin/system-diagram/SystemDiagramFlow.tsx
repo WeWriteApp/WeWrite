@@ -486,7 +486,7 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       'Feature-specific hooks',
     ],
     files: [
-      { path: 'app/hooks/useSimplePages.ts', description: 'Simple page data fetching' },
+      { path: 'app/hooks/useUserPages.ts', description: 'User pages fetching with pagination' },
       { path: 'app/hooks/useAllocationState.ts', description: 'Allocation management' },
       { path: 'app/hooks/useAllocationActions.ts', description: 'Allocation mutations' },
       { path: 'app/hooks/useDashboardAnalytics.ts', description: 'Admin analytics' },
@@ -494,7 +494,7 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { path: 'app/hooks/useDebounce.ts', description: 'Debounced value updates' },
     ],
     functions: [
-      { name: 'useSimplePages()', description: 'Fetch page data' },
+      { name: 'useUserPages()', description: 'Fetch user pages with sorting and pagination' },
       { name: 'useAllocationState()', description: 'Manage user allocations' },
       { name: 'useDebounce()', description: 'Debounced value updates' },
     ],

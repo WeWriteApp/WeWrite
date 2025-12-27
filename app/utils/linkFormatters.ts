@@ -1,7 +1,9 @@
 /**
  * Utility functions for consistent formatting of links and titles
- * These functions ensure that page titles never have @ symbols
- * and usernames always have @ symbols
+ *
+ * Design Decision: Usernames are displayed WITHOUT the @ symbol.
+ * Users are differentiated by their subscription tier badge, not by @.
+ * This applies to pills, badges, and all username displays.
  */
 
 /**
@@ -14,11 +16,12 @@ export const formatPageTitle = (title: string): string => {
 };
 
 /**
- * Format a username to ensure it always has an @ symbol
+ * Format a username - strips any @ symbol prefix
+ * Users are differentiated by subscription tier badge, not @
  */
 export const formatUsername = (username: string): string => {
   if (!username) return "Anonymous";
-  // Don't add @ symbol anymore - we're removing them from the UI
+  // Strip @ symbol if present - usernames are identified by tier badge
   return username.startsWith('@') ? username.substring(1) : username;
 };
 

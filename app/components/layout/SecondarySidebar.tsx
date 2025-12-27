@@ -20,7 +20,6 @@
  *   sections={sections}
  *   activeSection={activeSection}
  *   onSectionClick={handleSectionClick}
- *   onClose={() => router.push('/')}
  * />
  */
 
@@ -67,16 +66,12 @@ export interface SecondarySidebarProps {
   activeSection?: string | null;
   /** Called when a section is clicked */
   onSectionClick?: (section: SecondarySidebarSection) => void;
-  /** Called when close button is clicked */
-  onClose?: () => void;
   /** Optional header content (shown below title in expanded mode) */
   headerContent?: React.ReactNode;
   /** Optional footer content */
   footerContent?: React.ReactNode;
   /** Additional className for the sidebar container */
   className?: string;
-  /** Whether to show the close button */
-  showClose?: boolean;
   /** Default collapsed state (defaults to true) */
   defaultCollapsed?: boolean;
 }
@@ -109,11 +104,9 @@ export function SecondarySidebar({
   sections,
   activeSection,
   onSectionClick,
-  onClose,
   headerContent,
   footerContent,
   className,
-  showClose = true,
   defaultCollapsed = true,
 }: SecondarySidebarProps) {
   const router = useRouter();
@@ -216,9 +209,9 @@ export function SecondarySidebar({
               <h1 className="text-lg font-semibold truncate">{title}</h1>
             )}
 
-            {/* Collapse toggle + close button */}
+            {/* Collapse toggle */}
             <div className={cn(
-              "flex items-center gap-1",
+              "flex items-center",
               isCollapsed && "w-full justify-center"
             )}>
               <button
@@ -232,16 +225,6 @@ export function SecondarySidebar({
                   className="text-muted-foreground"
                 />
               </button>
-
-              {showClose && !isCollapsed && (
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                  title="Close"
-                >
-                  <Icon name="X" size={18} className="text-muted-foreground" />
-                </button>
-              )}
             </div>
           </div>
 

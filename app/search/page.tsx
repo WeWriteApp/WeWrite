@@ -17,6 +17,7 @@ import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 import RecentSearches from '../components/search/RecentSearches';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { SHARE_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 // Import the new separated components
 import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
@@ -211,6 +212,10 @@ RealtimeSearchInput.displayName = 'RealtimeSearchInput';
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
   const { user, isAuthenticated } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
+
+  // State for dismissible warning alert
+  const [showSearchWarning, setShowSearchWarning] = useState(true);
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
@@ -490,6 +495,36 @@ const SearchPage = React.memo(() => {
           hasResults: !!(results?.pages?.length || results?.users?.length)
         }}
       />
+
+      {/* Temporary warning alert */}
+      {showSearchWarning && (
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500">
+            <Icon name="AlertTriangle" size={18} />
+            {hasActiveSubscription ? (
+              <p className="text-sm">Fast search is temporarily disabled, we're working to get it back in service!</p>
+            ) : (
+              <p className="text-sm">Fast search is currently disabled due to a billing issue with Algolia search. Slow search still works! If you'd like to help WeWrite improve service uptime, please start your subscription so we can afford devs and coffee!</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!hasActiveSubscription && (
+              <Link href="/settings/fund-account">
+                <Button size="sm" variant="default" className="whitespace-nowrap">
+                  Start subscription
+                </Button>
+              </Link>
+            )}
+            <button
+              onClick={() => setShowSearchWarning(false)}
+              className="p-1 text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors"
+              aria-label="Dismiss warning"
+            >
+              <Icon name="X" size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Page header */}
       <div className="mb-6">

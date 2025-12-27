@@ -99,7 +99,7 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
           href={`/users/${item.username}`}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
-          @{item.username}
+          {item.username}
         </Link>
       )}
     </div>

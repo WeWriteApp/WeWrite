@@ -324,7 +324,7 @@ const DropdownMenuItem = ({ children, className, onClick, ...props }: any) => {
       className={cn(
         "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
         "transition-all duration-150 ease-out",
-        "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] hover:shadow-sm",
+        "hover:bg-alpha-10 hover:scale-[1.02]",
         "active:scale-[0.98] active:transition-transform active:duration-75",
         className
       )}
@@ -396,7 +396,7 @@ const DropdownMenuRadioItem = ({
   onClick?: () => void;
 }) => (
   <div
-    className="relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-accent hover:text-accent-foreground"
+    className="relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-alpha-10 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-alpha-10"
     onClick={onClick}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">

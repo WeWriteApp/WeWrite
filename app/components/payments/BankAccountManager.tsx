@@ -24,11 +24,11 @@ interface BankAccountStatus {
   accountStatus?: 'none' | 'pending' | 'verified' | 'requires_action' | 'restricted';
 }
 
-interface SimpleBankAccountManagerProps {
+interface BankAccountManagerProps {
   onUpdate?: () => void;
 }
 
-export const SimpleBankAccountManager: React.FC<SimpleBankAccountManagerProps> = ({
+export const BankAccountManager: React.FC<BankAccountManagerProps> = ({
   onUpdate
 }) => {
   const { user } = useAuth();
@@ -371,4 +371,7 @@ function formatRequirement(requirement: string): string {
   return requirementMap[requirement] || requirement.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-export default SimpleBankAccountManager;
+export default BankAccountManager;
+
+// Backward compatibility alias
+export { BankAccountManager as SimpleBankAccountManager };

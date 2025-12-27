@@ -83,6 +83,20 @@ export function formatTimeUntil(date: Date): string {
  * Cron job schedule info for the Events tab
  * Jobs marked as isSystemJob: true are backend processing jobs that don't send user-facing emails
  */
+/**
+ * Maps template IDs to their corresponding cron schedule IDs
+ * Used to show "upcoming" indicators on templates
+ */
+export const templateToCronMap: Record<string, string> = {
+  'weekly-digest': 'weekly-digest',
+  'first-page-activation': 'first-page-activation',
+  'choose-username': 'username-reminder',
+  'verify-to-choose-username': 'verify-to-choose-username',
+  'payout-setup-reminder': 'payout-setup-reminder',
+  'verification-reminder': 'email-verification-reminder',
+  'reactivation': 'reactivation',
+};
+
 export function getCronSchedules(): CronSchedule[] {
   return [
     {
@@ -126,7 +140,16 @@ export function getCronSchedules(): CronSchedule[] {
       name: 'Username Reminder',
       path: '/api/cron/username-reminder',
       schedule: '0 14 * * *',
-      description: 'Reminds users to set usernames daily at 2pm UTC',
+      description: 'Reminds VERIFIED users to set usernames daily at 2pm UTC',
+      nextRun: getNextCronRun('0 14 * * *'),
+      isSystemJob: false,
+    },
+    {
+      id: 'verify-to-choose-username',
+      name: 'Verify to Choose Username',
+      path: '/api/admin/trigger-cron',
+      schedule: '0 14 * * *',
+      description: 'Sends combined verify+username email daily at 2pm UTC to unverified users without usernames',
       nextRun: getNextCronRun('0 14 * * *'),
       isSystemJob: false,
     },

@@ -365,7 +365,7 @@ export default function NotificationSettingsPage() {
 
   return (
     <NavPageLayout>
-      <div className="max-w-2xl mx-auto pb-24">
+      <div className="max-w-2xl lg:max-w-3xl mx-auto pb-24">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Notification Settings</h1>

@@ -62,12 +62,13 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   const { accentColor } = useAccentColor();
 
   // Determine text color for filled pills based on accent color lightness
+  // Returns Tailwind class with ! prefix for important to override other styles
   const getFilledTextColor = useCallback(() => {
     const oklch = hexToOklch(accentColor);
     if (oklch && oklch.l >= 0.80) {
-      return 'text-black'; // Use black text for light backgrounds (≥80% lightness)
+      return '!text-black'; // Use black text for light backgrounds (≥80% lightness)
     }
-    return 'text-white'; // Use white text for dark backgrounds (<80% lightness)
+    return '!text-white'; // Use white text for dark backgrounds (<80% lightness)
   }, [accentColor]);
 
   // Load saved preferences on mount
@@ -193,7 +194,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           active:[background-image:var(--alpha-15-gradient)]
           hover:shadow-md
           active:shadow-sm
-          ${textColor} !important
+          ${textColor}
           px-2 py-0.5
           pill-filled-style
           ${shinyClasses}

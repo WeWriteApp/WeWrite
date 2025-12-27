@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { useToast } from '../ui/use-toast';
 import { type WritingIdea } from '../../data/writingIdeas';
 
@@ -292,41 +292,43 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
   };
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-semibold">Writing Ideas Management</CardTitle>
-          <div className="flex items-center gap-2">
+    <div className={className}>
+      {/* Header with search and actions */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+          <div className="flex-1">
             <Input
               placeholder="Search ideas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               leftIcon={<Icon name="Search" size={16} />}
-              className="w-64"
+              className="max-w-sm"
               disabled={isLoading}
             />
+          </div>
+          <div className="flex items-center gap-2">
             <Button
               onClick={loadIdeas}
               variant="outline"
               size="sm"
               disabled={isLoading}
             >
-              <Icon name="RefreshCw" size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
+              <Icon name="RefreshCw" size={16} className={isLoading ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline ml-2">Refresh</span>
             </Button>
             <Button
               onClick={() => setIsAddingNew(true)}
               disabled={isAddingNew || isLoading || isSaving}
               size="sm"
             >
-              <Icon name="Plus" size={16} className="mr-2" />
-              Add New
+              <Icon name="Plus" size={16} />
+              <span className="hidden sm:inline ml-2">Add New</span>
             </Button>
           </div>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Manage writing ideas that appear when creating new pages. Total: {isLoading ? '...' : ideas.length} ideas
+            {isLoading ? 'Loading...' : `${ideas.length} writing ideas`}
           </p>
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-2">
@@ -345,8 +347,10 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
             </div>
           )}
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+
+      {/* Content */}
+      <div>
         <div className="space-y-4">
           {/* Add New Idea Form */}
           {isAddingNew && (
@@ -445,8 +449,8 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
             </>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

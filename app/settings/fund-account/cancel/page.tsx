@@ -117,7 +117,7 @@ export default function CancelSubscriptionPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-2xl mx-auto">
+    <div className="p-6 lg:p-8 max-w-2xl lg:max-w-3xl mx-auto">
       <div className="space-y-6">
         {/* Header */}
         <div>

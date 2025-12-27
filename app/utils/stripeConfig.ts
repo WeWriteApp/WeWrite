@@ -44,14 +44,21 @@ export const getStripeSecretKeyAsync = async (): Promise<string | undefined> => 
 
       if (forceProduction) {
         // SECURITY CHECK: Only allow production Stripe keys for admin routes
+        // Check multiple possible sources for the request path
         const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+        const nextUrl = headersList.get('next-url') || '';
         const referer = headersList.get('referer') || '';
 
-        const isAdminApiRoute = pathname.startsWith('/api/admin/') || pathname.includes('/api/admin/');
+        // Check pathname (set by middleware), next-url (set by Next.js), and referer
+        const isAdminApiRoute = pathname.startsWith('/api/admin/') ||
+                                pathname.includes('/api/admin/') ||
+                                nextUrl.includes('/api/admin/');
+        // This is the most reliable check for browser-initiated requests
         const isFromAdminPage = referer.includes('/admin/') || referer.includes('/admin');
 
         if (!isAdminApiRoute && !isFromAdminPage) {
           console.warn('[Stripe Config] ⚠️ SECURITY: X-Force-Production-Data header ignored for non-admin route');
+          console.warn(`[Stripe Config] Pathname: ${pathname}, Next-URL: ${nextUrl}, Referer: ${referer}`);
           return getStripeSecretKey();
         }
 

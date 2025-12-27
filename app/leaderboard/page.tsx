@@ -869,7 +869,7 @@ function LeaderboardContent() {
             "font-medium truncate",
             isFirst ? "text-base" : "text-sm"
           )}>{entry.title}</p>
-          <p className="text-xs text-muted-foreground truncate">by @{entry.username}</p>
+          <p className="text-xs text-muted-foreground truncate">by {entry.username}</p>
         </div>
         <div className="flex-shrink-0 text-right">
           <p className={cn(

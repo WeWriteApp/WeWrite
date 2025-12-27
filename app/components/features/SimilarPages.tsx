@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { pageApi } from '../../utils/apiClient';
 import PillLink from "../utils/PillLink";
+import { Icon } from '../ui/Icon';
 
 interface Page {
   id: string;
@@ -68,7 +69,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }: SimilarPages
       <div className="mt-8 pt-6 border-t border-border">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="flex justify-center py-4">
-          <div className="loader loader-sm"></div>
+          <Icon name="Loader" size={20} />
         </div>
       </div>
     );

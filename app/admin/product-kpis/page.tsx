@@ -185,17 +185,8 @@ export default function AdminDashboardPage() {
   // Dashboard loading state
   const [dashboardLoading, setDashboardLoading] = useState(true);
 
-  // Options bar state - persist in localStorage
-  const [isOptionsBarExpanded, setIsOptionsBarExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('wewrite-admin-options-bar-expanded');
-      return stored === 'true';
-    }
-    return false;
-  });
-
-  // Granularity state for chart detail
-  const [granularity, setGranularity] = useState<number>(50);
+  // Granularity state for chart detail (fixed value, no longer configurable)
+  const [granularity] = useState<number>(50);
 
   // Global analytics filters state
   const [globalFilters, setGlobalFilters] = useState<GlobalAnalyticsFiltersType>(defaultGlobalAnalyticsFilters);
@@ -207,8 +198,7 @@ export default function AdminDashboardPage() {
     dateRange,
     granularity,
     globalFilters,
-    dashboardLoading,
-    isOptionsBarExpanded
+    dashboardLoading
   });
 
   // Debug current user authentication
@@ -220,17 +210,6 @@ export default function AdminDashboardPage() {
   });
 
   // Removed view mode and list items handlers - now using desktop-optimized component
-
-  // Handle options bar toggle with persistence
-  const handleToggleOptionsBar = () => {
-    const newState = !isOptionsBarExpanded;
-    setIsOptionsBarExpanded(newState);
-
-    // Persist the state
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wewrite-admin-options-bar-expanded', newState.toString());
-    }
-  };
 
   // Handle global filters change with persistence
   const handleGlobalFiltersChange = (newFilters: GlobalAnalyticsFiltersType) => {
@@ -291,17 +270,11 @@ export default function AdminDashboardPage() {
     }
   }, [user, authLoading, router]);
 
-  // Prevent options bar from closing due to dashboard loading state changes
-  useEffect(() => {
-    // This effect intentionally does nothing but prevents unwanted re-renders
-    // from affecting the options bar state
-  }, [dashboardLoading]);
-
   // Show loading while checking auth
   if (authLoading || !user || !user.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="loader"></div>
+        <Icon name="Loader" size={32} />
       </div>
     );
   }
@@ -309,50 +282,23 @@ export default function AdminDashboardPage() {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-background">
-        {/* Options Button - single button at top for both mobile and desktop */}
-        <div className="px-4 py-3 border-b">
-          {!dashboardLoading ? (
-            <Button
-              variant={isOptionsBarExpanded ? "default" : "outline"}
-              onClick={handleToggleOptionsBar}
-              className="gap-2"
-            >
-              <Icon name="Filter" size={16} />
-              Options
-            </Button>
-          ) : (
-            <div className="h-9 w-20 bg-muted animate-pulse rounded"></div>
-          )}
-        </div>
-
-        {/* Collapsible Options Bar */}
-        <div
-          className={`border-b-only bg-card transition-all duration-300 ease-in-out overflow-hidden ${
-            isOptionsBarExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-          }`}
-        >
-          <div className="px-6 py-4 space-y-4">
+        {/* Options Bar - Always visible */}
+        <div className="border-b bg-card">
+          <div className="px-6 py-4">
             {dashboardLoading ? (
               /* Loading state for options bar */
-              <div className="space-y-4">
-                <div className="h-12 bg-muted animate-pulse rounded"></div>
-                <div className="h-12 bg-muted animate-pulse rounded"></div>
-              </div>
+              <div className="h-10 bg-muted animate-pulse rounded"></div>
             ) : (
-              <>
-                {/* Combined Filters - Single Horizontal Row */}
-                <DateRangeFilter
-                  dateRange={dateRange}
-                  onDateRangeChange={setDateRange}
-                  granularity={granularity}
-                  onGranularityChange={setGranularity}
-                  globalFilters={globalFilters}
-                  onGlobalFiltersChange={handleGlobalFiltersChange}
-                  className="border-0 shadow-none p-0 bg-transparent"
-                  compact={true}
-                  combined={true}
-                />
-              </>
+              /* Combined Filters - Single Horizontal Row (no granularity) */
+              <DateRangeFilter
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                globalFilters={globalFilters}
+                onGlobalFiltersChange={handleGlobalFiltersChange}
+                className="border-0 shadow-none p-0 bg-transparent"
+                compact={true}
+                combined={true}
+              />
             )}
           </div>
         </div>

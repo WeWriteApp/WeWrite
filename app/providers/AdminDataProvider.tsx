@@ -18,17 +18,33 @@ interface AdminDataContextType {
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
 
+/**
+ * Determine the default data source based on the current environment.
+ * - In production/preview deployments: default to 'production'
+ * - In local development: default to 'dev'
+ */
+function getEnvironmentDefault(): DataSource {
+  // VERCEL_ENV is 'production' or 'preview' on Vercel, undefined locally
+  const vercelEnv = process.env.NEXT_PUBLIC_VERCEL_ENV;
+  if (vercelEnv === 'production' || vercelEnv === 'preview') {
+    return 'production';
+  }
+  // Local development defaults to dev
+  return 'dev';
+}
+
 export function AdminDataProvider({ children }: { children: React.ReactNode }) {
-  // Always start with 'dev' on server to avoid hydration mismatch
-  const [dataSource, setDataSourceState] = useState<DataSource>('dev');
+  // Always start with environment default on server to avoid hydration mismatch
+  const [dataSource, setDataSourceState] = useState<DataSource>(getEnvironmentDefault);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Read from localStorage ONLY after hydration
+  // Read from localStorage ONLY after hydration, with environment-aware default
   useEffect(() => {
     const stored = localStorage.getItem(ADMIN_DATA_STORAGE_KEY);
     if (stored === 'production' || stored === 'dev') {
       setDataSourceState(stored);
     }
+    // If no stored preference, keep the environment default (already set)
     setIsHydrated(true);
   }, []);
 

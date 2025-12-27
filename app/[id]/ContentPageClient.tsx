@@ -139,11 +139,30 @@ export default function ContentPageClient({
     }
   }, [shouldCheckUser, status, pageId, router]);
 
-  // Handle deleted state
+  // Handle deleted state - redirect to search with the page title
+  useEffect(() => {
+    if (status === 'deleted' && title) {
+      // Redirect to search with the deleted page's title
+      const searchQuery = encodeURIComponent(title);
+      router.replace(`/search?q=${searchQuery}&deleted=true`);
+    }
+  }, [status, title, router]);
+
+  // Show a brief loading state while redirecting for deleted pages
   if (status === 'deleted') {
+    if (title) {
+      // Redirecting to search - show minimal loader
+      return (
+        <UnifiedLoader
+          isLoading={true}
+          message={`Searching for "${title}"...`}
+        />
+      );
+    }
+    // No title available - show the full deleted view as fallback
     return (
       <PageDeletedView
-        pageTitle={title}
+        pageTitle={title || 'Untitled'}
         pageId={pageId}
       />
     );

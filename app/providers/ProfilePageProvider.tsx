@@ -1,5 +1,5 @@
 import React, { createContext, ReactNode } from "react";
-import useSimplePages from "../hooks/useSimplePages";
+import useUserPages from "../hooks/useUserPages";
 import { useAuth } from "./AuthProvider";
 // Types
 interface ProfilePagesProviderProps {
@@ -12,8 +12,8 @@ export const ProfilePagesContext = createContext<any>(undefined);
 
 export const ProfilePagesProvider = ({ userId, children }: ProfilePagesProviderProps) => {
   const { user } = useAuth();
-  // Use simple API-based hook instead of broken Firestore queries
-  const pagesData = useSimplePages(userId, user?.uid || null, true);
+  // Fetch user's pages via API
+  const pagesData = useUserPages(userId, user?.uid || null, true);
 
   return (
     <ProfilePagesContext.Provider value={pagesData}>

@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { Emails } from '../utils/urlConfig';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -310,8 +311,8 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-semibold mb-4">13. Contact Us</h2>
             <p className="text-muted-foreground">
               If you have any questions about this Privacy Policy or our data practices, please contact us at{' '}
-              <a href="mailto:privacy@wewrite.io" className="text-primary hover:underline">
-                privacy@wewrite.io
+              <a href={`mailto:${Emails.privacy}`} className="text-primary hover:underline">
+                {Emails.privacy}
               </a>
               .
             </p>

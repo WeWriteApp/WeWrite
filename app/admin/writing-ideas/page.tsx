@@ -63,25 +63,6 @@ export default function WritingIdeasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
-      <div className="hidden lg:block border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Writing Ideas Management</h1>
-              <p className="text-muted-foreground">
-                Manage writing ideas that appear when users create new pages
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="container mx-auto px-4 py-8">
-        <WritingIdeasManager />
-      </div>
-    </div>
+    <WritingIdeasManager />
   );
 }

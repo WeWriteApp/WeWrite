@@ -114,7 +114,7 @@ export function DashboardVerificationWidget() {
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-8">
-          <div className="loader"></div>
+          <Icon name="Loader" size={24} />
         </div>
       )}
 

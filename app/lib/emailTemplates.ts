@@ -1,9 +1,46 @@
 /**
  * Email Templates
- * 
+ *
  * Centralized email template definitions with preview support.
  * All templates are defined here and can be previewed in the admin panel.
  */
+
+// ============================================================================
+// UTM Parameter Helper
+// ============================================================================
+
+/**
+ * Add UTM parameters to a URL for email analytics tracking
+ *
+ * @param url - The base URL to add UTM parameters to
+ * @param templateId - The email template ID (used as utm_campaign)
+ * @param content - Optional button/link name (used as utm_content)
+ * @returns URL with UTM parameters appended
+ *
+ * @example
+ * addEmailUtm('https://getwewrite.app/settings', 'verification-reminder', 'verify_button')
+ * // Returns: https://getwewrite.app/settings?utm_source=email&utm_medium=email&utm_campaign=verification-reminder&utm_content=verify_button
+ */
+export function addEmailUtm(url: string, templateId: string, content?: string): string {
+  try {
+    const urlObj = new URL(url);
+    urlObj.searchParams.set('utm_source', 'email');
+    urlObj.searchParams.set('utm_medium', 'email');
+    urlObj.searchParams.set('utm_campaign', templateId);
+    if (content) {
+      urlObj.searchParams.set('utm_content', content);
+    }
+    return urlObj.toString();
+  } catch {
+    // If URL parsing fails, append manually (for relative URLs or edge cases)
+    const separator = url.includes('?') ? '&' : '?';
+    let utmParams = `utm_source=email&utm_medium=email&utm_campaign=${encodeURIComponent(templateId)}`;
+    if (content) {
+      utmParams += `&utm_content=${encodeURIComponent(content)}`;
+    }
+    return `${url}${separator}${utmParams}`;
+  }
+}
 
 // ============================================================================
 // Shared Styles
@@ -241,28 +278,31 @@ export const verificationEmailTemplate: EmailTemplate = {
     username: 'JohnDoe',
     verificationLink: 'https://getwewrite.app/verify?token=abc123',
   },
-  generateHtml: ({ username, verificationLink }) => wrapEmail('Verify Your Email', `
+  generateHtml: ({ username, verificationLink }) => {
+    const trackedLink = addEmailUtm(verificationLink, 'verification', 'verify_button');
+    return wrapEmail('Verify Your Email', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Verify Your Email</h2>
       <p class="dark-text">Hi ${username || 'there'},</p>
       <p class="dark-text">Thanks for signing up for WeWrite! Please verify your email address by clicking the button below:</p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${verificationLink}" style="${emailStyles.button}">
+        <a href="${trackedLink}" style="${emailStyles.button}">
           Verify Email
         </a>
       </div>
 
       <p class="dark-text-muted" style="${emailStyles.muted}">
         Or copy and paste this link into your browser:<br>
-        <a class="dark-link" href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
+        <a class="dark-link" href="${trackedLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
       </p>
     </div>
 
     <div class="dark-footer" style="${emailStyles.footer}">
       <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
     </div>
-  `),
+  `);
+  },
 };
 
 export const verificationReminderTemplate: EmailTemplate = {
@@ -275,7 +315,9 @@ export const verificationReminderTemplate: EmailTemplate = {
     username: 'JohnDoe',
     verificationLink: 'https://getwewrite.app/verify?token=sample-token',
   },
-  generateHtml: ({ username, verificationLink }) => wrapEmail('Verify Your Email', `
+  generateHtml: ({ username, verificationLink }) => {
+    const trackedLink = addEmailUtm(verificationLink, 'verification-reminder', 'verify_button');
+    return wrapEmail('Verify Your Email', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Don't Forget to Verify Your Email!</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -289,21 +331,22 @@ export const verificationReminderTemplate: EmailTemplate = {
       </ul>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${verificationLink}" style="${emailStyles.button}">
+        <a href="${trackedLink}" style="${emailStyles.button}">
           Verify Email Now
         </a>
       </div>
 
       <p class="dark-text-muted" style="${emailStyles.muted}">
         Or copy and paste this link into your browser:<br>
-        <a class="dark-link" href="${verificationLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
+        <a class="dark-link" href="${trackedLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
       </p>
     </div>
 
     <div class="dark-footer" style="${emailStyles.footer}">
       <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
     </div>
-  `),
+  `);
+  },
 };
 
 export const welcomeEmailTemplate: EmailTemplate = {
@@ -315,7 +358,9 @@ export const welcomeEmailTemplate: EmailTemplate = {
   sampleData: {
     username: 'JohnDoe',
   },
-  generateHtml: ({ username }) => wrapEmail('Welcome to WeWrite!', `
+  generateHtml: ({ username }) => {
+    const createPageLink = addEmailUtm('https://getwewrite.app/create', 'welcome', 'create_first_page');
+    return wrapEmail('Welcome to WeWrite!', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Welcome to WeWrite! 🎉</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -330,7 +375,7 @@ export const welcomeEmailTemplate: EmailTemplate = {
       </ul>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/create" style="${emailStyles.button}">
+        <a href="${createPageLink}" style="${emailStyles.button}">
           Create Your First Page
         </a>
       </div>
@@ -339,7 +384,8 @@ export const welcomeEmailTemplate: EmailTemplate = {
     <div class="dark-footer" style="${emailStyles.footer}">
       <p>Happy writing!</p>
     </div>
-  `),
+  `);
+  },
 };
 
 export const passwordResetEmailTemplate: EmailTemplate = {
@@ -353,7 +399,9 @@ export const passwordResetEmailTemplate: EmailTemplate = {
     email: 'johndoe@example.com',
     resetLink: 'https://getwewrite.app/auth/reset-password?token=xyz789',
   },
-  generateHtml: ({ username, email, resetLink }) => wrapEmail('Reset Your Password', `
+  generateHtml: ({ username, email, resetLink }) => {
+    const trackedLink = addEmailUtm(resetLink, 'password-reset', 'reset_button');
+    return wrapEmail('Reset Your Password', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Reset Your Password</h2>
       <p class="dark-text">Hi ${username || 'there'},</p>
@@ -362,7 +410,7 @@ export const passwordResetEmailTemplate: EmailTemplate = {
 
       <div style="text-align: center; margin: 30px 0;">
         <!--[if mso]>
-        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${resetLink}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="14%" strokecolor="#000000" fillcolor="#000000">
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${trackedLink}" style="height:44px;v-text-anchor:middle;width:200px;" arcsize="14%" strokecolor="#000000" fillcolor="#000000">
           <w:anchorlock/>
           <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Reset Password</center>
         </v:roundrect>
@@ -371,7 +419,7 @@ export const passwordResetEmailTemplate: EmailTemplate = {
         <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
           <tr>
             <td style="background-color: #000; border-radius: 6px; padding: 0;">
-              <a href="${resetLink}" target="_blank" style="background-color: #000; color: #ffffff; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 44px; text-align: center; text-decoration: none; width: 200px; border-radius: 6px; -webkit-text-size-adjust: none;">
+              <a href="${trackedLink}" target="_blank" style="background-color: #000; color: #ffffff; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 44px; text-align: center; text-decoration: none; width: 200px; border-radius: 6px; -webkit-text-size-adjust: none;">
                 Reset Password
               </a>
             </td>
@@ -383,14 +431,15 @@ export const passwordResetEmailTemplate: EmailTemplate = {
       <p class="dark-text-muted" style="${emailStyles.muted}">
         This link will expire in 1 hour.<br><br>
         If the button above doesn't work, copy and paste this link into your browser:<br>
-        <a class="dark-link" href="${resetLink}" style="${emailStyles.link}; word-break: break-all;">${resetLink}</a>
+        <a class="dark-link" href="${trackedLink}" style="${emailStyles.link}; word-break: break-all;">${resetLink}</a>
       </p>
     </div>
 
     <div class="dark-footer" style="${emailStyles.footer}">
       <p>If you didn't request a password reset for ${email}, you can safely ignore this email.</p>
     </div>
-  `),
+  `);
+  },
 };
 
 // ============================================================================
@@ -408,7 +457,9 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
     pendingEarnings: '$12.50',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, pendingEarnings, emailSettingsToken }) => wrapEmail('Set Up Your Payouts', `
+  generateHtml: ({ username, pendingEarnings, emailSettingsToken }) => {
+    const setupLink = addEmailUtm('https://getwewrite.app/settings/payouts', 'payout-setup-reminder', 'setup_button');
+    return wrapEmail('Set Up Your Payouts', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">You Have Earnings Waiting! 💰</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -416,7 +467,7 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
       <p class="dark-text">To receive your earnings, you'll need to set up your payout method. It only takes a few minutes!</p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/settings/payouts" style="${emailStyles.button}">
+        <a href="${setupLink}" style="${emailStyles.button}">
           Set Up Payouts
         </a>
       </div>
@@ -428,7 +479,8 @@ export const payoutSetupReminderTemplate: EmailTemplate = {
         </p>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'payout-reminder' }),
+  `, { emailSettingsToken, emailType: 'payout-reminder' });
+  },
 };
 
 export const firstEarningsTemplate: EmailTemplate = {
@@ -444,7 +496,9 @@ export const firstEarningsTemplate: EmailTemplate = {
     payoutThreshold: '$25.00',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, firstEarnings, amountToGo, payoutThreshold, emailSettingsToken }) => wrapEmail('First Earnings', `
+  generateHtml: ({ username, firstEarnings, amountToGo, payoutThreshold, emailSettingsToken }) => {
+    const createPageLink = addEmailUtm('https://getwewrite.app/new', 'first-earnings', 'create_page_button');
+    return wrapEmail('First Earnings', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Congratulations on Your First Earnings! 🎉</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -465,7 +519,7 @@ export const firstEarningsTemplate: EmailTemplate = {
       <p class="dark-text">Keep creating great content and engaging with the WeWrite community. Every contribution brings you closer to your first payout!</p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/new" style="${emailStyles.button}">
+        <a href="${createPageLink}" style="${emailStyles.button}">
           Create Another Page
         </a>
       </div>
@@ -477,7 +531,8 @@ export const firstEarningsTemplate: EmailTemplate = {
         </p>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'first-earnings' }),
+  `, { emailSettingsToken, emailType: 'first-earnings' });
+  },
 };
 
 export const halfwayToPayoutTemplate: EmailTemplate = {
@@ -493,7 +548,9 @@ export const halfwayToPayoutTemplate: EmailTemplate = {
     percentComplete: '50',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, currentEarnings, payoutThreshold, percentComplete, emailSettingsToken }) => wrapEmail('Halfway to Payout', `
+  generateHtml: ({ username, currentEarnings, payoutThreshold, percentComplete, emailSettingsToken }) => {
+    const createPageLink = addEmailUtm('https://getwewrite.app/new', 'halfway-to-payout', 'create_page_button');
+    return wrapEmail('Halfway to Payout', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">You're ${percentComplete}% to Your First Payout! 🎯</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -517,7 +574,7 @@ export const halfwayToPayoutTemplate: EmailTemplate = {
       <p class="dark-text">Keep creating great content and engaging with the community to reach your payout goal!</p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/new" style="${emailStyles.button}">
+        <a href="${createPageLink}" style="${emailStyles.button}">
           Create New Page
         </a>
       </div>
@@ -529,7 +586,8 @@ export const halfwayToPayoutTemplate: EmailTemplate = {
         </p>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'earnings-milestone' }),
+  `, { emailSettingsToken, emailType: 'earnings-milestone' });
+  },
 };
 
 export const payoutProcessedTemplate: EmailTemplate = {
@@ -545,7 +603,9 @@ export const payoutProcessedTemplate: EmailTemplate = {
     arrivalDate: 'December 3-5, 2025',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, amount, processingDate, arrivalDate, emailSettingsToken }) => wrapEmail('Payout Processed', `
+  generateHtml: ({ username, amount, processingDate, arrivalDate, emailSettingsToken }) => {
+    const historyLink = addEmailUtm('https://getwewrite.app/settings/payouts', 'payout-processed', 'view_history_button');
+    return wrapEmail('Payout Processed', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Payout Processed! 🎉</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -573,12 +633,13 @@ export const payoutProcessedTemplate: EmailTemplate = {
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/settings/payouts" style="${emailStyles.button}">
+        <a href="${historyLink}" style="${emailStyles.button}">
           View Payout History
         </a>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'payout-processed' }),
+  `, { emailSettingsToken, emailType: 'payout-processed' });
+  },
 };
 
 export const subscriptionConfirmationTemplate: EmailTemplate = {
@@ -594,7 +655,9 @@ export const subscriptionConfirmationTemplate: EmailTemplate = {
     nextBillingDate: 'January 4, 2026',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, planName, amount, nextBillingDate, emailSettingsToken }) => wrapEmail('Subscription Confirmed', `
+  generateHtml: ({ username, planName, amount, nextBillingDate, emailSettingsToken }) => {
+    const startLink = addEmailUtm('https://getwewrite.app', 'subscription-confirmation', 'start_button');
+    return wrapEmail('Subscription Confirmed', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Welcome to WeWrite Premium! ✨</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -625,12 +688,13 @@ export const subscriptionConfirmationTemplate: EmailTemplate = {
       </ul>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app" style="${emailStyles.button}">
+        <a href="${startLink}" style="${emailStyles.button}">
           Start Supporting Writers
         </a>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'subscription-confirmation' }),
+  `, { emailSettingsToken, emailType: 'subscription-confirmation' });
+  },
 };
 
 // ============================================================================
@@ -655,7 +719,9 @@ export const weeklyDigestTemplate: EmailTemplate = {
     ],
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, pageViews, newFollowers, earningsThisWeek, trendingPages, emailSettingsToken }) => wrapEmail('Weekly Digest', `
+  generateHtml: ({ username, pageViews, newFollowers, earningsThisWeek, trendingPages, emailSettingsToken }) => {
+    const trendingLink = addEmailUtm('https://getwewrite.app/trending', 'weekly-digest', 'explore_trending_button');
+    return wrapEmail('Weekly Digest', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Your Week on WeWrite 📚</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -685,12 +751,13 @@ export const weeklyDigestTemplate: EmailTemplate = {
       `).join('')}
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/trending" style="${emailStyles.button}">
+        <a href="${trendingLink}" style="${emailStyles.button}">
           Explore Trending
         </a>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'weekly-digest' }),
+  `, { emailSettingsToken, emailType: 'weekly-digest' });
+  },
 };
 
 export const newFollowerTemplate: EmailTemplate = {
@@ -705,7 +772,9 @@ export const newFollowerTemplate: EmailTemplate = {
     followerBio: 'Writer and coffee enthusiast ☕',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, followerUsername, followerBio, emailSettingsToken }) => wrapEmail('New Follower', `
+  generateHtml: ({ username, followerUsername, followerBio, emailSettingsToken }) => {
+    const profileLink = addEmailUtm(`https://getwewrite.app/u/${followerUsername}`, 'new-follower', 'view_profile_button');
+    return wrapEmail('New Follower', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">New Follower! 🎉</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -718,12 +787,13 @@ export const newFollowerTemplate: EmailTemplate = {
       ` : ''}
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/u/${followerUsername}" style="${emailStyles.button}">
+        <a href="${profileLink}" style="${emailStyles.button}">
           View Profile
         </a>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'new-follower' }),
+  `, { emailSettingsToken, emailType: 'new-follower' });
+  },
 };
 
 export const pageLinkedTemplate: EmailTemplate = {
@@ -740,7 +810,9 @@ export const pageLinkedTemplate: EmailTemplate = {
     linkerPageId: 'abc123',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle, linkerPageId, emailSettingsToken }) => wrapEmail('Page Linked', `
+  generateHtml: ({ username, linkedPageTitle, linkerUsername, linkerPageTitle, linkerPageId, emailSettingsToken }) => {
+    const pageLink = addEmailUtm(`https://getwewrite.app/${linkerPageId || ''}`, 'page-linked', 'view_page_button');
+    return wrapEmail('Page Linked', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Your Page Was Linked! 🔗</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -751,12 +823,13 @@ export const pageLinkedTemplate: EmailTemplate = {
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/${linkerPageId || ''}" style="${emailStyles.button}">
+        <a href="${pageLink}" style="${emailStyles.button}">
           View Their Page
         </a>
       </div>
     </div>
-  `, { emailSettingsToken, emailType: 'page-linked' }),
+  `, { emailSettingsToken, emailType: 'page-linked' });
+  },
 };
 
 // ============================================================================
@@ -777,21 +850,24 @@ export const genericNotificationTemplate: EmailTemplate = {
     ctaUrl: 'https://getwewrite.app/updates',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, heading, body, ctaText, ctaUrl, emailSettingsToken }) => wrapEmail(heading, `
+  generateHtml: ({ username, heading, body, ctaText, ctaUrl, emailSettingsToken }) => {
+    const trackedCtaUrl = ctaUrl ? addEmailUtm(ctaUrl, 'generic-notification', 'cta_button') : null;
+    return wrapEmail(heading, `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">${heading}</h2>
       ${username ? `<p class="dark-text">Hi ${username},</p>` : ''}
       <p class="dark-text">${body}</p>
 
-      ${ctaUrl ? `
+      ${trackedCtaUrl ? `
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${ctaUrl}" style="${emailStyles.button}">
+        <a href="${trackedCtaUrl}" style="${emailStyles.button}">
           ${ctaText || 'Learn More'}
         </a>
       </div>
       ` : ''}
     </div>
-  `, { emailSettingsToken, emailType: 'generic-notification' }),
+  `, { emailSettingsToken, emailType: 'generic-notification' });
+  },
 };
 
 export const accountSecurityTemplate: EmailTemplate = {
@@ -806,7 +882,9 @@ export const accountSecurityTemplate: EmailTemplate = {
     eventDetails: 'Chrome on macOS • San Francisco, CA',
     eventTime: 'December 4, 2025 at 3:45 PM',
   },
-  generateHtml: ({ username, eventType, eventDetails, eventTime }) => wrapEmail('Security Alert', `
+  generateHtml: ({ username, eventType, eventDetails, eventTime }) => {
+    const securityLink = addEmailUtm('https://getwewrite.app/settings/security', 'account-security', 'secure_account_button');
+    return wrapEmail('Security Alert', `
     <div class="dark-alert-security" style="background: #fff4f4; border: 1px solid #ffcccc; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 style="margin-top: 0; color: #cc0000;">🔒 ${eventType}</h2>
       <p class="dark-text">Hi ${username},</p>
@@ -823,12 +901,60 @@ export const accountSecurityTemplate: EmailTemplate = {
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/settings/security" style="background: #cc0000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        <a href="${securityLink}" style="background: #cc0000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
           Secure My Account
         </a>
       </div>
     </div>
-  `),
+  `);
+  },
+};
+
+export const verifyToChooseUsernameTemplate: EmailTemplate = {
+  id: 'verify-to-choose-username',
+  name: 'Verify Email to Choose Username',
+  description: 'For users who need both email verification AND a username - must verify first',
+  category: 'authentication',
+  subject: 'Verify your email to choose your WeWrite username ✉️',
+  sampleData: {
+    currentUsername: 'user_abc123',
+    verificationLink: 'https://getwewrite.app/auth/verify-email?token=sample-token',
+  },
+  generateHtml: ({ currentUsername, verificationLink }) => {
+    const trackedLink = addEmailUtm(verificationLink, 'verify-to-choose-username', 'verify_button');
+    return wrapEmail('Verify to Choose Username', `
+    <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Hey ${currentUsername || 'there'}, let's get you a proper username!</h2>
+      <p class="dark-text">We noticed you're still showing up as <strong style="color: #666;">${currentUsername || 'user_...'}</strong> around WeWrite.</p>
+
+      <p class="dark-text">Want to pick a username that's uniquely yours? There's just one quick step first:</p>
+
+      <div class="dark-card-inner" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center;">
+        <p class="dark-text" style="margin: 0 0 8px 0; font-size: 14px; color: #0369a1;">Step 1 of 2</p>
+        <p class="dark-text-heading" style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #0c4a6e;">Verify your email address</p>
+        <a href="${trackedLink}" style="${emailStyles.button}">
+          Verify Email
+        </a>
+      </div>
+
+      <p class="dark-text">Once verified, you'll be able to:</p>
+      <ul class="dark-text" style="padding-left: 20px; margin: 20px 0;">
+        <li style="margin-bottom: 8px;">Choose a custom username that represents you</li>
+        <li style="margin-bottom: 8px;">Secure your account and protect any future earnings</li>
+        <li style="margin-bottom: 8px;">Receive notifications about followers and page links</li>
+      </ul>
+
+      <p class="dark-text-muted" style="${emailStyles.muted}">
+        Or copy and paste this link into your browser:<br>
+        <a class="dark-link" href="${trackedLink}" style="${emailStyles.link}; word-break: break-all;">${verificationLink}</a>
+      </p>
+    </div>
+
+    <div class="dark-footer" style="${emailStyles.footer}">
+      <p>If you didn't create an account on WeWrite, you can safely ignore this email.</p>
+    </div>
+  `);
+  },
 };
 
 export const chooseUsernameTemplate: EmailTemplate = {
@@ -840,7 +966,9 @@ export const chooseUsernameTemplate: EmailTemplate = {
   sampleData: {
     currentUsername: 'user_abc123',
   },
-  generateHtml: ({ currentUsername }) => wrapEmail('Choose Your Username', `
+  generateHtml: ({ currentUsername }) => {
+    const profileLink = addEmailUtm('https://getwewrite.app/settings/profile', 'choose-username', 'choose_username_button');
+    return wrapEmail('Choose Your Username', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Make Your Mark on WeWrite ✏️</h2>
       <p class="dark-text">Hey there!</p>
@@ -855,7 +983,7 @@ export const chooseUsernameTemplate: EmailTemplate = {
       </ul>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/settings/profile" style="${emailStyles.button}">
+        <a href="${profileLink}" style="${emailStyles.button}">
           Choose My Username
         </a>
       </div>
@@ -869,7 +997,8 @@ export const chooseUsernameTemplate: EmailTemplate = {
         </p>
       </div>
     </div>
-  `),
+  `);
+  },
 };
 
 export const reactivationTemplate: EmailTemplate = {
@@ -883,7 +1012,9 @@ export const reactivationTemplate: EmailTemplate = {
     daysSinceActive: 30,
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, daysSinceActive, emailSettingsToken }) => wrapEmail('We Miss You!', `
+  generateHtml: ({ username, daysSinceActive, emailSettingsToken }) => {
+    const createLink = addEmailUtm('https://getwewrite.app/create', 'reactivation', 'start_writing_button');
+    return wrapEmail('We Miss You!', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Hey ${username || 'there'}, we've missed you!</h2>
       <p class="dark-text">It's been a little quiet on your WeWrite profile lately, and we wanted to check in.</p>
@@ -905,7 +1036,7 @@ export const reactivationTemplate: EmailTemplate = {
       <p class="dark-text-muted" style="color: #555;">Your next great idea could be the one that resonates with readers. Why not give it a shot?</p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://getwewrite.app/create" style="${emailStyles.button}">
+        <a href="${createLink}" style="${emailStyles.button}">
           Start Writing
         </a>
       </div>
@@ -914,7 +1045,8 @@ export const reactivationTemplate: EmailTemplate = {
         Got questions or feedback? Just reply to this email—we'd love to hear from you.
       </p>
     </div>
-  `, { emailSettingsToken, emailType: 'reactivation' }),
+  `, { emailSettingsToken, emailType: 'reactivation' });
+  },
 };
 
 export const firstPageActivationTemplate: EmailTemplate = {
@@ -927,7 +1059,9 @@ export const firstPageActivationTemplate: EmailTemplate = {
     username: 'JohnDoe',
     emailSettingsToken: 'sample-token-123',
   },
-  generateHtml: ({ username, emailSettingsToken }) => wrapEmail('Write Your First Page', `
+  generateHtml: ({ username, emailSettingsToken }) => {
+    const newPageLink = addEmailUtm('https://getwewrite.app/new', 'first-page-activation', 'write_first_page_button');
+    return wrapEmail('Write Your First Page', `
     <div class="dark-card" style="background: #f9f9f9; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
       <h2 class="dark-text-heading" style="margin-top: 0; color: #000;">Hey ${username || 'there'}, we're so glad you're here!</h2>
 
@@ -950,7 +1084,7 @@ export const firstPageActivationTemplate: EmailTemplate = {
       <p class="dark-text">Here's the beautiful thing about WeWrite: <strong>every page you write can earn you real money</strong>. When readers discover and support your work, you get paid. No minimums, no hoops to jump through. Just write something honest, and let the rest unfold.</p>
 
       <div style="text-align: center; margin: 32px 0;">
-        <a href="https://getwewrite.app/new" style="${emailStyles.button}; font-size: 16px; padding: 14px 36px;">
+        <a href="${newPageLink}" style="${emailStyles.button}; font-size: 16px; padding: 14px 36px;">
           Write Your First Page →
         </a>
       </div>
@@ -965,7 +1099,8 @@ export const firstPageActivationTemplate: EmailTemplate = {
         We can't wait to read what you write. Your voice matters here.
       </p>
     </div>
-  `, { emailSettingsToken, emailType: 'first-page-activation' }),
+  `, { emailSettingsToken, emailType: 'first-page-activation' });
+  },
 };
 
 // ============================================================================
@@ -993,9 +1128,10 @@ export const broadcastEmailTemplate: EmailTemplate = {
     emailSettingsToken: 'sample-token-123',
   },
   generateHtml: ({ subject, heading, body, ctaText, ctaUrl, emailSettingsToken }) => {
-    const ctaSection = ctaText && ctaUrl ? `
+    const trackedCtaUrl = ctaUrl ? addEmailUtm(ctaUrl, 'broadcast', 'cta_button') : null;
+    const ctaSection = ctaText && trackedCtaUrl ? `
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${ctaUrl}" style="${emailStyles.button}">
+        <a href="${trackedCtaUrl}" style="${emailStyles.button}">
           ${ctaText}
         </a>
       </div>
@@ -1022,6 +1158,7 @@ export const emailTemplates: EmailTemplate[] = [
   // Authentication
   verificationEmailTemplate,
   verificationReminderTemplate,
+  verifyToChooseUsernameTemplate,
   welcomeEmailTemplate,
   passwordResetEmailTemplate,
   // Payments

@@ -66,20 +66,28 @@ export async function GET(request: NextRequest) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     // Find users who haven't been active recently
-    // We use lastActiveAt if available, otherwise fall back to createdAt
+    // Query all users and filter in code to handle inconsistent date formats
     const usersSnapshot = await db.collection(getCollectionName('users'))
-      .where('lastActiveAt', '>=', ninetyDaysAgo)
-      .where('lastActiveAt', '<=', thirtyDaysAgo)
-      .limit(200)
+      .limit(500)
       .get();
 
-    console.log(`[REACTIVATION] Found ${usersSnapshot.size} inactive users in date range to check`);
+    console.log(`[REACTIVATION] Checking ${usersSnapshot.size} users for inactivity`);
 
     let sent = 0;
     let skipped = 0;
     let failed = 0;
     let alreadySent = 0;
     let optedOut = 0;
+    let notInRange = 0;
+
+    // Helper to parse various date formats
+    const getDateValue = (val: any): Date | null => {
+      if (!val) return null;
+      if (val._seconds) return new Date(val._seconds * 1000);
+      if (val.toDate) return val.toDate();
+      if (typeof val === 'string') return new Date(val);
+      return null;
+    };
 
     for (const userDoc of usersSnapshot.docs) {
       try {
@@ -92,19 +100,30 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
+        // Get last activity time - prefer lastActiveAt, fall back to lastLoginAt, then createdAt
+        const lastActivity = getDateValue(userData.lastActiveAt)
+          || getDateValue(userData.lastLoginAt)
+          || getDateValue(userData.createdAt);
+
+        if (!lastActivity) {
+          skipped++;
+          continue;
+        }
+
+        // Check if user is in the 30-90 day inactive window
+        if (lastActivity > thirtyDaysAgo || lastActivity < ninetyDaysAgo) {
+          notInRange++;
+          continue;
+        }
+
         // Skip users who already received a reactivation email recently (within 60 days)
-        if (userData.reactivationEmailSentAt) {
-          const lastSent = userData.reactivationEmailSentAt._seconds
-            ? new Date(userData.reactivationEmailSentAt._seconds * 1000)
-            : new Date(userData.reactivationEmailSentAt);
+        const lastReactivationEmail = getDateValue(userData.reactivationEmailSentAt);
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-          const sixtyDaysAgo = new Date();
-          sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-
-          if (lastSent > sixtyDaysAgo) {
-            alreadySent++;
-            continue;
-          }
+        if (lastReactivationEmail && lastReactivationEmail > sixtyDaysAgo) {
+          alreadySent++;
+          continue;
         }
 
         // Skip users who opted out of engagement emails
@@ -119,17 +138,8 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Calculate days since last active
-        const lastActiveAt = userData.lastActiveAt?._seconds
-          ? new Date(userData.lastActiveAt._seconds * 1000)
-          : userData.lastActiveAt
-            ? new Date(userData.lastActiveAt)
-            : userData.createdAt?._seconds
-              ? new Date(userData.createdAt._seconds * 1000)
-              : new Date();
-
         const daysSinceActive = Math.floor(
-          (Date.now() - lastActiveAt.getTime()) / (1000 * 60 * 60 * 24)
+          (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24)
         );
 
         // Generate email settings token for one-click unsubscribe
@@ -180,7 +190,7 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[REACTIVATION] Completed in ${duration}ms - Scheduled: ${sent} for ${scheduledAt}, Skipped: ${skipped}, Already sent: ${alreadySent}, Opted out: ${optedOut}, Failed: ${failed}`);
+    console.log(`[REACTIVATION] Completed in ${duration}ms - Scheduled: ${sent} for ${scheduledAt}, Not in range: ${notInRange}, Skipped: ${skipped}, Already sent: ${alreadySent}, Opted out: ${optedOut}, Failed: ${failed}`);
 
     return NextResponse.json({
       success: true,
@@ -188,6 +198,7 @@ export async function GET(request: NextRequest) {
         totalChecked: usersSnapshot.size,
         scheduled: sent,
         scheduledFor: scheduledAt,
+        notInRange,
         skipped,
         alreadySent,
         optedOut,

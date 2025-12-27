@@ -329,6 +329,10 @@ export function SpendBreakdown({
 
   return (
     <div className="space-y-2 text-sm">
+      <AnimatedRow index={0} isAnimating={isAnimating}>
+        <p className="text-xs text-muted-foreground text-center mb-3">Spend your monthly subscription on your favorite writers</p>
+        <div className="border-t border-border mb-3" />
+      </AnimatedRow>
       <AnimatedRow index={1} isAnimating={isAnimating} className="flex justify-between">
         <span className="text-muted-foreground">Monthly subscription:</span>
         <span className="font-medium">{formatUsdCents(totalUsdCents)}</span>
@@ -402,23 +406,6 @@ export function EarningsBreakdown({
           Start writing pages to earn from supporters
         </AnimatedRow>
       )}
-
-      {/* Beta warning card */}
-      <AnimatedRow index={totalEarnings === 0 ? 5 : 4} isAnimating={isAnimating}>
-        <div className="mt-4 p-3 rounded-lg bg-amber-500/15 border border-amber-500/30">
-          <div className="flex items-start gap-2">
-            <Icon name="AlertCircle" size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <div className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                Earnings are in beta
-              </div>
-              <div className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-                Payouts are not yet available. We're working on it!
-              </div>
-            </div>
-          </div>
-        </div>
-      </AnimatedRow>
     </div>
   );
 }

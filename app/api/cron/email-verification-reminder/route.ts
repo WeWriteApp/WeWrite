@@ -1,7 +1,8 @@
 /**
  * Email Verification Reminder Cron Job
  *
- * Sends reminder emails to users who haven't verified their email after 3 days.
+ * Sends reminder emails to ALL unverified users (at least 1 day old).
+ * Throttles to max once per week per user.
  * Run daily via Vercel cron.
  *
  * Add to vercel.json:
@@ -52,22 +53,27 @@ export async function GET(request: NextRequest) {
 
     const db = admin.firestore();
 
-    // Calculate date range - users who signed up 3-7 days ago
-    // We target users after 3 days but before a week
+    // Calculate dates for throttling
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    // Helper to parse various date formats
+    const getDateValue = (val: any): Date | null => {
+      if (!val) return null;
+      if (val._seconds) return new Date(val._seconds * 1000);
+      if (val.toDate) return val.toDate();
+      if (typeof val === 'string') return new Date(val);
+      return null;
+    };
 
-    // Find users who haven't verified their email and signed up 3-7 days ago
+    // Find ALL unverified users (query all and filter since can't easily query emailVerified != true)
     const usersSnapshot = await db.collection(getCollectionName('users'))
-      .where('createdAt', '>=', sevenDaysAgo)
-      .where('createdAt', '<=', threeDaysAgo)
-      .limit(200)
+      .limit(500)
       .get();
 
-    console.log(`[EMAIL VERIFY REMINDER] Found ${usersSnapshot.size} users in date range to check`);
+    console.log(`[EMAIL VERIFY REMINDER] Found ${usersSnapshot.size} total users to check`);
 
     let sent = 0;
     let skipped = 0;
@@ -97,14 +103,22 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Skip users who already received this reminder
-        if (userData.emailVerificationReminderSent) {
+        // Skip users who opted out of engagement emails
+        if (userData.emailPreferences?.engagement === false) {
           skipped++;
           continue;
         }
 
-        // Skip users who opted out of system emails
-        if (userData.emailPreferences?.system === false) {
+        // Skip users who signed up less than 1 day ago (give them time to verify naturally)
+        const createdAt = getDateValue(userData.createdAt);
+        if (!createdAt || createdAt > oneDayAgo) {
+          skipped++;
+          continue;
+        }
+
+        // Throttle: Skip users who already received a reminder within the last 7 days
+        const lastReminderSent = getDateValue(userData.verificationReminderSentAt);
+        if (lastReminderSent && lastReminderSent > sevenDaysAgo) {
           skipped++;
           continue;
         }
@@ -138,10 +152,9 @@ export async function GET(request: NextRequest) {
         });
 
         if (success) {
-          // Mark that we sent the reminder
+          // Mark that we sent the reminder with timestamp for throttling
           await userDoc.ref.update({
-            emailVerificationReminderSent: true,
-            emailVerificationReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
+            verificationReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
           });
           sent++;
         } else {

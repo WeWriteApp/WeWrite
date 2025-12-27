@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       });
       
       const result = await resend.emails.send({
-        from: 'WeWrite <noreply@getwewrite.app>',
+        from: 'WeWrite <notifications@getwewrite.app>',
         to: testEmail,
         subject,
         html,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       
       // Build batch emails
       const emails = batch.map(contact => ({
-        from: 'WeWrite <noreply@getwewrite.app>',
+        from: 'WeWrite <notifications@getwewrite.app>',
         to: contact.email,
         subject,
         html: broadcastEmailTemplate.generateHtml({

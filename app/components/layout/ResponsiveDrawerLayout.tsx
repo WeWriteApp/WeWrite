@@ -33,12 +33,11 @@
 
 import React, { useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Icon } from '@/components/ui/Icon';
+import { SidebarMenuItem } from '@/components/ui/sidebar-menu-item';
 import { cn } from '../../lib/utils';
 import { useMediaQuery } from '../../hooks/use-media-query';
 import { WarningDot } from '../ui/warning-dot';
 import { SECONDARY_SIDEBAR_LEFT_OFFSET } from '../../constants/layout';
-import { usePreviousRoute } from '../../providers/PreviousRouteProvider';
 
 export interface ResponsiveSection {
   id: string;
@@ -88,14 +87,12 @@ function FixedDesktopSidebar({
   currentPath,
   onSectionClick,
   title,
-  onClose,
   footerContent,
 }: {
   sections: ResponsiveSection[];
   currentPath: string;
   onSectionClick: (href: string) => void;
   title: string;
-  onClose: () => void;
   footerContent?: React.ReactNode;
 }) {
   return (
@@ -110,44 +107,26 @@ function FixedDesktopSidebar({
     >
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border px-4 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold truncate">{title}</h1>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-muted/50 transition-colors"
-            title={`Close ${title.toLowerCase()}`}
-          >
-            <Icon name="X" size={18} className="text-muted-foreground" />
-          </button>
-        </div>
+        <h1 className="text-lg font-semibold truncate">{title}</h1>
       </div>
 
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
           {sections.map((section) => {
-            const IconComponent = section.icon;
             const isActive = currentPath === section.href ||
               (currentPath.startsWith(section.href + '/') && section.href !== '/settings' && section.href !== '/admin');
 
             return (
               <div key={section.id} className="relative">
-                <button
+                <SidebarMenuItem
+                  icon={section.icon}
+                  label={section.title}
+                  isActive={isActive}
                   onClick={() => onSectionClick(section.href)}
-                  className={cn(
-                    "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors select-none",
-                    isActive
-                      ? "bg-primary/10 text-foreground"
-                      : "text-foreground hover:bg-muted/50"
-                  )}
                 >
-                  <IconComponent className={cn(
-                    "h-5 w-5 mr-3",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  <span className="flex-1 text-left">{section.title}</span>
                   {section.statusIndicator}
-                </button>
+                </SidebarMenuItem>
                 {section.showWarning && (
                   <WarningDot
                     variant={section.warningVariant || 'warning'}
@@ -176,17 +155,11 @@ export function ResponsiveDrawerLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const { navigateToPrevious } = usePreviousRoute();
 
   // Handle desktop section click
   const handleDesktopSectionClick = useCallback((href: string) => {
     router.push(href);
   }, [router]);
-
-  // Handle close button
-  const handleClose = useCallback(() => {
-    navigateToPrevious();
-  }, [navigateToPrevious]);
 
   // Desktop layout - fixed sidebar + full-width content
   if (isDesktop) {
@@ -198,7 +171,6 @@ export function ResponsiveDrawerLayout({
           currentPath={pathname}
           onSectionClick={handleDesktopSectionClick}
           title={title}
-          onClose={handleClose}
           footerContent={footerContent}
         />
 

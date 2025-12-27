@@ -655,6 +655,7 @@ export default function ContentPageView({
     const urlContent = searchParams?.get('content');
     const initialContentParam = searchParams?.get('initialContent');
     const pageType = searchParams?.get('type');
+    const locationParam = searchParams?.get('location');
 
     // Build initial title
     let initialTitle = '';
@@ -708,6 +709,23 @@ export default function ContentPageView({
       initialCustomDate = urlTitle.trim();
     }
 
+    // Parse location from URL param (from map flow)
+    let initialLocation: Location | null = null;
+    if (locationParam) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(locationParam));
+        if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+          initialLocation = {
+            lat: parsed.lat,
+            lng: parsed.lng,
+            zoom: parsed.zoom || 15
+          };
+        }
+      } catch (e) {
+        // Failed to parse location param - ignore
+      }
+    }
+
     // Set up local state for the new page (NOT saved to database yet)
     const newPageData: Page = {
       id: pageId,
@@ -722,13 +740,15 @@ export default function ContentPageView({
       replyToTitle: replyToTitle ? decodeURIComponent(replyToTitle) : null,
       replyToUsername: replyToUsername ? decodeURIComponent(replyToUsername) : null,
       groupId: groupId || null,
-      customDate: initialCustomDate
+      customDate: initialCustomDate,
+      location: initialLocation
     } as any;
 
     setPage(newPageData);
     setTitle(initialTitle);
     setEditorState(initialContent);
     setCustomDate(initialCustomDate);
+    setLocation(initialLocation);
     setIsLoading(false);
     setNewPageCreated(true);
   }, [isNewPageMode, pageId, user, newPageCreated, searchParams]);

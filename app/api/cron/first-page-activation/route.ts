@@ -60,14 +60,22 @@ export async function GET(request: NextRequest) {
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    // Find users who signed up recently
+    // Helper to parse various date formats
+    const getDateValue = (val: any): Date | null => {
+      if (!val) return null;
+      if (val._seconds) return new Date(val._seconds * 1000);
+      if (val.toDate) return val.toDate();
+      if (typeof val === 'string') return new Date(val);
+      return null;
+    };
+
+    // Find users who signed up recently - query all and filter in code
+    // to handle inconsistent date formats
     const usersSnapshot = await db.collection(getCollectionName('users'))
-      .where('createdAt', '>=', oneWeekAgo)
-      .where('createdAt', '<=', twoDaysAgo)
-      .limit(200)
+      .limit(500)
       .get();
 
-    console.log(`[FIRST PAGE ACTIVATION] Found ${usersSnapshot.size} recent users to check`);
+    console.log(`[FIRST PAGE ACTIVATION] Checking ${usersSnapshot.size} users for eligibility`);
 
     let sent = 0;
     let skipped = 0;
@@ -75,6 +83,7 @@ export async function GET(request: NextRequest) {
     let hasPages = 0;
     let alreadySent = 0;
     let optedOut = 0;
+    let notInRange = 0;
 
     for (const userDoc of usersSnapshot.docs) {
       try {
@@ -84,6 +93,19 @@ export async function GET(request: NextRequest) {
         // Skip users without email
         if (!userData.email) {
           skipped++;
+          continue;
+        }
+
+        // Check if user signed up in the 2-7 day window
+        const createdAt = getDateValue(userData.createdAt);
+        if (!createdAt) {
+          skipped++;
+          continue;
+        }
+
+        // Must be older than 2 days but newer than 7 days
+        if (createdAt > twoDaysAgo || createdAt < oneWeekAgo) {
+          notInRange++;
           continue;
         }
 
@@ -157,13 +179,14 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[FIRST PAGE ACTIVATION] Completed in ${duration}ms - Sent: ${sent}, Has Pages: ${hasPages}, Already Sent: ${alreadySent}, Opted Out: ${optedOut}, Skipped: ${skipped}, Failed: ${failed}`);
+    console.log(`[FIRST PAGE ACTIVATION] Completed in ${duration}ms - Sent: ${sent}, Not in range: ${notInRange}, Has Pages: ${hasPages}, Already Sent: ${alreadySent}, Opted Out: ${optedOut}, Skipped: ${skipped}, Failed: ${failed}`);
 
     return NextResponse.json({
       success: true,
       summary: {
         totalChecked: usersSnapshot.size,
         sent,
+        notInRange,
         hasPages,
         alreadySent,
         optedOut,

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/utils/isAdmin';
-import { getEmailLogsByTemplate, getRecentEmailLogs, getEmailStats } from '@/services/emailLogService';
+import { getEmailLogsByTemplate, getEmailLogsByUser, getRecentEmailLogs, getEmailStats } from '@/services/emailLogService';
 
 /**
  * Email Logs API for Admin
- * 
+ *
  * GET /api/admin/email-logs - Get email send logs
  * Query params:
  *   - templateId: Filter by template ID
+ *   - userId: Filter by recipient user ID
  *   - limit: Number of results (default 50)
  *   - stats: If true, return stats instead of logs
  */
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     // Get user email from middleware header
     const userEmail = request.headers.get('x-user-email');
-    
+
     if (!userEmail || !isAdmin(userEmail)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const templateId = searchParams.get('templateId');
+    const userId = searchParams.get('userId');
     const limitParam = searchParams.get('limit');
     const statsOnly = searchParams.get('stats') === 'true';
     const limit = limitParam ? parseInt(limitParam, 10) : 50;
@@ -38,9 +40,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get logs
+    // Get logs - prioritize userId filter, then templateId, then all
     let logs;
-    if (templateId) {
+    if (userId) {
+      logs = await getEmailLogsByUser(userId, limit);
+    } else if (templateId) {
       logs = await getEmailLogsByTemplate(templateId, limit);
     } else {
       logs = await getRecentEmailLogs(limit);

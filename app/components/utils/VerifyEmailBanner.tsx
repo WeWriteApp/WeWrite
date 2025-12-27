@@ -9,6 +9,7 @@ import { useBanner } from '../../providers/BannerProvider';
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 import { auth } from '../../firebase/config';
+import { Emails } from '../../utils/urlConfig';
 
 const STORAGE_KEYS = {
   EMAIL_BANNER_DISMISSED: 'wewrite_email_banner_dismissed',
@@ -208,7 +209,7 @@ function EmailVerificationHelpModal({
             <h4 className="font-medium">Here's what to check:</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>• Check your spam/junk folder</li>
-              <li>• Look for emails from WeWrite or noreply@wewrite.app</li>
+              <li>• Look for emails from WeWrite or {Emails.notifications}</li>
               <li>• Make sure your email address is correct in settings</li>
               <li>• Wait a few minutes - emails can be delayed</li>
             </ul>

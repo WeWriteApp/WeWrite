@@ -20,6 +20,7 @@ import { AdminDataProvider, useAdminData } from '../providers/AdminDataProvider'
 import { useAuth } from '../providers/AuthProvider';
 import { Icon } from '@/components/ui/Icon';
 import { Switch } from '../components/ui/switch';
+import { SidebarMenuItem } from '@/components/ui/sidebar-menu-item';
 import { cn } from '../lib/utils';
 import { useMediaQuery } from '../hooks/use-media-query';
 import { useAdminSections, AdminSectionWithStatus, ADMIN_TOGGLES } from '../hooks/useAdminSections';
@@ -152,37 +153,18 @@ function CollapsibleSidebarMenu({
 
       {/* Primary sections */}
       <div className={isCollapsed ? "space-y-1 px-1" : "space-y-0.5 px-2"}>
-        {sections.filter(s => s.isPrimary).map((section) => {
-          const IconComponent = section.icon;
-          const isActive = activeSection?.id === section.id;
-          return (
-            <button
-              key={section.id}
-              onClick={() => onSectionClick(section)}
-              title={isCollapsed ? section.title : undefined}
-              className={cn(
-                "w-full flex items-center transition-colors select-none",
-                isCollapsed
-                  ? cn(
-                      "justify-center p-2 rounded-lg",
-                      isActive ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                    )
-                  : cn(
-                      "justify-between px-3 py-2 rounded-lg text-left",
-                      isActive ? "bg-primary/10 text-primary" : "hover:bg-muted/50"
-                    )
-              )}
-            >
-              <div className={cn("flex items-center", !isCollapsed && "gap-3")}>
-                <IconComponent className={cn("h-5 w-5", isActive ? "text-primary" : "text-primary")} />
-                {!isCollapsed && <span className="font-medium">{section.title}</span>}
-              </div>
-              {!isCollapsed && section.statusIndicator && (
-                <div className="flex-shrink-0">{section.statusIndicator}</div>
-              )}
-            </button>
-          );
-        })}
+        {sections.filter(s => s.isPrimary).map((section) => (
+          <SidebarMenuItem
+            key={section.id}
+            icon={section.icon}
+            label={section.title}
+            isActive={activeSection?.id === section.id}
+            onClick={() => onSectionClick(section)}
+            showContent={!isCollapsed}
+          >
+            {section.statusIndicator}
+          </SidebarMenuItem>
+        ))}
       </div>
 
       {/* Divider with label */}
@@ -195,37 +177,18 @@ function CollapsibleSidebarMenu({
 
       {/* Regular sections */}
       <div className={isCollapsed ? "space-y-1 px-1" : "space-y-0.5 px-2"}>
-        {sections.filter(s => !s.isPrimary).map((section) => {
-          const IconComponent = section.icon;
-          const isActive = activeSection?.id === section.id;
-          return (
-            <button
-              key={section.id}
-              onClick={() => onSectionClick(section)}
-              title={isCollapsed ? section.title : undefined}
-              className={cn(
-                "w-full flex items-center transition-colors select-none",
-                isCollapsed
-                  ? cn(
-                      "justify-center p-2 rounded-lg",
-                      isActive ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                    )
-                  : cn(
-                      "justify-between px-3 py-2 rounded-lg text-left",
-                      isActive ? "bg-primary/10 text-primary" : "hover:bg-muted/50"
-                    )
-              )}
-            >
-              <div className={cn("flex items-center", !isCollapsed && "gap-3")}>
-                <IconComponent className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
-                {!isCollapsed && <span className="text-sm">{section.title}</span>}
-              </div>
-              {!isCollapsed && section.statusIndicator && (
-                <div className="flex-shrink-0">{section.statusIndicator}</div>
-              )}
-            </button>
-          );
-        })}
+        {sections.filter(s => !s.isPrimary).map((section) => (
+          <SidebarMenuItem
+            key={section.id}
+            icon={section.icon}
+            label={section.title}
+            isActive={activeSection?.id === section.id}
+            onClick={() => onSectionClick(section)}
+            showContent={!isCollapsed}
+          >
+            {section.statusIndicator}
+          </SidebarMenuItem>
+        ))}
       </div>
 
       {/* Testing Toggles - only show in expanded mode */}

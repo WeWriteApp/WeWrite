@@ -163,6 +163,47 @@ export function MenuDropdownSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
+      <StateDemo label="Menu Item States">
+        <div className="wewrite-card wewrite-floating p-3 rounded-2xl max-w-[200px]">
+          <div className="space-y-0.5">
+            <div className="text-xs font-semibold px-2 py-1.5 text-muted-foreground">Item States Demo</div>
+            <div className="h-px bg-muted -mx-1 my-1" />
+
+            {/* Default state */}
+            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm">
+              <Icon name="Circle" size={16} className="mr-2 text-muted-foreground" />
+              Default
+            </div>
+
+            {/* Hover state - simulated */}
+            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm bg-alpha-10 scale-[1.02]">
+              <Icon name="MousePointer" size={16} className="mr-2" />
+              Hover
+            </div>
+
+            {/* Active/pressed state - simulated */}
+            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm bg-alpha-10 scale-[0.98]">
+              <Icon name="Hand" size={16} className="mr-2" />
+              Active
+            </div>
+
+            <div className="h-px bg-muted -mx-1 my-1" />
+
+            {/* Destructive */}
+            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive">
+              <Icon name="Trash2" size={16} className="mr-2" />
+              Destructive
+            </div>
+
+            {/* Destructive hover */}
+            <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm text-destructive bg-alpha-10 scale-[1.02]">
+              <Icon name="Trash2" size={16} className="mr-2" />
+              Destructive Hover
+            </div>
+          </div>
+        </div>
+      </StateDemo>
+
       <StateDemo label="Animation & Interaction Details">
         <div className="wewrite-card p-4 max-w-2xl">
           <h4 className="font-medium mb-2">Open Direction API</h4>
@@ -184,8 +225,9 @@ export function MenuDropdownSection({ id }: { id: string }) {
 
           <h4 className="font-medium mb-2">Item Hover States</h4>
           <ul className="text-sm text-muted-foreground space-y-1 mb-4">
-            <li>Hover: <code className="bg-muted px-1 rounded">bg-accent text-accent-foreground scale-[1.02]</code></li>
+            <li>Hover: <code className="bg-muted px-1 rounded">bg-alpha-10 scale-[1.02]</code></li>
             <li>Active: <code className="bg-muted px-1 rounded">scale-[0.98]</code> with 75ms transition</li>
+            <li>Focus: <code className="bg-muted px-1 rounded">bg-alpha-10</code></li>
           </ul>
 
           <h4 className="font-medium mb-2">Styling</h4>

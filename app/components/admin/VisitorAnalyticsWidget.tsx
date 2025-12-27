@@ -126,7 +126,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
       <div className="h-48">
         {loading ? (
           <div className="h-full flex items-center justify-center">
-            <div className="loader"></div>
+            <Icon name="Loader" size={24} />
           </div>
         ) : !hasData ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">

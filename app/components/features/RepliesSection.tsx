@@ -335,7 +335,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{reply.title}</p>
-                    <p className="text-xs text-muted-foreground">@{reply.username}</p>
+                    <p className="text-xs text-muted-foreground">{reply.username}</p>
                   </div>
                 </div>
               </Link>

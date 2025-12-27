@@ -204,7 +204,6 @@ function SidebarContent({
   const showContent = isExpanded || isHovering;
   const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
   const isUserAdmin = user?.isAdmin === true;
-  const isAdminDashboard = pathname === '/admin/product-kpis';
 
   // Settings warning status
   const criticalSettingsStatus = (() => {
@@ -216,9 +215,6 @@ function SidebarContent({
     if (hasEmailVerificationNeeded) return 'info';
     return null;
   })();
-
-  // Don't render on admin dashboard
-  if (isAdminDashboard) return null;
 
   // Navigation config
   const navigationItemsConfig: Record<string, { icon: string; label: string; href: string; action?: () => void }> = {

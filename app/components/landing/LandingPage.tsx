@@ -526,7 +526,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                         href={`/u/${showAsPreview ? (user?.username || user?.uid || '') : (referrerInfo?.username || searchParams.get('ref'))}`}
                         className="text-primary hover:underline font-semibold"
                       >
-                        @{showAsPreview ? (user?.username || user?.displayName || 'you') : (referrerInfo?.username || referrerInfo?.displayName || searchParams.get('ref'))}
+                        {showAsPreview ? (user?.username || user?.displayName || 'you') : (referrerInfo?.username || referrerInfo?.displayName || searchParams.get('ref'))}
                       </Link>
                     </p>
                   </div>
@@ -594,7 +594,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                           <div className="flex flex-wrap gap-2">
                             {referralStats.recentReferrals.map((r, i) => (
                               <Badge key={i} variant="secondary">
-                                @{r.username}
+                                {r.username}
                               </Badge>
                             ))}
                           </div>

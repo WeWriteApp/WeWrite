@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
-import useSimplePages from "../hooks/useSimplePages";
+import useUserPages from "../hooks/useUserPages";
 import { auth } from "../firebase/config";
 import { useAuth } from './AuthProvider';
 import Cookies from 'js-cookie';
@@ -59,15 +59,15 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   const [hydrated, setHydrated] = useState<boolean>(false);
   const initialRenderRef = useRef<boolean>(true);
 
-  // Use the simple pages hook, passing in the userId if the user is authenticated
+  // Use the user pages hook, passing in the userId if the user is authenticated
   const {
     pages,
     loading: pagesLoading,
     error,
     refreshData: refreshPages
-  } = useSimplePages(user?.uid || '', user?.uid || null, false); // Use `user.uid` to fetch pages for the logged-in user
+  } = useUserPages(user?.uid || '', user?.uid || null, false);
 
-  // Simple pages doesn't have pagination, so we'll provide dummy values for compatibility
+  // useUserPages has pagination, but we provide dummy values for compatibility with existing DataContext interface
   const loadMorePages = () => {};
   const isMoreLoading = false;
   const hasMorePages = false;

@@ -1,15 +1,18 @@
 /**
  * Email Service - Resend Integration
- * 
+ *
  * Centralized email sending service using Resend.
  * https://resend.com/docs
- * 
- * Domain: getwewrite.app (pending DNS propagation)
- * From address: noreply@getwewrite.app (once DNS propagates)
- * Test address: onboarding@resend.dev (use until DNS propagates)
+ *
+ * IMPORTANT: Resend only supports SENDING emails.
+ * To RECEIVE emails at these addresses, set up email forwarding via:
+ * - Your DNS provider (many support simple forwarding)
+ * - A service like ImprovMX (free for basic use)
+ * - Full email hosting (Google Workspace, Zoho, etc.)
  */
 
 import { Resend } from 'resend';
+import { Emails } from '../utils/urlConfig';
 import {
   verificationEmailTemplate,
   welcomeEmailTemplate,
@@ -42,8 +45,8 @@ function getResend(): Resend {
 }
 
 // Use notifications@ instead of noreply@ for better deliverability
-const FROM_EMAIL = 'WeWrite <notifications@getwewrite.app>';
-const REPLY_TO_EMAIL = 'support@getwewrite.app';
+const FROM_EMAIL = `WeWrite <${Emails.notifications}>`;
+const REPLY_TO_EMAIL = Emails.support;
 
 interface EmailOptions {
   to: string | string[];

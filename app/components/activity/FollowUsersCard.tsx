@@ -130,7 +130,7 @@ export function FollowUsersCard({ onDismiss }: FollowUsersCardProps) {
               {/* User Header */}
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="font-medium">@{suggestion.username}</h4>
+                  <h4 className="font-medium">{suggestion.username}</h4>
                 </div>
               </div>
 

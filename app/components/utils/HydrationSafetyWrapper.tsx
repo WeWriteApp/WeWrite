@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
+import { Icon } from '../ui/Icon';
 
 interface HydrationSafetyWrapperProps {
   children: ReactNode;
@@ -72,7 +73,7 @@ export default function HydrationSafetyWrapper({ children }: HydrationSafetyWrap
       <div className="min-h-screen bg-background">
         {/* Minimal content to prevent blank page */}
         <div className="fixed inset-0 flex items-center justify-center">
-          <div className="loader loader-md"></div>
+          <Icon name="Loader" size={32} />
         </div>
       </div>
     );

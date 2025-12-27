@@ -244,6 +244,35 @@ const DrawerContent = React.forwardRef<
   const [dragY, setDragY] = React.useState(0)
   const [startY, setStartY] = React.useState(0)
   const contentRef = React.useRef<HTMLDivElement>(null)
+  const scrollContainerRef = React.useRef<HTMLElement | null>(null)
+  // Track if swipe should be allowed (only when at top of scroll)
+  const canSwipeRef = React.useRef(false)
+
+  // Find the scrollable container within the drawer content
+  const findScrollContainer = React.useCallback((element: HTMLElement | null): HTMLElement | null => {
+    if (!element) return null
+
+    // Check if this element is scrollable
+    const isScrollable = (el: HTMLElement) => {
+      const style = window.getComputedStyle(el)
+      const overflowY = style.overflowY
+      const isScrollableOverflow = overflowY === 'auto' || overflowY === 'scroll'
+      const hasScrollableContent = el.scrollHeight > el.clientHeight
+      return isScrollableOverflow && hasScrollableContent
+    }
+
+    // Search for scrollable child (depth-first)
+    const findScrollableChild = (el: HTMLElement): HTMLElement | null => {
+      if (isScrollable(el)) return el
+      for (const child of Array.from(el.children) as HTMLElement[]) {
+        const scrollable = findScrollableChild(child)
+        if (scrollable) return scrollable
+      }
+      return null
+    }
+
+    return findScrollableChild(element)
+  }, [])
 
   const handleTouchStart = (e: React.TouchEvent) => {
     // Skip if swipe-to-dismiss is disabled (e.g., for graph views that need drag interactions)
@@ -255,18 +284,34 @@ const DrawerContent = React.forwardRef<
       return
     }
 
-    setIsDragging(true)
-    setStartY(e.touches[0].clientY)
-    setDragY(0)
+    // Find scroll container on first touch
+    if (!scrollContainerRef.current && contentRef.current) {
+      scrollContainerRef.current = findScrollContainer(contentRef.current)
+    }
 
-    // Disable transitions during drag
-    if (contentRef.current) {
-      contentRef.current.style.transition = 'none'
+    // Check if we're at the top of any scrollable content
+    // Swipe-to-dismiss should only work when scrolled to top
+    const scrollContainer = scrollContainerRef.current
+    const isAtTop = !scrollContainer || scrollContainer.scrollTop <= 0
+
+    canSwipeRef.current = isAtTop
+
+    // Only start drag tracking if we're at the top
+    if (isAtTop) {
+      setIsDragging(true)
+      setStartY(e.touches[0].clientY)
+      setDragY(0)
+
+      // Disable transitions during drag
+      if (contentRef.current) {
+        contentRef.current.style.transition = 'none'
+      }
     }
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return
+    // If swipe wasn't allowed at touch start, don't process
+    if (!canSwipeRef.current || !isDragging) return
 
     // Don't handle touch events on input fields or interactive elements
     const target = e.target as HTMLElement
@@ -275,13 +320,27 @@ const DrawerContent = React.forwardRef<
     }
 
     const currentY = e.touches[0].clientY
-    const deltaY = Math.max(0, currentY - startY) // Only allow dragging down
-    setDragY(deltaY)
+    const deltaY = currentY - startY
 
-    if (contentRef.current) {
+    // If user is trying to scroll up (negative deltaY), cancel the drag and let scroll happen
+    if (deltaY < 0) {
+      setIsDragging(false)
+      canSwipeRef.current = false
+      if (contentRef.current) {
+        contentRef.current.style.transform = ''
+        contentRef.current.style.transition = ''
+      }
+      return
+    }
+
+    // Only allow dragging down
+    const clampedDeltaY = Math.max(0, deltaY)
+    setDragY(clampedDeltaY)
+
+    if (contentRef.current && clampedDeltaY > 0) {
       // Add resistance when dragging beyond threshold
-      const resistance = deltaY > 100 ? 0.5 : 1
-      const adjustedDelta = deltaY > 100 ? 100 + (deltaY - 100) * resistance : deltaY
+      const resistance = clampedDeltaY > 100 ? 0.5 : 1
+      const adjustedDelta = clampedDeltaY > 100 ? 100 + (clampedDeltaY - 100) * resistance : clampedDeltaY
       contentRef.current.style.transform = `translateY(${adjustedDelta}px)`
     }
   }
@@ -290,6 +349,7 @@ const DrawerContent = React.forwardRef<
     if (!isDragging) return
 
     setIsDragging(false)
+    canSwipeRef.current = false
 
     // If dragged down more than 100px, close the drawer with animation
     if (dragY > 100) {

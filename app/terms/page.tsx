@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { Emails } from '../utils/urlConfig';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -286,8 +287,8 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-semibold mb-4">13. Contact Information</h2>
             <p className="text-muted-foreground">
               For questions about these Terms, please contact us at{' '}
-              <a href="mailto:legal@wewrite.io" className="text-primary hover:underline">
-                legal@wewrite.io
+              <a href={`mailto:${Emails.legal}`} className="text-primary hover:underline">
+                {Emails.legal}
               </a>
               .
             </p>

@@ -73,7 +73,7 @@ export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className =
           <h3 className="text-lg font-semibold">PWA Installations</h3>
         </div>
         <div className="h-48 flex items-center justify-center">
-          <div className="loader"></div>
+          <Icon name="Loader" size={24} />
         </div>
       </div>
     );
@@ -146,7 +146,7 @@ export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className =
       <div className="h-48 mb-4">
         {loading ? (
           <div className="h-full flex items-center justify-center">
-            <div className="loader"></div>
+            <Icon name="Loader" size={24} />
           </div>
         ) : hasData ? (
           <ResponsiveContainer width="100%" height="100%">

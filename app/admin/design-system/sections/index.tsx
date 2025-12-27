@@ -11,6 +11,7 @@ import { BannerSystemSection } from './BannerSystemSection';
 import { BordersSeparatorsSection } from './BordersSeparatorsSection';
 import { ButtonSection } from './ButtonSection';
 import { CardSection } from './CardSection';
+import { ChartsSection } from './ChartsSection';
 import { ColorSystemSection } from './ColorSystemSection';
 import { ContentPageSection } from './ContentPageSection';
 import { ColorTokenReferenceSection } from './ColorTokenReferenceSection';
@@ -51,6 +52,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'borders-separators', label: 'Borders & Separators', component: BordersSeparatorsSection },
   { id: 'button', label: 'Button', component: ButtonSection },
   { id: 'card', label: 'Card', component: CardSection },
+  { id: 'charts', label: 'Charts & Sparklines', component: ChartsSection },
   { id: 'color-system', label: 'Color System Controls', component: ColorSystemSection },
   { id: 'color-token-reference', label: 'Color Token Reference', component: ColorTokenReferenceSection },
   { id: 'content-page', label: 'Content Page', component: ContentPageSection },

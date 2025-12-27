@@ -119,7 +119,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
       <div className="text-center mb-6">
         {loading ? (
           <div className="flex items-center justify-center">
-            <div className="loader"></div>
+            <Icon name="Loader" size={24} />
           </div>
         ) : (
           <>

@@ -3,13 +3,39 @@
  *
  * Provides consistent URL resolution across all environments.
  * Handles fallbacks for different environment variable configurations.
+ *
+ * IMPORTANT: This is the SINGLE SOURCE OF TRUTH for URLs and emails.
+ * Always import from here rather than hardcoding values.
  */
 
 /**
  * The canonical production URL for the application.
  * This should be used for any emails, verification links, etc. that target production users.
  */
-export const PRODUCTION_URL = 'https://getwewrite.app';
+export const PRODUCTION_URL = 'https://www.getwewrite.app';
+
+/**
+ * The primary domain (without protocol)
+ */
+export const PRODUCTION_DOMAIN = 'getwewrite.app';
+
+/**
+ * Centralized email addresses
+ * Note: Resend only supports SENDING emails. To RECEIVE emails at these addresses,
+ * you need email forwarding set up via your DNS provider or a service like ImprovMX.
+ */
+export const Emails = {
+  /** For legal inquiries and Terms of Service questions */
+  legal: 'legal@getwewrite.app',
+  /** For privacy inquiries and data requests */
+  privacy: 'privacy@getwewrite.app',
+  /** For user support requests */
+  support: 'support@getwewrite.app',
+  /** Default sender for all transactional emails (notifications, verification, broadcasts, etc.) */
+  notifications: 'notifications@getwewrite.app',
+  /** For security reports and incidents */
+  security: 'security@getwewrite.app',
+} as const;
 
 /**
  * Get the base URL for the application with proper fallbacks

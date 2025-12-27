@@ -80,6 +80,9 @@ export async function GET(request: NextRequest) {
       getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS),
     ]);
 
+    // Debug: Log which collections are being used
+    console.log(`[Admin Users API] Using collections: users=${usersCollectionName}, pages=${pagesCollectionName}, earnings=${writerEarningsCollectionName}`);
+
     // If only the count is needed, return early
     if (countOnly) {
       try {

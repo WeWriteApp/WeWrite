@@ -48,6 +48,7 @@ export function buildNewPageUrl(options?: {
   initialContent?: any;
   type?: string;
   ideas?: boolean;
+  location?: string; // JSON-encoded location object {lat, lng, zoom}
 }): string {
   const pageId = generatePageId();
   const params = new URLSearchParams();
@@ -91,6 +92,9 @@ export function buildNewPageUrl(options?: {
     }
     if (options.ideas) {
       params.set('ideas', 'true');
+    }
+    if (options.location) {
+      params.set('location', options.location);
     }
   }
 

@@ -9,11 +9,33 @@
 export const ADMIN_DATA_STORAGE_KEY = 'wewrite_admin_data_source';
 
 /**
+ * Determine the default data source based on the current environment.
+ * - In production/preview deployments: default to 'production'
+ * - In local development: default to 'dev'
+ */
+function getEnvironmentDefault(): 'dev' | 'production' {
+  if (typeof window === 'undefined') return 'dev';
+  // Check if we're on a Vercel deployment
+  const hostname = window.location.hostname;
+  const isVercelDeployment = hostname.includes('vercel.app') || hostname === 'wewrite.app' || hostname.endsWith('.wewrite.app');
+  if (isVercelDeployment) {
+    return 'production';
+  }
+  // Local development defaults to dev
+  return 'dev';
+}
+
+/**
  * Check if admin has selected production data source
  */
 export function isAdminProductionMode(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(ADMIN_DATA_STORAGE_KEY) === 'production';
+  const stored = localStorage.getItem(ADMIN_DATA_STORAGE_KEY);
+  // If explicitly set, use that value
+  if (stored === 'production') return true;
+  if (stored === 'dev') return false;
+  // Otherwise use environment default
+  return getEnvironmentDefault() === 'production';
 }
 
 /**
@@ -22,7 +44,9 @@ export function isAdminProductionMode(): boolean {
 export function getAdminDataSource(): 'dev' | 'production' {
   if (typeof window === 'undefined') return 'dev';
   const stored = localStorage.getItem(ADMIN_DATA_STORAGE_KEY);
-  return stored === 'production' ? 'production' : 'dev';
+  if (stored === 'production' || stored === 'dev') return stored;
+  // Return environment default if no explicit preference
+  return getEnvironmentDefault();
 }
 
 /**

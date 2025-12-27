@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getVertical, getVerticalSlugs, isValidVertical, LANDING_VERTICALS } from '../../constants/landing-verticals';
+import { PRODUCTION_URL } from '../../utils/urlConfig';
 import VerticalLandingClient from './VerticalLandingClient';
 
 interface Props {
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: vertical.metaDescription,
       type: 'website',
       siteName: 'WeWrite',
-      url: `https://wewrite.app/welcome/${verticalSlug}`,
+      url: `${PRODUCTION_URL}/welcome/${verticalSlug}`,
     },
     twitter: {
       card: 'summary_large_image',
@@ -47,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: vertical.metaDescription,
     },
     alternates: {
-      canonical: `https://wewrite.app/welcome/${verticalSlug}`,
+      canonical: `${PRODUCTION_URL}/welcome/${verticalSlug}`,
     },
   };
 }

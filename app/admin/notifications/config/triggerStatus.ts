@@ -54,7 +54,11 @@ export const triggerStatus: Record<string, TriggerStatusInfo> = {
   },
   'choose-username': {
     status: 'active',
-    description: 'Fully implemented. Daily cron job at 2pm UTC for users without usernames.'
+    description: 'Fully implemented. Daily cron job at 2pm UTC for VERIFIED users without usernames.'
+  },
+  'verify-to-choose-username': {
+    status: 'active',
+    description: 'Fully implemented. For unverified users without usernames - combined verification + username email.'
   },
   'first-page-activation': {
     status: 'active',

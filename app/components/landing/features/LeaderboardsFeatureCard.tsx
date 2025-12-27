@@ -57,7 +57,7 @@ export default function LeaderboardsFeatureCard() {
                 <Icon name={entry.iconName} size={16} className={entry.iconColor} />
               </div>
               <div>
-                <div className="font-medium text-sm">@{entry.username}</div>
+                <div className="font-medium text-sm">{entry.username}</div>
                 <div className="text-xs text-muted-foreground">Rank #{entry.rank}</div>
               </div>
             </div>

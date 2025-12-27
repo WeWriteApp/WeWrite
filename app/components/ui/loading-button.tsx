@@ -4,6 +4,7 @@ import * as React from "react"
 import { Button } from "./button"
 import type { ButtonProps } from "./button"
 import { cn } from "../../lib/utils"
+import { Icon } from "./Icon"
 
 interface LoadingButtonProps extends ButtonProps {
   isLoading?: boolean
@@ -35,7 +36,7 @@ export function LoadingButton({
     >
       {isLoading ? (
         <div className="flex items-center justify-center gap-2">
-          <div className="loader loader-sm"></div>
+          <Icon name="Loader" size={16} />
           {loadingText || children}
         </div>
       ) : (

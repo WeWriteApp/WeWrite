@@ -255,7 +255,7 @@ export default function SecurityPage() {
   const otherSessionsCount = sessions.filter(s => !s.isCurrent).length;
 
   return (
-    <div className="p-6 lg:p-8 max-w-2xl">
+    <div className="p-6 lg:p-8 max-w-2xl lg:max-w-3xl">
       <div className="space-y-6">
         {/* Header description */}
         <p className="text-sm text-muted-foreground">

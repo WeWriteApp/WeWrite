@@ -34,6 +34,7 @@ function NewPageRedirect() {
     const initialContentParam = searchParams?.get('initialContent');
     const pageType = searchParams?.get('type');
     const ideas = searchParams?.get('ideas');
+    const location = searchParams?.get('location');
 
     if (replyTo) options.replyTo = replyTo;
     if (replyToTitle) options.replyToTitle = decodeURIComponent(replyToTitle);
@@ -53,6 +54,7 @@ function NewPageRedirect() {
     }
     if (pageType) options.type = pageType;
     if (ideas === 'true') options.ideas = true;
+    if (location) options.location = location;
 
     // Generate new page URL and redirect
     const newUrl = buildNewPageUrl(options);
