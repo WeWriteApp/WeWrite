@@ -151,6 +151,24 @@
       ]
     },
     {
+      "collectionGroup": "DEV_backlinks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isPublic",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "targetPageId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastModified",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "featureHistory",
       "queryScope": "COLLECTION",
       "fields": [

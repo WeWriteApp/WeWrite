@@ -269,7 +269,7 @@ const AddToPageSearch = ({
 
       try {
         setRecentPagesLoading(true);
-        const response = await fetch(`/api/recent-pages?userId=${userId}&limit=10`);
+        const response = await fetch(`/api/recent-edits/user?userId=${userId}&limit=10`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch recent pages: ${response.status}`);

@@ -37,10 +37,11 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
     }
 
     // Set up real-time subscription to backlinks
+    // Note: Query order must match Firestore composite index: isPublic, targetPageId, lastModified
     const backlinksQuery = query(
       collection(db, getCollectionName('backlinks')),
-      where('targetPageId', '==', pageId),
       where('isPublic', '==', true),
+      where('targetPageId', '==', pageId),
       orderBy('lastModified', 'desc'),
       firestoreLimit(50)
     );

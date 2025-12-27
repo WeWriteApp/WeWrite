@@ -430,10 +430,11 @@ export const homeApi = {
   },
 
   /**
-   * Get recent pages
+   * Get recent pages for a user
    */
-  async getRecentPages(): Promise<ApiResponse> {
-    return apiCall('/api/recent-pages');
+  async getRecentPages(userId?: string): Promise<ApiResponse> {
+    const params = userId ? `?userId=${userId}` : '';
+    return apiCall(`/api/recent-edits/user${params}`);
   }
 };
 
