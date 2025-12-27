@@ -44,6 +44,67 @@ function getResend(): Resend {
   return resendInstance;
 }
 
+// Rate limiting: Resend allows 2 requests/second, we use 600ms for safety margin
+const RATE_LIMIT_DELAY_MS = 600;
+let lastEmailSentAt = 0;
+
+/**
+ * Wait to respect rate limits before sending next email
+ */
+async function waitForRateLimit(): Promise<void> {
+  const now = Date.now();
+  const timeSinceLastEmail = now - lastEmailSentAt;
+  if (timeSinceLastEmail < RATE_LIMIT_DELAY_MS) {
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY_MS - timeSinceLastEmail));
+  }
+  lastEmailSentAt = Date.now();
+}
+
+/**
+ * Send email with retry logic for rate limit errors
+ * @param sendFn - Function that performs the actual send
+ * @param maxRetries - Maximum number of retries (default 3)
+ */
+async function sendWithRetry<T>(
+  sendFn: () => Promise<{ data: T | null; error: { message: string; name?: string; statusCode?: number } | null }>,
+  maxRetries = 3
+): Promise<{ data: T | null; error: { message: string; name?: string } | null }> {
+  let lastError: { message: string; name?: string } | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // Wait for rate limit before each attempt
+    await waitForRateLimit();
+
+    const result = await sendFn();
+
+    if (!result.error) {
+      return result;
+    }
+
+    lastError = result.error;
+
+    // Check if it's a rate limit error (429)
+    const isRateLimitError =
+      result.error.name === 'rate_limit_exceeded' ||
+      result.error.message?.includes('rate limit') ||
+      result.error.message?.includes('Too many requests') ||
+      (result.error as any).statusCode === 429;
+
+    if (isRateLimitError && attempt < maxRetries) {
+      // Exponential backoff: 1s, 2s, 4s
+      const backoffMs = Math.pow(2, attempt) * 1000;
+      console.log(`[Email Service] Rate limited, retrying in ${backoffMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, backoffMs));
+      continue;
+    }
+
+    // Not a rate limit error or max retries reached
+    break;
+  }
+
+  return { data: null, error: lastError };
+}
+
 // Use notifications@ instead of noreply@ for better deliverability
 const FROM_EMAIL = `WeWrite <${Emails.notifications}>`;
 const REPLY_TO_EMAIL = Emails.support;
@@ -671,24 +732,27 @@ export const sendTemplatedEmail = async (options: {
   data: Record<string, any>;
   userId?: string;
   scheduledAt?: string;
-}): Promise<{ success: boolean; resendId?: string }> => {
+}): Promise<{ success: boolean; resendId?: string; error?: string }> => {
   const sentAt = new Date().toISOString();
   try {
     const { templateId, to, data, userId, scheduledAt } = options;
 
     const template = getTemplateById(templateId);
     if (!template) {
-      return { success: false };
+      return { success: false, error: `Template not found: ${templateId}` };
     }
 
-    const { data: resendData, error } = await getResend().emails.send({
-      from: FROM_EMAIL,
-      replyTo: REPLY_TO_EMAIL,
-      to,
-      subject: template.subject,
-      html: template.generateHtml(data),
-      ...(scheduledAt && { scheduledAt }),
-    });
+    // Use retry wrapper for rate limit handling
+    const { data: resendData, error } = await sendWithRetry(() =>
+      getResend().emails.send({
+        from: FROM_EMAIL,
+        replyTo: REPLY_TO_EMAIL,
+        to,
+        subject: template.subject,
+        html: template.generateHtml(data),
+        ...(scheduledAt && { scheduledAt }),
+      })
+    );
 
     if (error) {
       await logEmailSend({
@@ -703,7 +767,7 @@ export const sendTemplatedEmail = async (options: {
         metadata: { ...data, scheduledAt },
         sentAt,
       });
-      return { success: false };
+      return { success: false, error: error.message };
     }
 
     await logEmailSend({
@@ -720,7 +784,7 @@ export const sendTemplatedEmail = async (options: {
     });
     return { success: true, resendId: resendData?.id };
   } catch (error) {
-    return { success: false };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
 

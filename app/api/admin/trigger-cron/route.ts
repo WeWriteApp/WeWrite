@@ -135,12 +135,9 @@ export async function POST(request: NextRequest) {
             sent++;
           } else {
             failed++;
+            console.log(`[ADMIN TRIGGER CRON] Failed to send to ${userData.email}: ${result.error}`);
           }
-
-          // Rate limit
-          if (sent % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
+          // Rate limiting is now handled by emailService.ts (600ms between sends + retry logic)
         }
         break;
       }
@@ -207,12 +204,9 @@ export async function POST(request: NextRequest) {
             sent++;
           } else {
             failed++;
+            console.log(`[ADMIN TRIGGER CRON] Failed to send to ${userData.email}: ${result.error}`);
           }
-
-          // Rate limit
-          if (sent % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
+          // Rate limiting is now handled by emailService.ts (600ms between sends + retry logic)
         }
         break;
       }
@@ -260,12 +254,9 @@ export async function POST(request: NextRequest) {
             sent++;
           } else {
             failed++;
+            console.log(`[ADMIN TRIGGER CRON] Failed to send to ${userData.email}: ${result.error}`);
           }
-
-          // Rate limit
-          if (sent % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
+          // Rate limiting is now handled by emailService.ts (600ms between sends + retry logic)
         }
         break;
       }
