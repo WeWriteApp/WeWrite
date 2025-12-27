@@ -498,31 +498,36 @@ const SearchPage = React.memo(() => {
 
       {/* Temporary warning alert */}
       {showSearchWarning && (
-        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-500">
-            <Icon name="AlertTriangle" size={18} />
-            {hasActiveSubscription ? (
-              <p className="text-sm">Fast search is temporarily disabled, we're working to get it back in service!</p>
-            ) : (
-              <p className="text-sm">Fast search is currently disabled due to a billing issue with Algolia search. Slow search still works! If you'd like to help WeWrite improve service uptime, please start your subscription so we can afford devs and coffee!</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {!hasActiveSubscription && (
-              <Link href="/settings/fund-account">
-                <Button size="sm" variant="default" className="whitespace-nowrap">
-                  Start subscription
-                </Button>
-              </Link>
-            )}
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          {/* Top row: Icon, text, and dismiss button */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2 text-yellow-600 dark:text-yellow-500">
+              <Icon name="AlertTriangle" size={18} className="flex-shrink-0 mt-0.5" />
+              {hasActiveSubscription ? (
+                <p className="text-sm">Fast search is temporarily disabled, we're working to get it back in service!</p>
+              ) : (
+                <p className="text-sm">Fast search is currently disabled due to a billing issue with Algolia search. Slow search still works! If you'd like to help WeWrite improve service uptime, please start your subscription so we can afford devs and coffee!</p>
+              )}
+            </div>
             <button
               onClick={() => setShowSearchWarning(false)}
-              className="p-1 text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors"
+              className="p-1 text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors flex-shrink-0"
               aria-label="Dismiss warning"
             >
               <Icon name="X" size={16} />
             </button>
           </div>
+          {/* Bottom row: CTA button (only for non-subscribers) */}
+          {!hasActiveSubscription && (
+            <div className="mt-3">
+              <Link href="/settings/fund-account" className="block">
+                <Button size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white">
+                  <Icon name="Heart" size={18} className="mr-2" />
+                  Start subscription
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

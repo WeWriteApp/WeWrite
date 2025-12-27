@@ -182,6 +182,29 @@ async function createLinkNotifications(
     // Import notification service (this is safe for client-side)
     const { createNotification } = await import('../../services/notificationsApi');
 
+    // Get the source page to find its owner and look up the actual username
+    let actualSourceUsername = sourceUsername;
+    let sourceUserId: string | null = null;
+
+    try {
+      const sourcePageDoc = await getDoc(doc(db, getCollectionName('pages'), sourcePageId));
+      if (sourcePageDoc.exists()) {
+        const sourcePageData = sourcePageDoc.data();
+        sourceUserId = sourcePageData.userId;
+
+        // Look up the actual username from the users collection
+        if (sourceUserId) {
+          const sourceUserDoc = await getDoc(doc(db, getCollectionName('users'), sourceUserId));
+          if (sourceUserDoc.exists()) {
+            const sourceUserData = sourceUserDoc.data();
+            actualSourceUsername = sourceUserData.username || sourceUsername;
+          }
+        }
+      }
+    } catch (sourceUserError) {
+      // If lookup fails, continue with the original sourceUsername
+    }
+
     // Get target page data to find the page owners
     for (const link of pageLinks) {
       try {
@@ -193,14 +216,14 @@ async function createLinkNotifications(
           const targetUserId = targetPageData.userId;
 
           // Don't notify if the user is linking to their own page
-          if (targetUserId && targetUserId !== sourceUsername) {
+          if (targetUserId && targetUserId !== sourceUserId) {
             // Create in-app notification
             await createNotification({
               userId: targetUserId,
               type: 'link',
               title: 'Page Mention',
-              message: `${sourceUsername} linked to your page "${targetPageData.title || 'Untitled'}"`,
-              sourceUserId: sourceUsername, // This should be the user ID, but we have username
+              message: `${actualSourceUsername} linked to your page "${targetPageData.title || 'Untitled'}"`,
+              sourceUserId: sourceUserId || actualSourceUsername,
               targetPageId: link.pageId,
               targetPageTitle: targetPageData.title || 'Untitled',
               metadata: {
@@ -235,7 +258,7 @@ async function createLinkNotifications(
                       data: {
                         username: targetUsername,
                         linkedPageTitle: targetPageData.title || 'Untitled',
-                        linkerUsername: sourceUsername,
+                        linkerUsername: actualSourceUsername,
                         linkerPageTitle: sourcePageTitle,
                         linkerPageId: sourcePageId
                       },

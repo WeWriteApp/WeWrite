@@ -71,6 +71,7 @@ interface DesktopOptimizedDashboardProps {
   dateRange: DateRange;
   granularity: number;
   globalFilters?: GlobalAnalyticsFilters;
+  columnCount?: number; // 1-4 columns for grid layout
 }
 
 interface DashboardRow {
@@ -93,7 +94,8 @@ const MAX_ROW_HEIGHT = 400;
 export function DesktopOptimizedDashboard({
   dateRange,
   granularity,
-  globalFilters
+  globalFilters,
+  columnCount = 1
 }: DesktopOptimizedDashboardProps) {
   // Global height state - all graphs use the same height
   const [globalHeight, setGlobalHeight] = useState<number>(DEFAULT_ROW_HEIGHT);
@@ -595,6 +597,20 @@ export function DesktopOptimizedDashboard({
     }
   ];
 
+  // Get grid class based on column count
+  const getGridClass = () => {
+    switch (columnCount) {
+      case 2:
+        return 'grid grid-cols-2 gap-4';
+      case 3:
+        return 'grid grid-cols-3 gap-4';
+      case 4:
+        return 'grid grid-cols-4 gap-4';
+      default:
+        return 'space-y-0'; // Single column, use original layout
+    }
+  };
+
   return (
     <div className="desktop-optimized-dashboard">
       {/* Instructions - hidden on mobile */}
@@ -602,8 +618,8 @@ export function DesktopOptimizedDashboard({
         💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights.
       </div>
 
-      {/* Dashboard Rows */}
-      <div className="space-y-0">
+      {/* Dashboard Rows - Grid or List Layout */}
+      <div className={getGridClass()}>
         {dashboardRows.map((row, index) => (
           <React.Fragment key={row.id}>
             <DashboardRow
@@ -613,8 +629,8 @@ export function DesktopOptimizedDashboard({
               globalFilters={globalFilters}
               height={getRowHeight()}
             />
-            {/* Separator line between graphs */}
-            {index < dashboardRows.length - 1 && (
+            {/* Separator line between graphs - only for single column layout */}
+            {columnCount === 1 && index < dashboardRows.length - 1 && (
               <div className="border-t border-accent-20 my-4 md:my-6" />
             )}
           </React.Fragment>

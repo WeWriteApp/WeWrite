@@ -191,6 +191,9 @@ export default function AdminDashboardPage() {
   // Global analytics filters state
   const [globalFilters, setGlobalFilters] = useState<GlobalAnalyticsFiltersType>(defaultGlobalAnalyticsFilters);
 
+  // Column count state for grid layout (1-4 columns)
+  const [columnCount, setColumnCount] = useState<number>(1);
+
   // Removed view mode state - now only desktop-optimized mode
 
   // Debug logging for admin dashboard state
@@ -283,24 +286,43 @@ export default function AdminDashboardPage() {
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-background">
         {/* Options Bar - Always visible */}
-        <div className="border-b bg-card">
-          <div className="px-6 py-4">
-            {dashboardLoading ? (
-              /* Loading state for options bar */
-              <div className="h-10 bg-muted animate-pulse rounded"></div>
-            ) : (
-              /* Combined Filters - Single Horizontal Row (no granularity) */
+        <div className="px-6 py-4">
+          {dashboardLoading ? (
+            /* Loading state for options bar */
+            <div className="h-10 bg-muted animate-pulse rounded"></div>
+          ) : (
+            <div className="flex items-center gap-4">
+              {/* Combined Filters - Single Horizontal Row (no granularity) */}
               <DateRangeFilter
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
                 globalFilters={globalFilters}
                 onGlobalFiltersChange={handleGlobalFiltersChange}
-                className="border-0 shadow-none p-0 bg-transparent"
+                className="border-0 shadow-none p-0 bg-transparent flex-1"
                 compact={true}
                 combined={true}
               />
-            )}
-          </div>
+
+              {/* Column Selector */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Icon name="LayoutGrid" size={16} className="text-muted-foreground" />
+                <div className="flex items-center bg-muted rounded-md p-0.5">
+                  {[1, 2, 3, 4].map((cols) => (
+                    <Button
+                      key={cols}
+                      variant={columnCount === cols ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setColumnCount(cols)}
+                      className="h-6 w-6 p-0 text-xs font-medium"
+                      title={`${cols} column${cols > 1 ? 's' : ''}`}
+                    >
+                      {cols}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dashboard Content */}
@@ -327,6 +349,7 @@ export default function AdminDashboardPage() {
                           dateRange={dateRange}
                           granularity={granularity}
                           globalFilters={globalFilters}
+                          columnCount={columnCount}
                         />
                       </UnifiedErrorBoundary>
                     </div>

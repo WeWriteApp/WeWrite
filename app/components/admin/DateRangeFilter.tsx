@@ -3,7 +3,6 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
-import { Switch } from '../ui/switch';
 import { format, subDays, subWeeks, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { GlobalAnalyticsFilters as GlobalAnalyticsFiltersType } from './GlobalAnalyticsFilters';
 
@@ -137,15 +136,6 @@ export function DateRangeFilter({
     }
   };
 
-  const handlePerUserNormalizationChange = (enabled: boolean) => {
-    if (onGlobalFiltersChange && globalFilters) {
-      onGlobalFiltersChange({
-        ...globalFilters,
-        perUserNormalization: enabled
-      });
-    }
-  };
-
   // Compact horizontal layout for filter bar
   if (compact) {
     return (
@@ -244,29 +234,6 @@ export function DateRangeFilter({
                 </div>
               </div>
 
-              {/* Separator */}
-              <div className="h-6 w-px bg-border flex-shrink-0"></div>
-
-              {/* Per-User Normalization Toggle */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <Icon name="Users" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Per User:</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Switch
-                    checked={globalFilters.perUserNormalization}
-                    onCheckedChange={handlePerUserNormalizationChange}
-                    className="data-[state=checked]:bg-primary scale-75"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {globalFilters.perUserNormalization ? 'ON' : 'OFF'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Separator */}
-              <div className="h-6 w-px bg-border flex-shrink-0"></div>
             </>
           )}
 
@@ -295,24 +262,6 @@ export function DateRangeFilter({
             </>
           )}
 
-          {/* Current Range Display - Compact */}
-          <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-1">
-            <span className="font-mono">{format(dateRange.startDate, 'MMM dd')}</span>
-            <span className="mx-1">→</span>
-            <span className="font-mono">{format(dateRange.endDate, 'MMM dd')}</span>
-            <span className="ml-1.5">({Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))}d)</span>
-          </div>
-
-          {/* Info Text for Combined Mode */}
-          {combined && globalFilters && (
-            <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-2 opacity-75">
-              {globalFilters.timeDisplayMode === 'cumulative'
-                ? 'Running totals'
-                : 'Period values'
-              }
-              {globalFilters.perUserNormalization && ' • Per user'}
-            </div>
-          )}
           </div>
         </div>
       </div>

@@ -58,6 +58,7 @@ export class AdminAnalyticsService {
 
   /**
    * Get new accounts created within date range
+   * OPTIMIZED: Uses indexed date range query instead of fetching all docs
    */
   static async getNewAccountsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
     try {
@@ -65,16 +66,21 @@ export class AdminAnalyticsService {
       const usersCollectionName = await getCollectionNameAsync('users');
       const usersRef = db.collection(usersCollectionName);
 
-      // Fetch all users and filter in memory (simple and reliable)
-      const snapshot = await usersRef.limit(1000).get();
+      // OPTIMIZED: Use indexed query with date range filter instead of fetching 1000 docs
+      const snapshot = await usersRef
+        .where('createdAt', '>=', dateRange.startDate)
+        .where('createdAt', '<=', dateRange.endDate)
+        .orderBy('createdAt', 'asc')
+        .get();
       
       // Group by day
       const dailyCounts = new Map<string, number>();
       
+      // OPTIMIZED: No need to filter by date - already filtered at query level
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
-        
+
         if (createdAt) {
           let date: Date;
           if (createdAt.toDate) {
@@ -84,12 +90,9 @@ export class AdminAnalyticsService {
           } else {
             return; // Skip invalid dates
           }
-          
-          // Filter by date range
-          if (date >= dateRange.startDate && date <= dateRange.endDate) {
-            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
-          }
+
+          const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
         }
       });
       
@@ -120,6 +123,7 @@ export class AdminAnalyticsService {
 
   /**
    * Get new pages created within date range
+   * OPTIMIZED: Uses indexed date range query instead of fetching all docs
    */
   static async getNewPagesCreated(dateRange: DateRange): Promise<PagesDataPoint[]> {
     try {
@@ -127,29 +131,22 @@ export class AdminAnalyticsService {
       const pagesCollectionName = await getCollectionNameAsync('pages');
       const pagesRef = db.collection(pagesCollectionName);
 
-      // Fetch all pages and filter in memory (simple and reliable)
-      const snapshot = await pagesRef.limit(1000).get();
+      // OPTIMIZED: Use indexed query with date range filter
+      // Index exists: (deleted, createdAt) - we use it to filter non-deleted pages in date range
+      const snapshot = await pagesRef
+        .where('deleted', '==', false)
+        .where('createdAt', '>=', dateRange.startDate)
+        .where('createdAt', '<=', dateRange.endDate)
+        .orderBy('createdAt', 'asc')
+        .get();
       
-      // Group by day
+      // Group by day - OPTIMIZED: Already filtered at query level (deleted=false, date range)
       const dailyCounts = new Map<string, number>();
-      let processedCount = 0;
-      let skippedDeleted = 0;
-      let skippedNoCreatedAt = 0;
-      let skippedOutOfRange = 0;
-      let addedToResults = 0;
 
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
-        const deleted = data.deleted;
-        processedCount++;
 
-        // Skip deleted pages
-        if (deleted === true) {
-          skippedDeleted++;
-          return;
-        }
-        
         if (createdAt) {
           let date: Date;
           if (createdAt.toDate) {
@@ -157,20 +154,11 @@ export class AdminAnalyticsService {
           } else if (typeof createdAt === 'string') {
             date = new Date(createdAt);
           } else {
-            skippedNoCreatedAt++;
             return; // Skip invalid dates
           }
 
-          // Filter by date range
-          if (date >= dateRange.startDate && date <= dateRange.endDate) {
-            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
-            addedToResults++;
-          } else {
-            skippedOutOfRange++;
-          }
-        } else {
-          skippedNoCreatedAt++;
+          const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
         }
       });
       
@@ -204,6 +192,7 @@ export class AdminAnalyticsService {
   /**
    * Get analytics events (shares, content changes, etc.)
    * For content_change events, also aggregates character counts
+   * OPTIMIZED: Uses indexed query (eventType, timestamp) instead of fetching all docs
    */
   static async getAnalyticsEvents(dateRange: DateRange, eventType?: string): Promise<ChartDataPoint[]> {
     try {
@@ -211,36 +200,35 @@ export class AdminAnalyticsService {
       const eventsCollectionName = await getCollectionNameAsync('analytics_events');
       const eventsRef = db.collection(eventsCollectionName);
 
-      // Fetch all events and filter in memory (simple and reliable)
-      const snapshot = await eventsRef.limit(1000).get();
-      
-      // Group by day - track counts and character totals for content_change
-      const dailyData = new Map<string, { 
-        count: number; 
-        charactersAdded: number; 
-        charactersDeleted: number; 
-      }>();
-      let processedEvents = 0;
-      let matchedEvents = 0;
-      let skippedWrongType = 0;
-      let skippedNoTimestamp = 0;
-      let skippedOutOfRange = 0;
-      let addedToResults = 0;
+      // OPTIMIZED: Build query with index - uses (eventType, timestamp) index
+      let query = eventsRef
+        .where('timestamp', '>=', dateRange.startDate)
+        .where('timestamp', '<=', dateRange.endDate)
+        .orderBy('timestamp', 'asc');
 
+      // If event type is specified, add filter (uses eventType + timestamp index)
+      if (eventType) {
+        query = eventsRef
+          .where('eventType', '==', eventType)
+          .where('timestamp', '>=', dateRange.startDate)
+          .where('timestamp', '<=', dateRange.endDate)
+          .orderBy('timestamp', 'asc');
+      }
+
+      const snapshot = await query.get();
+
+      // Group by day - track counts and character totals for content_change
+      const dailyData = new Map<string, {
+        count: number;
+        charactersAdded: number;
+        charactersDeleted: number;
+      }>();
+
+      // OPTIMIZED: Already filtered at query level
       snapshot.forEach(doc => {
         const data = doc.data();
         const timestamp = data.timestamp;
-        const event = data.event || data.eventType; // CRITICAL FIX: Check both field names
-        processedEvents++;
 
-        // Filter by event type if specified
-        if (eventType && event !== eventType) {
-          skippedWrongType++;
-          return;
-        }
-
-        matchedEvents++;
-        
         if (timestamp) {
           let date: Date;
           if (timestamp.toDate) {
@@ -248,30 +236,21 @@ export class AdminAnalyticsService {
           } else if (typeof timestamp === 'string') {
             date = new Date(timestamp);
           } else {
-            skippedNoTimestamp++;
             return; // Skip invalid dates
           }
 
-          // Filter by date range
-          if (date >= dateRange.startDate && date <= dateRange.endDate) {
-            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-            
-            const existing = dailyData.get(dayKey) || { count: 0, charactersAdded: 0, charactersDeleted: 0 };
-            existing.count += 1;
-            
-            // For content_change events, aggregate character data
-            if (eventType === 'content_change') {
-              existing.charactersAdded += (data.charactersAdded || 0);
-              existing.charactersDeleted += (data.charactersDeleted || 0);
-            }
-            
-            dailyData.set(dayKey, existing);
-            addedToResults++;
-          } else {
-            skippedOutOfRange++;
+          const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+
+          const existing = dailyData.get(dayKey) || { count: 0, charactersAdded: 0, charactersDeleted: 0 };
+          existing.count += 1;
+
+          // For content_change events, aggregate character data
+          if (eventType === 'content_change') {
+            existing.charactersAdded += (data.charactersAdded || 0);
+            existing.charactersDeleted += (data.charactersDeleted || 0);
           }
-        } else {
-          skippedNoTimestamp++;
+
+          dailyData.set(dayKey, existing);
         }
       });
       
@@ -503,6 +482,7 @@ export class AdminAnalyticsService {
 
   /**
    * Get page views analytics within date range
+   * OPTIMIZED: Uses date field query instead of fetching 5000 docs
    */
   static async getPageViewsAnalytics(dateRange: DateRange): Promise<any[]> {
     try {
@@ -510,48 +490,47 @@ export class AdminAnalyticsService {
       const pageViewsCollectionName = await getCollectionNameAsync('pageViews');
       const pageViewsRef = db.collection(pageViewsCollectionName);
 
-      // Get all page view documents within the date range
-      const snapshot = await pageViewsRef.limit(5000).get();
+      // Format dates as strings for comparison (YYYY-MM-DD format used in date field)
+      const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+      const endDateStr = dateRange.endDate.toISOString().split('T')[0];
+
+      // OPTIMIZED: Query by date field range instead of fetching 5000 docs
+      // Uses index: (date, totalViews)
+      const snapshot = await pageViewsRef
+        .where('date', '>=', startDateStr)
+        .where('date', '<=', endDateStr)
+        .orderBy('date', 'asc')
+        .get();
 
       if (snapshot.empty) {
         return [];
       }
 
-      // Group page views by date
+      // Group page views by date - OPTIMIZED: Already filtered at query level
       const dailyViews = new Map<string, { totalViews: number; uniqueViews: number; pageIds: Set<string> }>();
 
       snapshot.docs.forEach(doc => {
         const data = doc.data();
         const docId = doc.id;
+        const dateStr = data.date || docId.split('_').pop(); // Use date field or extract from ID
 
-        // Extract date from document ID (format: pageId_YYYY-MM-DD)
-        const datePart = docId.split('_').pop();
-        if (!datePart || !datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          return; // Skip invalid document IDs
+        if (!dateStr) return;
+
+        if (!dailyViews.has(dateStr)) {
+          dailyViews.set(dateStr, {
+            totalViews: 0,
+            uniqueViews: 0,
+            pageIds: new Set()
+          });
         }
 
-        const docDate = new Date(datePart);
+        const dayData = dailyViews.get(dateStr)!;
+        dayData.totalViews += data.totalViews || 0;
 
-        // Check if date is within range
-        if (docDate >= dateRange.startDate && docDate <= dateRange.endDate) {
-          const dateStr = datePart;
-
-          if (!dailyViews.has(dateStr)) {
-            dailyViews.set(dateStr, {
-              totalViews: 0,
-              uniqueViews: 0,
-              pageIds: new Set()
-            });
-          }
-
-          const dayData = dailyViews.get(dateStr)!;
-          dayData.totalViews += data.totalViews || 0;
-
-          // Extract pageId from document ID
-          const pageId = docId.substring(0, docId.lastIndexOf('_'));
-          if (pageId) {
-            dayData.pageIds.add(pageId);
-          }
+        // Extract pageId from document ID or use pageId field
+        const pageId = data.pageId || docId.substring(0, docId.lastIndexOf('_'));
+        if (pageId) {
+          dayData.pageIds.add(pageId);
         }
       });
 
