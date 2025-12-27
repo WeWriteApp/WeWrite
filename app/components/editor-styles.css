@@ -60,35 +60,30 @@
   transition: all 0.2s ease;
 }
 
-/* Page links - internal pages */
-.page-link {
+/* NOTE: Page links, user links, and external links are now styled by the PillLink
+   component using PillStyleContext. These classes are kept for backwards compatibility
+   but should not override the component's Tailwind-based hover styles.
+
+   The PillLink component uses:
+   - hover:scale-[1.05] for scale animation
+   - hover:shadow-sm/md for shadow effects
+   - hover:[background-image:var(--alpha-10-gradient)] for filled pills
+   - hover:bg-accent-10 for outline pills
+   - hover:underline for text-only pills
+*/
+
+/* Legacy fallback styles - only apply if not using data-pill-style attribute */
+.page-link:not([data-pill-style]),
+.user-link:not([data-pill-style]),
+.external-link:not([data-pill-style]) {
   background-color: oklch(var(--primary));
   color: oklch(var(--primary-foreground));
 }
 
-.page-link:hover {
+.page-link:not([data-pill-style]):hover,
+.user-link:not([data-pill-style]):hover,
+.external-link:not([data-pill-style]):hover {
   background-color: oklch(var(--primary) / 0.8);
-}
-
-/* User links - user profiles */
-.user-link {
-  background-color: oklch(var(--secondary));
-  color: oklch(var(--secondary-foreground));
-}
-
-.user-link:hover {
-  background-color: oklch(var(--secondary) / 0.8);
-}
-
-/* External links */
-.external-link {
-  background-color: oklch(var(--muted));
-  color: oklch(var(--muted-foreground));
-  border: 1px solid oklch(var(--border));
-}
-
-.external-link:hover {
-  background-color: oklch(var(--muted) / 0.8);
 }
 
 /* User link styles - no @ symbol prefix (users are identified by tier badge instead) */
@@ -214,10 +209,11 @@
    FOCUS STATES
    ============================================================================ */
 
-/* Focus ring for accessibility */
-.page-link:focus,
-.user-link:focus,
-.external-link:focus {
+/* Focus ring for accessibility - only for legacy elements not using PillLink */
+/* PillLink uses Tailwind's focus-visible:ring-2 focus-visible:ring-accent classes */
+.page-link:not([data-pill-style]):focus,
+.user-link:not([data-pill-style]):focus,
+.external-link:not([data-pill-style]):focus {
   outline: 2px solid oklch(var(--primary));
   outline-offset: 2px;
 }
