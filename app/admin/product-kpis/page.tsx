@@ -172,12 +172,30 @@ export default function AdminDashboardPage() {
     localStorage.setItem('adminDashboardLayout', JSON.stringify(newWidgets.map(w => w.id)));
   };
 
-  // Date range state - default to last 6 months
+  // Date range state - persisted to localStorage
   const [dateRange, setDateRange] = useState<DateRange>(() => {
+    // Try to load from localStorage first
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('adminDashboardDateRange');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const startDate = new Date(parsed.startDate);
+          const endDate = new Date(parsed.endDate);
+          // Validate dates are valid
+          if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+            console.log('🗓️ [Admin Dashboard] Restored date range from localStorage:', { startDate, endDate });
+            return { startDate, endDate };
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved date range:', e);
+      }
+    }
+    // Default to last 6 months
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 6);
-
     console.log('🗓️ [Admin Dashboard] Initial date range:', { startDate, endDate });
     return { startDate, endDate };
   });
@@ -191,8 +209,23 @@ export default function AdminDashboardPage() {
   // Global analytics filters state
   const [globalFilters, setGlobalFilters] = useState<GlobalAnalyticsFiltersType>(defaultGlobalAnalyticsFilters);
 
-  // Column count state for grid layout (1-4 columns)
-  const [columnCount, setColumnCount] = useState<number>(1);
+  // Column count state for grid layout (1-4 columns) - persisted to localStorage
+  const [columnCount, setColumnCount] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('adminDashboardColumnCount');
+        if (saved) {
+          const count = parseInt(saved, 10);
+          if (count >= 1 && count <= 4) {
+            return count;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved column count:', e);
+      }
+    }
+    return 1;
+  });
 
   // Removed view mode state - now only desktop-optimized mode
 
@@ -250,6 +283,23 @@ export default function AdminDashboardPage() {
       }
     }
   }, []);
+
+  // Persist date range to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && dateRange.startDate && dateRange.endDate) {
+      localStorage.setItem('adminDashboardDateRange', JSON.stringify({
+        startDate: dateRange.startDate.toISOString(),
+        endDate: dateRange.endDate.toISOString()
+      }));
+    }
+  }, [dateRange]);
+
+  // Persist column count to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adminDashboardColumnCount', columnCount.toString());
+    }
+  }, [columnCount]);
 
   // Check if user is admin
   const [isAdminUser, setIsAdminUser] = useState(false);

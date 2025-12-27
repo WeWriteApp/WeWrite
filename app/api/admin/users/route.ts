@@ -23,6 +23,8 @@ interface UserData {
   referredBy?: string;
   referredByUsername?: string;
   referralSource?: string;
+  pwaInstalled?: boolean;
+  notificationSparkline?: number[];
   financial?: {
     hasSubscription: boolean;
     subscriptionAmount?: number | null;
@@ -80,6 +82,7 @@ export async function GET(request: NextRequest) {
     const usersCollectionName = getCollectionName('users');
     const pagesCollectionName = getCollectionName('pages');
     const writerEarningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+    const analyticsEventsCollectionName = getCollectionName('analytics_events');
 
     // Debug: Log which collections are being used
     console.log(`[Admin Users API] Using collections: users=${usersCollectionName}, pages=${pagesCollectionName}, earnings=${writerEarningsCollectionName}`);
@@ -126,7 +129,7 @@ export async function GET(request: NextRequest) {
     const userIds = snapshot.docs.map(doc => doc.id);
 
     // OPTIMIZATION: Run all data fetches in parallel instead of sequentially
-    const [subscriptionsMap, earningsMap, pageCountsMap, referrerUsernamesMap] = await Promise.all([
+    const [subscriptionsMap, earningsMap, pageCountsMap, referrerUsernamesMap, pwaInstallsMap, notificationSparklinesMap] = await Promise.all([
       // 1. Fetch Firestore subscription documents (source of truth - updated by webhooks)
       includeFinancial ? batchFetchSubscriptions(db, usersCollectionName, userIds) : Promise.resolve(new Map()),
 
@@ -138,6 +141,12 @@ export async function GET(request: NextRequest) {
 
       // 4. Pre-fetch referrer usernames
       batchFetchReferrerUsernames(db, usersCollectionName, snapshot.docs),
+
+      // 5. Batch fetch PWA installation status from analytics_events
+      batchFetchPWAInstalls(db, analyticsEventsCollectionName, userIds),
+
+      // 6. Batch fetch notification sparklines (7-day data)
+      batchFetchNotificationSparklines(db, userIds),
     ]);
 
     // Build user data array (now just simple object construction, no async)
@@ -160,6 +169,8 @@ export async function GET(request: NextRequest) {
         referredBy: data.referredBy || undefined,
         referralSource: data.referralSource || undefined,
         totalPages: pageCountsMap.get(uid) ?? 0,
+        pwaInstalled: pwaInstallsMap.get(uid) ?? false,
+        notificationSparkline: notificationSparklinesMap.get(uid) || Array(7).fill(0),
       };
 
       // Add referrer username if available
@@ -414,6 +425,155 @@ async function batchFetchReferrerUsernames(
     }
   } catch (err) {
     console.warn('[Admin Users] Error fetching referrer usernames:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch PWA installation status from analytics_events
+// Checks if a user has ever installed the PWA (app_installed event)
+async function batchFetchPWAInstalls(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userIds: string[]
+): Promise<Map<string, boolean>> {
+  const map = new Map<string, boolean>();
+  if (userIds.length === 0) return map;
+
+  try {
+    // Firestore 'in' query supports up to 30 items, batch if needed
+    const batchSize = 30;
+    const batches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+      batches.push(
+        db.collection(collectionName)
+          .where('eventType', '==', 'pwa_install')
+          .where('userId', 'in', batch)
+          .limit(batch.length) // Only need to know if at least one exists per user
+          .get()
+      );
+    }
+
+    const results = await Promise.all(batches);
+
+    // Mark users as having installed PWA if they have any pwa_install events
+    for (const snapshot of results) {
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const userId = data.userId;
+        if (userId) {
+          map.set(userId, true);
+        }
+      }
+    }
+
+    console.log(`[Admin Users] Found ${map.size} users with PWA installations`);
+  } catch (err) {
+    console.warn('[Admin Users] Error batch fetching PWA installs:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch notification sparklines (last 7 days)
+// Combines email logs and push notification events
+async function batchFetchNotificationSparklines(
+  db: FirebaseFirestore.Firestore,
+  userIds: string[]
+): Promise<Map<string, number[]>> {
+  const map = new Map<string, number[]>();
+  if (userIds.length === 0) return map;
+
+  try {
+    const admin = getFirebaseAdmin();
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Initialize sparkline data for all users
+    userIds.forEach(uid => {
+      map.set(uid, Array(7).fill(0));
+    });
+
+    // 1. Fetch email logs (using environment-aware collection name)
+    const emailLogsCollectionName = getCollectionName('emailLogs');
+    const batchSize = 30;
+    const emailBatches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+      emailBatches.push(
+        db.collection(emailLogsCollectionName)
+          .where('recipientUserId', 'in', batch)
+          .where('sentAt', '>=', sevenDaysAgo.toISOString())
+          .get()
+      );
+    }
+
+    const emailResults = await Promise.all(emailBatches);
+
+    for (const snapshot of emailResults) {
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const userId = data.recipientUserId;
+        const sentDate = new Date(data.sentAt);
+        const dayIndex = Math.floor((sentDate.getTime() - sevenDaysAgo.getTime()) / (24 * 60 * 60 * 1000));
+
+        if (userId && dayIndex >= 0 && dayIndex < 7) {
+          const sparkline = map.get(userId);
+          if (sparkline) {
+            sparkline[dayIndex]++;
+          }
+        }
+      }
+    }
+
+    // 2. Fetch push notification events
+    const analyticsCollectionName = getCollectionName('analytics_events');
+    const startTimestamp = admin.firestore.Timestamp.fromDate(sevenDaysAgo);
+    const pushBatches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+      pushBatches.push(
+        db.collection(analyticsCollectionName)
+          .where('eventType', '==', 'pwa_notification_sent')
+          .where('userId', 'in', batch)
+          .where('timestamp', '>=', startTimestamp)
+          .get()
+      );
+    }
+
+    const pushResults = await Promise.all(pushBatches);
+
+    for (const snapshot of pushResults) {
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const userId = data.userId;
+        const timestamp = data.timestamp;
+
+        if (userId && timestamp?.toDate) {
+          const eventDate = timestamp.toDate();
+          const dayIndex = Math.floor((eventDate.getTime() - sevenDaysAgo.getTime()) / (24 * 60 * 60 * 1000));
+
+          if (dayIndex >= 0 && dayIndex < 7) {
+            const sparkline = map.get(userId);
+            if (sparkline) {
+              sparkline[dayIndex]++;
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[Admin Users] Fetched notification sparklines for ${map.size} users`);
+  } catch (err) {
+    console.warn('[Admin Users] Error batch fetching notification sparklines:', err);
+    // Return empty sparklines on error
+    userIds.forEach(uid => {
+      if (!map.has(uid)) {
+        map.set(uid, Array(7).fill(0));
+      }
+    });
   }
   return map;
 }

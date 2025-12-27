@@ -87,7 +87,7 @@ export function ContentPageSection({ id }: { id: string }) {
       </StateDemo>
 
       {/* Same Title Pages Section */}
-      <StateDemo label="SameTitlePages (Others who wrote about this)">
+      <StateDemo label="SameTitlePages (Pages with same title by other users)">
         <div className="w-full space-y-4">
           <div className="wewrite-card">
             <h4 className="font-semibold mb-2 flex items-center gap-2">

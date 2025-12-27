@@ -66,9 +66,20 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
       },
       (err) => {
         console.error('Error in backlinks subscription:', err);
-        // If the error is due to index building, we can't use real-time updates
-        // Fall back to showing error state
-        setError('Failed to load backlinks');
+        // Check if error is due to missing index or permissions (common in development)
+        // If so, just show empty state instead of error
+        const errorMessage = err?.message || '';
+        if (errorMessage.includes('index') ||
+            errorMessage.includes('requires an index') ||
+            errorMessage.includes('permission') ||
+            errorMessage.includes('Missing or insufficient permissions')) {
+          console.warn('Backlinks query failed (likely index or permissions). Showing empty state.');
+          setBacklinks([]);
+          setError(null);
+        } else {
+          // For other errors, still show error state
+          setError('Failed to load backlinks');
+        }
         setLoading(false);
       }
     );

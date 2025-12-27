@@ -7,19 +7,10 @@ import ContentPageStats from "./ContentPageStats";
 import SameTitlePages from "./SameTitlePages";
 import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
-import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Icon } from "@/components/ui/Icon";
 import { useToast } from "../ui/use-toast";
 import type { Page } from '../../types/database';
-
-
-// Dynamically import AddToPageButton to avoid SSR issues
-const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
-  ssr: false,
-  loading: () => <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
-});
-// Removed old stats imports - now using UnifiedStatsService via PageStats component
 import { useAuth } from '../../providers/AuthProvider';
 
 /**
@@ -141,7 +132,7 @@ export default function ContentPageFooter({
           isEditing={isEditing} // Pass actual editing state for consistency
           setIsEditing={setIsEditing}
           className="action-buttons-container"
-          showFollowButton={user && !isOwner}
+          showFollowButton={!isOwner}
           onInsertLink={onInsertLink} // Pass insert link callback
           isSaving={isSaving} // Pass saving state
           showLinkSuggestions={showLinkSuggestions}
@@ -159,7 +150,7 @@ export default function ContentPageFooter({
           isEditing={false}
           setIsEditing={() => {}}
           className="action-buttons-container"
-          showFollowButton={!!user}
+          showFollowButton={true}
         />
       )}
 

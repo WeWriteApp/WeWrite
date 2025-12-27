@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Icon } from '@/components/ui/Icon';
 import { AdminSubpageHeader } from "../../components/admin/AdminSubpageHeader";
 import { Card, CardContent } from "../../components/ui/card";
@@ -37,6 +37,9 @@ import {
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useGlobalDrawer } from "../../providers/GlobalDrawerProvider";
 import { UserDetailsDrawer } from "../../components/admin/UserDetailsDrawer";
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import SimpleSparkline from "../../components/utils/SimpleSparkline";
 
 type FinancialInfo = {
   hasSubscription: boolean;
@@ -63,6 +66,8 @@ type User = {
   referredBy?: string;
   referredByUsername?: string; // Resolved username of referrer
   referralSource?: string;
+  pwaInstalled?: boolean;
+  notificationSparkline?: number[];
 };
 
 type Column = {
@@ -97,6 +102,82 @@ type Activity = {
   targetPageTitle?: string;
   actionUrl?: string;
 };
+
+const COLUMN_TYPE = 'COLUMN';
+
+// Draggable column header component
+interface DraggableColumnHeaderProps {
+  column: Column;
+  index: number;
+  moveColumn: (dragIndex: number, hoverIndex: number) => void;
+  sortBy: { id: string; dir: "asc" | "desc" } | null;
+  onSort: (id: string, sortable?: boolean) => void;
+}
+
+function DraggableColumnHeader({ column, index, moveColumn, sortBy, onSort }: DraggableColumnHeaderProps) {
+  const ref = useRef<HTMLTableCellElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: COLUMN_TYPE,
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [, drop] = useDrop({
+    accept: COLUMN_TYPE,
+    hover(item: { index: number }, monitor) {
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      if (dragIndex === hoverIndex) return;
+
+      const hoverBoundingRect = ref.current.getBoundingClientRect();
+      const hoverMiddleX = (hoverBoundingRect.right - hoverBoundingRect.left) / 2;
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+      const hoverClientX = clientOffset.x - hoverBoundingRect.left;
+
+      if (dragIndex < hoverIndex && hoverClientX < hoverMiddleX) return;
+      if (dragIndex > hoverIndex && hoverClientX > hoverMiddleX) return;
+
+      moveColumn(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  drag(drop(ref));
+
+  return (
+    <TableHead
+      ref={ref}
+      className="whitespace-nowrap px-3"
+      style={{
+        width: column.minWidth ? `${column.minWidth}px` : 'auto',
+        minWidth: column.minWidth ? `${column.minWidth}px` : '100px',
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
+      }}
+      onClick={() => onSort(column.id, column.sortable)}
+    >
+      <div className="flex items-center gap-1 select-none">
+        <span className="truncate">{column.label}</span>
+        {column.sortable && (
+          sortBy?.id === column.id ? (
+            sortBy.dir === "asc" ? (
+              <Icon name="ArrowUp" size={12} className="text-muted-foreground flex-shrink-0" />
+            ) : (
+              <Icon name="ArrowDown" size={12} className="text-muted-foreground flex-shrink-0" />
+            )
+          ) : (
+            <Icon name="ArrowUpDown" size={12} className="text-muted-foreground flex-shrink-0" />
+          )
+        )}
+      </div>
+    </TableHead>
+  );
+}
 
 // Upcoming notifications component - shows what automated emails will be sent to this user
 function UpcomingNotifications({ user }: { user: User }) {
@@ -228,8 +309,32 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
   const [userActivities, setUserActivities] = useState<Activity[]>([]);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [loadingActivities, setLoadingActivities] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('adminUsersColumnOrder');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse saved column order:', e);
+        }
+      }
+    }
+    return [];
+  });
+  const [sortBy, setSortBy] = useState<{ id: string; dir: "asc" | "desc" } | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('adminUsersSortBy');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse saved sort settings:', e);
+        }
+      }
+    }
+    return null;
+  });
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
 
@@ -296,15 +401,12 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
   const columns: Column[] = useMemo(() => [
     {
       id: "user",
-      label: "User",
+      label: "Email",
       sticky: false,
       sortable: true,
       minWidth: 220,
       render: (u) => (
-        <div className="space-y-1 whitespace-nowrap">
-          <div className="font-medium">{u.email}</div>
-          <div className="text-xs text-muted-foreground">{u.username || "—"}</div>
-        </div>
+        <div className="font-medium whitespace-nowrap">{u.email}</div>
       )
     },
     {
@@ -313,21 +415,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
       sortable: true,
       minWidth: 160,
       render: (u) => (
-        <div className="flex items-center gap-2">
-          <span className="whitespace-nowrap font-medium">{u.username || "—"}</span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-xs"
-            disabled={loadingAction !== null}
-            onClick={() => {
-              setEditUsernameUser(u);
-              setNewUsername(u.username || "");
-            }}
-          >
-            Edit
-          </Button>
-        </div>
+        <span className="whitespace-nowrap font-medium">{u.username || "—"}</span>
       )
     },
     {
@@ -475,39 +563,44 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
       label: "PWA installed",
       sortable: true,
       minWidth: 110,
-      render: () => "—" // TODO
+      render: (u) => (
+        u.pwaInstalled ? (
+          <Badge variant="success-secondary">
+            <Icon name="Smartphone" size={12} className="mr-1" />
+            Installed
+          </Badge>
+        ) : (
+          <Badge variant="outline-static">Not installed</Badge>
+        )
+      )
     },
     {
       id: "notifications",
       label: "Notifications",
-      sortable: true,
+      sortable: false,
       minWidth: 110,
-      render: () => "—" // TODO
-    },
-    {
-      id: "adminActions",
-      label: "Actions",
-      minWidth: 220,
-      render: (u) => (
-        <div className="space-x-2 whitespace-nowrap">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={loadingAction !== null}
-            onClick={() => setResetUserId(u)}
-          >
-            Reset password
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={loadingAction !== null}
-            onClick={() => setDeleteUserId(u)}
-          >
-            Delete
-          </Button>
-        </div>
-      )
+      render: (u) => {
+        // Show sparkline of last 7 days notification activity
+        const sparklineData = u.notificationSparkline || Array(7).fill(0);
+        const hasNotifications = sparklineData.some(v => v > 0);
+
+        if (!hasNotifications) {
+          return <span className="text-muted-foreground text-xs">None</span>;
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-20">
+              <SimpleSparkline
+                data={sparklineData}
+                height={30}
+                color="oklch(var(--primary))"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">7d</span>
+          </div>
+        );
+      }
     }
   ], [loadingAction]);
 
@@ -537,6 +630,34 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     });
   };
 
+  // Move column by index (for drag-and-drop in table headers)
+  const moveColumn = (dragIndex: number, hoverIndex: number) => {
+    setVisibleColumns((prev) => {
+      const newOrder = [...prev];
+      const [draggedColumn] = newOrder.splice(dragIndex, 1);
+      newOrder.splice(hoverIndex, 0, draggedColumn);
+      return newOrder;
+    });
+  };
+
+  // Persist column order to localStorage
+  useEffect(() => {
+    if (visibleColumns.length > 0 && typeof window !== 'undefined') {
+      localStorage.setItem('adminUsersColumnOrder', JSON.stringify(visibleColumns));
+    }
+  }, [visibleColumns]);
+
+  // Persist sort settings to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (sortBy) {
+        localStorage.setItem('adminUsersSortBy', JSON.stringify(sortBy));
+      } else {
+        localStorage.removeItem('adminUsersSortBy');
+      }
+    }
+  }, [sortBy]);
+
   // Map visibleColumns order to actual column definitions
   const activeColumns = visibleColumns
     .map((colId) => columns.find((c) => c.id === colId))
@@ -558,6 +679,8 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
         return u.referredBy ? 1 : 0;
       case "payouts":
         return u.financial?.payoutsSetup ? 1 : 0;
+      case "pwa":
+        return u.pwaInstalled ? 1 : 0;
       case "earningsMonth":
         return u.financial?.earningsThisMonthUsd ?? 0;
       case "earningsTotal":
@@ -1363,11 +1486,12 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
   }
 
   return (
-    <div className="p-4 pt-4 space-y-4">
-      <AdminSubpageHeader
-        title="Users"
-        description="View user accounts and their subscription/payout setup status."
-      />
+    <DndProvider backend={HTML5Backend}>
+      <div className="p-4 pt-4 space-y-4">
+        <AdminSubpageHeader
+          title="Users"
+          description="View user accounts and their subscription/payout setup status."
+        />
 
       <div className="space-y-3">
         <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
@@ -1546,31 +1670,15 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
                 >
                   <TableHeader className="sticky top-0 z-30 bg-background">
                     <TableRow className="[&>th]:px-3 [&>th]:py-3 [&>th]:align-top">
-                      {activeColumns.map((col) => (
-                        <TableHead
+                      {activeColumns.map((col, index) => (
+                        <DraggableColumnHeader
                           key={col.id}
-                          className="whitespace-nowrap"
-                          style={{
-                            width: col.minWidth ? `${col.minWidth}px` : 'auto',
-                            minWidth: col.minWidth ? `${col.minWidth}px` : '80px'
-                          }}
-                          onClick={() => handleSort(col.id, col.sortable)}
-                        >
-                          <div className="flex items-center gap-2 cursor-pointer select-none">
-                            {col.label}
-                            {col.sortable && (
-                              sortBy?.id === col.id ? (
-                                sortBy.dir === "asc" ? (
-                                  <Icon name="ArrowUp" size={12} className="text-muted-foreground" />
-                                ) : (
-                                  <Icon name="ArrowDown" size={12} className="text-muted-foreground" />
-                                )
-                              ) : (
-                                <Icon name="ArrowUpDown" size={12} className="text-muted-foreground" />
-                              )
-                            )}
-                          </div>
-                        </TableHead>
+                          column={col}
+                          index={index}
+                          moveColumn={moveColumn}
+                          sortBy={sortBy}
+                          onSort={handleSort}
+                        />
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -1676,7 +1784,14 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">PWA installed</span>
-                          <span className="font-medium">—</span>
+                          {u.pwaInstalled ? (
+                            <Badge variant="success-secondary">
+                              <Icon name="Smartphone" size={12} className="mr-1" />
+                              Installed
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline-static">Not installed</Badge>
+                          )}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Notifications</span>
@@ -1684,32 +1799,6 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 w-full pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                          disabled={loadingAction !== null}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setResetUserId(u);
-                          }}
-                        >
-                          Reset password
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="text-xs"
-                          disabled={loadingAction !== null}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteUserId(u);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -1871,6 +1960,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
           }}
         />
       )}
-    </div>
+      </div>
+    </DndProvider>
   );
 }

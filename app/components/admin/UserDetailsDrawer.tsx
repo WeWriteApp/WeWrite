@@ -153,6 +153,8 @@ export function UserDetailsDrawer({
   const [emailLogsLoading, setEmailLogsLoading] = useState(false);
   const [adminToggleLoading, setAdminToggleLoading] = useState(false);
   const [verificationEmailLoading, setVerificationEmailLoading] = useState(false);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [deleteUserLoading, setDeleteUserLoading] = useState(false);
 
   // Load user details when drawer opens
   useEffect(() => {
@@ -309,6 +311,112 @@ export function UserDetailsDrawer({
       });
     } finally {
       setVerificationEmailLoading(false);
+    }
+  };
+
+  // Reset password
+  const handleResetPassword = async () => {
+    if (!userDetails) return;
+
+    setResetPasswordLoading(true);
+    try {
+      const response = await adminFetch('/api/admin/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: userDetails.uid,
+          email: userDetails.email
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        toast({
+          title: 'Failed to reset password',
+          description: data.error,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Password reset link sent',
+          description: `Reset link sent to ${userDetails.email}`,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send password reset',
+        variant: 'destructive',
+      });
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
+  // Delete user
+  const handleDeleteUser = async () => {
+    if (!userDetails) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to delete ${userDetails.email}? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeleteUserLoading(true);
+    try {
+      const response = await adminFetch('/api/admin/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: userDetails.uid }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        toast({
+          title: 'Failed to delete user',
+          description: data.error,
+          variant: 'destructive',
+        });
+      } else {
+        // Check if manual action is required (Firebase Auth user couldn't be deleted)
+        if (data.manualActionRequired) {
+          toast({
+            title: 'User partially deleted',
+            description: `${data.message}. Firebase Auth user must be deleted manually.`,
+            variant: 'destructive',
+          });
+          // Open Firebase Console in new tab
+          if (data.manualActionRequired.url) {
+            window.open(data.manualActionRequired.url, '_blank');
+          }
+        } else if (data.warnings && data.warnings.length > 0) {
+          toast({
+            title: 'User deleted with warnings',
+            description: data.warnings.join('. '),
+          });
+        } else {
+          toast({
+            title: 'User deleted',
+            description: data.message || 'User successfully deleted',
+          });
+        }
+
+        // Close the drawer after successful deletion
+        onOpenChange(false);
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete user',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteUserLoading(false);
     }
   };
 
@@ -622,19 +730,67 @@ export function UserDetailsDrawer({
         </SideDrawerBody>
 
         <SideDrawerFooter>
-          <div className="flex items-center justify-between w-full gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
-            {userDetails?.username && (
-              <Button
-                variant="secondary"
-                onClick={() => window.open(`/u/${userDetails.username}`, '_blank')}
-              >
-                <Icon name="ExternalLink" size={16} className="mr-2" />
-                View Public Profile
-              </Button>
+          <div className="flex flex-col gap-3 w-full">
+            {/* Action buttons section */}
+            {userDetails && (
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs font-medium text-muted-foreground mb-2">Actions</div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetPassword}
+                    disabled={resetPasswordLoading || deleteUserLoading}
+                  >
+                    {resetPasswordLoading ? (
+                      <>
+                        <Icon name="Loader" size={14} className="mr-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="Key" size={14} className="mr-2" />
+                        Reset Password
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteUser}
+                    disabled={resetPasswordLoading || deleteUserLoading}
+                  >
+                    {deleteUserLoading ? (
+                      <>
+                        <Icon name="Loader" size={14} className="mr-2" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="Trash2" size={14} className="mr-2" />
+                        Delete User
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             )}
+
+            {/* Footer navigation buttons */}
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+              {userDetails?.username && (
+                <Button
+                  variant="secondary"
+                  onClick={() => window.open(`/u/${userDetails.username}`, '_blank')}
+                >
+                  <Icon name="ExternalLink" size={16} className="mr-2" />
+                  View Public Profile
+                </Button>
+              )}
+            </div>
           </div>
         </SideDrawerFooter>
       </SideDrawerContent>

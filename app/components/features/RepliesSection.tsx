@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '../../lib/utils';
 import { Icon } from '@/components/ui/Icon';
 import { PageLinksCardHeader } from '../ui/PageLinksCard';
-import Link from 'next/link';
+import { PillLink } from '../utils/PillLink';
+import { UsernameBadge } from '../ui/UsernameBadge';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import {
@@ -215,28 +216,6 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
     },
   ];
 
-  const getReplyTypeStyles = (replyType: string | null) => {
-    switch (replyType) {
-      case 'agree':
-        return 'border-l-green-500';
-      case 'disagree':
-        return 'border-l-red-500';
-      default:
-        return 'border-l-gray-300 dark:border-l-gray-600';
-    }
-  };
-
-  const getReplyTypeIcon = (replyType: string | null) => {
-    switch (replyType) {
-      case 'agree':
-        return <Icon name="ThumbsUp" size={12} className="text-green-600 dark:text-green-400" />;
-      case 'disagree':
-        return <Icon name="ThumbsDown" size={12} className="text-red-600 dark:text-red-400" />;
-      default:
-        return <Icon name="Minus" size={12} className="text-gray-500" />;
-    }
-  };
-
   return (
     <div className={cn("wewrite-card", className)}>
       <div className="p-4">
@@ -319,26 +298,23 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
 
         {/* Replies List */}
         {!loading && !error && replies.length > 0 && (
-          <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
             {replies.map((reply) => (
-              <Link
-                key={reply.id}
-                href={`/${reply.id}`}
-                className={cn(
-                  "block p-3 wewrite-card border-l-4 hover:bg-muted/50 transition-colors",
-                  getReplyTypeStyles(reply.replyType)
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="mt-0.5">
-                    {getReplyTypeIcon(reply.replyType)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{reply.title}</p>
-                    <p className="text-xs text-muted-foreground">{reply.username}</p>
-                  </div>
-                </div>
-              </Link>
+              <div key={reply.id} className="inline-flex items-center gap-1.5">
+                <PillLink
+                  href={`/${reply.id}`}
+                  pageId={reply.id}
+                  className="text-sm"
+                >
+                  {reply.title || 'Untitled'}
+                </PillLink>
+                <UsernameBadge
+                  userId={reply.userId}
+                  username={reply.username}
+                  size="sm"
+                  showBadge={false}
+                />
+              </div>
             ))}
           </div>
         )}

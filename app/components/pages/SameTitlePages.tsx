@@ -139,7 +139,7 @@ export default function SameTitlePages({
   return (
     <PageLinksCard
       icon="Users"
-      title="Others who wrote about this"
+      title={pageTitle ? `Pages titled "${pageTitle}" by others` : "Pages with the same title by others"}
       items={items}
       loading={loading}
       error={error}

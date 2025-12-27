@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
   let templateId = searchParams.get('id');
   const withHtml = searchParams.get('html') === 'true';
   const userId = searchParams.get('userId');
+  const storedMetadata = searchParams.get('metadata'); // For viewing sent emails with original data
 
   // Get a specific template
   if (templateId) {
@@ -51,8 +52,24 @@ export async function GET(request: NextRequest) {
     // If userId is provided, fetch real user data for personalized preview
     let templateData = template.sampleData;
     let isPersonalized = false;
+    let isFromStoredMetadata = false;
 
-    if (userId && withHtml) {
+    // If stored metadata is provided (from sent email logs), use that instead of fetching fresh data
+    if (storedMetadata && withHtml) {
+      try {
+        const parsedMetadata = JSON.parse(storedMetadata);
+        // Merge stored metadata with sample data (sample data as fallback for missing fields)
+        templateData = { ...template.sampleData, ...parsedMetadata };
+        isPersonalized = true;
+        isFromStoredMetadata = true;
+      } catch (parseError) {
+        console.error('[EMAIL TEMPLATES] Error parsing stored metadata:', parseError);
+        // Fall back to sample data or user data fetch
+      }
+    }
+
+    // If no stored metadata but userId is provided, fetch real user data for personalized preview
+    if (!isFromStoredMetadata && userId && withHtml) {
       try {
         const admin = getFirebaseAdmin();
         if (admin) {
@@ -132,6 +149,7 @@ export async function GET(request: NextRequest) {
         sampleData: template.sampleData,
         ...(withHtml && { html: previewHtml }),
         ...(isPersonalized && { isPersonalized, personalizedData: templateData }),
+        ...(isFromStoredMetadata && { isFromStoredMetadata }),
       },
     });
   }

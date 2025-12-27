@@ -409,7 +409,7 @@ function AdminEmailsPageContent() {
   };
 
   // Open email preview side drawer
-  const openEmailPreview = async (templateId: string, templateName: string, userId?: string, username?: string, triggerReason?: string) => {
+  const openEmailPreview = async (templateId: string, templateName: string, userId?: string, username?: string, triggerReason?: string, storedMetadata?: Record<string, any>) => {
     setEmailPreviewTemplateId(templateId);
     setEmailPreviewTemplateName(templateName);
     setEmailPreviewUserId(userId || null);
@@ -426,6 +426,10 @@ function AdminEmailsPageContent() {
       let url = `/api/admin/email-templates?id=${templateId}&html=true`;
       if (userId) {
         url += `&userId=${userId}`;
+      }
+      // If stored metadata is provided (from sent email logs), pass it to regenerate with original data
+      if (storedMetadata) {
+        url += `&metadata=${encodeURIComponent(JSON.stringify(storedMetadata))}`;
       }
 
       const response = await adminFetch(url);
@@ -968,7 +972,7 @@ function AdminEmailsPageContent() {
                       <td className="px-3 py-2">
                         <button
                           className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 transition-colors"
-                          onClick={() => openEmailPreview(log.templateId, log.templateName || log.templateId, log.recipientUserId, log.recipientUsername)}
+                          onClick={() => openEmailPreview(log.templateId, log.templateName || log.templateId, log.recipientUserId, log.recipientUsername, undefined, log.metadata)}
                         >
                           <Icon name="Eye" size={12} className="text-primary" />
                           {log.templateName || log.templateId}

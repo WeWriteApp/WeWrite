@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
 // Using API client instead of direct Firebase calls
@@ -40,12 +39,7 @@ import { navigateAfterPageDeletion } from "../../utils/postDeletionNavigation";
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
-
-// Dynamically import AddToPageButton to avoid SSR issues
-const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
-  ssr: false,
-  loading: () => <Button variant="secondary" size="lg" className="gap-2 w-full rounded-2xl" disabled>Loading...</Button>
-});
+import AddToPageButton from '../utils/AddToPageButton';
 
 /**
  * PageActions Component
@@ -405,8 +399,8 @@ export function ContentPageActions({
           {/* Add to Page button - available to all users when not editing (ORDER: 2nd) */}
           {!isEditing && <AddToPageButton page={page} />}
 
-          {/* Follow button - available to non-owners when logged in (ORDER: 3rd/last) */}
-          {showFollowButton && user && !isOwner && (
+          {/* Follow button - available to non-owners (handles auth internally) */}
+          {showFollowButton && !isOwner && (
             <FollowButton
               pageId={page.id}
               pageTitle={page.title}

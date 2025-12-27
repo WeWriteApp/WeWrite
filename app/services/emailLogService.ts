@@ -194,19 +194,19 @@ export async function getEmailStats(): Promise<{
       .collection(collectionName)
       .where('sentAt', '>=', sevenDaysAgo)
       .get();
-    
+
     let totalSent = 0;
     let totalFailed = 0;
     let last24Hours = 0;
     const byTemplate: Record<string, { sent: number; failed: number }> = {};
-    
+
     snapshot.docs.forEach(doc => {
       const data = doc.data() as EmailLogEntry;
-      
+
       if (!byTemplate[data.templateId]) {
         byTemplate[data.templateId] = { sent: 0, failed: 0 };
       }
-      
+
       if (data.status === 'sent' || data.status === 'delivered') {
         totalSent++;
         byTemplate[data.templateId].sent++;
@@ -214,12 +214,12 @@ export async function getEmailStats(): Promise<{
         totalFailed++;
         byTemplate[data.templateId].failed++;
       }
-      
+
       if (data.sentAt >= oneDayAgo) {
         last24Hours++;
       }
     });
-    
+
     return {
       totalSent,
       totalFailed,
@@ -236,5 +236,67 @@ export async function getEmailStats(): Promise<{
       last24Hours: 0,
       last7Days: 0,
     };
+  }
+}
+
+/**
+ * Get notification sparkline data for a user (last 7 days)
+ * Combines email logs and push notification events
+ */
+export async function getUserNotificationSparkline(userId: string): Promise<number[]> {
+  try {
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Initialize 7-day array (index 0 = 7 days ago, index 6 = today)
+    const dailyCounts = Array(7).fill(0);
+
+    // 1. Fetch email logs for this user
+    const emailLogsCollectionName = await getEmailLogsCollectionName();
+    const emailSnapshot = await db
+      .collection(emailLogsCollectionName)
+      .where('recipientUserId', '==', userId)
+      .where('sentAt', '>=', sevenDaysAgo.toISOString())
+      .get();
+
+    emailSnapshot.forEach(doc => {
+      const data = doc.data() as EmailLogEntry;
+      const sentDate = new Date(data.sentAt);
+      const dayIndex = Math.floor((sentDate.getTime() - sevenDaysAgo.getTime()) / (24 * 60 * 60 * 1000));
+      if (dayIndex >= 0 && dayIndex < 7) {
+        dailyCounts[dayIndex]++;
+      }
+    });
+
+    // 2. Fetch push notification events (analytics_events with eventType='pwa_notification_sent')
+    const analyticsCollectionName = await getCollectionNameAsync('analytics_events');
+    const startTimestamp = admin.firestore.Timestamp.fromDate(sevenDaysAgo);
+
+    const pushSnapshot = await db
+      .collection(analyticsCollectionName)
+      .where('eventType', '==', 'pwa_notification_sent')
+      .where('userId', '==', userId)
+      .where('timestamp', '>=', startTimestamp)
+      .get();
+
+    pushSnapshot.forEach(doc => {
+      const data = doc.data();
+      const timestamp = data.timestamp;
+      if (timestamp?.toDate) {
+        const eventDate = timestamp.toDate();
+        const dayIndex = Math.floor((eventDate.getTime() - sevenDaysAgo.getTime()) / (24 * 60 * 60 * 1000));
+        if (dayIndex >= 0 && dayIndex < 7) {
+          dailyCounts[dayIndex]++;
+        }
+      }
+    });
+
+    return dailyCounts;
+  } catch (error) {
+    console.error('[EmailLog] Failed to get user notification sparkline:', error);
+    return Array(7).fill(0);
   }
 }

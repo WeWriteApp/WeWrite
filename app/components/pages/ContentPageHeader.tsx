@@ -47,11 +47,7 @@ const TitleSettingsModal = dynamic(() => import('./TitleSettingsModal'), {
   loading: () => null
 });
 
-// Dynamically import AddToPageButton to avoid SSR issues
-const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
-  ssr: false,
-  loading: () => null
-});
+import AddToPageButton from '../utils/AddToPageButton';
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes

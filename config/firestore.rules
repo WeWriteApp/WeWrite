@@ -772,6 +772,21 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Environment-specific backlinks collections (DEV_backlinks, PREVIEW_backlinks, etc.)
+    match /{envBacklinks}/{backlinkId} {
+      // Allow authenticated users to read backlinks (needed for page connections and backlinks display)
+      allow read: if (envBacklinks.matches('.*backlinks') || envBacklinks == 'backlinks') && isAuthenticated();
+
+      // Allow authenticated users to create/update backlinks for their own pages
+      allow create, update: if (envBacklinks.matches('.*backlinks') || envBacklinks == 'backlinks') && isAuthenticated();
+
+      // Allow users to delete backlinks from their own pages
+      allow delete: if (envBacklinks.matches('.*backlinks') || envBacklinks == 'backlinks') && isAuthenticated();
+
+      // Allow admins full access for maintenance
+      allow read, write: if (envBacklinks.matches('.*backlinks') || envBacklinks == 'backlinks') && isAdmin();
+    }
+
     // Username reservation collections (usernames, dev_usernames, preview_usernames)
     match /{envUsernames}/{username} {
       // Allow reading username availability by everyone (for registration)

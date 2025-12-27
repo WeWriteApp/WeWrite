@@ -640,6 +640,38 @@ export async function PUT(request: NextRequest) {
         } catch (typesenseError) {
           // Non-fatal Typesense import error
         }
+
+        // If this is a reply page, send notification to the original page owner
+        if (replyTo) {
+          try {
+            const { createLinkMentionNotification } = await import('../../services/linkMentionService');
+            // Fetch the original page to get owner info
+            const originalPageDoc = await db.collection(getCollectionName('pages')).doc(replyTo).get();
+            if (originalPageDoc.exists) {
+              const originalPageData = originalPageDoc.data();
+              if (originalPageData?.userId && originalPageData.userId !== currentUserId) {
+                await createLinkMentionNotification({
+                  sourceUserId: currentUserId,
+                  sourceUsername: username,
+                  sourcePageId: id,
+                  sourcePageTitle: newPageData.title,
+                  targetUserId: originalPageData.userId,
+                  targetUsername: originalPageData.username,
+                  targetPageId: replyTo,
+                  targetPageTitle: replyToTitle || originalPageData.title || 'Untitled',
+                  isUserMention: false
+                });
+                logger.info('Reply notification sent to original page owner', {
+                  replyTo,
+                  targetUserId: originalPageData.userId
+                }, 'PAGE_SAVE');
+              }
+            }
+          } catch (notifError) {
+            logger.error('Failed to send reply notification', { error: notifError }, 'PAGE_SAVE');
+            // Non-fatal notification error
+          }
+        }
       } else {
         logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
         return createErrorResponse('NOT_FOUND', 'Page not found');
@@ -972,7 +1004,21 @@ export async function PUT(request: NextRequest) {
       // Run backlinks and notifications in parallel (non-blocking)
       const backgroundOps = async () => {
         const pageTitle = title?.trim() || pageData?.title || 'Untitled';
-        const pageUsername = pageData?.username || 'Anonymous';
+
+        // Get username - fallback to fetching from users collection if not on page
+        let pageUsername = pageData?.username;
+        if (!pageUsername && currentUserId) {
+          try {
+            const { getUserProfile } = await import('../../firebase/database/users');
+            const userProfile = await getUserProfile(currentUserId);
+            pageUsername = userProfile?.username || `user_${currentUserId.substring(0, 8)}`;
+          } catch {
+            pageUsername = `user_${currentUserId.substring(0, 8)}`;
+          }
+        }
+        if (!pageUsername) {
+          pageUsername = 'Anonymous';
+        }
 
         await Promise.allSettled([
           // Update backlinks index

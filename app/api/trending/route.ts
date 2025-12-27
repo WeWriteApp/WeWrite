@@ -33,6 +33,8 @@ interface PageViewData {
  */
 type PageData = Pick<Page, 'title' | 'userId' | 'deleted'> & {
   views?: number;
+  viewCount?: number;
+  totalViews?: number;
   lastModified?: string;
   isPublic?: boolean;
 };
@@ -78,12 +80,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       if (pageData.deleted) deletedCount++;
       if (!pageData.title) noTitleCount++;
 
-      // Skip private pages, deleted pages, pages without titles, or pages with zero views
-      const views = pageData.views || 0;
+      // Get lifetime views from any of the view count fields (different systems use different names)
+      const lifetimeViews = pageData.views || pageData.viewCount || pageData.totalViews || 0;
 
-      if (views < 1) lowViewsCount++;
+      if (lifetimeViews < 1) lowViewsCount++;
 
-      if (!pageData.isPublic || pageData.deleted || !pageData.title || views < 1) {
+      // Skip private pages, deleted pages, and pages without titles
+      // NOTE: We no longer filter by lifetimeViews here because:
+      // 1. Different view tracking systems use different field names
+      // 2. We get real 24h view data from pageViews collection below
+      // 3. Pages with recent activity should appear even if legacy view count is 0
+      if (!pageData.isPublic || pageData.deleted || !pageData.title) {
         filteredCount++;
         return;
       }
@@ -93,7 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         title: pageData.title,
         views: 0, // Will be replaced with views24h for trending display
         views24h: 0, // Will be populated with real data below
-        totalViews: views, // Store lifetime total views from pages collection for fallback sorting
+        totalViews: lifetimeViews, // Store lifetime total views from pages collection for fallback sorting
         userId: pageData.userId,
         lastModified: pageData.lastModified,
         hourlyViews: [] // Will be populated with real data below
@@ -119,15 +126,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // Keep defaults if not found: views24h = 0, hourlyViews = [], views = 0
     });
 
+    // Filter out pages with zero views in both 24h AND lifetime (truly no activity)
+    const pagesWithActivity = trendingPages.filter(page =>
+      page.views24h > 0 || page.totalViews > 0
+    );
+
     // Note: User data (including usernames and subscription info) should be fetched
     // by the client using the standardized /api/users/batch endpoint.
     // This keeps the trending API focused on page data only and ensures consistency
     // across all components that display user information.
 
-
-
     // Sort by 24h activity first, then by total lifetime views as fallback
-    trendingPages.sort((a, b) => {
+    pagesWithActivity.sort((a, b) => {
       // Prioritize pages with actual 24h activity
       if (a.views24h > 0 && b.views24h === 0) return -1;
       if (a.views24h === 0 && b.views24h > 0) return 1;
@@ -142,7 +152,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     // Limit to requested count
-    const finalPages = trendingPages.slice(0, limitCount);
+    const finalPages = pagesWithActivity.slice(0, limitCount);
 
     return createApiResponse({
       trendingPages: finalPages

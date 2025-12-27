@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-} from '../ui/dialog';
-import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
-
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '../ui/drawer';
+import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { appendPageReference, getPageById } from '../../utils/apiClient';
 import { toast } from '../ui/use-toast';
@@ -92,6 +90,8 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   // Use external state if provided, otherwise use internal state
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
   const [isAdding, setIsAdding] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isCreatingNewPage, setIsCreatingNewPage] = useState<boolean>(false);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -100,8 +100,9 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   const setIsOpen = externalSetIsOpen || setInternalIsOpen;
 
   const handleClose = (): void => {
-    if (!isAdding) {
+    if (!isAdding && !isCreatingNewPage) {
       setIsOpen(false);
+      setSearchQuery("");
     }
   };
 
@@ -191,7 +192,106 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
     }
   };
 
-  if (!user || !page) return null;
+  // Handle creating a new page with the source content already appended
+  const handleCreateNewPage = async (): Promise<void> => {
+    if (!user || !page || !searchQuery.trim()) return;
+
+    setIsCreatingNewPage(true);
+
+    try {
+      // 1. Check rate limiting
+      if (!checkRateLimit(user.uid)) {
+        toast.error(ERROR_MESSAGES.rate_limit_exceeded);
+        setIsCreatingNewPage(false);
+        return;
+      }
+
+      // 2. Validate source page content size
+      const sourceContent = page.content || [];
+      const contentString = typeof sourceContent === 'string' ? sourceContent : JSON.stringify(sourceContent);
+
+      if (contentString.length > MAX_CONTENT_SIZE) {
+        toast.error(ERROR_MESSAGES.content_too_large);
+        setIsCreatingNewPage(false);
+        return;
+      }
+
+      if (Array.isArray(sourceContent) && sourceContent.length > MAX_CONTENT_BLOCKS) {
+        toast.error(ERROR_MESSAGES.too_many_blocks);
+        setIsCreatingNewPage(false);
+        return;
+      }
+
+      // 3. Create the new page with content that includes a link to the source page
+      // Build initial content with a page link to the source
+      const initialContent = [
+        {
+          type: "paragraph",
+          children: [
+            { text: "From " },
+            {
+              type: "pageLink",
+              pageId: page.id,
+              displayText: page.title || 'Untitled',
+              children: [{ text: page.title || 'Untitled' }]
+            },
+            { text: ":" }
+          ]
+        },
+        { type: "paragraph", children: [{ text: "" }] },
+        // Include the source page's content
+        ...(Array.isArray(sourceContent) ? sourceContent : [])
+      ];
+
+      // 4. Create the page via API
+      const response = await fetch('/api/pages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: searchQuery.trim(),
+          content: initialContent,
+        }),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create page');
+      }
+
+      const result = await response.json();
+      const newPageId = result.data?.id || result.id;
+
+      if (newPageId) {
+        // Close the drawer and redirect to the new page
+        setIsOpen(false);
+        setSearchQuery("");
+        toast.success(`Created "${searchQuery.trim()}" with "${page.title}" added`);
+        router.push(`/${newPageId}`);
+      } else {
+        throw new Error('No page ID returned');
+      }
+    } catch (error: any) {
+      console.error("Error creating new page:", error);
+      toast.error(error.message || ERROR_MESSAGES.unknown_error);
+    } finally {
+      setIsCreatingNewPage(false);
+    }
+  };
+
+  // Don't render if no page data
+  if (!page) return null;
+
+  // Handle click - show toast if user not logged in
+  const handleClick = () => {
+    if (!user) {
+      toast.error("Please sign in to add this page to another page");
+      return;
+    }
+    setIsOpen(true);
+  };
 
   return (
     <>
@@ -200,7 +300,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
           variant="default"
           size="lg"
           className={`gap-2 w-full md:w-auto rounded-2xl font-medium ${className}`}
-          onClick={() => setIsOpen(true)}
+          onClick={handleClick}
           disabled={isAdding}
           aria-label={`Add "${page?.title || 'this page'}" to another page`}
         >
@@ -209,155 +309,72 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         </Button>
       )}
 
-      <Dialog
+      <Drawer
         open={isOpen}
-        onOpenChange={(open) => !isAdding && setIsOpen(open)}
+        onOpenChange={(open) => {
+          if (!isAdding && !isCreatingNewPage) {
+            setIsOpen(open);
+            if (!open) setSearchQuery("");
+          }
+        }}
         hashId="add-to-page"
       >
-        <DialogContent showCloseButton className="max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Add to another page</DialogTitle>
-          </DialogHeader>
-
-          <DialogBody className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
+        <DrawerContent
+          height="70vh"
+          accessibleTitle="Add to another page"
+        >
+          <DrawerHeader>
+            <DrawerTitle>Add to another page</DrawerTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Select a page to add "{page?.title || 'this page'}" to.
             </p>
+          </DrawerHeader>
 
-            {isAdding ? (
+          <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 flex flex-col">
+            {isAdding || isCreatingNewPage ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Icon name="Loader" size={32} className="text-primary mb-3" />
-                <p className="text-sm text-muted-foreground">Adding page...</p>
+                <p className="text-sm text-muted-foreground">
+                  {isCreatingNewPage ? "Creating page..." : "Adding page..."}
+                </p>
               </div>
             ) : (
-              <AddToPageSearch onSelect={handlePageSelect} disabled={isAdding} />
+              <>
+                <div className="flex-1 min-h-0 overflow-auto">
+                  <FilteredSearchResults
+                    onSelect={handlePageSelect}
+                    userId={user?.uid}
+                    placeholder="Search your pages..."
+                    editableOnly={true}
+                    preventRedirect={true}
+                    autoFocus={true}
+                    hideCreateButton={true}
+                    currentPageId={page?.id}
+                    maxResults={50}
+                    onInputChange={(value: string) => setSearchQuery(value)}
+                  />
+                </div>
+
+                {/* Create new page button - shown when user types a search query */}
+                {searchQuery.trim().length >= 2 && (
+                  <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-center gap-2"
+                      onClick={handleCreateNewPage}
+                      disabled={isCreatingNewPage}
+                    >
+                      <Icon name="Plus" size={16} />
+                      <span>Create new page called "{searchQuery.trim()}"</span>
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
-  );
-};
-
-// Search component for Add to Page functionality
-const AddToPageSearch = ({
-  onSelect,
-  disabled
-}: {
-  onSelect: (page: SelectedPage) => void;
-  disabled?: boolean;
-}) => {
-  const { user } = useAuth();
-  const userId = user?.uid;
-  const [recentPages, setRecentPages] = useState<any[]>([]);
-  const [recentPagesLoading, setRecentPagesLoading] = useState<boolean>(true);
-
-  const { currentQuery, results, isLoading, performSearch } = useUnifiedSearch(userId, {
-    context: SEARCH_CONTEXTS.ADD_TO_PAGE,
-    includeContent: false,
-    includeUsers: false,
-    maxResults: 50
-  });
-
-  // Fetch recent pages on component mount
-  useEffect(() => {
-    const fetchRecentPages = async () => {
-      if (!userId) {
-        setRecentPagesLoading(false);
-        return;
-      }
-
-      try {
-        setRecentPagesLoading(true);
-        const response = await fetch(`/api/recent-edits/user?userId=${userId}&limit=10`);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch recent pages: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Filter to only show editable pages (user's own pages)
-        const editableRecentPages = (data.pages || []).filter((page: any) =>
-          page.userId === userId || page.isEditable
-        );
-
-        setRecentPages(editableRecentPages);
-      } catch (error) {
-        console.error('Error fetching recent pages:', error);
-        setRecentPages([]);
-      } finally {
-        setRecentPagesLoading(false);
-      }
-    };
-
-    fetchRecentPages();
-  }, [userId]);
-
-  // Filter search results to only show editable pages
-  const editableSearchPages = results.pages?.filter(page =>
-    page.userId === userId || page.isEditable
-  ) || [];
-
-  // Determine what to show: search results if there's a query, otherwise recent pages
-  const showSearchResults = currentQuery && currentQuery.trim().length > 0;
-  const pagesToShow = showSearchResults ? editableSearchPages : recentPages;
-  const isLoadingPages = showSearchResults ? isLoading : recentPagesLoading;
-
-  return (
-    <div className="space-y-4">
-      <input
-        type="text"
-        placeholder="Search your pages..."
-        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-        onChange={(e) => performSearch(e.target.value)}
-        disabled={disabled}
-        aria-label="Search for pages to add content to"
-      />
-
-      {/* Show section header */}
-      {!isLoadingPages && (
-        <div className="text-sm font-medium text-muted-foreground">
-          {showSearchResults ? 'Search Results' : 'Recently Visited Pages'}
-        </div>
-      )}
-
-      {isLoadingPages && (
-        <div className="text-center py-4">
-          <Icon name="Loader" size={24} className="mx-auto" />
-        </div>
-      )}
-
-      {pagesToShow.length > 0 && (
-        <div className="max-h-60 overflow-y-auto space-y-2">
-          {pagesToShow.map((page) => (
-            <button
-              key={page.id}
-              onClick={() => onSelect(page)}
-              disabled={disabled}
-              className="w-full text-left p-3 rounded-md border border-input hover:bg-accent transition-colors break-words whitespace-normal disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="font-medium break-words whitespace-normal">{page.title || 'Untitled'}</div>
-              {page.username && (
-                <div className="text-sm text-muted-foreground break-words whitespace-normal">by {page.username}</div>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {showSearchResults && !isLoading && editableSearchPages.length === 0 && (
-        <div className="text-center py-4 text-muted-foreground">
-          No editable pages found
-        </div>
-      )}
-
-      {!showSearchResults && !recentPagesLoading && recentPages.length === 0 && (
-        <div className="text-center py-4 text-muted-foreground">
-          No recent pages found. Start typing to search your pages.
-        </div>
-      )}
-    </div>
   );
 };
 

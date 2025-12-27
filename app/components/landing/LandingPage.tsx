@@ -440,7 +440,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
         <div className="absolute inset-0 backdrop-blur-md border-b" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }} />
         {/* Title and buttons - hide logo text on very thin screens */}
         <div className="w-full py-2 relative z-10">
-          <div className="container mx-auto max-w-4xl flex justify-between items-center px-4">
+          <div className={`container mx-auto max-w-4xl flex justify-between items-center ${isStackedHeader ? 'px-3' : 'px-4'}`}>
             <WeWriteLogo
               size="md"
               styled={true}
@@ -460,7 +460,7 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
               }}
             />
 
-            <div className="flex items-center space-x-2">
+            <div className={`flex items-center ${isStackedHeader ? 'gap-1.5' : 'space-x-2'}`}>
               <ModeToggle />
               {/* In preview mode OR when not authenticated, always show Sign In/Sign Up buttons */}
               {(!isAuthenticated || showAsPreview) ? (

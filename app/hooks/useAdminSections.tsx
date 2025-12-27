@@ -71,6 +71,13 @@ const ADMIN_SECTIONS: AdminSection[] = [
     description: 'User management and search'
   },
   {
+    id: 'user-activation',
+    title: 'User Activation',
+    icon: createIconComponent('Flame'),
+    href: '/admin/user-activation',
+    description: 'Activation matrix and funnel'
+  },
+  {
     id: 'feature-flags',
     title: 'Feature Flags',
     icon: createIconComponent('Flag'),

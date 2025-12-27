@@ -90,6 +90,7 @@ const FilteredSearchResults = forwardRef(({
   const searchInputRef = useRef(null);
   const abortControllerRef = useRef(null);
   const lastRequestRef = useRef(null); // Track last request to prevent duplicates
+  const hasCompletedFirstSearch = useRef(false); // Track if we've completed at least one search
 
   // Determine if we're in link editor mode
   const isLinkEditor = !!setDisplayText || preventRedirect;
@@ -312,6 +313,8 @@ const FilteredSearchResults = forwardRef(({
       resetSearchResults();
     } finally {
       setIsSearching(false);
+      // Mark that we've completed at least one search
+      hasCompletedFirstSearch.current = true;
       // Clear the request signature when request completes
       if (lastRequestRef.current === requestSignature) {
         lastRequestRef.current = null;
@@ -713,8 +716,9 @@ const FilteredSearchResults = forwardRef(({
 
             {/* Groups functionality removed */}
 
-            {/* No Results - Only show after search has completed and we have attempted a search */}
-            {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) &&
+            {/* No Results - Only show after at least one search has completed */}
+            {hasCompletedFirstSearch.current &&
+             (search.length >= 2 || isLinkEditor) &&
              pages.length === 0 && users.length === 0 && groups.length === 0 && !isSearching && (
               <div className={wewriteCard('default', 'text-center')}>
                 <div className="text-muted-foreground">

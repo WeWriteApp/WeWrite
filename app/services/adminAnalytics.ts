@@ -207,25 +207,29 @@ export class AdminAnalyticsService {
   static async getAnalyticsEvents(dateRange: DateRange, eventType?: string): Promise<ChartDataPoint[]> {
     try {
       const db = getAdminFirestore();
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        throw new Error('Firebase Admin not initialized');
+      }
       const eventsCollectionName = await getCollectionNameAsync('analytics_events');
       const eventsRef = db.collection(eventsCollectionName);
 
       // OPTIMIZED: Build query with index - uses (eventType, timestamp) index
-      // CRITICAL FIX: Convert Date objects to ISO strings for consistent comparison
-      const startDateStr = dateRange.startDate.toISOString();
-      const endDateStr = dateRange.endDate.toISOString();
+      // FIX: Use Firestore Timestamp objects for proper comparison with stored Timestamp data
+      const startTimestamp = admin.firestore.Timestamp.fromDate(dateRange.startDate);
+      const endTimestamp = admin.firestore.Timestamp.fromDate(dateRange.endDate);
 
       let query = eventsRef
-        .where('timestamp', '>=', startDateStr)
-        .where('timestamp', '<=', endDateStr)
+        .where('timestamp', '>=', startTimestamp)
+        .where('timestamp', '<=', endTimestamp)
         .orderBy('timestamp', 'asc');
 
       // If event type is specified, add filter (uses eventType + timestamp index)
       if (eventType) {
         query = eventsRef
           .where('eventType', '==', eventType)
-          .where('timestamp', '>=', startDateStr)
-          .where('timestamp', '<=', endDateStr)
+          .where('timestamp', '>=', startTimestamp)
+          .where('timestamp', '<=', endTimestamp)
           .orderBy('timestamp', 'asc');
       }
 
@@ -566,6 +570,225 @@ export class AdminAnalyticsService {
 
     } catch (error) {
       console.error('Error fetching page views analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get replies analytics within date range
+   * Groups replies by type (agree, disagree, neutral) for stacked bar chart
+   */
+  static async getRepliesAnalytics(dateRange: DateRange): Promise<{
+    date: string;
+    label: string;
+    agree: number;
+    disagree: number;
+    neutral: number;
+    total: number;
+  }[]> {
+    try {
+      const db = getAdminFirestore();
+      const pagesCollectionName = await getCollectionNameAsync('pages');
+      const pagesRef = db.collection(pagesCollectionName);
+
+      // Create a map to aggregate by date
+      const dailyReplies = new Map<string, { agree: number; disagree: number; neutral: number }>();
+
+      // Initialize all dates in range
+      const currentDate = new Date(dateRange.startDate);
+      while (currentDate <= dateRange.endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        dailyReplies.set(dateStr, { agree: 0, disagree: 0, neutral: 0 });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Query pages that are replies (have replyTo field) within the date range
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
+      // Get all reply pages in the date range
+      const snapshot = await pagesRef
+        .where('deleted', '==', false)
+        .where('createdAt', '>=', startDateStr)
+        .where('createdAt', '<=', endDateStr)
+        .orderBy('createdAt', 'asc')
+        .get();
+
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+
+        // Only count pages that have a replyTo field (are replies)
+        if (!data.replyTo) return;
+
+        const createdAt = data.createdAt;
+        if (!createdAt) return;
+
+        let dateStr: string;
+        if (typeof createdAt === 'string') {
+          dateStr = createdAt.split('T')[0];
+        } else if (createdAt.toDate) {
+          dateStr = createdAt.toDate().toISOString().split('T')[0];
+        } else {
+          return;
+        }
+
+        if (!dailyReplies.has(dateStr)) return;
+
+        const dayData = dailyReplies.get(dateStr)!;
+
+        // Normalize replyType - 'standard' and null map to 'neutral'
+        const replyType = data.replyType;
+        if (replyType === 'agree') {
+          dayData.agree++;
+        } else if (replyType === 'disagree') {
+          dayData.disagree++;
+        } else {
+          // 'neutral', 'standard', null, undefined all count as neutral
+          dayData.neutral++;
+        }
+      });
+
+      // Convert to array format for stacked bar chart
+      const result = Array.from(dailyReplies.entries()).map(([date, data]) => ({
+        date,
+        label: new Date(date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        }),
+        agree: data.agree,
+        disagree: data.disagree,
+        neutral: data.neutral,
+        total: data.agree + data.disagree + data.neutral
+      }));
+
+      // Sort by date
+      result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching replies analytics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notifications sent analytics within date range
+   * Combines email logs and push notification data into stacked bar chart format
+   */
+  static async getNotificationsSentAnalytics(dateRange: DateRange): Promise<{
+    date: string;
+    label: string;
+    emails: number;
+    pushNotifications: number;
+    total: number;
+  }[]> {
+    try {
+      const db = getAdminFirestore();
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        throw new Error('Firebase Admin not initialized');
+      }
+
+      // Create a map to aggregate by date
+      const dailyNotifications = new Map<string, { emails: number; pushNotifications: number }>();
+
+      // Initialize all dates in range
+      const currentDate = new Date(dateRange.startDate);
+      while (currentDate <= dateRange.endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        dailyNotifications.set(dateStr, { emails: 0, pushNotifications: 0 });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Fetch email logs from emailLogs collection
+      const emailLogsCollectionName = await getCollectionNameAsync('emailLogs');
+      const emailLogsRef = db.collection(emailLogsCollectionName);
+
+      // Query emails by sentAt field (ISO string format)
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
+      try {
+        const emailSnapshot = await emailLogsRef
+          .where('sentAt', '>=', startDateStr)
+          .where('sentAt', '<=', endDateStr)
+          .get();
+
+        emailSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const sentAt = data.sentAt;
+          if (sentAt) {
+            const dateStr = sentAt.split('T')[0];
+            if (dailyNotifications.has(dateStr)) {
+              const dayData = dailyNotifications.get(dateStr)!;
+              dayData.emails++;
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching email logs:', error);
+        // Continue with push notifications even if emails fail
+      }
+
+      // Fetch push notifications from analytics_events collection
+      const eventsCollectionName = await getCollectionNameAsync('analytics_events');
+      const eventsRef = db.collection(eventsCollectionName);
+
+      // Use Firestore Timestamp objects for proper comparison
+      const startTimestamp = admin.firestore.Timestamp.fromDate(dateRange.startDate);
+      const endTimestamp = admin.firestore.Timestamp.fromDate(dateRange.endDate);
+
+      try {
+        const pushSnapshot = await eventsRef
+          .where('eventType', '==', 'pwa_notification_sent')
+          .where('timestamp', '>=', startTimestamp)
+          .where('timestamp', '<=', endTimestamp)
+          .get();
+
+        pushSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const timestamp = data.timestamp;
+          if (timestamp) {
+            // Handle both Firestore Timestamp and ISO string
+            let dateStr: string;
+            if (timestamp.toDate) {
+              dateStr = timestamp.toDate().toISOString().split('T')[0];
+            } else if (typeof timestamp === 'string') {
+              dateStr = timestamp.split('T')[0];
+            } else {
+              return;
+            }
+            if (dailyNotifications.has(dateStr)) {
+              const dayData = dailyNotifications.get(dateStr)!;
+              dayData.pushNotifications++;
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching push notifications:', error);
+        // Continue even if push notifications fail
+      }
+
+      // Convert to array format for stacked bar chart
+      const result = Array.from(dailyNotifications.entries()).map(([date, data]) => ({
+        date,
+        label: new Date(date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        }),
+        emails: data.emails,
+        pushNotifications: data.pushNotifications,
+        total: data.emails + data.pushNotifications
+      }));
+
+      // Sort by date
+      result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching notifications sent analytics:', error);
       throw error;
     }
   }

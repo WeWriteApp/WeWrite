@@ -64,7 +64,9 @@ import {
   usePWAInstallsMetrics,
   useVisitorMetrics,
   usePlatformRevenueMetrics,
-  useFollowedUsersMetrics
+  useFollowedUsersMetrics,
+  useNotificationsSentMetrics,
+  useRepliesMetrics
 } from '../../hooks/useDashboardAnalytics';
 import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
 
@@ -162,6 +164,165 @@ const GenericChart = ({
           activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
         />
       </LineChart>
+    </ResponsiveContainer>
+  );
+};
+
+// Stacked bar chart component for notifications (emails + push)
+const StackedBarChart = ({
+  data,
+  height,
+  tooltipFormatter,
+  labelKey = 'label'
+}: {
+  data: any[];
+  height: number;
+  tooltipFormatter?: (value: number) => string;
+  labelKey?: string;
+}) => {
+  const xAxisProps = {
+    dataKey: labelKey,
+    axisLine: false,
+    tickLine: false,
+    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    interval: 'preserveStartEnd' as const
+  };
+
+  const yAxisProps = {
+    axisLine: false,
+    tickLine: false,
+    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    interval: 'preserveStartEnd' as const,
+    width: 30
+  };
+
+  // Custom tooltip for stacked data
+  const StackedTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !Array.isArray(payload) || payload.length === 0) {
+      return null;
+    }
+    return (
+      <div className="bg-background border border-border rounded-lg px-3 py-2 shadow-lg text-sm">
+        <p className="text-muted-foreground text-xs mb-1">{label || 'Data'}</p>
+        <div className="space-y-0.5">
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="font-medium text-foreground flex items-center gap-2">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: entry.fill }}
+              />
+              {entry.name}: {entry.value?.toLocaleString()}
+            </p>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} />
+        <Tooltip content={<StackedTooltip />} />
+        <Bar
+          dataKey="emails"
+          stackId="notifications"
+          fill="oklch(var(--primary))"
+          name="Emails"
+          radius={[0, 0, 0, 0]}
+        />
+        <Bar
+          dataKey="pushNotifications"
+          stackId="notifications"
+          fill="oklch(var(--foreground) / 0.6)"
+          name="Push Notifications"
+          radius={[2, 2, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+};
+
+// Stacked bar chart component for replies (agree, disagree, neutral)
+const RepliesStackedBarChart = ({
+  data,
+  height,
+  labelKey = 'label'
+}: {
+  data: any[];
+  height: number;
+  labelKey?: string;
+}) => {
+  const xAxisProps = {
+    dataKey: labelKey,
+    axisLine: false,
+    tickLine: false,
+    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    interval: 'preserveStartEnd' as const
+  };
+
+  const yAxisProps = {
+    axisLine: false,
+    tickLine: false,
+    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    interval: 'preserveStartEnd' as const,
+    width: 30
+  };
+
+  // Custom tooltip for stacked data
+  const RepliesStackedTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !Array.isArray(payload) || payload.length === 0) {
+      return null;
+    }
+    return (
+      <div className="bg-background border border-border rounded-lg px-3 py-2 shadow-lg text-sm">
+        <p className="text-muted-foreground text-xs mb-1">{label || 'Data'}</p>
+        <div className="space-y-0.5">
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="font-medium text-foreground flex items-center gap-2">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: entry.fill }}
+              />
+              {entry.name}: {entry.value?.toLocaleString()}
+            </p>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} />
+        <Tooltip content={<RepliesStackedTooltip />} />
+        <Bar
+          dataKey="agree"
+          stackId="replies"
+          fill="#22c55e"
+          name="Agree"
+          radius={[0, 0, 0, 0]}
+        />
+        <Bar
+          dataKey="neutral"
+          stackId="replies"
+          fill="oklch(var(--muted-foreground) / 0.5)"
+          name="Neutral"
+          radius={[0, 0, 0, 0]}
+        />
+        <Bar
+          dataKey="disagree"
+          stackId="replies"
+          fill="#ef4444"
+          name="Disagree"
+          radius={[2, 2, 0, 0]}
+        />
+      </BarChart>
     </ResponsiveContainer>
   );
 };
@@ -319,6 +480,26 @@ export function DesktopOptimizedDashboard({
           dataKey="totalPages"
           tooltipFormatter={tooltipFormatter}
           chartType={chartType}
+        />
+      )
+    },
+    {
+      id: 'replies',
+      title: isCumulative ? 'Total Replies (Cumulative)' : 'Replies',
+      hook: (dateRange: DateRange, granularity: number) => useRepliesMetrics(dateRange, granularity),
+      valueKey: 'total',
+      valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.total?.toLocaleString() || '0';
+        }
+        const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
+        return total.toLocaleString();
+      },
+      // Always use stacked bar chart for replies (ignores chartType toggle)
+      chartComponent: ({ data, height }) => (
+        <RepliesStackedBarChart
+          data={data}
+          height={height}
         />
       )
     },
@@ -497,6 +678,26 @@ export function DesktopOptimizedDashboard({
           labelKey="date"
           yAxisWidth={60}
           yAxisTickFormatter={(value) => `$${value.toLocaleString()}`}
+        />
+      )
+    },
+    {
+      id: 'notifications-sent',
+      title: isCumulative ? 'Total Notifications Sent (Cumulative)' : 'Notifications Sent',
+      hook: (dateRange: DateRange, granularity: number) => useNotificationsSentMetrics(dateRange, granularity),
+      valueKey: 'total',
+      valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.total?.toLocaleString() || '0';
+        }
+        const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
+        return total.toLocaleString();
+      },
+      // Always use stacked bar chart for notifications (ignores chartType toggle)
+      chartComponent: ({ data, height }) => (
+        <StackedBarChart
+          data={data}
+          height={height}
         />
       )
     }
