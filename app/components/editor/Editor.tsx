@@ -444,7 +444,7 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [normalizedInitialContent, editor]);
 
-  // Optimized change handler with requestAnimationFrame for better mobile performance
+  // Optimized change handler - synchronous to prevent selection issues
   const handleChange = useCallback((newValue: Descendant[]) => {
     // Update local state immediately for instant UI feedback
     setEditorValue(newValue);
@@ -452,14 +452,15 @@ const Editor: React.FC<EditorProps> = ({
     // Mark this as an internal change to prevent the useEffect from resetting the editor
     isInternalChangeRef.current = true;
 
-    // Defer parent onChange callback to next frame to avoid blocking input
-    requestAnimationFrame(() => {
-      try {
-        onChange(newValue);
-      } catch (error) {
-        // Error in onChange callback
-      }
-    });
+    // Update prevContentRef immediately to prevent the useEffect from detecting this as an external change
+    prevContentRef.current = JSON.stringify(newValue);
+
+    // Call parent onChange synchronously to avoid race conditions with selection
+    try {
+      onChange(newValue);
+    } catch (error) {
+      // Error in onChange callback
+    }
   }, [onChange]);
 
   // Extract plain text from editor content for link suggestion analysis
