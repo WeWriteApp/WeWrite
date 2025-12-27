@@ -62,33 +62,33 @@
 
 /* Page links - internal pages */
 .page-link {
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background-color: oklch(var(--primary));
+  color: oklch(var(--primary-foreground));
 }
 
 .page-link:hover {
-  background-color: hsl(var(--primary) / 0.8);
+  background-color: oklch(var(--primary) / 0.8);
 }
 
 /* User links - user profiles */
 .user-link {
-  background-color: hsl(var(--secondary));
-  color: hsl(var(--secondary-foreground));
+  background-color: oklch(var(--secondary));
+  color: oklch(var(--secondary-foreground));
 }
 
 .user-link:hover {
-  background-color: hsl(var(--secondary) / 0.8);
+  background-color: oklch(var(--secondary) / 0.8);
 }
 
 /* External links */
 .external-link {
-  background-color: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-  border: 1px solid hsl(var(--border));
+  background-color: oklch(var(--muted));
+  color: oklch(var(--muted-foreground));
+  border: 1px solid oklch(var(--border));
 }
 
 .external-link:hover {
-  background-color: hsl(var(--muted) / 0.8);
+  background-color: oklch(var(--muted) / 0.8);
 }
 
 /* User link @ symbol */
@@ -147,7 +147,7 @@ a[data-user-id]::before {
 .paragraph-number {
   font-family: monospace;
   font-size: 0.75rem;
-  color: hsl(var(--muted-foreground));
+  color: oklch(var(--muted-foreground));
   margin-right: 0.75rem;
   flex-shrink: 0;
   user-select: none;
@@ -158,14 +158,14 @@ a[data-user-id]::before {
   flex: 1;
   min-width: 0;
   /* Ensure proper text color inheritance */
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* CRITICAL FIX: Target the exact path where text is blue */
 .wewrite-viewable-content .unified-text-content,
 .wewrite-viewable-content .unified-text-content span,
 .wewrite-viewable-content .unified-text-content span:not(.pill-link):not(.pill-link *) {
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* Also target any other content containers */
@@ -173,20 +173,20 @@ a[data-user-id]::before {
 .page-content .unified-text-content span,
 .unified-editor .unified-text-content,
 .unified-editor .unified-text-content span {
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* Dense paragraph content styling */
 .dense-paragraph-content {
   /* Ensure proper text color in dense mode */
-  color: hsl(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
 }
 
 /* Fix text color in dense mode - target the actual classes being used */
 .dense-mode .unified-text-content,
 .dense-mode .unified-text-content *,
 .dense-mode span:not(.pill-link):not(.pill-link *) {
-  color: hsl(var(--foreground));
+  color: oklch(var(--foreground));
 }
 
 /* ============================================================================
@@ -218,7 +218,7 @@ a[data-user-id]::before {
 .page-link:focus,
 .user-link:focus,
 .external-link:focus {
-  outline: 2px solid hsl(var(--primary));
+  outline: 2px solid oklch(var(--primary));
   outline-offset: 2px;
 }
 
