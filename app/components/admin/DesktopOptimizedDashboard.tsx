@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area, BarChart, Bar } from 'recharts';
+import { Button } from '../ui/button';
 
 // Custom tooltip with better formatting
 const ChartTooltip = ({ active, payload, label, valueFormatter }: any) => {
@@ -67,11 +68,15 @@ import {
 } from '../../hooks/useDashboardAnalytics';
 import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
 
+type ChartType = 'line' | 'bar';
+
 interface DesktopOptimizedDashboardProps {
   dateRange: DateRange;
   granularity: number;
   globalFilters?: GlobalAnalyticsFilters;
   columnCount?: number; // 1-4 columns for grid layout
+  chartType?: ChartType;
+  onChartTypeChange?: (type: ChartType) => void;
 }
 
 interface DashboardRow {
@@ -86,6 +91,81 @@ interface DashboardRow {
   supportsNativeCumulative?: boolean;
 }
 
+// Generic chart component that renders either line or bar chart based on type
+const GenericChart = ({
+  data,
+  height,
+  dataKey,
+  tooltipFormatter,
+  chartType = 'line',
+  labelKey = 'label',
+  yAxisWidth = 30,
+  yAxisTickFormatter
+}: {
+  data: any[];
+  height: number;
+  dataKey: string;
+  tooltipFormatter?: (value: number) => string;
+  chartType?: ChartType;
+  labelKey?: string;
+  yAxisWidth?: number;
+  yAxisTickFormatter?: (value: any) => string;
+}) => {
+  const xAxisProps = {
+    dataKey: labelKey,
+    axisLine: false,
+    tickLine: false,
+    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    interval: 'preserveStartEnd' as const
+  };
+
+  const yAxisProps = {
+    axisLine: false,
+    tickLine: false,
+    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    interval: 'preserveStartEnd' as const,
+    width: yAxisWidth,
+    tickFormatter: yAxisTickFormatter
+  };
+
+  if (chartType === 'bar') {
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+          <XAxis {...xAxisProps} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+          <Bar
+            dataKey={dataKey}
+            fill="oklch(var(--foreground))"
+            radius={[2, 2, 0, 0]}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+        <XAxis {...xAxisProps} />
+        <YAxis {...yAxisProps} />
+        <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+        <Line
+          type="monotone"
+          dataKey={dataKey}
+          stroke="oklch(var(--foreground))"
+          strokeWidth={1.5}
+          dot={false}
+          activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+};
+
 // Default row height in pixels
 const DEFAULT_ROW_HEIGHT = 120;
 const MIN_ROW_HEIGHT = 80;
@@ -95,10 +175,21 @@ export function DesktopOptimizedDashboard({
   dateRange,
   granularity,
   globalFilters,
-  columnCount = 1
+  columnCount = 1,
+  chartType: externalChartType,
+  onChartTypeChange
 }: DesktopOptimizedDashboardProps) {
   // Global height state - all graphs use the same height
   const [globalHeight, setGlobalHeight] = useState<number>(DEFAULT_ROW_HEIGHT);
+
+  // Chart type state - internal state with external override
+  const [internalChartType, setInternalChartType] = useState<ChartType>('line');
+  const chartType = externalChartType ?? internalChartType;
+
+  const handleChartTypeChange = (type: ChartType) => {
+    setInternalChartType(type);
+    onChartTypeChange?.(type);
+  };
 
   // Get height for all rows (now unified)
   const getRowHeight = () => globalHeight;
@@ -199,35 +290,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="count"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="count"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -242,35 +312,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.totalPages || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="totalPages"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="totalPages"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -293,35 +342,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.totalChanges || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="totalChanges"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="totalChanges"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -336,35 +364,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.successful || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="successful"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="successful"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -379,35 +386,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="value"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -422,35 +408,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="total"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="total"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -470,36 +435,16 @@ export function DesktopOptimizedDashboard({
         }).format(totalRevenue);
       },
       tooltipFormatter: (value: number) => `$${value.toLocaleString()}`,
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={50}
-              tickFormatter={(value) => `$${value}`}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="totalRevenue"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="totalRevenue"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+          yAxisWidth={50}
+          yAxisTickFormatter={(value) => `$${value}`}
+        />
       )
     },
     {
@@ -514,35 +459,14 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
       },
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="label"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={30}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="count"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="count"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+        />
       )
     },
     {
@@ -563,36 +487,17 @@ export function DesktopOptimizedDashboard({
         }).format(totalPayouts);
       },
       tooltipFormatter: (value: number) => `$${value.toLocaleString()}`,
-      chartComponent: ({ data, height, tooltipFormatter }) => (
-        <ResponsiveContainer width="100%" height={height}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-            <XAxis
-              dataKey="date"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' }}
-              interval="preserveStartEnd"
-              width={60}
-              tickFormatter={(value) => `$${value.toLocaleString()}`}
-            />
-            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-            <Line
-              type="monotone"
-              dataKey="payouts"
-              stroke="oklch(var(--foreground))"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      chartComponent: ({ data, height, tooltipFormatter, chartType }) => (
+        <GenericChart
+          data={data}
+          height={height}
+          dataKey="payouts"
+          tooltipFormatter={tooltipFormatter}
+          chartType={chartType}
+          labelKey="date"
+          yAxisWidth={60}
+          yAxisTickFormatter={(value) => `$${value.toLocaleString()}`}
+        />
       )
     }
   ];
@@ -613,9 +518,35 @@ export function DesktopOptimizedDashboard({
 
   return (
     <div className="desktop-optimized-dashboard">
-      {/* Instructions - hidden on mobile */}
-      <div className="hidden md:block mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-        💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights.
+      {/* Instructions and Chart Type Toggle - hidden on mobile */}
+      <div className="hidden md:flex mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground items-center justify-between">
+        <div>
+          💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights.
+        </div>
+        {/* Chart Type Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs">Chart:</span>
+          <div className="flex items-center bg-background rounded-md p-0.5 border border-border">
+            <Button
+              variant={chartType === 'line' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleChartTypeChange('line')}
+              className="h-6 px-2 text-xs"
+              title="Line chart"
+            >
+              <Icon name="TrendingUp" size={14} />
+            </Button>
+            <Button
+              variant={chartType === 'bar' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleChartTypeChange('bar')}
+              className="h-6 px-2 text-xs"
+              title="Bar chart"
+            >
+              <Icon name="BarChart3" size={14} />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Dashboard Rows - Grid or List Layout */}
@@ -628,6 +559,7 @@ export function DesktopOptimizedDashboard({
               granularity={granularity}
               globalFilters={globalFilters}
               height={getRowHeight()}
+              chartType={chartType}
             />
             {/* Separator line between graphs - only for single column layout */}
             {columnCount === 1 && index < dashboardRows.length - 1 && (
@@ -647,13 +579,15 @@ function DashboardRow({
   dateRange,
   granularity,
   globalFilters,
-  height
+  height,
+  chartType = 'line'
 }: {
   row: DashboardRow;
   dateRange: DateRange;
   granularity: number;
   globalFilters?: GlobalAnalyticsFilters;
   height: number;
+  chartType?: ChartType;
 }) {
   // Use the hook for this row
   const hookResult = row.hook(dateRange, granularity, globalFilters);
@@ -711,7 +645,7 @@ function DashboardRow({
             No data available
           </div>
         ) : (
-          <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} />
+          <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} chartType={chartType} />
         )}
       </div>
     </div>
