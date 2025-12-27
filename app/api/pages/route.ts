@@ -477,22 +477,33 @@ export async function POST(request: NextRequest) {
         // Don't fail the page creation if notification processing fails
       }
 
-      // Sync to Algolia for search indexing
+      // Sync to search engines for search indexing
+      const searchSyncData = {
+        pageId,
+        title: pageData.title || '',
+        content: contentString || '',
+        authorId: currentUserId,
+        authorUsername: username || '',
+        isPublic: pageData.isPublic ?? true,
+        alternativeTitles: [],
+        lastModified: now,
+        createdAt: now,
+      };
+
+      // Sync to Algolia (primary)
       try {
         const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-        await syncPageToAlgoliaServer({
-          pageId,
-          title: pageData.title || '',
-          content: contentString || '',
-          authorId: currentUserId,
-          authorUsername: username || '',
-          isPublic: pageData.isPublic ?? true,
-          alternativeTitles: [],
-          lastModified: now,
-          createdAt: now,
-        });
+        await syncPageToAlgoliaServer(searchSyncData);
       } catch (algoliaError) {
         // Don't fail the page creation if Algolia sync fails
+      }
+
+      // Sync to Typesense (secondary)
+      try {
+        const { syncPageToTypesenseServer } = await import('../../lib/typesenseSync');
+        await syncPageToTypesenseServer(searchSyncData);
+      } catch (typesenseError) {
+        // Don't fail the page creation if Typesense sync fails
       }
 
     } catch (error: any) {
@@ -601,24 +612,33 @@ export async function PUT(request: NextRequest) {
 
         logger.info('New page document created', { pageId: id }, 'PAGE_SAVE');
 
-        // Sync new page to Algolia immediately (fire-and-forget)
+        // Sync new page to search engines immediately (fire-and-forget)
+        const searchSyncData = {
+          pageId: id,
+          title: newPageData.title,
+          content: JSON.stringify(newPageData.content),
+          authorId: currentUserId,
+          authorUsername: username,
+          isPublic: newPageData.isPublic ?? true,
+          alternativeTitles: [],
+          lastModified: newPageData.lastModified,
+          createdAt: newPageData.createdAt,
+        };
+
+        // Sync to Algolia (primary)
         try {
           const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-          syncPageToAlgoliaServer({
-            pageId: id,
-            title: newPageData.title,
-            content: JSON.stringify(newPageData.content),
-            authorId: currentUserId,
-            authorUsername: username,
-            isPublic: newPageData.isPublic ?? true,
-            alternativeTitles: [],
-            lastModified: newPageData.lastModified,
-            createdAt: newPageData.createdAt,
-          }).catch(() => {
-            // Non-fatal Algolia sync error
-          });
+          syncPageToAlgoliaServer(searchSyncData).catch(() => {});
         } catch (algoliaError) {
           // Non-fatal Algolia import error
+        }
+
+        // Sync to Typesense (secondary)
+        try {
+          const { syncPageToTypesenseServer } = await import('../../lib/typesenseSync');
+          syncPageToTypesenseServer(searchSyncData).catch(() => {});
+        } catch (typesenseError) {
+          // Non-fatal Typesense import error
         }
       } else {
         logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
@@ -1009,17 +1029,15 @@ export async function PUT(request: NextRequest) {
             }
           })(),
 
-          // Sync to Algolia for search indexing
+          // Sync to search engines for search indexing
           (async () => {
             try {
-              const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-
-              // Get the content string for Algolia
+              // Get the content string for search engines
               const contentString = typeof content === 'string'
                 ? content
                 : JSON.stringify(contentNodes);
 
-              await syncPageToAlgoliaServer({
+              const searchSyncData = {
                 pageId: id,
                 title: pageTitle,
                 content: contentString,
@@ -1029,9 +1047,25 @@ export async function PUT(request: NextRequest) {
                 alternativeTitles: pageData?.alternativeTitles || [],
                 lastModified: new Date().toISOString(),
                 createdAt: pageData?.createdAt || new Date().toISOString(),
-              });
+              };
+
+              // Sync to Algolia (primary)
+              try {
+                const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
+                await syncPageToAlgoliaServer(searchSyncData);
+              } catch (err) {
+                // Algolia sync failed - non-fatal
+              }
+
+              // Sync to Typesense (secondary)
+              try {
+                const { syncPageToTypesenseServer } = await import('../../lib/typesenseSync');
+                await syncPageToTypesenseServer(searchSyncData);
+              } catch (err) {
+                // Typesense sync failed - non-fatal
+              }
             } catch (err) {
-              // Algolia sync failed - non-fatal
+              // Search sync failed - non-fatal
             }
           })()
         ]);

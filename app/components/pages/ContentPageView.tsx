@@ -646,7 +646,9 @@ export default function ContentPageView({
     // Extract URL parameters for the new page
     const replyTo = searchParams?.get('replyTo');
     const replyToTitle = searchParams?.get('page');
-    const replyToUsername = searchParams?.get('username') || searchParams?.get('pageUsername');
+    // Note: pageUsername is the page owner's username, username is the reply author's username
+    // For the reply attribution, we need the page owner's username
+    const replyToUsername = searchParams?.get('pageUsername') || searchParams?.get('username');
     const replyType = searchParams?.get('replyType');
     const pageUserId = searchParams?.get('pageUserId');
     const groupId = searchParams?.get('groupId');
@@ -1018,7 +1020,7 @@ export default function ContentPageView({
 
   // Computed values
   const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
-  const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
+  const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt, page?.username]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
   // BULLETPROOF EDIT MODE LOGIC:

@@ -53,7 +53,9 @@ export async function logEmailSend(entry: Omit<EmailLogEntry, 'id' | 'createdAt'
     };
 
     const collectionName = await getEmailLogsCollectionName();
+    console.log(`[EmailLog] Logging email to collection: ${collectionName}, templateId: ${entry.templateId}, recipientUserId: ${entry.recipientUserId}`);
     const docRef = await db.collection(collectionName).add(logEntry);
+    console.log(`[EmailLog] Email logged with docId: ${docRef.id}`);
     return docRef.id;
   } catch (error) {
     console.error('[EmailLog] Failed to log email:', error);
@@ -102,17 +104,41 @@ export async function getEmailLogsByUser(
     const db = admin.firestore();
 
     const collectionName = await getEmailLogsCollectionName();
-    const snapshot = await db
-      .collection(collectionName)
-      .where('recipientUserId', '==', userId)
-      .orderBy('sentAt', 'desc')
-      .limit(limit)
-      .get();
-    
-    return snapshot.docs.map(doc => ({
+    console.log(`[EmailLog] Querying collection: ${collectionName} for userId: ${userId}`);
+
+    let snapshot;
+    try {
+      // Try query with index (recipientUserId + sentAt)
+      snapshot = await db
+        .collection(collectionName)
+        .where('recipientUserId', '==', userId)
+        .orderBy('sentAt', 'desc')
+        .limit(limit)
+        .get();
+    } catch (indexError: any) {
+      // If index is missing, fall back to query without ordering
+      console.warn('[EmailLog] Index query failed, falling back to unordered query:', indexError.message);
+      snapshot = await db
+        .collection(collectionName)
+        .where('recipientUserId', '==', userId)
+        .limit(limit)
+        .get();
+    }
+
+    console.log(`[EmailLog] Found ${snapshot.docs.length} logs for user ${userId}`);
+
+    // Sort manually if we had to fall back
+    const logs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     })) as EmailLogEntry[];
+
+    // Sort by sentAt descending if not already sorted
+    return logs.sort((a, b) => {
+      const dateA = new Date(a.sentAt || a.createdAt).getTime();
+      const dateB = new Date(b.sentAt || b.createdAt).getTime();
+      return dateB - dateA;
+    });
   } catch (error) {
     console.error('[EmailLog] Failed to get logs by user:', error);
     return [];

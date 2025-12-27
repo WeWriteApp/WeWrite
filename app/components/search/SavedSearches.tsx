@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from "../../utils/savedSearches";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
-import { ConfirmationModal } from './ConfirmationModal';
+import { ConfirmationModal } from '../utils/ConfirmationModal';
 
 /**
  * SavedSearches Component
@@ -128,8 +128,10 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
             >
               {search.term}
             </span>
-            <X
-              className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-pointer opacity-70 group-hover:opacity-100"
+            <Icon
+              name="X"
+              size={12}
+              className="text-muted-foreground hover:text-foreground cursor-pointer opacity-70 group-hover:opacity-100"
               onClick={() => handleDeleteClick(index, search.term)}
             />
           </div>

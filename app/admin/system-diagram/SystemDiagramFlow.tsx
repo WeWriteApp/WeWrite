@@ -135,11 +135,12 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
   },
   'algolia': {
     title: 'Algolia',
-    description: 'Full-text search engine',
+    description: 'Primary full-text search engine',
     details: [
       'Instant search results with typo tolerance',
       'Faceted filtering by author, date, visibility',
       'Real-time index updates on page changes',
+      'Primary search engine in fallback chain (Algolia → Typesense → Firestore)',
     ],
     files: [
       { path: 'app/lib/algolia.ts', description: 'Algolia client initialization' },
@@ -152,13 +153,44 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { name: 'deletePage()', description: 'Remove page from index' },
     ],
     upstream: ['infrastructure-group'],
-    downstream: ['content-services'],
+    downstream: ['content-services', 'typesense'],
     monitoring: [
       { tool: 'Algolia Dashboard', description: 'Search analytics and performance' },
       { tool: 'Index Monitoring', description: 'Index size and record count' },
     ],
     links: [
       { label: 'Algolia Dashboard', path: 'https://www.algolia.com/dashboard' },
+    ],
+  },
+  'typesense': {
+    title: 'Typesense',
+    description: 'Secondary full-text search engine',
+    details: [
+      'Open-source search engine with typo tolerance',
+      'Secondary search in fallback chain (Algolia → Typesense → Firestore)',
+      'Environment-aware collections (DEV_ prefix in development)',
+      'Fast search (<50ms typical)',
+    ],
+    files: [
+      { path: 'app/lib/typesense.ts', description: 'Typesense client configuration' },
+      { path: 'app/lib/typesenseSync.ts', description: 'Typesense sync service' },
+      { path: 'app/api/typesense/sync/route.ts', description: 'Batch sync API' },
+      { path: 'app/api/typesense/sync-page/route.ts', description: 'Single page sync API' },
+    ],
+    functions: [
+      { name: 'searchPages()', description: 'Full-text page search' },
+      { name: 'searchUsers()', description: 'User search' },
+      { name: 'syncPageToTypesense()', description: 'Sync page to Typesense' },
+      { name: 'ensureCollectionsExist()', description: 'Create collections if missing' },
+    ],
+    upstream: ['infrastructure-group', 'algolia'],
+    downstream: ['content-services'],
+    monitoring: [
+      { tool: 'Typesense Dashboard', description: 'Cluster health and performance' },
+      { tool: 'Collection Stats', description: 'Document count and index size' },
+    ],
+    links: [
+      { label: 'Typesense Cloud', path: 'https://cloud.typesense.org' },
     ],
   },
   'resend': {
@@ -699,11 +731,23 @@ const createInitialNodes = (onNodeClick: (nodeId: string) => void): Node[] => [
   {
     id: 'algolia',
     type: 'systemNode',
-    position: { x: 400, y: 180 },
+    position: { x: 350, y: 180 },
     data: {
       label: 'Algolia',
       icon: 'Search',
-      description: 'Full-text search',
+      description: 'Primary search',
+      color: LAYER_COLORS.external,
+      onNodeClick,
+    },
+  },
+  {
+    id: 'typesense',
+    type: 'systemNode',
+    position: { x: 500, y: 180 },
+    data: {
+      label: 'Typesense',
+      icon: 'Search',
+      description: 'Secondary search',
       color: LAYER_COLORS.external,
       onNodeClick,
     },
@@ -711,7 +755,7 @@ const createInitialNodes = (onNodeClick: (nodeId: string) => void): Node[] => [
   {
     id: 'resend',
     type: 'systemNode',
-    position: { x: 600, y: 180 },
+    position: { x: 650, y: 180 },
     data: {
       label: 'Resend',
       icon: 'Mail',
@@ -899,7 +943,9 @@ const initialEdges: Edge[] = [
   { id: 'e-stripe-financial', source: 'stripe', target: 'financial-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'payments', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-firebase-content', source: 'firebase', target: 'content-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'Firestore', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-firebase-user', source: 'firebase', target: 'user-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'auth', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
+  { id: 'e-algolia-typesense', source: 'algolia', target: 'typesense', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external, strokeDasharray: '5,5' }, label: 'fallback', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-algolia-content', source: 'algolia', target: 'content-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'search', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
+  { id: 'e-typesense-content', source: 'typesense', target: 'content-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'search', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-resend-user', source: 'resend', target: 'user-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'emails', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
 
   // Stripe webhooks connection

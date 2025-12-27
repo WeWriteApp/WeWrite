@@ -18,8 +18,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel
 } from "../ui/dropdown-menu";
-import { getCurrentUsername } from "../../utils/userUtils";
-import { generateReplyTitle, createReplyContent, encodeReplyParams } from "../../utils/replyUtils";
+import { generateReplyTitle, createReplyContent } from "../../utils/replyUtils";
 import { saveDraftReply, setPendingReplyAction } from "../../utils/draftReplyUtils";
 import {
   Dialog,
@@ -292,86 +291,16 @@ export function ContentPageActions({
     }
 
     // User is authenticated, proceed with normal reply flow
-    try {
-      // Try to get username from multiple sources
-      let username = '';
+    // SIMPLIFIED: Just pass the essential data in URL params
+    // ContentPageView will create the reply attribution when loading the new page
+    const pageOwner = page.username || pageOwnerUsername || 'Anonymous';
 
-      // 1. Try to get username from getCurrentUsername utility
-      try {
-        username = await getCurrentUsername();
-        console.log("Current user username from utility:", username);
-      } catch (error) {
-        console.error("Error getting username from utility:", error);
-      }
+    // Build a simple, clean URL with just the essential params
+    // The /new page will use these to create the reply attribution
+    const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&pageUserId=${page.userId || ''}&pageUsername=${encodeURIComponent(pageOwner)}&replyType=${replyType || 'standard'}`;
 
-      // 2. If we don't have a username, try to get it from wewrite_accounts
-      if (!username) {
-        try {
-          const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-          if (wewriteAccounts) {
-            const accounts = JSON.parse(wewriteAccounts);
-            const user = accounts.find(acc => acc.isCurrent);
-
-            if (user && user.username) {
-              username = user.username;
-              console.log("Found username in wewrite_accounts:", username);
-            }
-          }
-        } catch (error) {
-          console.error("Error getting username from wewrite_accounts:", error);
-        }
-      }
-
-      // 3. If we still don't have a username, use 'Missing username'
-      if (!username) {
-        username = 'Missing username';
-      }
-
-      // Use utility functions to create standardized reply content
-      const replyTitle = generateReplyTitle(page.title || "Untitled");
-      const initialContent = createReplyContent({
-        pageId: page.id,
-        pageTitle: page.title || "Untitled",
-        userId: page.userId || "",
-        username: page.username || "Anonymous",
-        replyType: "standard"
-      });
-
-      // Use utility to encode parameters
-      try {
-        const params = encodeReplyParams({
-          title: replyTitle,
-          content: initialContent,
-          username
-        });
-
-        console.log("Navigating to direct-reply page with:", {
-          title: replyTitle,
-          username,
-          initialContent
-        });
-
-        // CONSOLIDATION FIX: Use unified /new route for all page creation
-        // Include the page title as a separate parameter to ensure it's available for attribution
-        const ownerUsername = pageOwnerUsername || page.username || username;
-        const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&pageUserId=${page.userId || ''}&pageUsername=${encodeURIComponent(ownerUsername || '')}&title=${params.title}&initialContent=${params.content}&username=${params.username}&replyType=${replyType || 'standard'}`;
-        router.push(replyUrl);
-      } catch (error) {
-        console.error("Error navigating to direct-reply page:", error);
-        toast({
-          title: "Reply failed",
-          description: "Failed to create reply",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Error in handleReply:", error);
-      toast({
-        title: "Reply failed",
-        description: "Failed to create reply",
-        variant: "destructive"
-      });
-    }
+    console.log("Reply flow:", { pageOwner, replyUrl });
+    router.push(replyUrl);
   };
 
   // Wrapper that logs analytics then starts flow
@@ -387,17 +316,6 @@ export function ContentPageActions({
       <div className="flex flex-col items-stretch gap-3 w-full">
         {/* Main action buttons - horizontal on desktop, vertical on mobile */}
         <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
-          {/* Follow button - available to non-owners when logged in */}
-          {showFollowButton && user && !isOwner && (
-            <FollowButton
-              pageId={page.id}
-              pageTitle={page.title}
-              pageOwnerId={page.userId}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-              size="lg"
-            />
-          )}
-
           {/* Insert Link button - shown when editing */}
           {isEditing && onInsertLink && (
             <Button
@@ -435,10 +353,7 @@ export function ContentPageActions({
             </Button>
           )}
 
-          {/* Add to Page button - available to all users when not editing */}
-          {!isEditing && <AddToPageButton page={page} />}
-
-          {/* Reply button - available to all users when not editing */}
+          {/* Reply button - available to all users when not editing (ORDER: 1st) */}
           {!isEditing && (
             <>
               <Button
@@ -456,7 +371,7 @@ export function ContentPageActions({
                   <DialogHeader>
                     <DialogTitle>Select reply type</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-2 p-4">
                     <Button
                       variant="secondary"
                       className="w-full justify-start gap-2"
@@ -485,6 +400,20 @@ export function ContentPageActions({
                 </DialogContent>
               </Dialog>
             </>
+          )}
+
+          {/* Add to Page button - available to all users when not editing (ORDER: 2nd) */}
+          {!isEditing && <AddToPageButton page={page} />}
+
+          {/* Follow button - available to non-owners when logged in (ORDER: 3rd/last) */}
+          {showFollowButton && user && !isOwner && (
+            <FollowButton
+              pageId={page.id}
+              pageTitle={page.title}
+              pageOwnerId={page.userId}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+              size="lg"
+            />
           )}
         </div>
 

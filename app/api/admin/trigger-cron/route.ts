@@ -74,10 +74,15 @@ export async function POST(request: NextRequest) {
     switch (cronId) {
       case 'email-verification-reminder': {
         // Only for unverified users who HAVE a proper username
+        // Graduated retry: 3 days after signup, then 7 days, then 21 days (max 3 reminders)
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const twentyOneDaysAgo = new Date();
+        twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
 
         const usersSnapshot = await db.collection(getCollectionName('users'))
           .limit(500)
@@ -99,8 +104,24 @@ export async function POST(request: NextRequest) {
           const createdAt = getDateValue(userData.createdAt);
           if (!createdAt || createdAt > oneDayAgo) { skipped++; continue; }
 
+          // Graduated retry logic
+          const reminderCount = userData.verificationReminderCount || 0;
           const lastReminderSent = getDateValue(userData.verificationReminderSentAt);
-          if (lastReminderSent && lastReminderSent > sevenDaysAgo) { skipped++; continue; }
+
+          // Max 3 reminders total
+          if (reminderCount >= 3) { skipped++; continue; }
+
+          // Check timing based on reminder count
+          if (reminderCount === 0) {
+            // First reminder: must be at least 3 days since signup
+            if (createdAt > threeDaysAgo) { skipped++; continue; }
+          } else if (reminderCount === 1) {
+            // Second reminder: must be at least 7 days since last reminder
+            if (lastReminderSent && lastReminderSent > sevenDaysAgo) { skipped++; continue; }
+          } else if (reminderCount === 2) {
+            // Third reminder: must be at least 21 days since last reminder
+            if (lastReminderSent && lastReminderSent > twentyOneDaysAgo) { skipped++; continue; }
+          }
 
           // Generate verification token
           const verificationToken = randomUUID();
@@ -130,7 +151,8 @@ export async function POST(request: NextRequest) {
 
           if (result.success) {
             await userDoc.ref.update({
-              verificationReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
+              verificationReminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+              verificationReminderCount: admin.firestore.FieldValue.increment(1)
             });
             sent++;
           } else {
@@ -144,10 +166,15 @@ export async function POST(request: NextRequest) {
 
       case 'verify-to-choose-username': {
         // For unverified users who DON'T have a proper username
+        // Graduated retry: 3 days after signup, then 7 days, then 21 days (max 3 reminders)
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const twentyOneDaysAgo = new Date();
+        twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
 
         const usersSnapshot = await db.collection(getCollectionName('users'))
           .limit(500)
@@ -167,9 +194,24 @@ export async function POST(request: NextRequest) {
           const createdAt = getDateValue(userData.createdAt);
           if (!createdAt || createdAt > oneDayAgo) { skipped++; continue; }
 
-          // Check if we already sent this combined reminder
+          // Graduated retry logic
+          const reminderCount = userData.verifyToChooseUsernameCount || 0;
           const lastReminderSent = getDateValue(userData.verifyToChooseUsernameSentAt);
-          if (lastReminderSent && lastReminderSent > sevenDaysAgo) { skipped++; continue; }
+
+          // Max 3 reminders total
+          if (reminderCount >= 3) { skipped++; continue; }
+
+          // Check timing based on reminder count
+          if (reminderCount === 0) {
+            // First reminder: must be at least 3 days since signup
+            if (createdAt > threeDaysAgo) { skipped++; continue; }
+          } else if (reminderCount === 1) {
+            // Second reminder: must be at least 7 days since last reminder
+            if (lastReminderSent && lastReminderSent > sevenDaysAgo) { skipped++; continue; }
+          } else if (reminderCount === 2) {
+            // Third reminder: must be at least 21 days since last reminder
+            if (lastReminderSent && lastReminderSent > twentyOneDaysAgo) { skipped++; continue; }
+          }
 
           // Generate verification token
           const verificationToken = randomUUID();
@@ -199,7 +241,8 @@ export async function POST(request: NextRequest) {
 
           if (result.success) {
             await userDoc.ref.update({
-              verifyToChooseUsernameSentAt: admin.firestore.FieldValue.serverTimestamp()
+              verifyToChooseUsernameSentAt: admin.firestore.FieldValue.serverTimestamp(),
+              verifyToChooseUsernameCount: admin.firestore.FieldValue.increment(1)
             });
             sent++;
           } else {

@@ -137,6 +137,20 @@ const shouldUseProductionCollections = (): boolean => {
  * unauthorized access to production data.
  */
 const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
+  // First check the admin request context (set by withAdminContext)
+  // This is needed because when emailLogService is called from within an API route
+  // that's wrapped in withAdminContext, the context is already set
+  try {
+    const { shouldForceProductionFromContext } = require('./adminRequestContext');
+    const forceProduction = shouldForceProductionFromContext();
+    if (forceProduction) {
+      console.log('[Environment Config] Using production via adminRequestContext');
+      return true;
+    }
+  } catch (e) {
+    // Module not available or not in a context, continue with fallback
+  }
+
   // Check if we're in a server context with headers available
   if (typeof window === 'undefined') {
     try {

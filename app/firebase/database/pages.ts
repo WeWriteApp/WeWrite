@@ -266,27 +266,38 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           // Error updating backlinks index - non-fatal
         }
 
-        // Sync to Algolia for real-time search updates
-        // This ensures new pages are immediately searchable since Algolia is the primary search engine
+        // Sync to search engines for real-time search updates
+        // This ensures new pages are immediately searchable
+        const contentString = typeof versionData.content === 'string'
+          ? versionData.content
+          : JSON.stringify(versionData.content);
+
+        const searchSyncData = {
+          pageId: pageRef.id,
+          title: pageData.title,
+          content: contentString,
+          authorId: data.userId,
+          authorUsername: pageData.username || '',
+          isPublic: pageData.isPublic ?? true,
+          alternativeTitles: [],
+          lastModified: now,
+          createdAt: now,
+        };
+
+        // Sync to Algolia (primary)
         try {
           const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
-          const contentString = typeof versionData.content === 'string'
-            ? versionData.content
-            : JSON.stringify(versionData.content);
-
-          await syncPageToAlgolia({
-            pageId: pageRef.id,
-            title: pageData.title,
-            content: contentString,
-            authorId: data.userId,
-            authorUsername: pageData.username || '',
-            isPublic: pageData.isPublic ?? true,
-            alternativeTitles: [],
-            lastModified: now,
-            createdAt: now,
-          });
+          await syncPageToAlgolia(searchSyncData);
         } catch (algoliaError) {
           // Don't fail page creation if Algolia sync fails
+        }
+
+        // Sync to Typesense (secondary)
+        try {
+          const { syncPageToTypesense } = await import('../../lib/typesenseSync');
+          await syncPageToTypesense(searchSyncData);
+        } catch (typesenseError) {
+          // Don't fail page creation if Typesense sync fails
         }
 
         return pageRef.id;
@@ -325,38 +336,36 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           return { pageData: null, error: "Invalid page ID" };
         }
 
-        // OPTIMIZATION: Check cache first
-        const { pageCache } = await import('../../utils/pageCache');
-        const cachedData = pageCache.get(pageId, userId);
-        if (cachedData) {
-          return cachedData;
-        }
+        // CACHING DISABLED: Always fetch fresh data for editor
+        // const { pageCache } = await import('../../utils/pageCache');
+        // const cachedData = pageCache.get(pageId, userId);
+        // if (cachedData) {
+        //   return cachedData;
+        // }
 
-
-
-      // OPTIMIZATION: Use API route for client-side requests for better performance
+      // Use API route for client-side requests - NO CACHING
       if (typeof window !== 'undefined') {
         try {
           const response = await fetch(`/api/pages/${pageId}${userId ? `?userId=${userId}` : ''}`, {
             headers: {
-              'Cache-Control': 'no-cache', // CRITICAL: No caching for immediate updates after saves
-            }
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            },
+            cache: 'no-store' // Disable fetch cache
           });
 
           if (response.ok) {
-            const pageData = await response.json();
+            const apiResponse = await response.json();
 
             // Transform API response to match expected format
+            // The API returns { success: true, pageData: {...} }
             const result = {
-              pageData: pageData,
+              pageData: apiResponse.pageData || apiResponse,
               versionData: null, // API doesn't return version data yet
               links: [] // API doesn't return links yet
             };
 
-            // OPTIMIZATION: Cache the result
-            const etag = response.headers.get('ETag');
-            pageCache.set(pageId, result, userId, etag || undefined);
-
+            // CACHING DISABLED - do not cache the result
             return result;
           } else if (response.status === 404) {
             return { pageData: null, error: "Page not found" };

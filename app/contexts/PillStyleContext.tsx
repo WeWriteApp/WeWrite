@@ -143,6 +143,8 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         focus-visible:ring-accent
         focus-visible:ring-offset-2
         focus-visible:outline-none
+        overflow-hidden
+        max-w-full
       `.trim().replace(/\s+/g, ' ');
 
       // Style-specific classes

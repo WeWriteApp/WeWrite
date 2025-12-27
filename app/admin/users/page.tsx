@@ -409,27 +409,15 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
       id: "earningsMonth",
       label: "Earnings (month)",
       sortable: true,
-      minWidth: 140,
-      render: (u) => (
-        <span className={`font-medium ${earningColor(u.financial?.earningsThisMonthUsd)}`}>
-          {u.financial?.earningsThisMonthUsd !== undefined
-            ? `$${(u.financial.earningsThisMonthUsd ?? 0).toFixed(2)}`
-            : "—"}
-        </span>
-      )
+      minWidth: 160,
+      render: (u) => renderEarningsWithBar(u.financial?.earningsThisMonthUsd, maxEarningsMonth)
     },
     {
       id: "earningsTotal",
       label: "Earnings (total)",
       sortable: true,
-      minWidth: 130,
-      render: (u) => (
-        <span className={`font-medium ${earningColor(u.financial?.earningsTotalUsd)}`}>
-          {u.financial?.earningsTotalUsd !== undefined
-            ? `$${(u.financial.earningsTotalUsd ?? 0).toFixed(2)}`
-            : "—"}
-        </span>
-      )
+      minWidth: 160,
+      render: (u) => renderEarningsWithBar(u.financial?.earningsTotalUsd, maxEarningsTotal)
     },
     {
       id: "available",
@@ -686,12 +674,34 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     );
   };
 
-  const earningColor = (amt?: number) => {
-    if (amt === undefined || amt === null) return "text-muted-foreground";
-    if (amt >= 100) return "text-emerald-500";
-    if (amt >= 10) return "text-emerald-400";
-    if (amt > 0) return "text-emerald-300";
-    return "text-muted-foreground";
+  // Calculate max earnings for progress bar scaling
+  const maxEarningsMonth = useMemo(() => {
+    return Math.max(1, ...users.map(u => u.financial?.earningsThisMonthUsd ?? 0));
+  }, [users]);
+
+  const maxEarningsTotal = useMemo(() => {
+    return Math.max(1, ...users.map(u => u.financial?.earningsTotalUsd ?? 0));
+  }, [users]);
+
+  // Render earnings with progress bar
+  const renderEarningsWithBar = (amt: number | undefined, maxAmt: number) => {
+    if (amt === undefined || amt === null) {
+      return <span className="text-muted-foreground">—</span>;
+    }
+    const percentage = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
+    return (
+      <div className="flex items-center gap-2 min-w-[100px]">
+        <span className="font-medium text-foreground w-16 text-right">
+          ${amt.toFixed(2)}
+        </span>
+        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[40px]">
+          <div
+            className="h-full bg-emerald-500 rounded-full transition-all"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+    );
   };
 
   const formatRelative = (value: any) => {
@@ -1638,19 +1648,11 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Earnings (month)</span>
-                          <span className={`font-medium ${earningColor(u.financial?.earningsThisMonthUsd)}`}>
-                            {u.financial?.earningsThisMonthUsd !== undefined
-                              ? `$${(u.financial.earningsThisMonthUsd ?? 0).toFixed(2)}`
-                              : "—"}
-                          </span>
+                          {renderEarningsWithBar(u.financial?.earningsThisMonthUsd, maxEarningsMonth)}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Earnings (total)</span>
-                          <span className={`font-medium ${earningColor(u.financial?.earningsTotalUsd)}`}>
-                            {u.financial?.earningsTotalUsd !== undefined
-                              ? `$${(u.financial.earningsTotalUsd ?? 0).toFixed(2)}`
-                              : "—"}
-                          </span>
+                          {renderEarningsWithBar(u.financial?.earningsTotalUsd, maxEarningsTotal)}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Available</span>

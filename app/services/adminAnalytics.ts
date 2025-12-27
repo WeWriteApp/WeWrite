@@ -67,9 +67,14 @@ export class AdminAnalyticsService {
       const usersRef = db.collection(usersCollectionName);
 
       // OPTIMIZED: Use indexed query with date range filter instead of fetching 1000 docs
+      // CRITICAL FIX: Convert Date objects to ISO strings for consistent comparison
+      // Users store createdAt as ISO strings (e.g., "2024-12-15T10:30:00.000Z")
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
       const snapshot = await usersRef
-        .where('createdAt', '>=', dateRange.startDate)
-        .where('createdAt', '<=', dateRange.endDate)
+        .where('createdAt', '>=', startDateStr)
+        .where('createdAt', '<=', endDateStr)
         .orderBy('createdAt', 'asc')
         .get();
       
@@ -133,10 +138,15 @@ export class AdminAnalyticsService {
 
       // OPTIMIZED: Use indexed query with date range filter
       // Index exists: (deleted, createdAt) - we use it to filter non-deleted pages in date range
+      // CRITICAL FIX: Convert Date objects to ISO strings for consistent comparison
+      // Pages store createdAt as ISO strings (e.g., "2024-12-15T10:30:00.000Z")
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
       const snapshot = await pagesRef
         .where('deleted', '==', false)
-        .where('createdAt', '>=', dateRange.startDate)
-        .where('createdAt', '<=', dateRange.endDate)
+        .where('createdAt', '>=', startDateStr)
+        .where('createdAt', '<=', endDateStr)
         .orderBy('createdAt', 'asc')
         .get();
       
@@ -201,17 +211,21 @@ export class AdminAnalyticsService {
       const eventsRef = db.collection(eventsCollectionName);
 
       // OPTIMIZED: Build query with index - uses (eventType, timestamp) index
+      // CRITICAL FIX: Convert Date objects to ISO strings for consistent comparison
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
       let query = eventsRef
-        .where('timestamp', '>=', dateRange.startDate)
-        .where('timestamp', '<=', dateRange.endDate)
+        .where('timestamp', '>=', startDateStr)
+        .where('timestamp', '<=', endDateStr)
         .orderBy('timestamp', 'asc');
 
       // If event type is specified, add filter (uses eventType + timestamp index)
       if (eventType) {
         query = eventsRef
           .where('eventType', '==', eventType)
-          .where('timestamp', '>=', dateRange.startDate)
-          .where('timestamp', '<=', dateRange.endDate)
+          .where('timestamp', '>=', startDateStr)
+          .where('timestamp', '<=', endDateStr)
           .orderBy('timestamp', 'asc');
       }
 

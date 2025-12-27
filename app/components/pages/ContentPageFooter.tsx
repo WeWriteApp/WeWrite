@@ -24,8 +24,9 @@ import { useAuth } from '../../providers/AuthProvider';
 
 /**
  * Page data type for footer - uses centralized Page type
+ * Includes username for reply flows to correctly attribute the page owner
  */
-type PageData = Pick<Page, 'id' | 'title' | 'userId'> & { isNewPage?: boolean; [key: string]: any };
+type PageData = Pick<Page, 'id' | 'title' | 'userId' | 'username'> & { isNewPage?: boolean; [key: string]: any };
 
 interface PageFooterProps {
   page: PageData;

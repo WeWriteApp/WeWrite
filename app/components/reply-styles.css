@@ -12,11 +12,4 @@
  * between edit and view modes based on the user's appearance settings
  */
 
-/* Add @ symbol before user links */
-[data-editor] a.user-link::before,
-[data-editor] a[data-user-id]::before,
-[data-editor] a.editor-link.user-link::before {
-  content: "@";
-  margin-right: 1px;
-  opacity: 0.7;
-}
+/* User link styles - no @ symbol prefix (users are identified by tier badge instead) */

@@ -407,17 +407,15 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       // Cache invalidation failed - non-fatal
     }
 
-    // Sync to Algolia for real-time search updates
+    // Sync to search engines for real-time search updates
     try {
-      const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
-
-      // Get the page data for Algolia sync
+      // Get the page data for search sync
       const pageRefForSync = doc(db, getCollectionName("pages"), pageId);
       const pageSyncSnap = await getDoc(pageRefForSync);
 
       if (pageSyncSnap.exists()) {
         const pageSyncData = pageSyncSnap.data();
-        await syncPageToAlgolia({
+        const searchSyncData = {
           pageId,
           title: pageSyncData.title || '',
           content: contentString,
@@ -427,10 +425,26 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
           alternativeTitles: pageSyncData.alternativeTitles || [],
           lastModified: now,
           createdAt: pageSyncData.createdAt,
-        });
+        };
+
+        // Sync to Algolia (primary)
+        try {
+          const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
+          await syncPageToAlgolia(searchSyncData);
+        } catch (algoliaError) {
+          // Don't fail the save if Algolia sync fails
+        }
+
+        // Sync to Typesense (secondary)
+        try {
+          const { syncPageToTypesense } = await import('../../lib/typesenseSync');
+          await syncPageToTypesense(searchSyncData);
+        } catch (typesenseError) {
+          // Don't fail the save if Typesense sync fails
+        }
       }
-    } catch (algoliaError) {
-      // Don't fail the save if Algolia sync fails
+    } catch (syncError) {
+      // Don't fail the save if search sync fails
     }
 
     return {

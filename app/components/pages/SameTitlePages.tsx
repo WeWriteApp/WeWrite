@@ -123,13 +123,13 @@ export default function SameTitlePages({
     />
   );
 
-  // Footer with "Write your own" button
+  // Footer with "Write your own" button - full width and primary style for prominence
   const footerContent = !isOwner ? (
     <Button
-      variant="outline"
-      size="sm"
+      variant="default"
+      size="default"
       onClick={handleWriteYourOwn}
-      className="gap-2"
+      className="w-full gap-2"
     >
       <Icon name="PenLine" size={16} />
       Write your own

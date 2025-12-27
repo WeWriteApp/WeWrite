@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
-import { pageCache } from '../../../utils/pageCache';
+// CACHING DISABLED: pageCache removed to ensure editor always gets fresh data
+// import { pageCache } from '../../../utils/pageCache';
 import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { isAdminUserId, hasAdminAccess } from '../../../utils/adminConfig';
@@ -132,20 +133,26 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       processedPageData.content = cleanLinkElements(processedPageData.content);
     }
 
-    // Fetch username if userId exists - USE RTDB (primary user store)
+    // Fetch username if userId exists - USE FIRESTORE (with DEV_ prefix support)
     let username = processedPageData.username;
 
-    if (processedPageData.userId && !username) {
-      try {
-        // Use RTDB for user data (primary source of truth for usernames)
-        const rtdb = admin.database();
-        const userRef = rtdb.ref(`users/${processedPageData.userId}`);
-        const userSnapshot = await userRef.get();
+    // Check if stored username looks like a userId (long random string without spaces/special chars)
+    // Valid usernames are short and human-readable, userIds are 20+ char random strings
+    const usernameNeedsRefresh = !username ||
+      username === 'Unknown' ||
+      username === 'Anonymous' ||
+      (username.length > 15 && /^[a-zA-Z0-9]+$/.test(username)); // Looks like a userId
 
-        if (userSnapshot.exists()) {
-          const userData = userSnapshot.val();
+    if (processedPageData.userId && usernameNeedsRefresh) {
+      try {
+        // Use Firestore for user data with proper DEV_ prefix support
+        const usersCollection = await getCollectionNameAsync('users');
+        const userDoc = await db.collection(usersCollection).doc(processedPageData.userId).get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
           // Only use username field, never displayName or email
-          username = userData.username || null;
+          username = userData?.username || null;
         }
 
         // If still no username, fall back to a safe identifier
@@ -153,6 +160,7 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
           username = `user_${processedPageData.userId.slice(0, 8)}`;
         }
       } catch (error) {
+        console.error('Error fetching username from Firestore:', error);
         username = `user_${processedPageData.userId.slice(0, 8)}`;
       }
     }
@@ -210,19 +218,10 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
 }
 
 /**
- * Highly Optimized Page Data API
+ * Page Data API - NO CACHING
  *
- * Features:
- * - Smart caching with ETag-based freshness validation
- * - In-memory cache with short TTL for hot data
- * - Conditional request support (If-None-Match)
- * - Cost monitoring and optimization
- *
- * Caching Strategy:
- * - ETag based on lastModified timestamp ensures clients always get fresh data
- * - Short browser cache (60s) reduces requests for rapid navigation
- * - Conditional requests return 304 Not Modified when data hasn't changed
- * - Server-side cache validated against database lastModified
+ * CACHING COMPLETELY DISABLED to ensure editor always gets fresh data.
+ * Every request goes directly to Firebase.
  */
 export async function GET(
   request: NextRequest,
@@ -247,62 +246,10 @@ export async function GET(
     // Use the requested userId if provided, otherwise use authenticated user
     const effectiveUserId = requestedUserId || currentUserId;
 
-    // Check for conditional request (If-None-Match header)
-    const clientEtag = request.headers.get('if-none-match');
-
-    // Check in-memory cache first for fast responses
-    const cachedData = pageCache.get(pageId, effectiveUserId);
-
-    if (cachedData && clientEtag) {
-      // Validate cache freshness by checking lastModified against database
-      // For conditional requests, we need to verify the ETag is still valid
-      const cachedEtag = pageCache.getETag(pageId);
-
-      if (cachedEtag && clientEtag === cachedEtag) {
-        // Client has current data - quick database check to confirm
-        const admin = getFirebaseAdmin();
-        const db = admin.firestore();
-        const collectionName = await getCollectionNameAsync('pages');
-        const pageRef = db.collection(collectionName).doc(pageId);
-
-        // Only fetch essential fields for validation (minimal read)
-        const pageSnapshot = await pageRef.select('lastModified', 'updatedAt', 'userId').get();
-
-        if (pageSnapshot.exists) {
-          const data = pageSnapshot.data();
-          const currentLastModified = data?.lastModified || data?.updatedAt;
-          const currentEtag = `"${pageId}-${currentLastModified || 'unknown'}"`;
-
-          if (clientEtag === currentEtag) {
-            // Data hasn't changed - return 304 Not Modified
-            trackFirebaseRead('pages', 'getPageById-validation', 1, 'api-etag-check');
-
-            // Check if user is page owner for cache headers
-            const pageOwnerId = data?.userId;
-            const isOwner = effectiveUserId && pageOwnerId === effectiveUserId;
-
-            return new NextResponse(null, {
-              status: 304,
-              headers: {
-                'ETag': currentEtag,
-                // Page owners get no-cache to ensure they always see fresh edits
-                'Cache-Control': isOwner
-                  ? 'private, no-cache, no-store, must-revalidate'
-                  : 'private, max-age=30, must-revalidate',
-                'X-Cache-Status': 'VALIDATED',
-                'X-Response-Time': `${Date.now() - startTime}ms`,
-                'X-Is-Owner': isOwner ? 'true' : 'false',
-              }
-            });
-          }
-        }
-      }
-    }
-
     // Track this read for cost monitoring
     trackFirebaseRead('pages', 'getPageById', 1, 'api-fetch');
 
-    // Fetch page data directly using Firebase Admin (avoid circular calls)
+    // Fetch page data directly using Firebase Admin - NO CACHING
     const result = await fetchPageDirectly(pageId, effectiveUserId, request);
 
     if (result.error) {
@@ -337,46 +284,28 @@ export async function GET(
       );
     }
 
-    // Generate ETag based on lastModified - this ensures freshness
-    const lastModified = result.pageData?.lastModified || result.pageData?.updatedAt || Date.now();
-    const etag = `"${pageId}-${lastModified}"`;
-
-    // Cache the successful result for future requests
-    pageCache.set(pageId, result, effectiveUserId, etag);
-
     const responseTime = Date.now() - startTime;
 
-    // Return successful result with smart cache headers
+    // Return successful result - NO CACHING
     const response = NextResponse.json({
       success: true,
       pageData: result.pageData,
       fromCache: false
     });
 
-    // Smart caching strategy:
-    // - For page owners: no-cache to ensure they always see their latest edits immediately
-    // - For readers: short cache (30s) to reduce load while keeping data fresh
-    const isPageOwner = effectiveUserId && result.pageData?.userId === effectiveUserId;
-
-    if (isPageOwner) {
-      // Page owner should always get fresh data for editing
-      response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-    } else {
-      // Readers can use a short cache
-      response.headers.set('Cache-Control', 'private, max-age=30, must-revalidate');
-    }
-
-    response.headers.set('ETag', etag);
-    response.headers.set('X-Cache-Status', 'MISS');
+    // NO CACHING - Always serve fresh data
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('X-Cache-Status', 'DISABLED');
     response.headers.set('X-Response-Time', `${responseTime}ms`);
     response.headers.set('X-Database-Reads', '1');
-    response.headers.set('X-Is-Owner', isPageOwner ? 'true' : 'false');
 
     return response;
 
   } catch (error) {
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       },

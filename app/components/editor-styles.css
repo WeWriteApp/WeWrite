@@ -91,15 +91,7 @@
   background-color: oklch(var(--muted) / 0.8);
 }
 
-/* User link @ symbol */
-.user-link::before,
-a.user-link::before,
-[data-user-id]::before,
-a[data-user-id]::before {
-  content: '@';
-  opacity: 0.7;
-  margin-right: 1px;
-}
+/* User link styles - no @ symbol prefix (users are identified by tier badge instead) */
 
 /* ============================================================================
    COMPOUND LINK STYLING

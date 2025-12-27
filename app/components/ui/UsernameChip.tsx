@@ -51,8 +51,6 @@ interface UsernameChipProps {
   onClick?: (e: React.MouseEvent) => void;
   /** Additional CSS classes */
   className?: string;
-  /** Show @ prefix before username */
-  showAtSymbol?: boolean;
 }
 
 // Size configurations
@@ -103,7 +101,6 @@ export function UsernameChip({
   clickable = true,
   onClick,
   className,
-  showAtSymbol = false,
 }: UsernameChipProps) {
   // Determine if user has active subscription
   const isActive = subscriptionStatus === 'active';
@@ -119,7 +116,7 @@ export function UsernameChip({
   const chipContent = (
     <span className="inline-flex items-center">
       <span className="truncate max-w-[120px]">
-        {showAtSymbol && '@'}{displayUsername}
+        {displayUsername}
       </span>
       {showBadge && (
         <SubscriptionTierBadge

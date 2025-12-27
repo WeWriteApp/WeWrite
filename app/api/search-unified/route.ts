@@ -5,12 +5,19 @@ import { getCollectionName } from '../../utils/environmentConfig';
 import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker';
 import { recordProductionRead } from '../../utils/productionReadMonitor';
 import { searchPages, searchUsers as algoliaSearchUsers } from '../../lib/algolia';
+import {
+  searchPages as typesenseSearchPages,
+  searchUsers as typesenseSearchUsers,
+  isTypesenseConfigured,
+} from '../../lib/typesense';
 
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
 
-// Feature flag for Algolia - set to true to use Algolia, false for Firestore fallback
+// Feature flags for search engines
+// Order of fallback: Algolia -> Typesense -> Firestore
 const USE_ALGOLIA = true;
+const USE_TYPESENSE = true;
 
 // Type definitions
 interface SearchCacheEntry {
@@ -650,6 +657,82 @@ async function searchWithAlgolia(
 }
 
 /**
+ * Search using Typesense
+ */
+async function searchWithTypesense(
+  searchTerm: string,
+  userId: string | null,
+  options: AlgoliaSearchOptions = {}
+): Promise<{ pages: PageSearchResult[]; users: UserSearchResult[]; source: string; totalPages: number; totalUsers: number }> {
+  const {
+    maxResults = 100,
+    includeUsers = true,
+    filterByUserId = null,
+    currentPageId = null,
+    context = SEARCH_CONTEXTS.MAIN
+  } = options;
+
+  try {
+    // Build Typesense filter
+    let filterBy = '';
+    if (filterByUserId) {
+      filterBy = `authorId:=${filterByUserId}`;
+    }
+
+    const [pagesResponse, usersResponse] = await Promise.all([
+      typesenseSearchPages(searchTerm, {
+        perPage: Math.min(maxResults, 100),
+        filterBy: filterBy || undefined,
+        includeFields: ['id', 'title', 'authorId', 'authorUsername', 'isPublic', 'lastModified', 'alternativeTitles'],
+      }),
+      includeUsers ? typesenseSearchUsers(searchTerm, {
+        perPage: 10,
+        includeFields: ['id', 'username', 'displayName', 'photoURL'],
+      }) : Promise.resolve({ hits: [], found: 0 })
+    ]);
+
+    const pages: PageSearchResult[] = pagesResponse.hits
+      .filter(hit => hit.document.id !== currentPageId)
+      .map(hit => ({
+        id: hit.document.id,
+        title: hit.document.title || 'Untitled',
+        type: 'page' as const,
+        isOwned: hit.document.authorId === userId,
+        isEditable: hit.document.authorId === userId,
+        userId: hit.document.authorId || '',
+        username: hit.document.authorUsername || null,
+        lastModified: hit.document.lastModified ? new Date(hit.document.lastModified * 1000).toISOString() : '',
+        isPublic: hit.document.isPublic,
+        alternativeTitles: hit.document.alternativeTitles,
+        matchScore: hit.text_match || 100,
+        isContentMatch: false,
+        context,
+        _highlightResult: hit.highlight
+      }));
+
+    const users: UserSearchResult[] = (usersResponse.hits || []).map(hit => ({
+      id: hit.document.id,
+      username: hit.document.username || '',
+      displayName: hit.document.displayName,
+      photoURL: hit.document.photoURL || null,
+      type: 'user' as const,
+      matchScore: hit.text_match || 100,
+      _highlightResult: hit.highlight
+    }));
+
+    return {
+      pages,
+      users,
+      source: 'typesense',
+      totalPages: pagesResponse.found || 0,
+      totalUsers: usersResponse.found || 0
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
  * Main API route handler - GET
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -743,11 +826,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Try Algolia first if enabled
+    // Search fallback chain: Algolia -> Typesense -> Firestore
     let pages: PageSearchResult[] = [];
     let users: UserSearchResult[] = [];
     let searchSource = 'firestore';
 
+    // Try Algolia first if enabled
     if (USE_ALGOLIA) {
       try {
         const algoliaResults = await searchWithAlgolia(searchTerm, userId, {
@@ -761,12 +845,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         users = algoliaResults.users;
         searchSource = 'algolia';
       } catch (algoliaError) {
-        // Algolia failed, falling back to Firestore
+        console.log('[Search] Algolia failed, trying Typesense fallback:', algoliaError instanceof Error ? algoliaError.message : 'Unknown error');
       }
     }
 
-    // Firestore fallback
-    if (searchSource !== 'algolia') {
+    // Try Typesense if Algolia failed or is disabled
+    if (searchSource !== 'algolia' && USE_TYPESENSE && isTypesenseConfigured()) {
+      try {
+        const typesenseResults = await searchWithTypesense(searchTerm, userId, {
+          maxResults: maxResults || 100,
+          includeUsers,
+          filterByUserId,
+          currentPageId,
+          context
+        });
+        pages = typesenseResults.pages;
+        users = typesenseResults.users;
+        searchSource = 'typesense';
+      } catch (typesenseError) {
+        console.log('[Search] Typesense failed, falling back to Firestore:', typesenseError instanceof Error ? typesenseError.message : 'Unknown error');
+      }
+    }
+
+    // Firestore fallback (last resort)
+    if (searchSource !== 'algolia' && searchSource !== 'typesense') {
       const [firestorePages, firestoreUsers] = await Promise.all([
         searchPagesComprehensive(userId, searchTerm, {
           context,

@@ -191,14 +191,6 @@ const SearchResultsDisplay = React.memo(({
           resultsCount: totalResults
         }}
       />
-      {/* Search Results Summary */}
-      <div className="mb-4">
-        <p className="text-sm text-muted-foreground">
-          {isLoading
-            ? "Searching..."
-            : `${totalResults} results`}
-        </p>
-      </div>
 
       <div className="space-y-6">
         {/* Error State - ignore AbortError as it's expected behavior during typing */}
@@ -236,8 +228,8 @@ const SearchResultsDisplay = React.memo(({
             <h3 className="text-lg font-semibold mb-4">Users</h3>
             {results.users.map(user => (
               <div key={`user-${user.id}`} className="flex items-center gap-2 min-w-0">
-                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-60px)]">
-                  <PillLink href={`/user/${user.id}`} className="max-w-full truncate">
+                <div className="min-w-0 flex-1 max-w-[calc(100%-60px)]">
+                  <PillLink href={`/user/${user.id}`} className="max-w-full">
                     {user?.username}
                   </PillLink>
                 </div>
@@ -255,12 +247,12 @@ const SearchResultsDisplay = React.memo(({
             <h3 className="text-lg font-semibold mb-4">Pages</h3>
             {results.pages.map(page => (
               <div key={`page-${page.id}`} className="flex items-center gap-2 min-w-0">
-                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
+                <div className="min-w-0 flex-1 max-w-[calc(100%-80px)]">
                   <PillLink
                     href={`/${page.id}`}
                     isPublic={page.isPublic}
                     isOwned={page.userId === userId}
-                    className="hover:scale-105 transition-transform"
+                    className="hover:scale-105 transition-transform max-w-full"
                   >
                       {page.title && isExactDateFormat(page.title)
                         ? formatDateString(page.title)

@@ -65,7 +65,8 @@ export const createReplyContent = ({
   const normalizedType = replyType === 'agree' || replyType === 'disagree' ? replyType : null;
 
   // Ensure we have a valid username to display
-  const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+  // Keep "Anonymous" as a valid fallback - don't convert it to something else
+  const displayUsername = username && username.trim() !== "" ? username : "Anonymous";
 
   const sentimentText = normalizedType === 'agree'
     ? 'I agree with '

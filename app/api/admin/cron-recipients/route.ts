@@ -162,11 +162,16 @@ export async function GET(request: NextRequest) {
 
       case 'email-verification-reminder': {
         // Unverified users who HAVE a proper username (unverified + no username go to verify-to-choose-username)
-        // Send reminders weekly (don't spam if already sent within 7 days)
+        // Graduated retry: 3 days after signup, then 7 days after last send, then 21 days after last send
+        // Max 3 reminders total (tracked by verificationReminderCount)
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const twentyOneDaysAgo = new Date();
+        twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
 
         // Helper to parse various date formats
         const getDateValue = (val: any): Date | null => {
@@ -205,18 +210,38 @@ export async function GET(request: NextRequest) {
           const createdAt = getDateValue(data.createdAt);
           if (!createdAt || createdAt > oneDayAgo) continue;
 
-          // Check last reminder sent - don't send more than once per week
+          // Graduated retry logic:
+          // - First reminder: 3 days after signup (count = 0 or undefined)
+          // - Second reminder: 7 days after first reminder (count = 1)
+          // - Third reminder: 21 days after second reminder (count = 2)
+          // - No more reminders after 3 (count >= 3)
+          const reminderCount = data.verificationReminderCount || 0;
           const lastReminderSent = getDateValue(data.verificationReminderSentAt);
-          if (lastReminderSent && lastReminderSent > sevenDaysAgo) continue;
+
+          // Max 3 reminders total
+          if (reminderCount >= 3) continue;
+
+          // Check timing based on reminder count
+          if (reminderCount === 0) {
+            // First reminder: must be at least 3 days since signup
+            if (createdAt > threeDaysAgo) continue;
+          } else if (reminderCount === 1) {
+            // Second reminder: must be at least 7 days since last reminder
+            if (lastReminderSent && lastReminderSent > sevenDaysAgo) continue;
+          } else if (reminderCount === 2) {
+            // Third reminder: must be at least 21 days since last reminder
+            if (lastReminderSent && lastReminderSent > twentyOneDaysAgo) continue;
+          }
 
           const daysAgo = Math.floor((Date.now() - createdAt.getTime()) / 86400000);
+          const reminderLabel = reminderCount === 0 ? '1st' : reminderCount === 1 ? '2nd' : '3rd (final)';
 
           recipients.push({
             userId: doc.id,
             email: data.email,
             username: data.username,
             type: 'unverified',
-            reason: `Signed up ${daysAgo} days ago, email not verified (has username: ${data.username})`
+            reason: `Signed up ${daysAgo} days ago, ${reminderLabel} reminder (has username: ${data.username})`
           });
 
           if (recipients.length >= 50) break;
@@ -227,10 +252,16 @@ export async function GET(request: NextRequest) {
       case 'verify-to-choose-username': {
         // Unverified users who DON'T have a proper username
         // Combined email: verify first, then choose username
+        // Graduated retry: 3 days after signup, then 7 days after last send, then 21 days after last send
+        // Max 3 reminders total (tracked by verifyToChooseUsernameCount)
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const twentyOneDaysAgo = new Date();
+        twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
 
         // Helper to parse various date formats
         const getDateValue = (val: any): Date | null => {
@@ -265,18 +296,38 @@ export async function GET(request: NextRequest) {
           const createdAt = getDateValue(data.createdAt);
           if (!createdAt || createdAt > oneDayAgo) continue;
 
-          // Check if we already sent this combined reminder
+          // Graduated retry logic:
+          // - First reminder: 3 days after signup (count = 0 or undefined)
+          // - Second reminder: 7 days after first reminder (count = 1)
+          // - Third reminder: 21 days after second reminder (count = 2)
+          // - No more reminders after 3 (count >= 3)
+          const reminderCount = data.verifyToChooseUsernameCount || 0;
           const lastReminderSent = getDateValue(data.verifyToChooseUsernameSentAt);
-          if (lastReminderSent && lastReminderSent > sevenDaysAgo) continue;
+
+          // Max 3 reminders total
+          if (reminderCount >= 3) continue;
+
+          // Check timing based on reminder count
+          if (reminderCount === 0) {
+            // First reminder: must be at least 3 days since signup
+            if (createdAt > threeDaysAgo) continue;
+          } else if (reminderCount === 1) {
+            // Second reminder: must be at least 7 days since last reminder
+            if (lastReminderSent && lastReminderSent > sevenDaysAgo) continue;
+          } else if (reminderCount === 2) {
+            // Third reminder: must be at least 21 days since last reminder
+            if (lastReminderSent && lastReminderSent > twentyOneDaysAgo) continue;
+          }
 
           const daysAgo = Math.floor((Date.now() - createdAt.getTime()) / 86400000);
+          const reminderLabel = reminderCount === 0 ? '1st' : reminderCount === 1 ? '2nd' : '3rd (final)';
 
           recipients.push({
             userId: doc.id,
             email: data.email,
             username: data.username,
             type: 'unverified-no-username',
-            reason: `Signed up ${daysAgo} days ago, needs verification + username`
+            reason: `Signed up ${daysAgo} days ago, ${reminderLabel} reminder, needs verification + username`
           });
 
           if (recipients.length >= 50) break;

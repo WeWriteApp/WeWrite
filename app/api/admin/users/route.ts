@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
       // Add financial data if requested
       if (includeFinancial) {
         const subscriptionData = subscriptionsMap.get(uid);
-        const earningsData = earningsMap.get(uid) || { total: 0, available: 0, pending: 0 };
+        const earningsData = earningsMap.get(uid) || { total: 0, available: 0, thisMonth: 0 };
 
         // Use Firestore subscription document as source of truth (updated by webhooks)
         let subscriptionAmount: number | null = null;
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
           subscriptionCancelReason,
           availableEarningsUsd: earningsData.available > 0 ? earningsData.available / 100 : undefined,
           earningsTotalUsd: earningsData.total > 0 ? earningsData.total / 100 : undefined,
-          earningsThisMonthUsd: earningsData.pending > 0 ? earningsData.pending / 100 : undefined,
+          earningsThisMonthUsd: earningsData.thisMonth > 0 ? earningsData.thisMonth / 100 : undefined,
           payoutsSetup: Boolean(user.stripeConnectedAccountId),
         };
       }
@@ -283,9 +283,12 @@ async function batchFetchEarnings(
   db: FirebaseFirestore.Firestore,
   collectionName: string,
   userIds: string[]
-): Promise<Map<string, { total: number; available: number; pending: number }>> {
-  const map = new Map<string, { total: number; available: number; pending: number }>();
+): Promise<Map<string, { total: number; available: number; thisMonth: number }>> {
+  const map = new Map<string, { total: number; available: number; thisMonth: number }>();
   if (userIds.length === 0) return map;
+
+  // Get current month in YYYY-MM format for "this month" calculation
+  const currentMonth = new Date().toISOString().slice(0, 7);
 
   try {
     // Firestore 'in' query supports up to 30 items, batch if needed
@@ -309,17 +312,22 @@ async function batchFetchEarnings(
         const data = doc.data();
         const userId = data.userId;
         const cents = data.totalUsdCentsReceived || data.totalCentsReceived || 0;
+        const month = data.month; // YYYY-MM format
 
         if (!map.has(userId)) {
-          map.set(userId, { total: 0, available: 0, pending: 0 });
+          map.set(userId, { total: 0, available: 0, thisMonth: 0 });
         }
 
         const entry = map.get(userId)!;
         entry.total += cents;
 
-        if (data.status === 'pending') {
-          entry.pending += cents;
-        } else if (data.status === 'available') {
+        // "This month" = earnings from current month (by month field, not status)
+        if (month === currentMonth) {
+          entry.thisMonth += cents;
+        }
+
+        // "Available" = earnings that can be paid out
+        if (data.status === 'available') {
           entry.available += cents;
         }
       }

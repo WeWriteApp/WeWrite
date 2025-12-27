@@ -17,7 +17,7 @@ This document outlines the current search implementation, known limitations, and
 
 ## Current Implementation
 
-### Status: **Production** (with limitations)
+### Status: **Production** (with multi-engine fallback)
 
 ### Architecture Overview
 
@@ -29,32 +29,54 @@ User Input
     |
     v
 +---------------------------+
-|   Phase 1: Prefix Queries |  <-- Fast Firestore queries
-|   (Case variations)       |      Only matches titles STARTING with search term
+|   Engine 1: Algolia       |  <-- Primary search engine (when available)
+|   Fast, typo-tolerant     |      Limited by free tier quotas
 +---------------------------+
-    |
+    | (on failure/limit)
     v
 +---------------------------+
-|   Phase 2: Comprehensive  |  <-- Client-side filtering
-|   Search (1500 docs)      |      Scans recent pages for substring matches
+|   Engine 2: Typesense     |  <-- Secondary search engine
+|   Fast, self-hosted/cloud |      Full-text search with typo tolerance
 +---------------------------+
-    |
+    | (on failure)
     v
 +---------------------------+
-|   Phase 3: Fallback       |  <-- Additional fallback
-|   (500 docs by createdAt) |      Catches older pages
+|   Engine 3: Firestore     |  <-- Fallback (slow but reliable)
+|   Prefix + client scan    |      Scans up to 1500 recent docs
 +---------------------------+
     |
     v
 [Score & Rank Results] --> Return to Client
 ```
 
+### Search Engine Fallback Chain
+
+The unified search implements a waterfall fallback pattern:
+
+1. **Algolia** (Primary) - Fast, managed service with typo tolerance
+   - Free tier: 10K searches/month
+   - Falls back if: quota exceeded, service unavailable, or disabled
+
+2. **Typesense** (Secondary) - Open-source alternative
+   - Uses Typesense Cloud or self-hosted instance
+   - Falls back if: not configured, service unavailable
+
+3. **Firestore** (Fallback) - Built-in database search
+   - Prefix queries + client-side filtering
+   - Always available but slower
+
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `app/api/search-unified/route.ts` | Main search API endpoint |
+| `app/api/search-unified/route.ts` | Main search API endpoint with fallback chain |
 | `app/hooks/useUnifiedSearch.ts` | Client-side search hook with debouncing |
+| `app/lib/algolia.ts` | Algolia client configuration |
+| `app/lib/algoliaSync.ts` | Algolia sync service for page updates |
+| `app/lib/typesense.ts` | Typesense client configuration |
+| `app/lib/typesenseSync.ts` | Typesense sync service for page updates |
+| `app/api/typesense/sync/route.ts` | Typesense batch sync API |
+| `app/api/typesense/sync-page/route.ts` | Typesense single page sync API |
 | `app/utils/searchCache.ts` | Multi-tier caching system |
 | `app/utils/searchUtils.ts` | Shared search utilities |
 
@@ -177,16 +199,37 @@ It does **NOT** support:
 
 ---
 
-### Option 3: Typesense (Self-Hosted or Cloud)
+### Option 3: Typesense (Self-Hosted or Cloud) ✅ IMPLEMENTED
 
 **Overview**: Open-source alternative focused on simplicity and speed.
 
+**Status**: Implemented as secondary search engine in fallback chain.
+
+**Implementation Files**:
+- `app/lib/typesense.ts` - Client configuration and search functions
+- `app/lib/typesenseSync.ts` - Real-time sync service
+- `app/api/typesense/sync/route.ts` - Batch sync API
+- `app/api/typesense/sync-page/route.ts` - Single page sync API
+
+**Environment Variables Required**:
+```
+NEXT_PUBLIC_TYPESENSE_HOST=xxx.typesense.net
+NEXT_PUBLIC_TYPESENSE_PORT=443
+NEXT_PUBLIC_TYPESENSE_PROTOCOL=https
+NEXT_PUBLIC_TYPESENSE_SEARCH_KEY=your-search-key
+TYPESENSE_ADMIN_KEY=your-admin-key (server-side only)
+```
+
+**Collections**:
+- `pages` / `DEV_pages` - Page documents with title, content, author info
+- `users` / `DEV_users` - User documents with username, display name
+
 **Pros**:
 - Open source
-- Very fast
+- Very fast (<50ms typical)
 - Typo tolerance
-- Good Firebase integration
-- Simpler than Elasticsearch
+- Environment-aware collections (DEV_ prefix in development)
+- Graceful fallback when not configured
 
 **Cons**:
 - Smaller community than Algolia/Meilisearch

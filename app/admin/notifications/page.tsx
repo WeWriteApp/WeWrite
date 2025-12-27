@@ -100,10 +100,12 @@ function AdminEmailsPageContent() {
 
   // Tab state from URL
   const tabParam = searchParams.get('tab');
-  const activeTab = (tabParam === 'events' ? 'events' : 'templates') as 'templates' | 'events';
+  const validTabs = ['templates', 'upcoming', 'sent'] as const;
+  type TabType = typeof validTabs[number];
+  const activeTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'templates';
 
   // Function to change tab with URL update
-  const setActiveTab = (tab: 'templates' | 'events') => {
+  const setActiveTab = (tab: TabType) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`/admin/notifications?${params.toString()}`, { scroll: false });
@@ -227,10 +229,10 @@ function AdminEmailsPageContent() {
     }
   }, [user, authLoading, toast]);
 
-  // Load events data when Events tab is active
+  // Load sent emails data when Sent tab is active
   useEffect(() => {
-    const loadEventsData = async () => {
-      if (activeTab !== 'events' || !user || authLoading) return;
+    const loadSentData = async () => {
+      if (activeTab !== 'sent' || !user || authLoading) return;
 
       setAllLogsLoading(true);
       try {
@@ -241,10 +243,10 @@ function AdminEmailsPageContent() {
           setAllEmailLogs(logsData.logs || []);
         }
       } catch (error) {
-        console.error('Failed to load events data:', error);
+        console.error('Failed to load sent emails:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load notification events',
+          description: 'Failed to load sent emails',
           variant: 'destructive',
         });
       } finally {
@@ -252,7 +254,7 @@ function AdminEmailsPageContent() {
       }
     };
 
-    loadEventsData();
+    loadSentData();
   }, [activeTab, user, authLoading, toast]);
 
   // Load all cron recipients for both tabs (templates shows "upcoming" counts, events shows list)
@@ -287,6 +289,37 @@ function AdminEmailsPageContent() {
       loadAllCronRecipients();
     }
   }, [user, authLoading]);
+
+  // Function to refresh all cron recipients (force reload)
+  const refreshAllCronRecipients = async () => {
+    // Set all to loading
+    const loadingState: Record<string, { loading: boolean; recipients: any[] }> = {};
+    for (const cron of cronSchedules) {
+      if (!cron.isSystemJob) {
+        loadingState[cron.id] = { loading: true, recipients: [] };
+      }
+    }
+    setCronRecipients(loadingState);
+
+    // Reload all
+    for (const cron of cronSchedules) {
+      if (cron.isSystemJob) continue;
+      try {
+        const res = await adminFetch(`/api/admin/cron-recipients?cronId=${cron.id}`);
+        const data = await res.json();
+        setCronRecipients(prev => ({
+          ...prev,
+          [cron.id]: { loading: false, recipients: data.recipients || [] }
+        }));
+      } catch (error) {
+        console.error('Failed to fetch recipients:', error);
+        setCronRecipients(prev => ({
+          ...prev,
+          [cron.id]: { loading: false, recipients: [] }
+        }));
+      }
+    }
+  };
 
   // Load template preview and logs
   const loadPreview = async (templateId: string) => {
@@ -664,8 +697,8 @@ function AdminEmailsPageContent() {
     );
   }
 
-  // Render Events tab content
-  const renderEventsTab = () => {
+  // Render the Upcoming tab content
+  const renderUpcomingTab = () => {
     // Separate email-sending crons from system (backend) jobs
     const emailCrons = cronSchedules.filter(c => !c.isSystemJob);
     const systemCrons = cronSchedules.filter(c => c.isSystemJob);
@@ -675,7 +708,6 @@ function AdminEmailsPageContent() {
     const sortedSystemCrons = [...systemCrons].sort((a, b) => a.nextRun.getTime() - b.nextRun.getTime());
 
     // Build a flat list of all upcoming notifications with their scheduled time
-    // Only include email-sending crons (not system jobs)
     const buildUpcomingNotificationsList = () => {
       const notifications: Array<{
         cronId: string;
@@ -698,9 +730,7 @@ function AdminEmailsPageContent() {
         }
       }
 
-      // Sort by next run time (soonest first)
       notifications.sort((a, b) => a.nextRun.getTime() - b.nextRun.getTime());
-
       return notifications;
     };
 
@@ -713,12 +743,20 @@ function AdminEmailsPageContent() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Icon name="Calendar" size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">Upcoming Scheduled Notifications</h3>
+            <h3 className="text-sm font-semibold">Scheduled Notifications</h3>
             {!isLoadingRecipients && (
               <Badge variant="secondary" className="text-xs">
                 {upcomingNotifications.length}
               </Badge>
             )}
+            <button
+              onClick={refreshAllCronRecipients}
+              disabled={isLoadingRecipients}
+              className="ml-auto text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              title="Refresh upcoming notifications"
+            >
+              <Icon name="RefreshCw" size={14} className={isLoadingRecipients ? 'animate-spin' : ''} />
+            </button>
           </div>
 
           {isLoadingRecipients ? (
@@ -729,7 +767,7 @@ function AdminEmailsPageContent() {
           ) : upcomingNotifications.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               <Icon name="Calendar" size={40} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No upcoming notifications found</p>
+              <p className="text-sm">No upcoming notifications scheduled</p>
             </div>
           ) : (
             <div className="wewrite-card p-0 overflow-hidden">
@@ -802,187 +840,6 @@ function AdminEmailsPageContent() {
           )}
         </div>
 
-        {/* Recent Notification Events */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Icon name="History" size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">Recent Notification Events</h3>
-            <Badge variant="secondary" className="text-xs">
-              {allEmailLogs.length}
-            </Badge>
-          </div>
-
-          {allEmailLogs.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              <Icon name="Mail" size={40} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No notification events found</p>
-            </div>
-          ) : (
-            <div className="wewrite-card p-0 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Type</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Username</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Email</th>
-                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Sent</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border max-h-[500px] overflow-y-auto">
-                  {allEmailLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-muted/20">
-                      <td className="px-3 py-2 text-left">
-                        <div className="flex items-center gap-1.5">
-                          {(() => {
-                            // Build tooltip content
-                            const tooltipParts: string[] = [`Status: ${log.status}`];
-                            if (log.errorMessage) tooltipParts.push(`Error: ${log.errorMessage}`);
-                            if (log.bounceReason) tooltipParts.push(`Bounce: ${log.bounceReason}`);
-                            if (log.resendId) tooltipParts.push(`Resend ID: ${log.resendId}`);
-                            if (log.metadata?.scheduledAt) tooltipParts.push(`Scheduled for: ${new Date(log.metadata.scheduledAt).toLocaleString()}`);
-                            if (log.openedAt) tooltipParts.push(`Opened: ${new Date(log.openedAt).toLocaleString()}`);
-                            if (log.clickedAt) tooltipParts.push(`Clicked: ${new Date(log.clickedAt).toLocaleString()}`);
-                            if (log.lastWebhookEvent) tooltipParts.push(`Last event: ${log.lastWebhookEvent}`);
-                            const tooltip = tooltipParts.join('\n');
-
-                            if (log.status === 'delivered') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="CheckCircle2"
-                                    size={14}
-                                    className="text-green-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'sent') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="Send"
-                                    size={14}
-                                    className="text-blue-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'scheduled') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="Clock"
-                                    size={14}
-                                    className="text-blue-400 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'opened') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="Eye"
-                                    size={14}
-                                    className="text-purple-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'clicked') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="MousePointerClick"
-                                    size={14}
-                                    className="text-indigo-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'bounced') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="MailWarning"
-                                    size={14}
-                                    className="text-orange-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'complained') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="Flag"
-                                    size={14}
-                                    className="text-red-400 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else if (log.status === 'delayed') {
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="Timer"
-                                    size={14}
-                                    className="text-yellow-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            } else {
-                              // failed status
-                              return (
-                                <span title={tooltip} className="cursor-help">
-                                  <Icon
-                                    name="XCircle"
-                                    size={14}
-                                    className="text-red-500 flex-shrink-0"
-                                  />
-                                </span>
-                              );
-                            }
-                          })()}
-                          <button
-                            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 transition-colors"
-                            onClick={() => openEmailPreview(log.templateId, log.templateName || log.templateId, log.recipientUserId, log.recipientUsername)}
-                          >
-                            <Icon name="Eye" size={12} className="text-primary" />
-                            {log.templateName || log.templateId}
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        {log.recipientUserId && log.recipientUsername ? (
-                          <UsernameBadge
-                            userId={log.recipientUserId}
-                            username={log.recipientUsername}
-                            size="sm"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openUserDetails(log.recipientUserId, log.recipientUsername);
-                            }}
-                          />
-                        ) : log.recipientUsername ? (
-                          <button
-                            onClick={() => openUserDetails(log.recipientUserId, log.recipientUsername)}
-                            className="text-primary hover:underline cursor-pointer text-sm"
-                          >
-                            @{log.recipientUsername}
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">
-                        {log.recipientEmail}
-                      </td>
-                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
-                        {formatRelativeTime(log.sentAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
         {/* System Jobs Section (backend processing, no user emails) */}
         {sortedSystemCrons.length > 0 && (
           <div>
@@ -1027,6 +884,131 @@ function AdminEmailsPageContent() {
             </div>
           </div>
         )}
+      </div>
+    );
+  };
+
+  // Render the Sent tab content
+  const renderSentTab = () => {
+    return (
+      <div className="space-y-6">
+        {/* Recent Sent Emails */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="Send" size={16} className="text-primary" />
+            <h3 className="text-sm font-semibold">Sent Emails</h3>
+            <Badge variant="secondary" className="text-xs">
+              {allEmailLogs.length}
+            </Badge>
+          </div>
+
+          {allLogsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Icon name="Loader" className="text-primary mr-2 animate-spin" />
+              <span className="text-sm text-muted-foreground">Loading sent emails...</span>
+            </div>
+          ) : allEmailLogs.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <Icon name="Mail" size={40} className="mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No sent emails found</p>
+            </div>
+          ) : (
+            <div className="wewrite-card p-0 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Template</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Username</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Email</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">Sent</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {allEmailLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-muted/20">
+                      <td className="px-3 py-2 text-left">
+                        {(() => {
+                          // Build tooltip content
+                          const tooltipParts: string[] = [`Status: ${log.status}`];
+                          if (log.errorMessage) tooltipParts.push(`Error: ${log.errorMessage}`);
+                          if (log.bounceReason) tooltipParts.push(`Bounce: ${log.bounceReason}`);
+                          if (log.resendId) tooltipParts.push(`Resend ID: ${log.resendId}`);
+                          if (log.metadata?.scheduledAt) tooltipParts.push(`Scheduled for: ${new Date(log.metadata.scheduledAt).toLocaleString()}`);
+                          if (log.openedAt) tooltipParts.push(`Opened: ${new Date(log.openedAt).toLocaleString()}`);
+                          if (log.clickedAt) tooltipParts.push(`Clicked: ${new Date(log.clickedAt).toLocaleString()}`);
+                          if (log.lastWebhookEvent) tooltipParts.push(`Last event: ${log.lastWebhookEvent}`);
+                          const tooltip = tooltipParts.join('\n');
+
+                          const statusConfig: Record<string, { icon: string; color: string }> = {
+                            delivered: { icon: 'CheckCircle2', color: 'text-green-500' },
+                            sent: { icon: 'Send', color: 'text-blue-500' },
+                            scheduled: { icon: 'Clock', color: 'text-blue-400' },
+                            opened: { icon: 'Eye', color: 'text-purple-500' },
+                            clicked: { icon: 'MousePointerClick', color: 'text-indigo-500' },
+                            bounced: { icon: 'MailWarning', color: 'text-orange-500' },
+                            complained: { icon: 'Flag', color: 'text-red-400' },
+                            delayed: { icon: 'Timer', color: 'text-yellow-500' },
+                            failed: { icon: 'XCircle', color: 'text-red-500' },
+                          };
+
+                          const config = statusConfig[log.status] || statusConfig.failed;
+
+                          return (
+                            <span title={tooltip} className="cursor-help">
+                              <Icon
+                                name={config.icon as any}
+                                size={14}
+                                className={`${config.color} flex-shrink-0`}
+                              />
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-3 py-2">
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 transition-colors"
+                          onClick={() => openEmailPreview(log.templateId, log.templateName || log.templateId, log.recipientUserId, log.recipientUsername)}
+                        >
+                          <Icon name="Eye" size={12} className="text-primary" />
+                          {log.templateName || log.templateId}
+                        </button>
+                      </td>
+                      <td className="px-3 py-2">
+                        {log.recipientUserId && log.recipientUsername ? (
+                          <UsernameBadge
+                            userId={log.recipientUserId}
+                            username={log.recipientUsername}
+                            size="sm"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openUserDetails(log.recipientUserId, log.recipientUsername);
+                            }}
+                          />
+                        ) : log.recipientUsername ? (
+                          <button
+                            onClick={() => openUserDetails(log.recipientUserId, log.recipientUsername)}
+                            className="text-primary hover:underline cursor-pointer text-sm"
+                          >
+                            @{log.recipientUsername}
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell">
+                        {log.recipientEmail}
+                      </td>
+                      <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
+                        {formatRelativeTime(log.sentAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1084,21 +1066,34 @@ function AdminEmailsPageContent() {
             Templates
           </button>
           <button
-            onClick={() => setActiveTab('events')}
+            onClick={() => setActiveTab('upcoming')}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === 'events'
+              activeTab === 'upcoming'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon name="History" size={16} className="inline-block mr-2" />
-            Events
+            <Icon name="Calendar" size={16} className="inline-block mr-2" />
+            Upcoming
+          </button>
+          <button
+            onClick={() => setActiveTab('sent')}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === 'sent'
+                ? 'border-primary text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon name="Send" size={16} className="inline-block mr-2" />
+            Sent
           </button>
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'events' ? (
-          renderEventsTab()
+        {activeTab === 'upcoming' ? (
+          renderUpcomingTab()
+        ) : activeTab === 'sent' ? (
+          renderSentTab()
         ) : (
           <div className="space-y-4">
             {/* Search */}

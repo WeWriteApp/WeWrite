@@ -15,9 +15,9 @@ import { addRecentSearch, addRecentSearchDebounced } from "../utils/recentSearch
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 import RecentSearches from '../components/search/RecentSearches';
+import SavedSearches from '../components/search/SavedSearches';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { SHARE_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
-import { useSubscription } from '../contexts/SubscriptionContext';
 
 // Import the new separated components
 import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
@@ -212,10 +212,6 @@ RealtimeSearchInput.displayName = 'RealtimeSearchInput';
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
   const { user, isAuthenticated } = useAuth();
-  const { hasActiveSubscription } = useSubscription();
-
-  // State for dismissible warning alert
-  const [showSearchWarning, setShowSearchWarning] = useState(true);
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
@@ -496,41 +492,6 @@ const SearchPage = React.memo(() => {
         }}
       />
 
-      {/* Temporary warning alert */}
-      {showSearchWarning && (
-        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-          {/* Top row: Icon, text, and dismiss button */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-2 text-yellow-600 dark:text-yellow-500">
-              <Icon name="AlertTriangle" size={18} className="flex-shrink-0 mt-0.5" />
-              {hasActiveSubscription ? (
-                <p className="text-sm">Fast search is temporarily disabled, we're working to get it back in service!</p>
-              ) : (
-                <p className="text-sm">Fast search is currently disabled due to a billing issue with Algolia search. Slow search still works! If you'd like to help WeWrite improve service uptime, please start your subscription so we can afford devs and coffee!</p>
-              )}
-            </div>
-            <button
-              onClick={() => setShowSearchWarning(false)}
-              className="p-1 text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors flex-shrink-0"
-              aria-label="Dismiss warning"
-            >
-              <Icon name="X" size={16} />
-            </button>
-          </div>
-          {/* Bottom row: CTA button (only for non-subscribers) */}
-          {!hasActiveSubscription && (
-            <div className="mt-3">
-              <Link href="/settings/fund-account" className="block">
-                <Button size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white">
-                  <Icon name="Heart" size={18} className="mr-2" />
-                  Start subscription
-                </Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Search</h1>
@@ -549,21 +510,35 @@ const SearchPage = React.memo(() => {
         isLoading={isLoading}
       />
 
-      {/* Recent Searches - only show when no active search */}
+      {/* Saved and Recent Searches - only show when no active search */}
       {!currentQuery && (
-        <RecentSearches
-          onSelect={handleRecentSearchSelect}
-          userId={userId}
-        />
+        <>
+          <SavedSearches
+            onSelect={handleRecentSearchSelect}
+            userId={userId}
+          />
+          <RecentSearches
+            onSelect={handleRecentSearchSelect}
+            userId={userId}
+          />
+        </>
       )}
 
       {/* Search Results Header with Share and Save Buttons */}
       {currentQuery && currentQuery.trim() && (
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold">Search Results</h2>
             <p className="text-sm text-muted-foreground">
-              Results for "{currentQuery}"
+              {isLoading ? (
+                'Searching...'
+              ) : (
+                <>
+                  {((results?.pages?.length || 0) + (results?.users?.length || 0))} results for "{currentQuery}"
+                  {searchStats?.searchTimeMs && (
+                    <span className="ml-1">({searchStats.searchTimeMs}ms)</span>
+                  )}
+                </>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">

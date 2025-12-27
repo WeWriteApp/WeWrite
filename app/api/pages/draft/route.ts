@@ -133,26 +133,38 @@ export async function POST(request: NextRequest) {
       console.log('🔵 NEW PAGE: Created page with auto-generated ID:', pageId);
     }
 
-    // Sync to Algolia for search indexing (only if page has a title)
+    // Sync to search engines for search indexing (only if page has a title)
     if (pageData.title) {
+      const searchSyncData = {
+        pageId,
+        title: pageData.title,
+        content: JSON.stringify(pageData.content),
+        authorId: currentUserId,
+        authorUsername: username,
+        isPublic: true,
+        alternativeTitles: [],
+        lastModified: pageData.lastModified,
+        createdAt: pageData.createdAt,
+      };
+
+      // Sync to Algolia (primary)
       try {
         console.log('🔍 Syncing new page to Algolia:', pageId);
         const { syncPageToAlgoliaServer } = await import('../../../lib/algoliaSync');
-        const algoliaResult = await syncPageToAlgoliaServer({
-          pageId,
-          title: pageData.title,
-          content: JSON.stringify(pageData.content),
-          authorId: currentUserId,
-          authorUsername: username,
-          isPublic: true,
-          alternativeTitles: [],
-          lastModified: pageData.lastModified,
-          createdAt: pageData.createdAt,
-        });
+        const algoliaResult = await syncPageToAlgoliaServer(searchSyncData);
         console.log('✅ Algolia sync result:', algoliaResult);
       } catch (algoliaError) {
         console.error('⚠️ Error syncing to Algolia (non-fatal):', algoliaError);
-        // Don't fail the page creation if Algolia sync fails
+      }
+
+      // Sync to Typesense (secondary)
+      try {
+        console.log('🔍 Syncing new page to Typesense:', pageId);
+        const { syncPageToTypesenseServer } = await import('../../../lib/typesenseSync');
+        const typesenseResult = await syncPageToTypesenseServer(searchSyncData);
+        console.log('✅ Typesense sync result:', typesenseResult);
+      } catch (typesenseError) {
+        console.error('⚠️ Error syncing to Typesense (non-fatal):', typesenseError);
       }
     }
 
