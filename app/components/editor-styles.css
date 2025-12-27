@@ -158,35 +158,43 @@ a[data-user-id]::before {
   flex: 1;
   min-width: 0;
   /* Ensure proper text color inheritance */
-  color: oklch(var(--foreground)) !important;
+  color: oklch(var(--foreground));
 }
 
-/* CRITICAL FIX: Target the exact path where text is blue */
-.wewrite-viewable-content .unified-text-content,
-.wewrite-viewable-content .unified-text-content span,
-.wewrite-viewable-content .unified-text-content span:not(.pill-link):not(.pill-link *) {
-  color: oklch(var(--foreground)) !important;
+/* CRITICAL FIX: Target text spans but EXCLUDE pill links which have their own styling */
+/* Pill links use [data-pill-style] attribute and need to control their own text color */
+/* Using :not() to exclude pill link elements and their children */
+.wewrite-viewable-content .unified-text-content {
+  color: oklch(var(--foreground));
 }
 
 /* Also target any other content containers */
 .page-content .unified-text-content,
-.page-content .unified-text-content span,
-.unified-editor .unified-text-content,
-.unified-editor .unified-text-content span {
-  color: oklch(var(--foreground)) !important;
+.unified-editor .unified-text-content {
+  color: oklch(var(--foreground));
 }
 
 /* Dense paragraph content styling */
 .dense-paragraph-content {
   /* Ensure proper text color in dense mode */
-  color: oklch(var(--foreground)) !important;
+  color: oklch(var(--foreground));
 }
 
-/* Fix text color in dense mode - target the actual classes being used */
-.dense-mode .unified-text-content,
-.dense-mode .unified-text-content *,
-.dense-mode span:not(.pill-link):not(.pill-link *) {
+/* Fix text color in dense mode */
+.dense-mode .unified-text-content {
   color: oklch(var(--foreground));
+}
+
+/* IMPORTANT: Pill links control their own text color via Tailwind classes */
+/* Ensure pill link text inherits from the pill, not from parent containers */
+[data-pill-style] {
+  /* Pill links have their text color set via Tailwind (!text-white or !text-black) */
+  /* This rule ensures children inherit from the pill, not from .unified-text-content */
+}
+
+[data-pill-style] .pill-text,
+[data-pill-style] span {
+  color: inherit !important;
 }
 
 /* ============================================================================
