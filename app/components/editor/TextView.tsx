@@ -644,7 +644,7 @@ const TextView: React.FC<TextViewProps> = ({
       >
         <div
           className={`${getViewModeStyles} w-full text-left ${
-            isScrolled ? 'pb-16' : ''
+            isScrolled ? 'pb-4' : ''
           } ${
             canEdit ? 'relative cursor-text' : 'relative'
           } ${

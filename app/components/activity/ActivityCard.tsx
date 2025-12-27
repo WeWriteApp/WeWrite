@@ -25,6 +25,7 @@ import { useDateFormat } from "../../contexts/DateFormatContext";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
 import { AllocationControls } from "../payments/AllocationControls";
+import { useFeatureFlags } from "../../contexts/FeatureFlagContext";
 
 
 /**
@@ -49,6 +50,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const [currentPageName, setCurrentPageName] = useState(activity?.pageName || '');
   const { formatDate } = useDateFormat();
   const { toast } = useToast();
+  const { isEnabled } = useFeatureFlags();
+  const showUILabels = isEnabled('ui_labels');
   const [isRestoring, setIsRestoring] = useState(false);
 
   // Check if user can restore this version (is page owner and in activity context)
@@ -424,9 +427,11 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </div>
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Header Section: Page title, author/group, and timestamp
-          </TooltipContent>
+          {showUILabels && (
+            <TooltipContent side="top" className="text-xs">
+              Header Section: Page title, author/group, and timestamp
+            </TooltipContent>
+          )}
         </Tooltip>
 
         {/* Diff preview sub-card - chunked section */}
@@ -471,9 +476,11 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </div>
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Diff Section: Character additions/removals and content preview
-          </TooltipContent>
+          {showUILabels && (
+            <TooltipContent side="top" className="text-xs">
+              Diff Section: Character additions/removals and content preview
+            </TooltipContent>
+          )}
         </Tooltip>
 
         {/* Restore button for activity context - only show if needed */}
@@ -504,9 +511,11 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Restore Section: Revert page to this version
-            </TooltipContent>
+            {showUILabels && (
+              <TooltipContent side="top" className="text-xs">
+                Restore Section: Revert page to this version
+              </TooltipContent>
+            )}
           </Tooltip>
         )}
 
@@ -525,9 +534,11 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-              Allocation Section: Support this author with tokens
-            </TooltipContent>
+            {showUILabels && (
+              <TooltipContent side="top" className="text-xs">
+                Allocation Section: Support this author with tokens
+              </TooltipContent>
+            )}
           </Tooltip>
         )}
       </TooltipProvider>

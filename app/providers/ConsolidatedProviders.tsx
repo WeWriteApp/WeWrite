@@ -3,6 +3,7 @@
 import React from 'react';
 
 // UI/Theme Providers (no auth dependency)
+import { TooltipProvider } from '../components/ui/tooltip';
 import { DateFormatProvider } from '../contexts/DateFormatContext';
 import { AccentColorProvider } from '../contexts/AccentColorContext';
 import { NeutralColorProvider } from '../contexts/NeutralColorContext';
@@ -33,19 +34,21 @@ import { TutorialProvider } from '../contexts/TutorialContext';
  */
 export function UIProviders({ children }: { children: React.ReactNode }) {
   return (
-    <DateFormatProvider>
-      <AccentColorProvider>
-        <NeutralColorProvider>
-          <PillStyleProvider>
-            <FeatureFlagProvider>
-              <LineSettingsProvider>
-                {children}
-              </LineSettingsProvider>
-            </FeatureFlagProvider>
-          </PillStyleProvider>
-        </NeutralColorProvider>
-      </AccentColorProvider>
-    </DateFormatProvider>
+    <TooltipProvider>
+      <DateFormatProvider>
+        <AccentColorProvider>
+          <NeutralColorProvider>
+            <PillStyleProvider>
+              <FeatureFlagProvider>
+                <LineSettingsProvider>
+                  {children}
+                </LineSettingsProvider>
+              </FeatureFlagProvider>
+            </PillStyleProvider>
+          </NeutralColorProvider>
+        </AccentColorProvider>
+      </DateFormatProvider>
+    </TooltipProvider>
   );
 }
 

@@ -1740,7 +1740,7 @@ export default function ContentPageView({
 
                             {/* Dense mode toggle below content - only show in view mode (hidden in print) */}
                             {!canEdit && (
-                              <div className="flex justify-center pt-4 no-print">
+                              <div className="flex justify-center pt-2 no-print">
                                 <DenseModeToggle />
                               </div>
                             )}
@@ -1759,7 +1759,7 @@ export default function ContentPageView({
             </div>
 
             {/* Page Footer with actions - tight spacing (hidden in print) */}
-            <div className="mt-4 no-print">
+            <div className="mt-2 no-print">
               <ContentPageFooter
               page={memoizedPage}
               content={editorState}
