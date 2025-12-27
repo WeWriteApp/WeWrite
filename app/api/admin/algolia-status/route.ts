@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '../../../utils/isAdmin';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getAlgoliaIndexName, ALGOLIA_INDICES, logAlgoliaConfig } from '../../../lib/algolia';
 import { getEnvironmentType, getEnvironmentPrefix } from '../../../utils/environmentConfig';
 
@@ -13,10 +13,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin access via middleware header
-    const userEmail = request.headers.get('x-user-email');
-    if (!userEmail || !isAdmin(userEmail)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     // Get configuration info

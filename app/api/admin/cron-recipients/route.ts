@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { isAdmin } from '../../../utils/isAdmin';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
 import { withAdminContext } from '../../../utils/adminRequestContext';
 
@@ -29,10 +29,10 @@ export async function GET(request: NextRequest) {
   // Wrap the entire handler with admin context for proper environment detection
   return withAdminContext(request, async () => {
   try {
-    // Verify admin access via middleware header
-    const userEmail = request.headers.get('x-user-email');
-    if (!userEmail || !isAdmin(userEmail)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

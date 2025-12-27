@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/utils/isAdmin';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getEmailLogsByTemplate, getEmailLogsByUser, getRecentEmailLogs, getEmailStats } from '@/services/emailLogService';
 import { withAdminContext } from '@/utils/adminRequestContext';
 
@@ -16,12 +16,11 @@ import { withAdminContext } from '@/utils/adminRequestContext';
 export async function GET(request: NextRequest) {
   return withAdminContext(request, async () => {
   try {
-    // Get user email from middleware header
-    const userEmail = request.headers.get('x-user-email');
-
-    if (!userEmail || !isAdmin(userEmail)) {
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: adminCheck.error || 'Admin access required' },
         { status: 403 }
       );
     }

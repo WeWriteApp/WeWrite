@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { PRODUCTION_URL } from '../../../utils/urlConfig';
-import { isAdmin } from '../../../utils/isAdmin';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { randomUUID } from 'crypto';
 import { sendTemplatedEmail } from '../../../services/emailService';
 import { withAdminContext } from '../../../utils/adminRequestContext';
@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
   // Wrap the entire handler with admin context for proper environment detection
   return withAdminContext(request, async () => {
   try {
-    // Verify admin access
-    const userEmail = request.headers.get('x-user-email');
-    if (!userEmail || !isAdmin(userEmail)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Verify admin access using session cookie
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
