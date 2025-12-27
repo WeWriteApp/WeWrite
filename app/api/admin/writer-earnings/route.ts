@@ -7,9 +7,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -143,5 +145,6 @@ export async function GET(request: NextRequest) {
       error: 'Failed to fetch writer earnings data',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
-  }
+    }
+  }); // End withAdminContext
 }

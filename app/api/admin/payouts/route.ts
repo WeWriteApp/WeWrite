@@ -22,6 +22,7 @@ import { StripePayoutService } from '../../../services/stripePayoutService';
 import { PayoutMonitoringService } from '../../../services/payoutMonitoringService';
 import { FinancialUtils } from '../../../types/financial';
 import { adminRateLimiter } from '../../../utils/rateLimiter';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 // SECURITY: Removed vulnerable admin check - now using centralized security module
 
@@ -30,12 +31,13 @@ import { adminRateLimiter } from '../../../utils/rateLimiter';
  * Get paginated list of payouts with filtering and search
  */
 export async function GET(request: NextRequest) {
-  try {
-    // SECURITY: Use centralized admin verification with audit logging
-    const adminAuth = await verifyAdminAccess(request);
-    if (!adminAuth.isAdmin) {
-      return createAdminUnauthorizedResponse(adminAuth.auditId);
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // SECURITY: Use centralized admin verification with audit logging
+      const adminAuth = await verifyAdminAccess(request);
+      if (!adminAuth.isAdmin) {
+        return createAdminUnauthorizedResponse(adminAuth.auditId);
+      }
 
     // Apply admin rate limiting
     const rateLimitResult = await adminRateLimiter.checkLimit(adminAuth.userId!);
@@ -126,26 +128,27 @@ export async function GET(request: NextRequest) {
       averageAmount: allPayouts.length > 0 ? allPayouts.reduce((sum, p) => sum + (p.amount || 0), 0) / allPayouts.length : 0
     };
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        payouts,
-        recipients,
-        stats,
-        pagination: {
-          hasMore: payoutsSnapshot.docs.length === pageSize,
-          lastPayoutId: payoutsSnapshot.docs.length > 0 ? payoutsSnapshot.docs[payoutsSnapshot.docs.length - 1].id : null
+      return NextResponse.json({
+        success: true,
+        data: {
+          payouts,
+          recipients,
+          stats,
+          pagination: {
+            hasMore: payoutsSnapshot.docs.length === pageSize,
+            lastPayoutId: payoutsSnapshot.docs.length > 0 ? payoutsSnapshot.docs[payoutsSnapshot.docs.length - 1].id : null
+          }
         }
-      }
-    });
+      });
 
-  } catch (error) {
-    console.error('Error getting admin payouts:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Error getting admin payouts:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error.message
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -153,15 +156,14 @@ export async function GET(request: NextRequest) {
  * Admin actions on payouts (retry, cancel, force complete, etc.)
  */
 export async function POST(request: NextRequest) {
-  try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const adminAuth = await verifyAdminAccess(request);
+      if (!adminAuth.isAdmin) {
+        return createAdminUnauthorizedResponse(adminAuth.auditId);
+      }
 
-    if (!(await isAdmin(userId))) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+      const userId = adminAuth.userId!;
 
     const body = await request.json();
     const { action, payoutId, reason, data } = body;
@@ -299,11 +301,12 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
     }
 
-  } catch (error) {
-    console.error('Error processing admin payout action:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error.message
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Error processing admin payout action:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error.message
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

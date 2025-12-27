@@ -15,6 +15,7 @@ import { getAdminClient, getAlgoliaIndexName, ALGOLIA_INDICES, AlgoliaPageRecord
 import { getAdminFirestore } from '../../../firebase/admin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Allow longer execution for large datasets
@@ -83,7 +84,8 @@ function toUnixTimestamp(timestamp: any): number {
  * Compare Firestore pages with Algolia index and find missing pages
  */
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // SECURITY: Verify admin access
     const adminAuth = await verifyAdminAccess(request);
     if (!adminAuth.isAdmin) {
@@ -239,16 +241,17 @@ export async function GET(request: NextRequest) {
       ...result
     });
 
-  } catch (error) {
-    console.error('[Algolia Audit] Error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('[Algolia Audit] Error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -256,7 +259,8 @@ export async function GET(request: NextRequest) {
  * Backfill missing pages to Algolia
  */
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // SECURITY: Verify admin access
     const adminAuth = await verifyAdminAccess(request);
     if (!adminAuth.isAdmin) {
@@ -442,14 +446,15 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined
     });
 
-  } catch (error) {
-    console.error('[Algolia Backfill] Error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('[Algolia Backfill] Error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

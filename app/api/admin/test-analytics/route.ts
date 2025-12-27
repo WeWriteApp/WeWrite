@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../../firebase/database/core';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     console.log('🔍 [Test Analytics API] Starting analytics test...');
     
     const results: any = {
@@ -67,5 +69,6 @@ export async function GET(request: NextRequest) {
         code: error.code
       }
     }, { status: 500 });
-  }
+    }
+  }); // End withAdminContext
 }

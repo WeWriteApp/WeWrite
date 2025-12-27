@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * Migration API to fix username documents missing email fields
@@ -9,7 +10,8 @@ import { getCollectionName } from '../../../utils/environmentConfig';
  */
 
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Simple auth check - only allow in development or with admin key
     const { adminKey } = await request.json();
     
@@ -120,7 +122,8 @@ export async function POST(request: NextRequest) {
     console.error('[Migration] Migration failed:', error);
     return NextResponse.json({ 
       error: 'Migration failed',
-      details: error.message 
+      details: error.message
     }, { status: 500 });
-  }
+    }
+  }); // End withAdminContext
 }

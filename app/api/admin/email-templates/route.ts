@@ -9,7 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { emailTemplates, getTemplateById } from '../../../lib/emailTemplates';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionNameAsync } from '../../../utils/environmentConfig';
+import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 // Map cronId to actual email template ID
 // This is needed because cron job IDs don't always match template IDs
@@ -24,6 +25,8 @@ const CRON_TO_TEMPLATE_MAP: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   const { searchParams } = new URL(request.url);
   let templateId = searchParams.get('id');
   const withHtml = searchParams.get('html') === 'true';
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest) {
         const admin = getFirebaseAdmin();
         if (admin) {
           const db = admin.firestore();
-          const usersCollectionName = await getCollectionNameAsync('users');
+          const usersCollectionName = getCollectionName('users');
           const userDoc = await db.collection(usersCollectionName).doc(userId).get();
 
           if (userDoc.exists) {
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
             // Fetch additional data based on template type
             if (templateId === 'payout-setup-reminder') {
               // Get pending earnings for payout reminder
-              const writerBalancesCollectionName = await getCollectionNameAsync('writerUsdBalances');
+              const writerBalancesCollectionName = getCollectionName('writerUsdBalances');
               const balanceDoc = await db.collection(writerBalancesCollectionName).doc(userId).get();
               if (balanceDoc.exists) {
                 const balanceData = balanceDoc.data()!;
@@ -157,4 +160,5 @@ export async function GET(request: NextRequest) {
     grouped,
     total: templateList.length,
   });
+  }); // End withAdminContext
 }

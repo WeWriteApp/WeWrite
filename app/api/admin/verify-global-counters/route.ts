@@ -8,9 +8,11 @@ import { collection, query, limit, getDocs, doc, getDoc, where } from 'firebase/
 import { db } from '../../../firebase/config';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { checkAdminPermissions } from '../../admin-auth-helper';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin access using session cookie (avoids jose issues)
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -161,5 +163,6 @@ export async function GET(request: NextRequest) {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to verify global counters'
     }, { status: 500 });
-  }
+    }
+  }); // End withAdminContext
 }

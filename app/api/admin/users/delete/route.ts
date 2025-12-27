@@ -3,6 +3,7 @@ import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { deleteUserByUid } from '../../../../lib/firebase-rest';
+import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_API_URL = 'https://api.resend.com';
@@ -86,24 +87,25 @@ async function deleteFromAllResendAudiences(email: string): Promise<{ deleted: b
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 503 });
-    }
-    const db = admin.firestore();
+  return withAdminContext(request, async () => {
+    try {
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 503 });
+      }
+      const db = admin.firestore();
 
-    // Verify admin access using session cookie
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
-    }
+      // Verify admin access using session cookie
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
+      }
 
-    const body = await request.json();
-    const { uid } = body || {};
-    if (!uid) {
-      return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
-    }
+      const body = await request.json();
+      const { uid } = body || {};
+      if (!uid) {
+        return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
+      }
 
     const deletionResults = {
       authUser: { deleted: false, error: null as string | null },
@@ -201,17 +203,18 @@ export async function POST(request: NextRequest) {
       message = 'Deletion partially failed - check warnings';
     }
 
-    return NextResponse.json({
-      success: authDeleted || dataDeleted,
-      message,
-      uid,
-      email: userData?.email || null,
-      username: userData?.username || null,
-      deletionResults,
-      warnings: warnings.length > 0 ? warnings : undefined,
-    });
-  } catch (error: any) {
-    console.error('[ADMIN DELETE] Error:', error);
-    return NextResponse.json({ error: error?.message || 'Failed to delete user' }, { status: 500 });
-  }
+      return NextResponse.json({
+        success: authDeleted || dataDeleted,
+        message,
+        uid,
+        email: userData?.email || null,
+        username: userData?.username || null,
+        deletionResults,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      });
+    } catch (error: any) {
+      console.error('[ADMIN DELETE] Error:', error);
+      return NextResponse.json({ error: error?.message || 'Failed to delete user' }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { setAdminClaim, getAdminClaim, getAllAdmins, revokeUserTokens } from '../../../services/adminClaimsService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface SessionData {
   uid?: string;
@@ -63,6 +64,7 @@ async function verifyAdminAccess(request: NextRequest): Promise<{ isAdmin: boole
  * GET - List all admin users
  */
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     const authResult = await verifyAdminAccess(request);
     if (!authResult.isAdmin) {
@@ -80,6 +82,7 @@ export async function GET(request: NextRequest) {
     console.error('[Admin Claims API] Error listing admins:', error);
     return NextResponse.json({ error: 'Failed to list admins' }, { status: 500 });
   }
+  }); // End withAdminContext
 }
 
 /**
@@ -88,6 +91,7 @@ export async function GET(request: NextRequest) {
  * Body: { uid: string, action: 'grant' | 'revoke', revokeTokens?: boolean }
  */
 export async function POST(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     const authResult = await verifyAdminAccess(request);
     if (!authResult.isAdmin) {
@@ -165,4 +169,5 @@ export async function POST(request: NextRequest) {
     console.error('[Admin Claims API] Error:', error);
     return NextResponse.json({ error: 'Failed to update admin claim' }, { status: 500 });
   }
+  }); // End withAdminContext
 }

@@ -8,10 +8,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getCurrentMonth } from '../../../utils/subscriptionTiers';
 import { centsToDollars } from '../../../utils/formatCurrency';
 import * as adminSDK from 'firebase-admin';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface AllocationRecord {
   id: string;
@@ -48,23 +49,24 @@ interface ReconciliationResult {
  * Preview what would be backfilled (dry run)
  */
 export async function GET(request: NextRequest) {
-  const startTime = Date.now();
-  const correlationId = `backfill_${Date.now()}`;
+  return withAdminContext(request, async () => {
+    const startTime = Date.now();
+    const correlationId = `backfill_${Date.now()}`;
 
-  try {
-    // Verify admin access via cookie-based auth (from middleware)
-    const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month') || getCurrentMonth();
-    const debug = searchParams.get('debug') === 'true';
+    try {
+      // Verify admin access via cookie-based auth (from middleware)
+      const { searchParams } = new URL(request.url);
+      const month = searchParams.get('month') || getCurrentMonth();
+      const debug = searchParams.get('debug') === 'true';
 
-    console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Starting preview for month: ${month}`);
+      console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Starting preview for month: ${month}`);
 
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+      const admin = getFirebaseAdmin();
+      const db = admin.firestore();
 
-    // Get collection name for allocations (MUST use async version in production)
-    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
-    const earningsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+      // Get collection name for allocations
+      const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
+      const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
 
     console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Collection names:`, {
       allocations: allocationsCollectionName,
@@ -210,14 +212,15 @@ export async function GET(request: NextRequest) {
       correlationId
     });
 
-  } catch (error: any) {
-    console.error(`📊 [BACKFILL PREVIEW] [${correlationId}] Error:`, error);
-    return NextResponse.json({
-      error: 'Failed to preview earnings backfill',
-      details: error.message,
-      correlationId
-    }, { status: 500 });
-  }
+    } catch (error: any) {
+      console.error(`📊 [BACKFILL PREVIEW] [${correlationId}] Error:`, error);
+      return NextResponse.json({
+        error: 'Failed to preview earnings backfill',
+        details: error.message,
+        correlationId
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -225,29 +228,30 @@ export async function GET(request: NextRequest) {
  * Execute the backfill (creates/updates missing earnings)
  */
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  const correlationId = `backfill_exec_${Date.now()}`;
+  return withAdminContext(request, async () => {
+    const startTime = Date.now();
+    const correlationId = `backfill_exec_${Date.now()}`;
 
-  try {
-    const body = await request.json();
-    const { month, dryRun = true } = body;
+    try {
+      const body = await request.json();
+      const { month, dryRun = true } = body;
 
-    if (!month) {
-      return NextResponse.json({
-        error: 'Month is required (YYYY-MM format)',
-        correlationId
-      }, { status: 400 });
-    }
+      if (!month) {
+        return NextResponse.json({
+          error: 'Month is required (YYYY-MM format)',
+          correlationId
+        }, { status: 400 });
+      }
 
-    console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Starting backfill for ${month} (dryRun: ${dryRun})`);
+      console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Starting backfill for ${month} (dryRun: ${dryRun})`);
 
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+      const admin = getFirebaseAdmin();
+      const db = admin.firestore();
 
-    // Get collection names (MUST use async version in production)
-    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
-    const earningsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS);
-    const balancesCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_BALANCES);
+      // Get collection names
+      const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
+      const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+      const balancesCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES);
 
     console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Collection names:`, {
       allocations: allocationsCollectionName,
@@ -503,12 +507,13 @@ export async function POST(request: NextRequest) {
       correlationId
     });
 
-  } catch (error: any) {
-    console.error(`💰 [BACKFILL EXECUTE] [${correlationId}] Error:`, error);
-    return NextResponse.json({
-      error: 'Failed to execute earnings backfill',
-      details: error.message,
-      correlationId
-    }, { status: 500 });
-  }
+    } catch (error: any) {
+      console.error(`💰 [BACKFILL EXECUTE] [${correlationId}] Error:`, error);
+      return NextResponse.json({
+        error: 'Failed to execute earnings backfill',
+        details: error.message,
+        correlationId
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

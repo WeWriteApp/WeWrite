@@ -108,12 +108,24 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  * This is determined by the presence of the X-Force-Production-Data header
  * which is sent by ANY logged-out user components throughout the app.
  *
- * Note: In Next.js 15+, headers() must be awaited. This function handles both
- * sync and async contexts gracefully.
+ * Note: In Next.js 15+, headers() must be awaited. This function now uses
+ * AsyncLocalStorage via adminRequestContext to access the header value
+ * synchronously within properly wrapped API route handlers.
  */
 const shouldUseProductionCollections = (): boolean => {
-  // Always return false to avoid sync header access in Next.js 15+
-  // Use shouldUseProductionCollectionsAsync in API routes instead
+  // Try to get the value from AsyncLocalStorage context first
+  // This works when the request is wrapped with withAdminContext()
+  try {
+    const { shouldForceProductionFromContext } = require('./adminRequestContext');
+    const forceProduction = shouldForceProductionFromContext();
+    if (forceProduction) {
+      return true;
+    }
+  } catch (e) {
+    // Module not available or not in a context, continue with fallback
+  }
+
+  // Fallback: return false (use environment-based detection)
   return false;
 };
 

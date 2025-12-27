@@ -12,19 +12,21 @@ import { getStripeSecretKey, getStripePublishableKey } from '../../../utils/stri
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { getEnvironmentContext } from '../../../utils/environmentDetection';
 import Stripe from 'stripe';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Verify admin access
+      const userId = await getUserIdFromRequest(request);
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const isAdmin = await isAdminUser(userId);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+      const isAdmin = await isAdminUser(userId);
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
 
     console.log(`🔍 [ADMIN] Starting comprehensive environment audit`);
 
@@ -164,56 +166,58 @@ export async function GET(request: NextRequest) {
       recommendations.push('Consider using environment-specific collection prefixes for better separation');
     }
 
-    return NextResponse.json({
-      success: true,
-      audit: {
-        timestamp: new Date().toISOString(),
-        environment: environmentContext,
-        stripe: {
-          configuration: stripeAudit,
-          connection: stripeConnectionTest,
-          storageBalance: storageBalanceTest
+      return NextResponse.json({
+        success: true,
+        audit: {
+          timestamp: new Date().toISOString(),
+          environment: environmentContext,
+          stripe: {
+            configuration: stripeAudit,
+            connection: stripeConnectionTest,
+            storageBalance: storageBalanceTest
+          },
+          firebase: {
+            collections: collectionsAudit
+          },
+          environmentVariables: envVarsAudit,
+          consistency: consistencyCheck,
+          storageBalanceAnalysis,
+          issues,
+          recommendations
         },
-        firebase: {
-          collections: collectionsAudit
-        },
-        environmentVariables: envVarsAudit,
-        consistency: consistencyCheck,
-        storageBalanceAnalysis,
-        issues,
-        recommendations
-      },
-      summary: {
-        environmentType: environmentContext.type,
-        stripeMode: stripeAudit.secretKeyType,
-        storageBalanceAvailable: storageBalanceAnalysis.available,
-        configurationValid: issues.length === 0,
-        issuesFound: issues.length,
-        recommendationsCount: recommendations.length
-      }
-    });
+        summary: {
+          environmentType: environmentContext.type,
+          stripeMode: stripeAudit.secretKeyType,
+          storageBalanceAvailable: storageBalanceAnalysis.available,
+          configurationValid: issues.length === 0,
+          issuesFound: issues.length,
+          recommendationsCount: recommendations.length
+        }
+      });
 
-  } catch (error) {
-    console.error('❌ [ADMIN] Error in environment audit:', error);
-    return NextResponse.json({
-      error: 'Environment audit failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('❌ [ADMIN] Error in environment audit:', error);
+      return NextResponse.json({
+        error: 'Environment audit failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Verify admin access
+      const userId = await getUserIdFromRequest(request);
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const isAdmin = await isAdminUser(userId);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+      const isAdmin = await isAdminUser(userId);
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
 
     const body = await request.json();
     const { action } = body;
@@ -231,13 +235,14 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
     }
 
-  } catch (error) {
-    console.error('❌ [ADMIN] Error in environment audit POST:', error);
-    return NextResponse.json({
-      error: 'Environment audit action failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('❌ [ADMIN] Error in environment audit POST:', error);
+      return NextResponse.json({
+        error: 'Environment audit action failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 async function handleTestStorageBalanceSetup() {

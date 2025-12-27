@@ -12,19 +12,21 @@ import { stripeStorageBalanceService } from '../../../services/stripeStorageBala
 import { db } from '../../../firebase/config';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Verify admin access
+      const userId = await getUserIdFromRequest(request);
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const isAdmin = await isAdminUser(userId);
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+      const isAdmin = await isAdminUser(userId);
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
 
     console.log(`🔍 [ADMIN] Diagnosing balance state`);
 
@@ -175,11 +177,12 @@ export async function GET(request: NextRequest) {
           ]
     });
 
-  } catch (error) {
-    console.error('❌ [ADMIN] Error diagnosing balances:', error);
-    return NextResponse.json({
-      error: 'Failed to diagnose balance state',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('❌ [ADMIN] Error diagnosing balances:', error);
+      return NextResponse.json({
+        error: 'Failed to diagnose balance state',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

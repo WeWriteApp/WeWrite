@@ -15,17 +15,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const MIN_EARNINGS_THRESHOLD_CENTS = WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold * 100; // $25 in cents
 
 export async function GET(request: NextRequest) {
-  try {
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+      }
 
-    const db = admin.firestore();
+      const db = admin.firestore();
 
     // Find users who have payoutReminderSentAt set
     const usersWithReminder = await db.collection(getCollectionName('users'))
@@ -97,23 +99,25 @@ export async function GET(request: NextRequest) {
       message: 'Use POST request to cleanup the payoutReminderSentAt field for users below threshold',
     });
 
-  } catch (error) {
-    console.error('[CLEANUP PAYOUT REMINDERS] Error:', error);
-    return NextResponse.json({
-      error: 'Failed to analyze payout reminders',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('[CLEANUP PAYOUT REMINDERS] Error:', error);
+      return NextResponse.json({
+        error: 'Failed to analyze payout reminders',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+      }
 
-    const db = admin.firestore();
+      const db = admin.firestore();
 
     // Find users who have payoutReminderSentAt set
     const usersWithReminder = await db.collection(getCollectionName('users'))
@@ -158,11 +162,12 @@ export async function POST(request: NextRequest) {
       message: `Cleared payoutReminderSentAt for ${cleanedUp} users who were below the $${WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold} threshold`,
     });
 
-  } catch (error) {
-    console.error('[CLEANUP PAYOUT REMINDERS] Error:', error);
-    return NextResponse.json({
-      error: 'Failed to cleanup payout reminders',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('[CLEANUP PAYOUT REMINDERS] Error:', error);
+      return NextResponse.json({
+        error: 'Failed to cleanup payout reminders',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

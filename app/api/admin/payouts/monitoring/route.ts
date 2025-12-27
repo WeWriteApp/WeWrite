@@ -16,17 +16,19 @@ import { getCollectionName } from '../../../../utils/environmentConfig';
 import { PayoutMonitoringService } from '../../../../services/payoutMonitoringService';
 import { payoutRetryService } from '../../../../services/payoutRetryService';
 import { FinancialUtils } from '../../../../types/financial';
+import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 /**
  * GET /api/admin/payouts/monitoring
  * Get comprehensive payout system monitoring data
  */
 export async function GET(request: NextRequest) {
-  try {
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
+      }
 
     const correlationId = FinancialUtils.generateCorrelationId();
 
@@ -59,27 +61,28 @@ export async function GET(request: NextRequest) {
     // Get volume trends
     const volumeTrends = await getVolumeTrends();
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        health,
-        retryStatistics: retryStats.data,
-        stuckPayouts,
-        recentFailures,
-        processingDelays,
-        volumeTrends,
-        lastUpdated: new Date().toISOString()
-      },
-      correlationId
-    });
+      return NextResponse.json({
+        success: true,
+        data: {
+          health,
+          retryStatistics: retryStats.data,
+          stuckPayouts,
+          recentFailures,
+          processingDelays,
+          volumeTrends,
+          lastUpdated: new Date().toISOString()
+        },
+        correlationId
+      });
 
-  } catch (error: unknown) {
-    console.error('Error getting monitoring data:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error: unknown) {
+      console.error('Error getting monitoring data:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -280,15 +283,12 @@ async function getVolumeTrends() {
  * Trigger manual monitoring checks or alerts
  */
 export async function POST(request: NextRequest) {
-  try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!(await isAdmin(userId))) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
+      }
 
     const body = await request.json();
     const { action } = body;
@@ -344,11 +344,12 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
     }
 
-  } catch (error: unknown) {
-    console.error('Error processing monitoring action:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error: unknown) {
+      console.error('Error processing monitoring action:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

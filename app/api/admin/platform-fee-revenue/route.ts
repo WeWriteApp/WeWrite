@@ -3,17 +3,19 @@ import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error }, { status: 403 });
+      }
 
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+      const admin = getFirebaseAdmin();
+      const db = admin.firestore();
 
     // Get platform fee data from payouts
     // This would typically come from a dedicated platform_fees collection
@@ -110,23 +112,25 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error fetching platform fee revenue:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch platform fee revenue data' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error fetching platform fee revenue:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch platform fee revenue data' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 // Mock data endpoint for development/testing
 export async function POST(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error }, { status: 403 });
+      }
 
     // Generate mock data for the last 6 months
     const mockData = [];
@@ -172,11 +176,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error generating mock platform fee data:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate mock data' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error generating mock platform fee data:', error);
+      return NextResponse.json(
+        { error: 'Failed to generate mock data' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

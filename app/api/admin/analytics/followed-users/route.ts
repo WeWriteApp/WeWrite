@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     // Check authentication and admin access
     const adminCheck = await checkAdminPermissions(request);
@@ -209,4 +211,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }

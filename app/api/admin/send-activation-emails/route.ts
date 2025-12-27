@@ -14,6 +14,7 @@ import { firstPageActivationTemplate } from '../../../lib/emailTemplates';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { Resend } from 'resend';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 // Get Resend client
 function getResend(): Resend {
@@ -83,6 +84,8 @@ async function getEligibleUsers(limit?: number): Promise<UserForActivation[]> {
 
 // GET - Get count of eligible users
 export async function GET(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   try {
     // Verify admin access
     const adminCheck = await checkAdminPermissions(request);
@@ -108,10 +111,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }
 
 // POST - Send activation emails
 export async function POST(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   try {
     // Verify admin access
     const adminCheck = await checkAdminPermissions(request);
@@ -249,4 +255,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }

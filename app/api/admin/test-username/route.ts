@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * Test API to verify username lookup works correctly
@@ -8,7 +9,8 @@ import { getCollectionName } from '../../../utils/environmentConfig';
  */
 
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     const { username } = await request.json();
 
     if (!username) {
@@ -85,7 +87,8 @@ export async function POST(request: NextRequest) {
     console.error('[Test] Username test error:', error);
     return NextResponse.json({ 
       error: 'Test failed',
-      details: error.message 
+      details: error.message
     }, { status: 500 });
-  }
+    }
+  }); // End withAdminContext
 }

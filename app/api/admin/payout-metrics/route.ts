@@ -9,6 +9,7 @@ import { checkAdminPermissions } from '../../admin-auth-helper';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -16,12 +17,13 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2025-06-30.basil'});
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const authResult = await checkAdminPermissions(request);
-    if (!authResult.success) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const authResult = await checkAdminPermissions(request);
+      if (!authResult.success) {
+        return NextResponse.json({ error: authResult.error }, { status: 401 });
+      }
 
     // Calculate date ranges
     const now = new Date();
@@ -141,13 +143,14 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error: any) {
-    console.error('Error fetching payout metrics:', error);
-    return NextResponse.json({
-      error: 'Failed to fetch payout metrics',
-      details: error.message
-    }, { status: 500 });
-  }
+    } catch (error: any) {
+      console.error('Error fetching payout metrics:', error);
+      return NextResponse.json({
+        error: 'Failed to fetch payout metrics',
+        details: error.message
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 export async function POST(request: NextRequest) {

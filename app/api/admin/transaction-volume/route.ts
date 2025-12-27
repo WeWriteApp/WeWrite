@@ -7,17 +7,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const authResult = await checkAdminPermissions(request);
-    if (!authResult.success) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const authResult = await checkAdminPermissions(request);
+      if (!authResult.success) {
+        return NextResponse.json({ error: authResult.error }, { status: 401 });
+      }
 
     // Get last 24 hours of transaction data
     const now = new Date();
@@ -92,13 +94,14 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error: any) {
-    console.error('Error fetching transaction volume:', error);
-    return NextResponse.json({
-      error: 'Failed to fetch transaction volume',
-      details: error.message
-    }, { status: 500 });
-  }
+    } catch (error: any) {
+      console.error('Error fetching transaction volume:', error);
+      return NextResponse.json({
+        error: 'Failed to fetch transaction volume',
+        details: error.message
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 export async function POST(request: NextRequest) {

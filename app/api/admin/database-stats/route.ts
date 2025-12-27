@@ -8,6 +8,7 @@ import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface DatabaseStats {
   totalUsers: number;
@@ -20,7 +21,8 @@ interface DatabaseStats {
 
 // GET endpoint - Get database statistics
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -77,15 +79,17 @@ export async function GET(request: NextRequest) {
       message: 'Database statistics retrieved successfully'
     }, null, 200);
 
-  } catch (error) {
-    console.error('Error fetching database statistics:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch database statistics');
-  }
+    } catch (error) {
+      console.error('Error fetching database statistics:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch database statistics');
+    }
+  }); // End withAdminContext
 }
 
 // POST endpoint - Refresh/recalculate statistics
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -117,8 +121,9 @@ export async function POST(request: NextRequest) {
       message: 'Database statistics recalculated and stored successfully'
     }, null, 200);
 
-  } catch (error) {
-    console.error('Error recalculating database statistics:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to recalculate database statistics');
-  }
+    } catch (error) {
+      console.error('Error recalculating database statistics:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Failed to recalculate database statistics');
+    }
+  }); // End withAdminContext
 }

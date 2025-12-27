@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { verifyAdminAccess } from '../../../utils/adminSecurity';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface SetAdminClaimRequest {
   targetUserId: string;
@@ -23,7 +24,8 @@ interface SetAdminClaimRequest {
 }
 
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Verify the requesting user is an admin
     const adminAuth = await verifyAdminAccess(request);
     if (!adminAuth.isAdmin) {
@@ -115,13 +117,14 @@ export async function POST(request: NextRequest) {
       note: 'User must sign out and back in for changes to take effect in their token',
     });
 
-  } catch (error) {
-    console.error('[Set Admin Claim] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to set admin claim' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('[Set Admin Claim] Error:', error);
+      return NextResponse.json(
+        { error: 'Failed to set admin claim' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -130,7 +133,8 @@ export async function POST(request: NextRequest) {
  * Check the current admin claim status for a user
  */
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Verify the requesting user is an admin
     const adminAuth = await verifyAdminAccess(request);
     if (!adminAuth.isAdmin) {
@@ -184,11 +188,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-  } catch (error) {
-    console.error('[Get Admin Claim] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get admin claim' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('[Get Admin Claim] Error:', error);
+      return NextResponse.json(
+        { error: 'Failed to get admin claim' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

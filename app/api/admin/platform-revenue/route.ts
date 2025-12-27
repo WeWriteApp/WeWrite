@@ -8,14 +8,16 @@ import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { platformRevenueService } from '../../../services/platformRevenueService';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error }, { status: 403 });
+      }
 
     const { searchParams } = new URL(request.url);
     const startDateStr = searchParams.get('startDate');
@@ -79,27 +81,29 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('❌ [Platform Revenue API] Error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch platform revenue analytics',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('❌ [Platform Revenue API] Error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to fetch platform revenue analytics',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 // Mock data endpoint for development/testing
 export async function POST(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error }, { status: 403 });
+      }
 
     const { searchParams } = new URL(request.url);
     const startDateStr = searchParams.get('startDate');
@@ -178,17 +182,18 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('❌ [Platform Revenue API] Mock data error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to generate mock platform revenue data',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('❌ [Platform Revenue API] Mock data error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to generate mock platform revenue data',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**

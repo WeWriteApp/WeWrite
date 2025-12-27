@@ -15,6 +15,7 @@ import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentCo
 import Stripe from 'stripe';
 import * as adminSdk from 'firebase-admin';
 import { detectEnvironmentType } from '../../../utils/environmentDetection';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-06-20',
@@ -42,20 +43,21 @@ interface CleanupResult {
 }
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  const devBypass = isLocalhostDevBypass(request);
+  return withAdminContext(request, async () => {
+    const startTime = Date.now();
+    const devBypass = isLocalhostDevBypass(request);
 
-  try {
-    // Verify admin access (or allow dev bypass for localhost)
-    const userId = await getUserIdFromRequest(request);
-    if (!userId && !devBypass) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    try {
+      // Verify admin access (or allow dev bypass for localhost)
+      const userId = await getUserIdFromRequest(request);
+      if (!userId && !devBypass) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const isAdmin = userId ? await isAdminUser(userId) : false;
-    if (!isAdmin && !devBypass) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+      const isAdmin = userId ? await isAdminUser(userId) : false;
+      if (!isAdmin && !devBypass) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
 
     const body = await request.json().catch(() => ({}));
     const dryRun = body.dryRun !== false; // Default to dry run for safety
@@ -102,13 +104,14 @@ export async function POST(request: NextRequest) {
         : 'Cleanup complete. Stale records have been removed.',
     });
 
-  } catch (error) {
-    console.error('❌ [CLEANUP] Error:', error);
-    return NextResponse.json({
-      error: 'Cleanup failed',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('❌ [CLEANUP] Error:', error);
+      return NextResponse.json({
+        error: 'Cleanup failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 async function cleanupPayouts(
@@ -359,19 +362,20 @@ async function cleanupWriterEarnings(
 
 // GET endpoint for checking status without making changes
 export async function GET(request: NextRequest) {
-  const devBypass = isLocalhostDevBypass(request);
+  return withAdminContext(request, async () => {
+    const devBypass = isLocalhostDevBypass(request);
 
-  try {
-    // Verify admin access (or allow dev bypass for localhost)
-    const userId = await getUserIdFromRequest(request);
-    if (!userId && !devBypass) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    try {
+      // Verify admin access (or allow dev bypass for localhost)
+      const userId = await getUserIdFromRequest(request);
+      if (!userId && !devBypass) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
 
-    const isAdmin = userId ? await isAdminUser(userId) : false;
-    if (!isAdmin && !devBypass) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+      const isAdmin = userId ? await isAdminUser(userId) : false;
+      if (!isAdmin && !devBypass) {
+        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      }
 
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -400,11 +404,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-  } catch (error) {
-    console.error('❌ [CLEANUP] Status check error:', error);
-    return NextResponse.json({
-      error: 'Status check failed',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('❌ [CLEANUP] Status check error:', error);
+      return NextResponse.json({
+        error: 'Status check failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

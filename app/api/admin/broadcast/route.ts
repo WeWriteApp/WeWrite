@@ -13,6 +13,7 @@ import { getAdminFirestore } from '../../../firebase/admin';
 import { broadcastEmailTemplate } from '../../../lib/emailTemplates';
 import { Resend } from 'resend';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const GENERAL_AUDIENCE_ID = '493da2d9-7034-4bb0-99de-1dcfac3b424d';
 
@@ -57,6 +58,8 @@ interface AudienceContact {
 
 // GET - Get audience stats
 export async function GET(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   try {
     const resend = getResend();
     
@@ -108,10 +111,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }
 
 // POST - Send a broadcast
 export async function POST(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   try {
     const body: BroadcastRequest = await request.json();
     const { subject, heading, body: emailBody, ctaText, ctaUrl, testMode, testEmail } = body;
@@ -261,4 +267,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }

@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * Backfill API for Leaderboard Data
- * 
+ *
  * This endpoint ensures all collections have proper createdAt Timestamps
  * so the leaderboard queries work correctly.
- * 
+ *
  * Collections backfilled:
  * - pages: createdAt (string -> Timestamp)
  * - backlinks: createdAt (string -> Timestamp)
  * - usdAllocations: createdAt (string -> Timestamp)
  * - pageViews: date field (ensure exists)
- * 
+ *
  * POST /api/admin/backfill-leaderboard?collection=all&env=production
- * 
+ *
  * Query params:
  * - collection: 'pages' | 'backlinks' | 'allocations' | 'pageViews' | 'all'
  * - env: 'development' | 'production' (defaults to current environment)
@@ -25,7 +26,8 @@ import { getCollectionName, getEnvironmentType } from '../../../utils/environmen
 type CollectionType = 'pages' | 'backlinks' | 'allocations' | 'pageViews' | 'all';
 
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     const { searchParams } = new URL(request.url);
     const collection = (searchParams.get('collection') || 'all') as CollectionType;
     const envOverride = searchParams.get('env');
@@ -109,13 +111,14 @@ export async function POST(request: NextRequest) {
       results
     });
 
-  } catch (error) {
-    console.error('Backfill error:', error);
-    return NextResponse.json({
-      error: 'Backfill failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Backfill error:', error);
+      return NextResponse.json({
+        error: 'Backfill failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 async function backfillTimestamps(
@@ -270,7 +273,8 @@ async function checkPageViews(
 
 // GET endpoint for status check
 export async function GET(request: NextRequest) {
-  return NextResponse.json({
+  return withAdminContext(request, async () => {
+    return NextResponse.json({
     message: 'Leaderboard Backfill API',
     usage: 'POST /api/admin/backfill-leaderboard?collection=all&env=production',
     params: {
@@ -279,5 +283,6 @@ export async function GET(request: NextRequest) {
       dryRun: 'true | false (default false)'
     },
     auth: 'Authorization: Bearer <ADMIN_API_SECRET>'
-  });
+    });
+  }); // End withAdminContext
 }

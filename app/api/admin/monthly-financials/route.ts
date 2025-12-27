@@ -22,10 +22,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin, FieldValue } from '../../../firebase/firebaseAdmin';
-import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import Stripe from 'stripe';
 import { getStripeSecretKeyAsync } from '../../../utils/stripeConfig';
 import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 // Use the centralized platform fee config for payout fee (10%)
 // NOTE: This fee is only charged when writers request payouts, not at allocation time.
@@ -86,19 +87,20 @@ interface WriterEarningsDetail {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error }, { status: 403 });
+      }
 
-    // Check for sync parameter
-    const { searchParams } = new URL(request.url);
-    const shouldSync = searchParams.get('sync') === 'true';
+      // Check for sync parameter
+      const { searchParams } = new URL(request.url);
+      const shouldSync = searchParams.get('sync') === 'true';
 
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+      const admin = getFirebaseAdmin();
+      const db = admin.firestore();
 
     // Get current month in YYYY-MM format
     const now = new Date();
@@ -110,7 +112,7 @@ export async function GET(request: NextRequest) {
       apiVersion: '2024-06-20'
     });
 
-    const usdBalancesCollection = await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES);
+    const usdBalancesCollection = getCollectionName(USD_COLLECTIONS.USD_BALANCES);
 
     // ========================================
     // 1. Get ACTUAL subscription data from Stripe (source of truth)
@@ -126,11 +128,11 @@ export async function GET(request: NextRequest) {
     const customerAllocations: Map<string, { allocatedCents: number; userId: string }> = new Map();
 
     // Get allocation data from Firebase (used by multiple sections)
-    const balancesRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
+    const balancesRef = db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES));
     const balancesSnapshot = await balancesRef.get();
 
     // Also get users collection reference (used by multiple sections)
-    const usersCollectionName = await getCollectionNameAsync('users');
+    const usersCollectionName = getCollectionName('users');
     const usersRef = db.collection(usersCollectionName);
 
     // User cache: Fetch all user data at once to reduce Firebase reads
@@ -327,7 +329,7 @@ export async function GET(request: NextRequest) {
     // ========================================
     // 4. Get historical monthly data from monthly_processing collection
     // ========================================
-    const processingRef = db.collection(await getCollectionNameAsync('monthly_processing'));
+    const processingRef = db.collection(getCollectionName('monthly_processing'));
     const processingSnapshot = await processingRef.orderBy('processedAt', 'desc').limit(12).get();
 
     const historicalData: MonthlyFinancialData[] = [];
@@ -574,7 +576,7 @@ export async function GET(request: NextRequest) {
 
     try {
       // Get writer earnings for the CURRENT MONTH from writerUsdEarnings collection
-      const writerEarningsCollectionName = await getCollectionNameAsync('writerUsdEarnings');
+      const writerEarningsCollectionName = getCollectionName('writerUsdEarnings');
       const currentMonthEarningsSnapshot = await db.collection(writerEarningsCollectionName)
         .where('month', '==', currentMonth)
         .get();
@@ -751,11 +753,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error fetching monthly financials:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch monthly financials data' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error fetching monthly financials:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch monthly financials data' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

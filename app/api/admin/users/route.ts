@@ -6,7 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions, isUserRecordAdmin } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface UserData {
   uid: string;
@@ -37,6 +38,8 @@ interface UserData {
 // GET endpoint - Get all users with their details and feature flag overrides
 // OPTIMIZED: Uses parallel batch queries instead of sequential N+1 queries
 export async function GET(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   const startTime = Date.now();
 
   try {
@@ -73,12 +76,10 @@ export async function GET(request: NextRequest) {
     const includeFinancial = searchParams.get('includeFinancial') === 'true';
     const countOnly = searchParams.get('countOnly') === 'true';
 
-    // Pre-compute collection names (async to support X-Force-Production-Data header)
-    const [usersCollectionName, pagesCollectionName, writerEarningsCollectionName] = await Promise.all([
-      getCollectionNameAsync('users'),
-      getCollectionNameAsync('pages'),
-      getCollectionNameAsync(USD_COLLECTIONS.WRITER_USD_EARNINGS),
-    ]);
+    // Collection names are now synchronous when using withAdminContext wrapper
+    const usersCollectionName = getCollectionName('users');
+    const pagesCollectionName = getCollectionName('pages');
+    const writerEarningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
 
     // Debug: Log which collections are being used
     console.log(`[Admin Users API] Using collections: users=${usersCollectionName}, pages=${pagesCollectionName}, earnings=${writerEarningsCollectionName}`);
@@ -224,6 +225,7 @@ export async function GET(request: NextRequest) {
       details: (error as Error).message
     }, { status: 500 });
   }
+  }); // End withAdminContext
 }
 
 // Helper: Batch fetch subscription documents from Firestore (source of truth)

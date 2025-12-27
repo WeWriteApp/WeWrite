@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -28,12 +29,13 @@ interface PaymentAlert {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const authResult = await checkAdminPermissions(request);
-    if (!authResult.success) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const authResult = await checkAdminPermissions(request);
+      if (!authResult.success) {
+        return NextResponse.json({ error: authResult.error }, { status: 401 });
+      }
 
     const alerts: PaymentAlert[] = [];
     const now = new Date();
@@ -186,13 +188,14 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error: any) {
-    console.error('Error fetching payment alerts:', error);
-    return NextResponse.json({
-      error: 'Failed to fetch payment alerts',
-      details: error.message
-    }, { status: 500 });
-  }
+    } catch (error: any) {
+      console.error('Error fetching payment alerts:', error);
+      return NextResponse.json({
+        error: 'Failed to fetch payment alerts',
+        details: error.message
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 async function calculateDailyRevenue(date: Date): Promise<number> {

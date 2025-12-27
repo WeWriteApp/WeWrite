@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
@@ -44,12 +45,13 @@ interface CleanupSummary {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // SECURITY: Use centralized admin verification with audit logging
-    const adminAuth = await verifyAdminAccess(request);
-    if (!adminAuth.isAdmin) {
-      return createAdminUnauthorizedResponse(adminAuth.auditId);
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // SECURITY: Use centralized admin verification with audit logging
+      const adminAuth = await verifyAdminAccess(request);
+      if (!adminAuth.isAdmin) {
+        return createAdminUnauthorizedResponse(adminAuth.auditId);
+      }
 
     const body = await request.json();
     const {
@@ -223,25 +225,27 @@ export async function POST(request: NextRequest) {
         : `Cleanup completed - cancelled ${summary.allocationsCancelled} orphaned allocations`
     });
 
-  } catch (error) {
-    console.error('[ORPHANED ALLOCATION CLEANUP] Error:', error);
-    return NextResponse.json(
-      {
-        error: 'Cleanup failed',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('[ORPHANED ALLOCATION CLEANUP] Error:', error);
+      return NextResponse.json(
+        {
+          error: 'Cleanup failed',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    // SECURITY: Use centralized admin verification with audit logging
-    const adminAuth = await verifyAdminAccess(request);
-    if (!adminAuth.isAdmin) {
-      return createAdminUnauthorizedResponse(adminAuth.auditId);
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // SECURITY: Use centralized admin verification with audit logging
+      const adminAuth = await verifyAdminAccess(request);
+      if (!adminAuth.isAdmin) {
+        return createAdminUnauthorizedResponse(adminAuth.auditId);
+      }
 
     // GET request just returns stats without making changes
     // IMPORTANT: Use COLLECTIONS.USD_ALLOCATIONS constant ('usdAllocations') not 'usd_allocations'
@@ -287,14 +291,15 @@ export async function GET(request: NextRequest) {
       message: 'Use POST with dryRun: false to clean up orphaned allocations'
     });
 
-  } catch (error) {
-    console.error('[ORPHANED ALLOCATION CLEANUP] Stats error:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to get stats',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('[ORPHANED ALLOCATION CLEANUP] Stats error:', error);
+      return NextResponse.json(
+        {
+          error: 'Failed to get stats',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

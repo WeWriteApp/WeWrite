@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { syncFirestoreAdminsToClaims } from '../../../../services/adminClaimsService';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../../utils/environmentConfig';
+import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 interface SessionData {
   uid?: string;
@@ -61,6 +62,7 @@ async function verifyAdminAccess(request: NextRequest): Promise<{ isAdmin: boole
  * POST - Sync all Firestore admins to Firebase Custom Claims
  */
 export async function POST(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     const authResult = await verifyAdminAccess(request);
     if (!authResult.isAdmin) {
@@ -94,4 +96,5 @@ export async function POST(request: NextRequest) {
     console.error('[Admin Claims Sync] Error:', error);
     return NextResponse.json({ error: 'Failed to sync admin claims' }, { status: 500 });
   }
+  }); // End withAdminContext
 }

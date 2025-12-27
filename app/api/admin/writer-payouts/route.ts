@@ -7,14 +7,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check admin permissions
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      // Check admin permissions
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
+      }
 
     const admin = initAdmin();
     if (!admin) {
@@ -139,17 +141,18 @@ export async function GET(request: NextRequest) {
       cumulative
     });
 
-    return NextResponse.json({
-      success: true,
-      data: responseData
-    });
+      return NextResponse.json({
+        success: true,
+        data: responseData
+      });
 
-  } catch (error) {
-    console.error('[ADMIN] Error fetching writer payouts:', error);
-    
-    return NextResponse.json({
-      error: 'Failed to fetch writer payouts data',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('[ADMIN] Error fetching writer payouts:', error);
+
+      return NextResponse.json({
+        error: 'Failed to fetch writer payouts data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

@@ -7,9 +7,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionNameAsync } from '../../../utils/environmentConfig';
+import { getCollectionName } from '../../../utils/environmentConfig';
 import { isAdmin } from '../../../utils/isAdmin';
 import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 // Threshold in cents for payout setup reminder ($25 minimum)
 const PAYOUT_THRESHOLD_CENTS = WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold * 100;
@@ -25,6 +26,8 @@ interface Recipient {
 }
 
 export async function GET(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   try {
     // Verify admin access via middleware header
     const userEmail = request.headers.get('x-user-email');
@@ -48,8 +51,8 @@ export async function GET(request: NextRequest) {
     const recipients: Recipient[] = [];
 
     // Pre-compute collection names (async to support X-Force-Production-Data header)
-    const usersCollectionName = await getCollectionNameAsync('users');
-    const writerBalancesCollectionName = await getCollectionNameAsync('writerUsdBalances');
+    const usersCollectionName = getCollectionName('users');
+    const writerBalancesCollectionName = getCollectionName('writerUsdBalances');
 
     switch (cronId) {
       case 'username-reminder': {
@@ -540,4 +543,5 @@ export async function GET(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+  }); // End withAdminContext
 }

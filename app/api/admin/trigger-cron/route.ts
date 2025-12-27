@@ -12,10 +12,13 @@ import { PRODUCTION_URL } from '../../../utils/urlConfig';
 import { isAdmin } from '../../../utils/isAdmin';
 import { randomUUID } from 'crypto';
 import { sendTemplatedEmail } from '../../../services/emailService';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
+  // Wrap the entire handler with admin context for proper environment detection
+  return withAdminContext(request, async () => {
   try {
     // Verify admin access
     const userEmail = request.headers.get('x-user-email');
@@ -287,4 +290,5 @@ export async function POST(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+  }); // End withAdminContext
 }

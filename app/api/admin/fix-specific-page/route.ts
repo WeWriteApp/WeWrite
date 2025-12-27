@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * Admin API to fix a specific page with malformed content
  * POST /api/admin/fix-specific-page - Fix a specific page by ID
  */
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // SECURITY: Use centralized admin verification with audit logging
     const adminAuth = await verifyAdminAccess(request);
     if (!adminAuth.isAdmin) {
@@ -125,5 +127,6 @@ export async function POST(request: NextRequest) {
       error: 'Failed to fix specific page',
       details: error?.message || 'Unknown error'
     }, { status: 500 });
-  }
+    }
+  }); // End withAdminContext
 }

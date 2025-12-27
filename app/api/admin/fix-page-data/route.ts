@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * Admin API to fix page data issues
  * POST /api/admin/fix-page-data - Fix pages with missing titles, usernames, or version data
- * 
+ *
  * This endpoint addresses the "Untitled" and "by missing username" issues by:
  * 1. Finding pages with missing or default titles/usernames
  * 2. Attempting to recover data from versions
@@ -14,7 +15,8 @@ import { getCollectionName } from '../../../utils/environmentConfig';
  * 4. Creating missing currentVersion references
  */
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Only allow admin users
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -204,11 +206,12 @@ export async function POST(request: NextRequest) {
       results
     });
 
-  } catch (error) {
-    console.error('Fix page data error:', error);
-    return NextResponse.json({
-      error: 'Failed to fix page data',
-      details: error?.message || 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Fix page data error:', error);
+      return NextResponse.json({
+        error: 'Failed to fix page data',
+        details: error?.message || 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

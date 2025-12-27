@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface DefaultBackgroundImage {
   id: string;
@@ -18,13 +19,14 @@ interface DefaultBackgroundImage {
  * Fetch all default background images
  */
 export async function GET(request: NextRequest) {
-  // Verify admin access
-  const adminAuth = await verifyAdminAccess(request);
-  if (!adminAuth.isAdmin) {
-    return createAdminUnauthorizedResponse(adminAuth.auditId);
-  }
+  return withAdminContext(request, async () => {
+    // Verify admin access
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
+    }
 
-  try {
+    try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
@@ -57,16 +59,17 @@ export async function GET(request: NextRequest) {
       count: images.length
     });
 
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch background images',
-        auditId: adminAuth.auditId
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to fetch background images',
+          auditId: adminAuth.auditId
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -74,14 +77,15 @@ export async function GET(request: NextRequest) {
  * Upload a new default background image
  */
 export async function POST(request: NextRequest) {
-  // Verify admin access
-  const adminAuth = await verifyAdminAccess(request);
+  return withAdminContext(request, async () => {
+    // Verify admin access
+    const adminAuth = await verifyAdminAccess(request);
 
-  if (!adminAuth.isAdmin) {
-    return createAdminUnauthorizedResponse(adminAuth.auditId);
-  }
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
+    }
 
-  try {
+    try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const order = parseInt(formData.get('order') as string) || 0;
@@ -201,16 +205,17 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to upload background image',
-        auditId: adminAuth.auditId
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to upload background image',
+          auditId: adminAuth.auditId
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -218,13 +223,14 @@ export async function POST(request: NextRequest) {
  * Update image order or active status
  */
 export async function PUT(request: NextRequest) {
-  // Verify admin access
-  const adminAuth = await verifyAdminAccess(request);
-  if (!adminAuth.isAdmin) {
-    return createAdminUnauthorizedResponse(adminAuth.auditId);
-  }
+  return withAdminContext(request, async () => {
+    // Verify admin access
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
+    }
 
-  try {
+    try {
     const { images } = await request.json();
 
     if (!Array.isArray(images)) {
@@ -254,16 +260,17 @@ export async function PUT(request: NextRequest) {
       message: 'Background images updated successfully'
     });
 
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update background images',
-        auditId: adminAuth.auditId
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to update background images',
+          auditId: adminAuth.auditId
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -271,13 +278,14 @@ export async function PUT(request: NextRequest) {
  * Delete a default background image
  */
 export async function DELETE(request: NextRequest) {
-  // Verify admin access
-  const adminAuth = await verifyAdminAccess(request);
-  if (!adminAuth.isAdmin) {
-    return createAdminUnauthorizedResponse(adminAuth.auditId);
-  }
+  return withAdminContext(request, async () => {
+    // Verify admin access
+    const adminAuth = await verifyAdminAccess(request);
+    if (!adminAuth.isAdmin) {
+      return createAdminUnauthorizedResponse(adminAuth.auditId);
+    }
 
-  try {
+    try {
     const url = new URL(request.url);
     const imageId = url.searchParams.get('id');
 
@@ -324,14 +332,15 @@ export async function DELETE(request: NextRequest) {
       message: 'Background image deleted successfully'
     });
 
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to delete background image',
-        auditId: adminAuth.auditId
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to delete background image',
+          auditId: adminAuth.auditId
+        },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

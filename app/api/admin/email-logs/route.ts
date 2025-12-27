@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '@/utils/isAdmin';
 import { getEmailLogsByTemplate, getEmailLogsByUser, getRecentEmailLogs, getEmailStats } from '@/services/emailLogService';
+import { withAdminContext } from '@/utils/adminRequestContext';
 
 /**
  * Email Logs API for Admin
@@ -13,6 +14,7 @@ import { getEmailLogsByTemplate, getEmailLogsByUser, getRecentEmailLogs, getEmai
  *   - stats: If true, return stats instead of logs
  */
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     // Get user email from middleware header
     const userEmail = request.headers.get('x-user-email');
@@ -62,4 +64,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }

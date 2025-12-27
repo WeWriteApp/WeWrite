@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * ADMIN: Fix Username Propagation Issues
- * 
+ *
  * This endpoint fixes username propagation issues by:
  * 1. Finding users with missing or invalid usernames
  * 2. Updating page documents with correct usernames
@@ -13,7 +14,8 @@ import { getCollectionName } from '../../../utils/environmentConfig';
  * 4. Ensuring data consistency across all collections
  */
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check if user is admin
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
@@ -75,10 +77,11 @@ export async function POST(request: NextRequest) {
 
     return createApiResponse(results);
 
-  } catch (error) {
-    console.error('❌ ADMIN: Error fixing username propagation:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to fix username propagation');
-  }
+    } catch (error) {
+      console.error('❌ ADMIN: Error fixing username propagation:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Failed to fix username propagation');
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -257,7 +260,8 @@ async function syncPageUsernames(db: any, results: any, targetUserId?: string) {
  * GET: Check username propagation status
  */
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
@@ -319,10 +323,11 @@ export async function GET(request: NextRequest) {
       recommendations: generateRecommendations(issues)
     });
 
-  } catch (error) {
-    console.error('Error checking username propagation status:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to check status');
-  }
+    } catch (error) {
+      console.error('Error checking username propagation status:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Failed to check status');
+    }
+  }); // End withAdminContext
 }
 
 function generateRecommendations(issues: any): string[] {

@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { writingIdeas as defaultWritingIdeas, type WritingIdea } from '../../../data/writingIdeas';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 const DOCUMENT_ID = 'writing_ideas';
 
@@ -23,7 +24,8 @@ interface WritingIdeasDocument {
  * Retrieve all writing ideas
  */
 export async function GET(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     console.log('[Writing Ideas API] GET request received');
 
     // Check admin permissions
@@ -114,7 +116,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
-  }
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -122,7 +125,8 @@ export async function GET(request: NextRequest) {
  * Add a new writing idea
  */
 export async function POST(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -197,13 +201,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error adding writing idea:', error);
-    return NextResponse.json(
-      { error: 'Failed to add writing idea' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error adding writing idea:', error);
+      return NextResponse.json(
+        { error: 'Failed to add writing idea' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -211,7 +216,8 @@ export async function POST(request: NextRequest) {
  * Update an existing writing idea
  */
 export async function PUT(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -281,13 +287,14 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error updating writing idea:', error);
-    return NextResponse.json(
-      { error: 'Failed to update writing idea' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error updating writing idea:', error);
+      return NextResponse.json(
+        { error: 'Failed to update writing idea' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -295,7 +302,8 @@ export async function PUT(request: NextRequest) {
  * Delete a writing idea
  */
 export async function DELETE(request: NextRequest) {
-  try {
+  return withAdminContext(request, async () => {
+    try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
     if (!adminCheck.success) {
@@ -357,11 +365,12 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
-  } catch (error) {
-    console.error('Error deleting writing idea:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete writing idea' },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error deleting writing idea:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete writing idea' },
+        { status: 500 }
+      );
+    }
+  }); // End withAdminContext
 }

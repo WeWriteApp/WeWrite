@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { checkAdminPermissions } from '../../../admin-auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 export type ActivityType = 'subscription' | 'payout' | 'notification';
 
@@ -34,21 +35,22 @@ export interface Activity {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const uid = searchParams.get('uid');
-  const filterType = searchParams.get('filter') as ActivityType | 'all' | null;
-  const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10), 100);
+  return withAdminContext(request, async () => {
+    const { searchParams } = new URL(request.url);
+    const uid = searchParams.get('uid');
+    const filterType = searchParams.get('filter') as ActivityType | 'all' | null;
+    const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10), 100);
 
-  if (!uid) {
-    return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
-  }
+    if (!uid) {
+      return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
+    }
 
-  const adminAuth = await checkAdminPermissions(request);
-  if (!adminAuth.success) {
-    return NextResponse.json({ error: adminAuth.error || 'Admin access required' }, { status: 403 });
-  }
+    const adminAuth = await checkAdminPermissions(request);
+    if (!adminAuth.success) {
+      return NextResponse.json({ error: adminAuth.error || 'Admin access required' }, { status: 403 });
+    }
 
-  try {
+    try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
     
@@ -380,17 +382,18 @@ export async function GET(request: NextRequest) {
     // Apply limit
     const limitedActivities = uniqueActivities.slice(0, limit);
     
-    return NextResponse.json({ 
-      success: true, 
-      activities: limitedActivities,
-      total: uniqueActivities.length,
-      filter
-    });
-    
-  } catch (error: any) {
-    console.error('[Activity API] Failed to load activity feed:', error);
-    return NextResponse.json({ error: 'Failed to load activity feed' }, { status: 500 });
-  }
+      return NextResponse.json({
+        success: true,
+        activities: limitedActivities,
+        total: uniqueActivities.length,
+        filter
+      });
+
+    } catch (error: any) {
+      console.error('[Activity API] Failed to load activity feed:', error);
+      return NextResponse.json({ error: 'Failed to load activity feed' }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 function getSubscriptionTitle(status: string): string {

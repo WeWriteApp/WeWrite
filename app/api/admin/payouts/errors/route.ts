@@ -16,17 +16,19 @@ import {
 } from 'firebase/firestore';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { PayoutErrorCategory, PayoutErrorSeverity } from '../../../../services/payoutErrorLogger';
+import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 /**
  * GET /api/admin/payouts/errors
  * Get paginated list of payout error logs with filtering
  */
 export async function GET(request: NextRequest) {
-  try {
-    const adminCheck = await checkAdminPermissions(request);
-    if (!adminCheck.success) {
-      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
+      }
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') as PayoutErrorCategory | null;
@@ -145,34 +147,35 @@ export async function GET(request: NextRequest) {
       stats.byResolutionStatus[status] = (stats.byResolutionStatus[status] || 0) + 1;
     });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        errors,
-        stats,
-        filters: {
-          category,
-          severity,
-          correlationId,
-          payoutId,
-          search,
-          timeRange
-        },
-        pagination: {
-          hasMore: errorsSnapshot.docs.length === pageSize,
-          lastErrorId: errorsSnapshot.docs.length > 0 ? 
-            errorsSnapshot.docs[errorsSnapshot.docs.length - 1].id : null
+      return NextResponse.json({
+        success: true,
+        data: {
+          errors,
+          stats,
+          filters: {
+            category,
+            severity,
+            correlationId,
+            payoutId,
+            search,
+            timeRange
+          },
+          pagination: {
+            hasMore: errorsSnapshot.docs.length === pageSize,
+            lastErrorId: errorsSnapshot.docs.length > 0 ?
+              errorsSnapshot.docs[errorsSnapshot.docs.length - 1].id : null
+          }
         }
-      }
-    });
+      });
 
-  } catch (error: unknown) {
-    console.error('Error getting error logs:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error: unknown) {
+      console.error('Error getting error logs:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -180,15 +183,12 @@ export async function GET(request: NextRequest) {
  * Update error resolution status
  */
 export async function PUT(request: NextRequest) {
-  try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!(await isAdmin(userId))) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
+      }
 
     const body = await request.json();
     const { errorId, resolution } = body;
@@ -221,18 +221,19 @@ export async function PUT(request: NextRequest) {
 
     await updateDoc(doc(db, getCollectionName('payoutErrorLogs'), errorId), updateData);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Error resolution updated'
-    });
+      return NextResponse.json({
+        success: true,
+        message: 'Error resolution updated'
+      });
 
-  } catch (error: unknown) {
-    console.error('Error updating error resolution:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error: unknown) {
+      console.error('Error updating error resolution:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }
 
 /**
@@ -240,15 +241,12 @@ export async function PUT(request: NextRequest) {
  * Bulk operations on error logs
  */
 export async function POST(request: NextRequest) {
-  try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!(await isAdmin(userId))) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+  return withAdminContext(request, async () => {
+    try {
+      const adminCheck = await checkAdminPermissions(request);
+      if (!adminCheck.success) {
+        return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
+      }
 
     const body = await request.json();
     const { action, errorIds, resolution } = body;
@@ -302,20 +300,21 @@ export async function POST(request: NextRequest) {
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
 
-    return NextResponse.json({
-      success: successCount > 0,
-      message: `Bulk operation completed: ${successCount} successful, ${failureCount} failed`,
-      data: {
-        results,
-        summary: { successCount, failureCount, total: errorIds.length }
-      }
-    });
+      return NextResponse.json({
+        success: successCount > 0,
+        message: `Bulk operation completed: ${successCount} successful, ${failureCount} failed`,
+        data: {
+          results,
+          summary: { successCount, failureCount, total: errorIds.length }
+        }
+      });
 
-  } catch (error: unknown) {
-    console.error('Error processing bulk error operation:', error);
-    return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+    } catch (error: unknown) {
+      console.error('Error processing bulk error operation:', error);
+      return NextResponse.json({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+  }); // End withAdminContext
 }

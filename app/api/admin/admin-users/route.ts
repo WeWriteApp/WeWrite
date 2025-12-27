@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 interface AdminUser {
   id: string;
@@ -18,6 +19,7 @@ interface AdminUser {
 
 // GET endpoint - Get all admin users
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
@@ -93,10 +95,12 @@ export async function GET(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+  }); // End withAdminContext
 }
 
 // POST endpoint - Add or remove admin users
 export async function POST(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
@@ -173,4 +177,5 @@ export async function POST(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+  }); // End withAdminContext
 }

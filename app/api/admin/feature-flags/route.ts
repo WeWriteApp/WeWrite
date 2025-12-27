@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { checkAdminPermissions } from '../../admin-auth-helper';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 type FeatureFlagMap = Record<string, boolean>;
 
@@ -57,6 +58,7 @@ async function assertAdmin(request: NextRequest): Promise<{ ok: boolean; email?:
 }
 
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   const adminCheck = await assertAdmin(request);
   if (!adminCheck.ok) {
     return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status });
@@ -94,9 +96,11 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }
 
 export async function POST(request: NextRequest) {
+  return withAdminContext(request, async () => {
   const adminCheck = await assertAdmin(request);
   if (!adminCheck.ok) {
     return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status });
@@ -146,4 +150,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  }); // End withAdminContext
 }

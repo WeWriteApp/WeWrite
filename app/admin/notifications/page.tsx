@@ -21,7 +21,7 @@ import {
 } from '../../components/ui/side-drawer';
 import { isAdmin } from '../../utils/isAdmin';
 import { useToast } from '../../components/ui/use-toast';
-import { adminFetch } from '../../utils/adminFetch';
+import { useAdminData } from '../../providers/AdminDataProvider';
 import { UserDetailsDrawer } from '../../components/admin/UserDetailsDrawer';
 import { useTheme } from '../../providers/ThemeProvider';
 
@@ -96,6 +96,7 @@ function AdminEmailsPageContent() {
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
+  const { adminFetch } = useAdminData();
 
   // Tab state from URL
   const tabParam = searchParams.get('tab');
