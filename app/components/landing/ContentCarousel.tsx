@@ -113,10 +113,11 @@ export default function ContentCarousel({
     );
   }
 
-  // Empty state
-  if (!children || (Array.isArray(children) && children.length === 0)) {
+  // Empty state - use React.Children.count for accurate child counting
+  const childCount = React.Children.count(children);
+  if (!children || childCount === 0) {
     return (
-      <div 
+      <div
         className="flex items-center justify-center text-muted-foreground"
         style={{ height: `${height}px` }}
       >

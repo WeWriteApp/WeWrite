@@ -19,6 +19,15 @@ export function TooltipSection({ id }: { id: string }) {
       path="app/components/ui/tooltip.tsx"
       description="Accessible tooltips for displaying additional information on hover. Uses Radix UI primitives for proper keyboard and screen reader support. TooltipProvider is already wrapped at the app level."
     >
+      <StateDemo label="Variants">
+        <SimpleTooltip content="Primary variant (accent color)" variant="primary">
+          <Button variant="default">Primary</Button>
+        </SimpleTooltip>
+        <SimpleTooltip content="Secondary variant (neutral)" variant="secondary">
+          <Button variant="secondary">Secondary</Button>
+        </SimpleTooltip>
+      </StateDemo>
+
       <StateDemo label="SimpleTooltip (Recommended)">
         <SimpleTooltip content="This is a tooltip">
           <Button variant="outline">Hover me</Button>

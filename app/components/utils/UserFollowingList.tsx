@@ -3,13 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from "../ui/button";
-import { Card } from "../ui/card";
 import { InlineError } from '../ui/InlineError';
 import { followsApi } from "../../utils/apiClient";
 import { useAuth } from '../../providers/AuthProvider';
-import Link from 'next/link';
 import { UsernameBadge } from '../ui/UsernameBadge';
-import { cn } from '../../lib/utils';
 
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from './AlertModal';
@@ -112,7 +109,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
       }
     } catch (err) {
       console.error('Error loading followed users:', err);
-      setError('Failed to load followed users');
+      setError('Failed to load followed writers');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -129,14 +126,14 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
       const response = await followsApi.unfollowUser(followedId);
 
       if (!response.success) {
-        throw new Error(response.error || 'Failed to unfollow user');
+        throw new Error(response.error || 'Failed to unfollow writer');
       }
 
       // Update the local state
       setFollowedUsers(prev => prev.filter(u => u.id !== followedId));
     } catch (err) {
       console.error('Error unfollowing user:', err);
-      await showError('Unfollow Failed', 'Failed to unfollow user. Please try again.');
+      await showError('Unfollow Failed', 'Failed to unfollow writer. Please try again.');
     } finally {
       setUnfollowingId(null);
     }
@@ -165,11 +162,11 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
           <Icon name="Users" size={20} className="text-primary" />
         </div>
-        <h3 className="text-lg font-medium mb-2">No followed users yet</h3>
+        <h3 className="text-lg font-medium mb-2">No followed writers yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
           {isCurrentUser
-            ? "When you follow users, they'll appear here so you can easily find them later."
-            : "This user isn't following anyone yet."}
+            ? "When you follow writers, they'll appear here so you can easily find them later."
+            : "This writer isn't following anyone yet."}
         </p>
       </div>
     );
@@ -177,65 +174,37 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col space-y-2">
+      <div className="space-y-2">
         {followedUsers.map(followedUser => {
-          const bioText = typeof followedUser.bio === 'string'
-            ? followedUser.bio
-            : Array.isArray(followedUser.bio)
-              ? followedUser.bio.map((n: any) => n.text || '').join(' ')
-              : '';
-
-          // Check if username is long enough to warrant stacking
           const username = followedUser.username || 'Anonymous User';
-          const isLongUsername = username.length > 15;
 
           return (
           <div
             key={followedUser.id}
-            className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
+            className="wewrite-card flex items-center justify-between p-3"
           >
-            <Link
-              href={`/u/${followedUser.id}`}
-              className="flex items-center gap-2 flex-grow min-w-0"
-            >
-              <div className={cn(
-                "flex gap-1",
-                isLongUsername ? "flex-col items-start" : "flex-row items-center flex-wrap"
-              )}>
-                <span className={cn(
-                  "font-medium text-primary",
-                  isLongUsername && "break-all"
-                )}>
-                  {username}
-                </span>
-                {(followedUser.subscriptionStatus === 'active' && followedUser.subscriptionAmount) && (
-                  <span className={cn(
-                    "text-xs font-medium text-muted-foreground",
-                    isLongUsername && "self-center"
-                  )}>
-                    ${followedUser.subscriptionAmount.toFixed(2)}
-                  </span>
-                )}
-                {bioText && (
-                  <p className="text-xs text-muted-foreground line-clamp-1 w-full">{bioText}</p>
-                )}
-              </div>
-            </Link>
+            <UsernameBadge
+              userId={followedUser.id}
+              username={username}
+              tier={followedUser.tier}
+              subscriptionStatus={followedUser.subscriptionStatus}
+              subscriptionAmount={followedUser.subscriptionAmount}
+              variant="pill"
+              pillVariant="primary"
+              size="md"
+            />
 
             {isCurrentUser && (
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                 onClick={() => handleUnfollow(followedUser.id)}
                 disabled={unfollowingId === followedUser.id}
               >
                 {unfollowingId === followedUser.id ? (
-                  <Icon name="Loader" />
-                ) : (
-                  <Icon name="UserX" size={16} />
-                )}
-                <span className="sr-only">Unfollow</span>
+                  <Icon name="Loader" size={16} className="mr-1" />
+                ) : null}
+                Unfollow
               </Button>
             )}
           </div>

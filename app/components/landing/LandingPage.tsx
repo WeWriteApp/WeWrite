@@ -17,6 +17,10 @@ import { useAuth } from '../../providers/AuthProvider';
 import HeroCard from './HeroCard';
 import HowItWorksSection from './HowItWorksSection';
 import FeaturesCarousel from './FeaturesCarousel';
+import PlatformStatsCarousel from './PlatformStatsCarousel';
+import ComparisonSection from './ComparisonSection';
+import SocialFeedsSection from './SocialFeedsSection';
+import OpenSourceSection from './OpenSourceSection';
 
 import { LandingColorProvider } from './LandingColorContext';
 // LandingBlobs is now rendered globally via GlobalLandingBlobs in root layout
@@ -707,6 +711,9 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
           </div>
         </section>
 
+        {/* Comparison Section - How WeWrite is Different */}
+        <ComparisonSection />
+
         {/* FAQ Section */}
         <section className="py-12 md:py-16">
           <div className="container mx-auto px-6 max-w-4xl">
@@ -759,6 +766,19 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
           </div>
         </section>
 
+        {/* Platform Stats Carousel - Social Proof */}
+        <section className="py-8 md:py-12">
+          <div className="text-center mb-8 px-6">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Platform Growth</h2>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+              Watch our community grow in real time
+            </p>
+          </div>
+          <div className="w-full overflow-visible">
+            <PlatformStatsCarousel />
+          </div>
+        </section>
+
         {/* Browse by Community Section - shows all vertical landing pages */}
         <section className="py-12 md:py-16 bg-muted/30">
           <div className="container mx-auto px-6 max-w-4xl">
@@ -793,6 +813,12 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
             </div>
           </div>
         </section>
+
+        {/* Social Feeds Section - Instagram and X embeds */}
+        <SocialFeedsSection />
+
+        {/* Open Source Section */}
+        <OpenSourceSection />
 
         {/* Ready to Start CTA Card - only show for logged out users */}
         {!isAuthenticated && (

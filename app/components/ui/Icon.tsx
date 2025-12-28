@@ -150,6 +150,7 @@ import {
   Youtube,
   Twitter,
   Instagram,
+  Github,
   BookText,
   FolderPlus,
   Printer,
@@ -228,7 +229,7 @@ export type IconName =
   | "Flame" | "Tablet" | "Sort"
   | "Flag" | "Ban" | "Wrench"
   | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack"
-  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "BookText" | "FolderPlus"
+  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "Github" | "BookText" | "FolderPlus"
   | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff";
 
 // Icon props interface
@@ -452,6 +453,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Youtube: Youtube,
   Twitter: Twitter,
   Instagram: Instagram,
+  Github: Github,
   BookText: BookText,
   FolderPlus: FolderPlus,
   Printer: Printer,

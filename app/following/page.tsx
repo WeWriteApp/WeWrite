@@ -6,6 +6,7 @@ import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from '../components/ui/segmented-control';
 import UserFollowingList from '../components/utils/UserFollowingList';
+import FollowingSuggestions from '../components/utils/FollowingSuggestions';
 import FollowedPages from '../components/pages/FollowedPages';
 import { Button } from '../components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -101,15 +102,12 @@ export default function FollowingPage() {
                   onClick={() => router.push('/search')}
                   className="flex items-center gap-2 rounded-2xl h-8 px-3"
                 >
-                  <Icon name="UserPlus" size={16} />
-                  <span className="hidden sm:inline">Find Users</span>
+                  <Icon name="Search" size={16} />
+                  <span className="hidden sm:inline">Search Writers</span>
                 </Button>
               </div>
             </div>
             
-            <p className="text-muted-foreground text-lg">
-              Manage your followed users and pages. Stay connected with the content and creators you care about.
-            </p>
       </div>
 
       {/* Following Content with Segmented Control */}
@@ -118,7 +116,7 @@ export default function FollowingPage() {
           <SegmentedControlList className="grid w-full grid-cols-2 max-w-md">
             <SegmentedControlTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="Users" size={12} className="sm:h-4 sm:w-4" />
-              <span>Following Users</span>
+              <span>Following Writers</span>
             </SegmentedControlTrigger>
             <SegmentedControlTrigger value="pages" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="FileText" size={12} className="sm:h-4 sm:w-4" />
@@ -129,12 +127,17 @@ export default function FollowingPage() {
           <SegmentedControlContent value="users" className="space-y-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Users You Follow</h2>
+                <h2 className="text-xl font-semibold">Writers You Follow</h2>
               </div>
               <UserFollowingList
                 userId={user.uid}
                 isCurrentUser={true}
               />
+            </div>
+
+            {/* Following Suggestions */}
+            <div className="mt-8 pt-8 border-t border-border">
+              <FollowingSuggestions limit={10} />
             </div>
           </SegmentedControlContent>
 
@@ -154,26 +157,6 @@ export default function FollowingPage() {
         </SegmentedControl>
       </div>
 
-      {/* Additional Info */}
-      <div className="mt-12 p-6 bg-muted/30 rounded-lg">
-        <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-          <Icon name="Heart" size={20} className="text-red-500" />
-          About Following
-        </h2>
-        <div className="space-y-2 text-muted-foreground">
-          <p>
-            Following users lets you stay updated with their latest content and activity.
-            You'll see their recent edits and new pages in your activity feed.
-          </p>
-          <p>
-            Following pages gives you quick access to specific content you want to track.
-            You'll be notified when these pages are updated.
-          </p>
-          <p>
-            Your following relationships are private and only visible to you.
-          </p>
-        </div>
-      </div>
     </NavPageLayout>
   );
 }

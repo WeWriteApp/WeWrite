@@ -872,6 +872,13 @@ export const followsApi = {
    */
   async getUserFollowers(userId: string): Promise<ApiResponse> {
     return apiCall(`/api/follows/users?userId=${encodeURIComponent(userId)}&type=followers`);
+  },
+
+  /**
+   * Get follow suggestions for the current user
+   */
+  async getFollowSuggestions(limit: number = 10): Promise<ApiResponse> {
+    return apiCall(`/api/follows/suggestions?limit=${limit}`);
   }
 };
 
