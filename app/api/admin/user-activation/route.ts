@@ -11,7 +11,6 @@ import { withAdminContext } from '../../../utils/adminRequestContext';
 
 // Activation milestone keys in chronological order
 export const ACTIVATION_MILESTONES = [
-  'accountCreated',
   'usernameSet',
   'emailVerified',
   'pageCreated',
@@ -20,10 +19,29 @@ export const ACTIVATION_MILESTONES = [
   'repliedToPage',
   'pwaInstalled',
   'hasSubscription',
+  'allocatedToWriters',
+  'receivedEarnings',
+  'reachedPayoutThreshold',
   'payoutsSetup',
 ] as const;
 
+// Payout threshold in cents ($25.00)
+const PAYOUT_THRESHOLD_CENTS = 2500;
+
 export type ActivationMilestone = typeof ACTIVATION_MILESTONES[number];
+
+// Define milestone hierarchy for UI grouping
+export const MILESTONE_HIERARCHY: Record<string, { parent?: string; children?: string[] }> = {
+  pageCreated: { children: ['linkedOwnPage', 'linkedOtherPage', 'repliedToPage'] },
+  linkedOwnPage: { parent: 'pageCreated' },
+  linkedOtherPage: { parent: 'pageCreated' },
+  repliedToPage: { parent: 'pageCreated' },
+  hasSubscription: { children: ['allocatedToWriters'] },
+  allocatedToWriters: { parent: 'hasSubscription' },
+  receivedEarnings: { children: ['reachedPayoutThreshold', 'payoutsSetup'] },
+  reachedPayoutThreshold: { parent: 'receivedEarnings' },
+  payoutsSetup: { parent: 'receivedEarnings' },
+};
 
 export interface UserActivationData {
   uid: string;
@@ -59,10 +77,12 @@ export async function GET(request: NextRequest) {
       const sortBy = searchParams.get('sortBy') || 'createdAt'; // createdAt or completedCount
       const sortDir = searchParams.get('sortDir') || 'desc';
 
-      // Collection names
+      // Collection names - getCollectionName handles dev vs prod automatically
       const usersCollectionName = getCollectionName('users');
       const pagesCollectionName = getCollectionName('pages');
       const analyticsEventsCollectionName = getCollectionName('analytics_events');
+
+      console.log(`[User Activation] Using collections: users=${usersCollectionName}, pages=${pagesCollectionName}`);
 
       // Fetch all users
       let snapshot;
@@ -86,6 +106,10 @@ export async function GET(request: NextRequest) {
       const userIds = snapshot.docs.map(doc => doc.id);
 
       // Parallel data fetching for all milestones
+      const backlinksCollectionName = getCollectionName('backlinks');
+      const allocationsCollectionName = getCollectionName('usd_allocations');
+      const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+
       const [
         pageCountsMap,
         pwaInstallsMap,
@@ -93,13 +117,17 @@ export async function GET(request: NextRequest) {
         linkedOwnPageMap,
         linkedOtherPageMap,
         repliedMap,
+        allocatedMap,
+        earningsMap,
       ] = await Promise.all([
         batchFetchPageCounts(db, pagesCollectionName, userIds),
         batchFetchPWAInstalls(db, analyticsEventsCollectionName, userIds),
         batchFetchSubscriptions(db, usersCollectionName, userIds),
-        batchFetchLinkedOwnPage(db, pagesCollectionName, userIds),
-        batchFetchLinkedOtherPage(db, pagesCollectionName, userIds),
+        batchFetchLinkedOwnPage(db, backlinksCollectionName, pagesCollectionName, userIds),
+        batchFetchLinkedOtherPage(db, backlinksCollectionName, pagesCollectionName, userIds),
         batchFetchRepliedToPage(db, pagesCollectionName, userIds),
+        batchFetchAllocations(db, allocationsCollectionName, userIds),
+        batchFetchEarnings(db, earningsCollectionName, userIds),
       ]);
 
       // Build activation data
@@ -119,9 +147,13 @@ export async function GET(request: NextRequest) {
         const hasLinkedOwnPage = linkedOwnPageMap.get(uid) ?? false;
         const hasLinkedOtherPage = linkedOtherPageMap.get(uid) ?? false;
         const hasReplied = repliedMap.get(uid) ?? false;
+        const hasAllocated = allocatedMap.get(uid) ?? false;
+        // Earnings: check if user has any earnings and if they've reached the payout threshold
+        const earningsData = earningsMap.get(uid);
+        const hasReceivedEarnings = (earningsData?.totalCents ?? 0) > 0;
+        const hasReachedPayoutThreshold = (earningsData?.availableCents ?? 0) >= PAYOUT_THRESHOLD_CENTS;
 
         const milestones: Record<ActivationMilestone, boolean> = {
-          accountCreated: true, // Always true if user exists
           usernameSet: Boolean(hasUsername),
           emailVerified: data.emailVerified === true,
           pageCreated: hasPages,
@@ -130,6 +162,9 @@ export async function GET(request: NextRequest) {
           repliedToPage: hasReplied,
           pwaInstalled: hasPwa,
           hasSubscription: hasSubscription,
+          allocatedToWriters: hasAllocated,
+          receivedEarnings: hasReceivedEarnings,
+          reachedPayoutThreshold: hasReachedPayoutThreshold,
           payoutsSetup: hasStripe,
         };
 
@@ -173,6 +208,7 @@ export async function GET(request: NextRequest) {
         success: true,
         users: activationData,
         milestones: ACTIVATION_MILESTONES,
+        hierarchy: MILESTONE_HIERARCHY,
         total: activationData.length,
         _debug: { durationMs: duration },
       });
@@ -301,58 +337,61 @@ async function batchFetchSubscriptions(
   return map;
 }
 
-// Helper: Batch fetch if user has linked to their own page (created a link that points to a page they own)
-// A page has links in the content (not directly tracked), so we check if user has pages that are linked FROM other pages
-// Actually, "linked to own page" means the user added a link in their page's content pointing to another of their own pages
-// We'll check if the user has pages with pageLinks array containing pageIds they also own
+// Helper: Batch fetch if user has linked to their own page
+// Uses the backlinks collection: sourcePageId links to targetPageId
+// A user has "linked to own page" if they have a backlink where both source and target pages belong to them
 async function batchFetchLinkedOwnPage(
   db: FirebaseFirestore.Firestore,
-  collectionName: string,
+  backlinksCollectionName: string,
+  pagesCollectionName: string,
   userIds: string[]
 ): Promise<Map<string, boolean>> {
   const map = new Map<string, boolean>();
   if (userIds.length === 0) return map;
 
   try {
-    // First get all pages grouped by user
+    // First get all pages to build userId -> pageIds mapping
     const batchSize = 30;
+    const userPageIds = new Map<string, Set<string>>();
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      const snapshot = await db.collection(collectionName)
+      const pagesSnapshot = await db.collection(pagesCollectionName)
         .where('userId', 'in', batch)
-        .select('userId', 'pageLinks')
+        .select('userId')
         .get();
 
-      // Group pages by userId
-      const userPages = new Map<string, Set<string>>();
-      const userPagesWithLinks = new Map<string, string[]>();
-
-      for (const doc of snapshot.docs) {
-        const data = doc.data();
-        const userId = data.userId;
-
-        if (!userPages.has(userId)) {
-          userPages.set(userId, new Set());
-          userPagesWithLinks.set(userId, []);
+      for (const doc of pagesSnapshot.docs) {
+        const userId = doc.data().userId;
+        if (!userPageIds.has(userId)) {
+          userPageIds.set(userId, new Set());
         }
-        userPages.get(userId)!.add(doc.id);
-
-        // Check if this page has links to other pages
-        if (data.pageLinks && Array.isArray(data.pageLinks) && data.pageLinks.length > 0) {
-          userPagesWithLinks.get(userId)!.push(...data.pageLinks);
-        }
+        userPageIds.get(userId)!.add(doc.id);
       }
+    }
 
-      // For each user, check if any of their linked pages belong to them
-      for (const [userId, linkedPageIds] of userPagesWithLinks) {
-        const ownedPageIds = userPages.get(userId) || new Set();
-        const hasLinkedOwn = linkedPageIds.some(pageId => ownedPageIds.has(pageId));
-        if (hasLinkedOwn) {
+    // Now query backlinks to find self-links
+    // For each user, check if there's a backlink where both source and target are their pages
+    const allBacklinks = await db.collection(backlinksCollectionName).get();
+
+    console.log(`[User Activation] Found ${allBacklinks.size} total backlinks, ${userPageIds.size} users with pages`);
+
+    for (const doc of allBacklinks.docs) {
+      const data = doc.data();
+      const sourcePageId = data.sourcePageId;
+      const targetPageId = data.targetPageId;
+
+      // Find which user owns the source page
+      for (const [userId, pageIds] of userPageIds) {
+        if (pageIds.has(sourcePageId) && pageIds.has(targetPageId)) {
+          // User has linked to their own page
           map.set(userId, true);
+          break;
         }
       }
     }
+
+    console.log(`[User Activation] Found ${map.size} users with own-page links`);
   } catch (err) {
     console.warn('[User Activation] Error batch fetching linked own page:', err);
   }
@@ -360,52 +399,57 @@ async function batchFetchLinkedOwnPage(
 }
 
 // Helper: Batch fetch if user has linked to someone else's page
+// Uses the backlinks collection: sourcePageId links to targetPageId
+// A user has "linked to other's page" if they have a backlink where source is theirs but target is not
 async function batchFetchLinkedOtherPage(
   db: FirebaseFirestore.Firestore,
-  collectionName: string,
+  backlinksCollectionName: string,
+  pagesCollectionName: string,
   userIds: string[]
 ): Promise<Map<string, boolean>> {
   const map = new Map<string, boolean>();
   if (userIds.length === 0) return map;
 
   try {
+    // First get all pages to build userId -> pageIds mapping
     const batchSize = 30;
+    const userPageIds = new Map<string, Set<string>>();
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      const snapshot = await db.collection(collectionName)
+      const pagesSnapshot = await db.collection(pagesCollectionName)
         .where('userId', 'in', batch)
-        .select('userId', 'pageLinks')
+        .select('userId')
         .get();
 
-      // Group pages by userId
-      const userPages = new Map<string, Set<string>>();
-      const userPagesWithLinks = new Map<string, string[]>();
-
-      for (const doc of snapshot.docs) {
-        const data = doc.data();
-        const userId = data.userId;
-
-        if (!userPages.has(userId)) {
-          userPages.set(userId, new Set());
-          userPagesWithLinks.set(userId, []);
+      for (const doc of pagesSnapshot.docs) {
+        const userId = doc.data().userId;
+        if (!userPageIds.has(userId)) {
+          userPageIds.set(userId, new Set());
         }
-        userPages.get(userId)!.add(doc.id);
-
-        if (data.pageLinks && Array.isArray(data.pageLinks) && data.pageLinks.length > 0) {
-          userPagesWithLinks.get(userId)!.push(...data.pageLinks);
-        }
+        userPageIds.get(userId)!.add(doc.id);
       }
+    }
 
-      // For each user, check if any of their linked pages DON'T belong to them
-      for (const [userId, linkedPageIds] of userPagesWithLinks) {
-        const ownedPageIds = userPages.get(userId) || new Set();
-        const hasLinkedOther = linkedPageIds.some(pageId => !ownedPageIds.has(pageId));
-        if (hasLinkedOther) {
+    // Now query backlinks to find links to others' pages
+    const allBacklinks = await db.collection(backlinksCollectionName).get();
+
+    for (const doc of allBacklinks.docs) {
+      const data = doc.data();
+      const sourcePageId = data.sourcePageId;
+      const targetPageId = data.targetPageId;
+
+      // Find which user owns the source page
+      for (const [userId, pageIds] of userPageIds) {
+        if (pageIds.has(sourcePageId) && !pageIds.has(targetPageId)) {
+          // User has linked to another user's page
           map.set(userId, true);
+          break;
         }
       }
     }
+
+    console.log(`[User Activation] Found ${map.size} users with other-page links`);
   } catch (err) {
     console.warn('[User Activation] Error batch fetching linked other page:', err);
   }
@@ -413,6 +457,7 @@ async function batchFetchLinkedOtherPage(
 }
 
 // Helper: Batch fetch if user has replied to someone's page (created a page with replyTo field)
+// Replies are pages with isReply: true and a replyTo field containing the target page ID
 async function batchFetchRepliedToPage(
   db: FirebaseFirestore.Firestore,
   collectionName: string,
@@ -426,12 +471,49 @@ async function batchFetchRepliedToPage(
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      // Query for pages that have a replyTo field (meaning they are replies)
+
+      // Fetch all pages for these users and check replyTo/isReply fields
+      // This avoids composite index requirements and is more reliable
       const snapshot = await db.collection(collectionName)
         .where('userId', 'in', batch)
-        .where('replyTo', '!=', null)
-        .select('userId')
-        .limit(batch.length) // Only need one per user
+        .get();
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        // Check if page is a reply (has replyTo field or isReply is true)
+        if (data.userId && (data.replyTo || data.isReply === true)) {
+          map.set(data.userId, true);
+        }
+      }
+    }
+
+    console.log(`[User Activation] Found ${map.size} users with replies out of ${userIds.length} checked`);
+  } catch (err) {
+    console.warn('[User Activation] Error batch fetching replied to page:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch if user has allocated funds to writers
+// Allocations are stored in the usd_allocations collection with userId field (the donor/allocator)
+async function batchFetchAllocations(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userIds: string[]
+): Promise<Map<string, boolean>> {
+  const map = new Map<string, boolean>();
+  if (userIds.length === 0) return map;
+
+  try {
+    const batchSize = 30;
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+
+      // Query for allocations where this user is the allocator (userId field)
+      const snapshot = await db.collection(collectionName)
+        .where('userId', 'in', batch)
+        .where('status', '==', 'active')
         .get();
 
       for (const doc of snapshot.docs) {
@@ -441,8 +523,58 @@ async function batchFetchRepliedToPage(
         }
       }
     }
+
+    console.log(`[User Activation] Found ${map.size} users with allocations out of ${userIds.length} checked`);
   } catch (err) {
-    console.warn('[User Activation] Error batch fetching replied to page:', err);
+    console.warn('[User Activation] Error batch fetching allocations:', err);
+  }
+  return map;
+}
+
+// Helper: Batch fetch earnings data (total earned and available balance)
+// Earnings are stored in writerUsdEarnings collection with userId field
+async function batchFetchEarnings(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userIds: string[]
+): Promise<Map<string, { totalCents: number; availableCents: number }>> {
+  const map = new Map<string, { totalCents: number; availableCents: number }>();
+  if (userIds.length === 0) return map;
+
+  try {
+    const batchSize = 30;
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+
+      // Query for earnings records for these users
+      const snapshot = await db.collection(collectionName)
+        .where('userId', 'in', batch)
+        .get();
+
+      // Aggregate earnings by user
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const userId = data.userId;
+        if (!userId) continue;
+
+        const existing = map.get(userId) || { totalCents: 0, availableCents: 0 };
+        const earnedCents = data.totalUsdCentsReceived || 0;
+
+        existing.totalCents += earnedCents;
+
+        // Available balance includes pending and available status earnings
+        if (data.status === 'available' || data.status === 'pending') {
+          existing.availableCents += earnedCents;
+        }
+
+        map.set(userId, existing);
+      }
+    }
+
+    console.log(`[User Activation] Found ${map.size} users with earnings out of ${userIds.length} checked`);
+  } catch (err) {
+    console.warn('[User Activation] Error batch fetching earnings:', err);
   }
   return map;
 }

@@ -17,38 +17,42 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { UserDetailsDrawer } from "../../components/admin/UserDetailsDrawer";
+import { ActivationTrends } from "../../components/admin/ActivationTrends";
 
 // Activation milestones in order - short labels for column headers
 const MILESTONE_LABELS: Record<string, string> = {
-  accountCreated: 'Account',
   usernameSet: 'Username',
   emailVerified: 'Email',
   pageCreated: 'Page',
-  linkedOwnPage: 'Own Link',
-  linkedOtherPage: 'Other Link',
+  linkedOwnPage: 'Own link',
+  linkedOtherPage: 'Other link',
   repliedToPage: 'Reply',
   pwaInstalled: 'PWA',
-  hasSubscription: 'Subscriber',
+  hasSubscription: 'Subscribed',
+  allocatedToWriters: 'Allocated',
+  receivedEarnings: 'Earnings',
+  reachedPayoutThreshold: '$25+',
   payoutsSetup: 'Payouts',
 };
 
-// Full labels for tooltips
+// Full labels for tooltips and charts
 const MILESTONE_FULL_LABELS: Record<string, string> = {
-  accountCreated: 'Account Created',
-  usernameSet: 'Username Set',
-  emailVerified: 'Email Verified',
-  pageCreated: 'Page Created',
-  linkedOwnPage: 'Linked to Own Page',
-  linkedOtherPage: 'Linked to Another User\'s Page',
-  repliedToPage: 'Replied to a Page',
-  pwaInstalled: 'PWA Installed',
-  hasSubscription: 'Active Subscription',
-  payoutsSetup: 'Payouts Setup',
+  usernameSet: 'Chose a username',
+  emailVerified: 'Verified email',
+  pageCreated: 'Written first page',
+  linkedOwnPage: 'Linked own page',
+  linkedOtherPage: 'Linked another\'s page',
+  repliedToPage: 'Replied to a page',
+  pwaInstalled: 'Installed app',
+  hasSubscription: 'Activated subscription',
+  allocatedToWriters: 'Allocated to writers',
+  receivedEarnings: 'Received earnings',
+  reachedPayoutThreshold: 'Reached $25 threshold',
+  payoutsSetup: 'Set up payouts',
 };
 
 // Detailed descriptions for tooltips
 const MILESTONE_DESCRIPTIONS: Record<string, string> = {
-  accountCreated: 'User has created an account on the platform',
   usernameSet: 'User has set a custom username (not auto-generated)',
   emailVerified: 'User has verified their email address',
   pageCreated: 'User has created at least one page',
@@ -57,7 +61,55 @@ const MILESTONE_DESCRIPTIONS: Record<string, string> = {
   repliedToPage: 'User has created a reply (agree/disagree/neutral) to someone\'s page',
   pwaInstalled: 'User has installed the Progressive Web App',
   hasSubscription: 'User has an active paid subscription',
+  allocatedToWriters: 'User has allocated funds to at least one writer',
+  receivedEarnings: 'User has received earnings from reader allocations',
+  reachedPayoutThreshold: 'User has $25 or more in available earnings, qualifying for payout',
   payoutsSetup: 'User has connected their Stripe account for receiving payouts',
+};
+
+// Colors for each milestone (matching ActivationTrends)
+const MILESTONE_COLORS: Record<string, string> = {
+  usernameSet: '#8b5cf6',    // violet
+  emailVerified: '#a855f7',  // purple
+  pageCreated: '#d946ef',    // fuchsia
+  linkedOwnPage: '#ec4899',  // pink
+  linkedOtherPage: '#f43f5e', // rose
+  repliedToPage: '#ef4444',  // red
+  pwaInstalled: '#f97316',   // orange
+  hasSubscription: '#eab308', // yellow
+  allocatedToWriters: '#84cc16', // lime
+  receivedEarnings: '#14b8a6', // teal
+  reachedPayoutThreshold: '#10b981', // emerald
+  payoutsSetup: '#22c55e',   // green
+};
+
+// Icons for each milestone (Lucide icon names)
+const MILESTONE_ICONS: Record<string, string> = {
+  usernameSet: 'AtSign',
+  emailVerified: 'MailCheck',
+  pageCreated: 'FileText',
+  linkedOwnPage: 'Link',
+  linkedOtherPage: 'ExternalLink',
+  repliedToPage: 'MessageCircle',
+  pwaInstalled: 'Smartphone',
+  hasSubscription: 'CreditCard',
+  allocatedToWriters: 'Send',
+  receivedEarnings: 'DollarSign',
+  reachedPayoutThreshold: 'Award',
+  payoutsSetup: 'Wallet',
+};
+
+// Define milestone hierarchy for UI grouping
+const MILESTONE_HIERARCHY: Record<string, { parent?: string; children?: string[] }> = {
+  pageCreated: { children: ['linkedOwnPage', 'linkedOtherPage', 'repliedToPage'] },
+  linkedOwnPage: { parent: 'pageCreated' },
+  linkedOtherPage: { parent: 'pageCreated' },
+  repliedToPage: { parent: 'pageCreated' },
+  hasSubscription: { children: ['allocatedToWriters'] },
+  allocatedToWriters: { parent: 'hasSubscription' },
+  receivedEarnings: { children: ['reachedPayoutThreshold', 'payoutsSetup'] },
+  reachedPayoutThreshold: { parent: 'receivedEarnings' },
+  payoutsSetup: { parent: 'receivedEarnings' },
 };
 
 type UserActivationData = {
@@ -141,22 +193,6 @@ export default function UserActivationPage() {
     return result;
   }, [users, search, filterCompleted, milestones.length]);
 
-  // Calculate funnel stats
-  const funnelStats = useMemo(() => {
-    const stats: Record<string, { count: number; percent: number }> = {};
-    const total = users.length;
-
-    for (const milestone of milestones) {
-      const count = users.filter(u => u.milestones[milestone]).length;
-      stats[milestone] = {
-        count,
-        percent: total > 0 ? Math.round((count / total) * 100) : 0,
-      };
-    }
-
-    return stats;
-  }, [users, milestones]);
-
   const formatRelativeDate = (dateStr: string) => {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
@@ -173,32 +209,13 @@ export default function UserActivationPage() {
         description="Dense matrix view of user activation milestones from signup to engagement."
       />
 
-      {/* Funnel Summary */}
-      {!loading && milestones.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-wrap gap-4 items-center justify-center">
-              {milestones.map((milestone, index) => (
-                <React.Fragment key={milestone}>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-foreground">
-                      {funnelStats[milestone]?.percent ?? 0}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {MILESTONE_LABELS[milestone] || milestone}
-                    </div>
-                    <div className="text-xs text-muted-foreground/60">
-                      ({funnelStats[milestone]?.count ?? 0})
-                    </div>
-                  </div>
-                  {index < milestones.length - 1 && (
-                    <Icon name="ChevronRight" size={20} className="text-muted-foreground/40" />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Activation Trends - Pie charts with 30-day area graphs */}
+      {!loading && milestones.length > 0 && users.length > 0 && (
+        <ActivationTrends
+          users={users}
+          milestones={milestones}
+          milestoneLabels={MILESTONE_FULL_LABELS}
+        />
       )}
 
       {/* Controls */}
@@ -266,52 +283,53 @@ export default function UserActivationPage() {
         </Card>
       )}
 
-      {/* Dense Matrix Table */}
+      {/* Per-User Breakdown */}
       {!loading && !error && (
-        <div className="overflow-x-auto border border-border rounded-lg bg-card">
-          <table className="w-full text-sm">
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          {/* Section header */}
+          <div className="px-4 py-3 border-b border-border bg-muted/30">
+            <h3 className="text-sm font-semibold text-foreground">Per-User Breakdown</h3>
+          </div>
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
             {/* Header with diagonal labels */}
             <thead>
-              <tr className="border-b border-border">
+              <tr>
                 {/* User column */}
-                <th className="text-left p-2 font-medium text-muted-foreground sticky left-0 bg-card z-10 min-w-[140px]">
+                <th className="text-left p-2 font-medium text-muted-foreground sticky left-0 bg-background z-10 min-w-[140px] border-b border-border">
                   User
                 </th>
-                {/* Milestone columns with diagonal headers */}
-                {milestones.map((milestone) => (
+                {/* Milestone columns with icon headers */}
+                {milestones.map((milestone, index) => (
                   <th
                     key={milestone}
-                    className={`text-center p-0 w-8 min-w-[32px] transition-colors cursor-help ${
-                      hoveredCol === milestone ? 'bg-muted/50' : ''
+                    className={`text-center p-2 w-10 min-w-[40px] cursor-help border-b border-border ${
+                      index > 0 ? 'border-l border-border' : ''
                     }`}
+                    style={{
+                      backgroundColor: hoveredCol === milestone ? 'var(--neutral-alpha-10)' : undefined
+                    }}
                     title={`${MILESTONE_FULL_LABELS[milestone] || milestone}\n\n${MILESTONE_DESCRIPTIONS[milestone] || ''}`}
                     onMouseEnter={() => setHoveredCol(milestone)}
                     onMouseLeave={() => setHoveredCol(null)}
                   >
-                    <div className="h-20 relative">
-                      <span
-                        className={`absolute bottom-1 left-1/2 text-xs whitespace-nowrap origin-bottom-left transition-colors ${
-                          hoveredCol === milestone ? 'text-foreground font-medium' : 'text-muted-foreground'
-                        }`}
-                        style={{
-                          transform: 'rotate(-45deg) translateX(-50%)',
-                        }}
-                      >
+                    <div className="flex flex-col items-center gap-1">
+                      <Icon
+                        name={MILESTONE_ICONS[milestone] || 'Circle'}
+                        size={18}
+                        style={{ color: MILESTONE_COLORS[milestone] }}
+                      />
+                      <span className="text-[10px] text-muted-foreground leading-tight max-w-[40px] text-center">
                         {MILESTONE_LABELS[milestone] || milestone}
                       </span>
                     </div>
                   </th>
                 ))}
                 {/* Created column */}
-                <th className="text-center p-2 font-medium text-muted-foreground w-20">
-                  <div className="h-20 flex items-end justify-center pb-1">
-                    <span
-                      className="text-xs whitespace-nowrap origin-bottom-left"
-                      style={{
-                        transform: 'rotate(-45deg) translateX(-50%)',
-                        display: 'inline-block',
-                      }}
-                    >
+                <th className="text-center p-2 font-medium text-muted-foreground w-16 border-b border-border border-l">
+                  <div className="flex flex-col items-center gap-1">
+                    <Icon name="Calendar" size={18} className="text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">
                       Created
                     </span>
                   </div>
@@ -319,68 +337,84 @@ export default function UserActivationPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((user) => (
-                <tr
-                  key={user.uid}
-                  className={`border-b border-border/50 transition-colors cursor-pointer ${
-                    hoveredRow === user.uid ? 'bg-muted/40' : 'hover:bg-muted/30'
-                  }`}
-                  onMouseEnter={() => setHoveredRow(user.uid)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  onClick={() => handleUserSelect(user)}
-                >
-                  {/* User info - username only */}
-                  <td className="p-2 sticky left-0 bg-card z-10">
-                    <span className="font-medium text-foreground truncate block max-w-[130px]">
-                      {user.username || 'No username'}
-                    </span>
-                  </td>
-                  {/* Milestone checkmarks */}
-                  {milestones.map((milestone) => {
-                    const isHighlighted = hoveredRow === user.uid || hoveredCol === milestone;
-                    const isIntersection = hoveredRow === user.uid && hoveredCol === milestone;
-                    return (
-                      <td
-                        key={milestone}
-                        className={`p-1 text-center transition-colors ${
-                          isIntersection
-                            ? 'bg-primary/20'
-                            : isHighlighted
-                              ? 'bg-muted/50'
-                              : ''
-                        }`}
-                        title={`${MILESTONE_FULL_LABELS[milestone]}: ${user.milestones[milestone] ? 'Completed' : 'Not completed'}\n\n${MILESTONE_DESCRIPTIONS[milestone] || ''}`}
-                        onMouseEnter={() => setHoveredCol(milestone)}
-                        onMouseLeave={() => setHoveredCol(null)}
-                      >
-                        {user.milestones[milestone] ? (
-                          <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center mx-auto">
-                            <Icon
-                              name="Check"
-                              size={14}
-                              className="text-white"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded bg-muted/40 flex items-center justify-center mx-auto">
-                            <Icon
-                              name="X"
-                              size={12}
-                              className="text-muted-foreground/40"
-                            />
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                  {/* Created date */}
-                  <td className="p-2 text-center text-xs text-muted-foreground" title={user.createdAt}>
-                    {formatRelativeDate(user.createdAt)}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((user) => {
+                const isRowHovered = hoveredRow === user.uid;
+                return (
+                  <tr
+                    key={user.uid}
+                    className="cursor-pointer"
+                    style={{
+                      backgroundColor: isRowHovered ? 'var(--neutral-alpha-10)' : undefined
+                    }}
+                    onMouseEnter={() => setHoveredRow(user.uid)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    onClick={() => handleUserSelect(user)}
+                  >
+                    {/* User info - username only */}
+                    <td
+                      className="p-2 sticky left-0 z-10 border-b border-border"
+                      style={{
+                        backgroundColor: isRowHovered ? 'var(--neutral-alpha-10)' : 'var(--background)'
+                      }}
+                    >
+                      <span className="font-medium text-foreground truncate block max-w-[130px]">
+                        {user.username || 'No username'}
+                      </span>
+                    </td>
+                    {/* Milestone checkmarks */}
+                    {milestones.map((milestone, colIndex) => {
+                      const isColHovered = hoveredCol === milestone;
+                      const isIntersection = isRowHovered && isColHovered;
+                      return (
+                        <td
+                          key={milestone}
+                          className={`p-1 text-center border-b border-border ${
+                            colIndex > 0 ? 'border-l border-border' : ''
+                          }`}
+                          style={{
+                            backgroundColor: isIntersection
+                              ? 'var(--neutral-alpha-20)'
+                              : (isRowHovered || isColHovered)
+                                ? 'var(--neutral-alpha-10)'
+                                : undefined
+                          }}
+                          title={`${MILESTONE_FULL_LABELS[milestone]}: ${user.milestones[milestone] ? 'Completed' : 'Not completed'}\n\n${MILESTONE_DESCRIPTIONS[milestone] || ''}`}
+                          onMouseEnter={() => setHoveredCol(milestone)}
+                          onMouseLeave={() => setHoveredCol(null)}
+                        >
+                          {user.milestones[milestone] ? (
+                            <div
+                              className="w-6 h-6 rounded-md flex items-center justify-center mx-auto"
+                              style={{ backgroundColor: MILESTONE_COLORS[milestone] }}
+                            >
+                              <Icon
+                                name={MILESTONE_ICONS[milestone] || 'Check'}
+                                size={14}
+                                className="text-white"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center mx-auto">
+                              <Icon
+                                name={MILESTONE_ICONS[milestone] || 'X'}
+                                size={18}
+                                className="text-muted-foreground/20"
+                              />
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                    {/* Created date */}
+                    <td className="p-2 text-center text-xs text-muted-foreground border-b border-border border-l" title={user.createdAt}>
+                      {formatRelativeDate(user.createdAt)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          </div>
 
           {/* Empty state */}
           {filtered.length === 0 && (
