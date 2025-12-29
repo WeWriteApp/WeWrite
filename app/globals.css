@@ -4360,9 +4360,12 @@ button.bg-transparent[type] {
   }
 }
 
-/* Mobile Admin Page Styling (in drawer) */
+/* ============================================================================
+   Mobile Admin Page Styling (in drawer)
+   ============================================================================ */
+
 .mobile-admin-page {
-  padding: 1rem;
+  padding: 0.75rem;
   max-width: 100%;
   overflow-x: hidden;
 }
@@ -4372,12 +4375,13 @@ button.bg-transparent[type] {
 .mobile-admin-page .hidden.md\:block,
 .mobile-admin-page .hidden.md\:flex,
 .mobile-admin-page .hidden.lg\:block,
-.mobile-admin-page .hidden.lg\:flex {
+.mobile-admin-page .hidden.lg\:flex,
+.mobile-admin-page .hidden.xl\:block,
+.mobile-admin-page .hidden.xl\:flex {
   display: none !important;
 }
 
 /* Show all mobile-specific elements in mobile drawer */
-/* Use flex for elements that have both md:hidden and flex classes */
 .mobile-admin-page .md\:hidden {
   display: flex !important;
 }
@@ -4386,9 +4390,24 @@ button.bg-transparent[type] {
   display: flex !important;
 }
 
+.mobile-admin-page .xl\:hidden {
+  display: flex !important;
+}
+
+/* Ensure block display for non-flex elements */
+.mobile-admin-page div.md\:hidden:not(.flex),
+.mobile-admin-page div.lg\:hidden:not(.flex) {
+  display: block !important;
+}
+
 /* Make admin grids stack on mobile */
 .mobile-admin-page .grid {
   grid-template-columns: 1fr !important;
+}
+
+/* Exception: Allow 2-column grids for small cards/stats */
+.mobile-admin-page .mobile-grid-2 {
+  grid-template-columns: repeat(2, 1fr) !important;
 }
 
 /* Reduce admin page padding in drawer */
@@ -4400,11 +4419,173 @@ button.bg-transparent[type] {
   padding: 0.75rem;
 }
 
+.mobile-admin-page .p-4 {
+  padding: 0.5rem;
+}
+
+/* Reduce gaps on mobile */
+.mobile-admin-page .gap-6 {
+  gap: 0.75rem;
+}
+
+.mobile-admin-page .gap-4 {
+  gap: 0.5rem;
+}
+
+.mobile-admin-page .gap-8 {
+  gap: 1rem;
+}
+
+/* Reduce margins on mobile */
+.mobile-admin-page .mb-6 {
+  margin-bottom: 0.75rem;
+}
+
+.mobile-admin-page .mb-8 {
+  margin-bottom: 1rem;
+}
+
+.mobile-admin-page .mt-6 {
+  margin-top: 0.75rem;
+}
+
+.mobile-admin-page .mt-8 {
+  margin-top: 1rem;
+}
+
+.mobile-admin-page .space-y-6 > * + * {
+  margin-top: 0.75rem;
+}
+
+.mobile-admin-page .space-y-8 > * + * {
+  margin-top: 1rem;
+}
+
 /* Make tables horizontally scrollable */
 .mobile-admin-page table {
   display: block;
   overflow-x: auto;
   white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile-optimized cards */
+.mobile-admin-page .wewrite-card {
+  padding: 0.75rem;
+}
+
+/* Compact headers on mobile */
+.mobile-admin-page h1 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.mobile-admin-page h2 {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+}
+
+.mobile-admin-page h3 {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+/* Touch-friendly buttons (minimum 44px height) */
+.mobile-admin-page button,
+.mobile-admin-page [role="button"],
+.mobile-admin-page a.inline-flex {
+  min-height: 44px;
+}
+
+/* Compact button text */
+.mobile-admin-page .btn,
+.mobile-admin-page button {
+  font-size: 0.875rem;
+}
+
+/* Full-width inputs on mobile */
+.mobile-admin-page input[type="text"],
+.mobile-admin-page input[type="email"],
+.mobile-admin-page input[type="search"],
+.mobile-admin-page input[type="number"],
+.mobile-admin-page textarea,
+.mobile-admin-page select {
+  width: 100%;
+  min-height: 44px;
+}
+
+/* Stack flex containers vertically on mobile */
+.mobile-admin-page .mobile-stack {
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+.mobile-admin-page .mobile-stack > * {
+  width: 100% !important;
+}
+
+/* Hide scrollbars for horizontal scroll areas but keep functionality */
+.mobile-admin-page .mobile-scroll-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-admin-page .mobile-scroll-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Reduce text sizes for data tables */
+.mobile-admin-page .text-sm {
+  font-size: 0.8125rem;
+}
+
+.mobile-admin-page .text-xs {
+  font-size: 0.6875rem;
+}
+
+/* Compact badges on mobile */
+.mobile-admin-page .badge,
+.mobile-admin-page [class*="Badge"] {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  font-size: 0.6875rem;
+}
+
+/* Hide sidebar offset elements */
+.mobile-admin-page .xl\:ml-\[180px\] {
+  margin-left: 0 !important;
+}
+
+/* Ensure charts/sparklines are visible and sized properly */
+.mobile-admin-page svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Mobile-specific utility classes */
+.mobile-admin-page .mobile-hidden {
+  display: none !important;
+}
+
+.mobile-admin-page .mobile-full-width {
+  width: 100% !important;
+}
+
+/* Fix flex row layouts that should stack */
+.mobile-admin-page .flex-row.mobile-stack,
+.mobile-admin-page .md\:flex-row {
+  flex-direction: column !important;
+}
+
+/* Ensure proper overflow handling for long content */
+.mobile-admin-page .truncate {
+  max-width: 150px;
+}
+
+/* Reduce chart heights on mobile */
+.mobile-admin-page [class*="h-64"],
+.mobile-admin-page [class*="h-80"] {
+  height: 12rem !important;
 }
 
 /* Pending page link styling */

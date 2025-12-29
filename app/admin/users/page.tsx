@@ -50,6 +50,10 @@ type FinancialInfo = {
   payoutsSetup: boolean;
   earningsTotalUsd?: number;
   earningsThisMonthUsd?: number;
+  // Allocation data (how much of their subscription they've allocated this month)
+  allocatedUsdCents?: number;
+  unallocatedUsdCents?: number;
+  totalBudgetUsdCents?: number;
 };
 
 type User = {
@@ -397,6 +401,24 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     });
   }, [users, search]);
 
+  // Calculate max values for progress bar scaling (100% = max value across all users)
+  // IMPORTANT: These must be defined BEFORE columns so they're available in the closure
+  const maxEarningsMonth = useMemo(() => {
+    return Math.max(1, ...users.map(u => u.financial?.earningsThisMonthUsd ?? 0));
+  }, [users]);
+
+  const maxEarningsTotal = useMemo(() => {
+    return Math.max(1, ...users.map(u => u.financial?.earningsTotalUsd ?? 0));
+  }, [users]);
+
+  const maxAllocatedCents = useMemo(() => {
+    return Math.max(1, ...users.map(u => u.financial?.allocatedUsdCents ?? 0));
+  }, [users]);
+
+  const maxUnallocatedCents = useMemo(() => {
+    return Math.max(1, ...users.map(u => u.financial?.unallocatedUsdCents ?? 0));
+  }, [users]);
+
   // Column definitions with minimum widths to prevent collision
   const columns: Column[] = useMemo(() => [
     {
@@ -548,15 +570,15 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
       id: "allocated",
       label: "Allocated",
       sortable: true,
-      minWidth: 90,
-      render: () => "—" // TODO
+      minWidth: 140,
+      render: (u) => renderAllocationWithBar(u.financial?.allocatedUsdCents, maxAllocatedCents, 'bg-primary')
     },
     {
       id: "unallocated",
       label: "Unallocated",
       sortable: true,
-      minWidth: 100,
-      render: () => "—" // TODO
+      minWidth: 140,
+      render: (u) => renderAllocationWithBar(u.financial?.unallocatedUsdCents, maxUnallocatedCents, 'bg-amber-500')
     },
     {
       id: "pwa",
@@ -602,7 +624,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
         );
       }
     }
-  ], [loadingAction]);
+  ], [loadingAction, maxEarningsMonth, maxEarningsTotal, maxAllocatedCents, maxUnallocatedCents]);
 
   // Initialize visible columns once
   useEffect(() => {
@@ -699,6 +721,10 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
         return 0;
       case "totalPages":
         return u.totalPages ?? 0;
+      case "allocated":
+        return u.financial?.allocatedUsdCents ?? 0;
+      case "unallocated":
+        return u.financial?.unallocatedUsdCents ?? 0;
       default:
         return 0;
     }
@@ -797,16 +823,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     );
   };
 
-  // Calculate max earnings for progress bar scaling
-  const maxEarningsMonth = useMemo(() => {
-    return Math.max(1, ...users.map(u => u.financial?.earningsThisMonthUsd ?? 0));
-  }, [users]);
-
-  const maxEarningsTotal = useMemo(() => {
-    return Math.max(1, ...users.map(u => u.financial?.earningsTotalUsd ?? 0));
-  }, [users]);
-
-  // Render earnings with progress bar
+  // Render earnings with progress bar (USD dollars)
   const renderEarningsWithBar = (amt: number | undefined, maxAmt: number) => {
     if (amt === undefined || amt === null) {
       return <span className="text-muted-foreground">—</span>;
@@ -820,6 +837,28 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[40px]">
           <div
             className="h-full bg-emerald-500 rounded-full transition-all"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Render allocation with progress bar (cents, converts to dollars for display)
+  const renderAllocationWithBar = (cents: number | undefined, maxCents: number, color: string = 'bg-primary') => {
+    if (cents === undefined || cents === null || cents === 0) {
+      return <span className="text-muted-foreground">—</span>;
+    }
+    const dollars = cents / 100;
+    const percentage = maxCents > 0 ? (cents / maxCents) * 100 : 0;
+    return (
+      <div className="flex items-center gap-2 min-w-[100px]">
+        <span className="font-medium text-foreground w-16 text-right">
+          ${dollars.toFixed(2)}
+        </span>
+        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden min-w-[40px]">
+          <div
+            className={`h-full ${color} rounded-full transition-all`}
             style={{ width: `${percentage}%` }}
           />
         </div>
@@ -1776,11 +1815,11 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Allocated</span>
-                          <span className="font-medium">—</span>
+                          {renderAllocationWithBar(u.financial?.allocatedUsdCents, maxAllocatedCents, 'bg-primary')}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">Unallocated</span>
-                          <span className="font-medium">—</span>
+                          {renderAllocationWithBar(u.financial?.unallocatedUsdCents, maxUnallocatedCents, 'bg-amber-500')}
                         </div>
                         <div className="flex items-center justify-between py-1.5">
                           <span className="text-muted-foreground">PWA installed</span>

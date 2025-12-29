@@ -57,7 +57,7 @@ export const emailStyles = {
     color: #fff;
     padding: 12px 30px;
     text-decoration: none;
-    border-radius: 6px;
+    border-radius: 24px;
     display: inline-block;
     font-weight: 500;
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.2);
@@ -67,7 +67,7 @@ export const emailStyles = {
     color: #333;
     padding: 12px 30px;
     text-decoration: none;
-    border-radius: 6px;
+    border-radius: 24px;
     display: inline-block;
     font-weight: 500;
     border: 1px solid #ddd;
@@ -421,8 +421,8 @@ export const passwordResetEmailTemplate: EmailTemplate = {
         <!--[if !mso]><!-->
         <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
           <tr>
-            <td style="background-color: #000; border-radius: 6px; padding: 0;">
-              <a href="${trackedLink}" target="_blank" style="background-color: #000; color: #ffffff; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 44px; text-align: center; text-decoration: none; width: 200px; border-radius: 6px; -webkit-text-size-adjust: none;">
+            <td style="background-color: #000; border-radius: 24px; padding: 0;">
+              <a href="${trackedLink}" target="_blank" style="background-color: #000; color: #ffffff; display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: 500; line-height: 44px; text-align: center; text-decoration: none; width: 200px; border-radius: 24px; -webkit-text-size-adjust: none;">
                 Reset Password
               </a>
             </td>
@@ -993,7 +993,7 @@ export const accountSecurityTemplate: EmailTemplate = {
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${securityLink}" style="background: #cc0000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        <a href="${securityLink}" style="background: #cc0000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 24px; display: inline-block; font-weight: 500;">
           Secure My Account
         </a>
       </div>

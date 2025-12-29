@@ -147,6 +147,7 @@ export async function POST(request: NextRequest) {
             },
             userId,
             scheduledAt, // Pass through the scheduled time
+            triggerSource: 'admin',
           });
 
           if (result.success) {
@@ -237,6 +238,7 @@ export async function POST(request: NextRequest) {
             },
             userId,
             scheduledAt,
+            triggerSource: 'admin',
           });
 
           if (result.success) {
@@ -287,6 +289,7 @@ export async function POST(request: NextRequest) {
             },
             userId,
             scheduledAt,
+            triggerSource: 'admin',
           });
 
           if (result.success) {

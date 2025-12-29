@@ -336,12 +336,12 @@ export default function AdminDashboardPage() {
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-background">
         {/* Options Bar - Always visible */}
-        <div className="px-6 py-4">
+        <div className="px-3 md:px-6 py-3 md:py-4">
           {dashboardLoading ? (
             /* Loading state for options bar */
             <div className="h-10 bg-muted animate-pulse rounded"></div>
           ) : (
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4 md:items-center">
               {/* Combined Filters - Single Horizontal Row (no granularity) */}
               <DateRangeFilter
                 dateRange={dateRange}
@@ -353,8 +353,8 @@ export default function AdminDashboardPage() {
                 combined={true}
               />
 
-              {/* Column Selector */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Column Selector - hidden on mobile since grid is 1 col */}
+              <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                 <Icon name="LayoutGrid" size={16} className="text-muted-foreground" />
                 <div className="flex items-center bg-muted rounded-md p-0.5">
                   {[1, 2, 3, 4].map((cols) => (
@@ -376,7 +376,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="py-4 px-4 md:py-6 md:px-6">
+        <div className="py-2 px-2 md:py-6 md:px-6">
           <UnifiedErrorBoundary>
             {(() => {
               if (dashboardLoading) {

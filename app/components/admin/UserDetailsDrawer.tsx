@@ -171,7 +171,7 @@ export function UserDetailsDrawer({
       try {
         // Fetch user details and email logs in parallel
         const [usersResponse, logsResponse] = await Promise.all([
-          adminFetch('/api/admin/users?includeFinancial=true&limit=300'),
+          adminFetch('/api/admin/users?includeFinancial=true&limit=1000'),
           userId ? adminFetch(`/api/admin/email-logs?userId=${userId}&limit=50`) : Promise.resolve(null)
         ]);
 

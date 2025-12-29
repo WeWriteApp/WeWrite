@@ -12,7 +12,7 @@
  * - No duplication of business logic
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Icon, IconName } from '@/components/ui/Icon';
 import { StatusIcon } from '../components/ui/status-icon';
 import { useBankSetupStatus } from './useBankSetupStatus';
@@ -22,6 +22,7 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { useNextPayoutCountdown, formatPayoutCountdown } from './useNextPayoutCountdown';
 import { useUsernameStatus } from './useUsernameStatus';
 import { useEmailVerificationStatus } from './useEmailVerificationStatus';
+import { useAuth } from '../providers/AuthProvider';
 
 // Icon wrapper components for settings sections
 const createIconComponent = (name: IconName) => {
@@ -45,6 +46,56 @@ const SettingsIcon = createIconComponent('Settings');
 
 // Payout threshold in cents ($25)
 const PAYOUT_THRESHOLD_CENTS = 2500;
+
+/**
+ * Hook to fetch count of recently deleted pages
+ */
+function useDeletedPagesCount(): { count: number; isLoading: boolean } {
+  const { user } = useAuth();
+  const [count, setCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchCount = async () => {
+      try {
+        // Add cache buster to ensure fresh data
+        const cacheBuster = Date.now();
+        const response = await fetch(
+          `/api/pages?userId=${user.uid}&includeDeleted=true&limit=100&_cb=${cacheBuster}`
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.pages) {
+            // Filter for pages deleted within last 30 days
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            const recentlyDeleted = result.data.pages.filter((page: any) => {
+              if (!page.deletedAt) return false;
+              return new Date(page.deletedAt) >= thirtyDaysAgo;
+            });
+
+            setCount(recentlyDeleted.length);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching deleted pages count:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCount();
+  }, [user?.uid]);
+
+  return { count, isLoading };
+}
 
 export interface SettingsSection {
   id: string;
@@ -196,6 +247,7 @@ export function useSettingsSections(): {
   const payoutCountdown = useNextPayoutCountdown();
   const { needsUsername } = useUsernameStatus();
   const emailVerificationStatus = useEmailVerificationStatus();
+  const deletedPages = useDeletedPagesCount();
 
   const sections = useMemo(() => {
     return BASE_SECTIONS.map((section): SettingsSectionWithStatus => {
@@ -313,6 +365,20 @@ export function useSettingsSections(): {
           break;
         }
 
+        case 'deleted': {
+          // Show count of recently deleted pages
+          if (deletedPages.isLoading) {
+            statusIndicator = <Icon name="Loader" size={14} />;
+          } else if (deletedPages.count > 0) {
+            statusIndicator = (
+              <span className="text-xs text-muted-foreground font-medium">
+                {deletedPages.count}
+              </span>
+            );
+          }
+          break;
+        }
+
         // Other sections don't have status indicators
         default:
           break;
@@ -334,7 +400,8 @@ export function useSettingsSections(): {
     isLoadingSubscription,
     payoutCountdown,
     needsUsername,
-    emailVerificationStatus
+    emailVerificationStatus,
+    deletedPages
   ]);
 
   return {

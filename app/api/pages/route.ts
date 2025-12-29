@@ -1243,6 +1243,16 @@ export async function DELETE(request: NextRequest) {
         // Error removing from Algolia - non-fatal
       }
 
+      // Invalidate caches
+      try {
+        invalidateCache.page(pageId);
+        invalidateCache.user(currentUserId);
+        invalidateCache.pagesList(currentUserId); // Invalidate apiCache pages list entries
+        pagesListCache.invalidateUser(currentUserId);
+      } catch (cacheError) {
+        console.warn('Cache invalidation failed after permanent deletion:', cacheError);
+      }
+
       return createApiResponse({
         id: pageId,
         message: 'Page permanently deleted'
@@ -1319,6 +1329,22 @@ export async function DELETE(request: NextRequest) {
         await removePageFromAlgoliaServer(pageId);
       } catch (algoliaError) {
         // Error removing from Algolia - non-fatal
+      }
+
+      // CRITICAL: Invalidate all caches so deleted page shows in Recently Deleted
+      try {
+        // Invalidate server cache
+        invalidateCache.page(pageId);
+        invalidateCache.user(currentUserId);
+
+        // Invalidate apiCache pages list entries (key pattern: pages_${userId}_*)
+        invalidateCache.pagesList(currentUserId);
+
+        // Invalidate pagesListCache for this user (both deleted and non-deleted queries)
+        pagesListCache.invalidateUser(currentUserId);
+      } catch (cacheError) {
+        // Cache invalidation failed - non-fatal but log it
+        console.warn('Cache invalidation failed after page deletion:', cacheError);
       }
 
       return createApiResponse({

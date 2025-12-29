@@ -112,9 +112,10 @@ const COMPARISONS: ComparisonData[] = [
     brandColor: '#FF6719',
     renderIcon: ({ size, className }) => <SubstackLogo size={size} className={className} />,
     differences: [
-      { text: 'WeWrite pages are meant to be continually added to, changed, and edited over time', icon: 'RefreshCw' },
-      { text: 'Substack relies on paywalls, WeWrite doesn\'t paywall content', icon: 'Unlock' },
-      { text: 'Users allocate parts of their subscription to favorite writers instead of paying per-publication', icon: 'Percent' },
+      { text: 'Substack posts are static once published. WeWrite pages evolve—edit, update, and refine over time!', icon: 'RefreshCw' },
+      { text: 'Substack locks content behind paywalls. WeWrite keeps everything open—everyone can read, always', icon: 'Unlock' },
+      { text: 'Substack means subscribing per-newsletter. WeWrite readers split one subscription across all their favorite writers', icon: 'Percent' },
+      { text: 'Substack is a blog feed. WeWrite pages link together to form an interconnected web of ideas', icon: 'Link' },
     ],
   },
   {
@@ -123,8 +124,10 @@ const COMPARISONS: ComparisonData[] = [
     brandColor: '#FF424D',
     renderIcon: ({ size, className }) => <PatreonLogo size={size} className={className} />,
     differences: [
-      { text: 'Patreon is about paywalling posts, WeWrite is about building an interconnected web of ideas where every page is a fundraiser', icon: 'Network' },
-      { text: 'Patreon helps communities monetize themselves, WeWrite does that while also allowing communities to cross-pollinate into others, breaking down silos', icon: 'Users' },
+      { text: 'Patreon locks content behind tiers. WeWrite keeps everything open—every page is a mini-fundraiser!', icon: 'Network' },
+      { text: 'Patreon communities stay siloed. WeWrite communities connect and cross-pollinate ideas', icon: 'Users' },
+      { text: 'Patreon requires managing complex tiers. WeWrite readers just allocate what feels right to pages they love', icon: 'Settings' },
+      { text: 'Patreon content is members-only. WeWrite lives on the open web, discoverable by anyone', icon: 'Globe' },
     ],
   },
   {
@@ -133,7 +136,10 @@ const COMPARISONS: ComparisonData[] = [
     brandColor: '#FFCC00',
     renderIcon: ({ size, className }) => <AppleLogo size={size} className={className} />,
     differences: [
-      { text: 'Apple Notes comparison coming soon...', icon: 'Clock' },
+      { text: 'Apple Notes keeps ideas in a locked drawer. WeWrite is built for sharing with an audience!', icon: 'Lock' },
+      { text: 'Apple Notes requires Apple devices. WeWrite works everywhere—just open your browser', icon: 'Globe' },
+      { text: 'Apple Notes has no discovery. WeWrite helps readers find you through trending pages and feeds', icon: 'Search' },
+      { text: 'Apple Notes collaboration is clunky. WeWrite is social-first with seamless real-time features', icon: 'Users' },
     ],
   },
   {
@@ -142,7 +148,10 @@ const COMPARISONS: ComparisonData[] = [
     brandColor: '#7C3AED',
     renderIcon: ({ size, className }) => <ObsidianLogo size={size} className={className} />,
     differences: [
-      { text: 'Obsidian comparison coming soon...', icon: 'Clock' },
+      { text: 'Obsidian is powerful but private. WeWrite is "Obsidian Social"—linking meets community!', icon: 'Users' },
+      { text: 'Obsidian vaults stay on your device. WeWrite lets you build your knowledge graph in public', icon: 'Share2' },
+      { text: 'Obsidian links stay in your vault. WeWrite links connect you to other writers\' ideas too', icon: 'Link' },
+      { text: 'Obsidian needs plugins and sync fees. WeWrite works instantly in your browser, free', icon: 'Zap' },
     ],
   },
   {
@@ -151,7 +160,10 @@ const COMPARISONS: ComparisonData[] = [
     brandColor: '#000000',
     renderIcon: ({ size, className }) => <WikipediaLogo size={size} className={className} />,
     differences: [
-      { text: 'Wikipedia comparison coming soon...', icon: 'Clock' },
+      { text: 'Wikipedia forces one consensus per topic. WeWrite lets everyone have their own perspective!', icon: 'Users' },
+      { text: 'Wikipedia editors are anonymous. WeWrite writers build personal brands and earn from expertise', icon: 'UserCircle' },
+      { text: 'Wikipedia requires "neutral point of view." WeWrite welcomes hot takes and unique viewpoints', icon: 'MessageSquare' },
+      { text: 'Wikipedia has strict notability rules. WeWrite lets you write about anything you want', icon: 'Sparkles' },
     ],
   },
 ];

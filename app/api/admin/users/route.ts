@@ -34,6 +34,10 @@ interface UserData {
     payoutsSetup: boolean;
     earningsTotalUsd?: number;
     earningsThisMonthUsd?: number;
+    // Allocation data (how much of their subscription they've allocated this month)
+    allocatedUsdCents?: number;
+    unallocatedUsdCents?: number;
+    totalBudgetUsdCents?: number;
   };
 }
 
@@ -128,8 +132,11 @@ export async function GET(request: NextRequest) {
     // Extract all user IDs for batch queries
     const userIds = snapshot.docs.map(doc => doc.id);
 
+    // Get collection name for USD balances
+    const usdBalancesCollectionName = getCollectionName(USD_COLLECTIONS.USD_BALANCES);
+
     // OPTIMIZATION: Run all data fetches in parallel instead of sequentially
-    const [subscriptionsMap, earningsMap, pageCountsMap, referrerUsernamesMap, pwaInstallsMap, notificationSparklinesMap] = await Promise.all([
+    const [subscriptionsMap, earningsMap, pageCountsMap, referrerUsernamesMap, pwaInstallsMap, notificationSparklinesMap, usdBalancesMap] = await Promise.all([
       // 1. Fetch Firestore subscription documents (source of truth - updated by webhooks)
       includeFinancial ? batchFetchSubscriptions(db, usersCollectionName, userIds) : Promise.resolve(new Map()),
 
@@ -147,6 +154,9 @@ export async function GET(request: NextRequest) {
 
       // 6. Batch fetch notification sparklines (7-day data)
       batchFetchNotificationSparklines(db, userIds),
+
+      // 7. Batch fetch USD balances (allocated/unallocated)
+      includeFinancial ? batchFetchUsdBalances(db, usdBalancesCollectionName, userIds) : Promise.resolve(new Map()),
     ]);
 
     // Build user data array (now just simple object construction, no async)
@@ -194,6 +204,9 @@ export async function GET(request: NextRequest) {
           subscriptionCancelReason = subscriptionData.cancelReason || null;
         }
 
+        // Get USD balance data for allocation info
+        const usdBalanceData = usdBalancesMap.get(uid);
+
         user.financial = {
           hasSubscription: subscriptionStatus === 'active',
           subscriptionAmount,
@@ -203,6 +216,10 @@ export async function GET(request: NextRequest) {
           earningsTotalUsd: earningsData.total > 0 ? earningsData.total / 100 : undefined,
           earningsThisMonthUsd: earningsData.thisMonth > 0 ? earningsData.thisMonth / 100 : undefined,
           payoutsSetup: Boolean(user.stripeConnectedAccountId),
+          // Allocation data (how much of their subscription budget they've allocated)
+          allocatedUsdCents: usdBalanceData?.allocatedUsdCents,
+          unallocatedUsdCents: usdBalanceData?.availableUsdCents,
+          totalBudgetUsdCents: usdBalanceData?.totalUsdCents,
         };
       }
 
@@ -578,6 +595,51 @@ async function batchFetchNotificationSparklines(
   return map;
 }
 
+// Helper: Batch fetch USD balances (allocated/unallocated amounts)
+interface UsdBalanceInfo {
+  totalUsdCents: number;
+  allocatedUsdCents: number;
+  availableUsdCents: number;
+}
+
+async function batchFetchUsdBalances(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  userIds: string[]
+): Promise<Map<string, UsdBalanceInfo>> {
+  const map = new Map<string, UsdBalanceInfo>();
+  if (userIds.length === 0) return map;
+
+  try {
+    // Use getAll for efficient batch fetching (document IDs are user IDs)
+    const refs = userIds.map(uid => db.collection(collectionName).doc(uid));
+    const docs = await db.getAll(...refs);
+
+    for (let i = 0; i < docs.length; i++) {
+      const doc = docs[i];
+      const userId = userIds[i];
+
+      if (doc.exists) {
+        const data = doc.data()!;
+        const totalUsdCents = data.totalUsdCents || 0;
+        const allocatedUsdCents = data.allocatedUsdCents || 0;
+        const availableUsdCents = totalUsdCents - allocatedUsdCents;
+
+        map.set(userId, {
+          totalUsdCents,
+          allocatedUsdCents,
+          availableUsdCents
+        });
+      }
+    }
+
+    console.log(`[Admin Users] Fetched ${map.size} USD balances`);
+  } catch (err) {
+    console.warn('[Admin Users] Error batch fetching USD balances:', err);
+  }
+  return map;
+}
+
 // POST endpoint - Update user feature flag overrides
 export async function POST(request: NextRequest) {
   try {
@@ -598,12 +660,12 @@ export async function POST(request: NextRequest) {
 
     // This code is unreachable since we return early above
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating user feature flag:', error);
     return NextResponse.json({
       success: false,
       error: 'Failed to update feature flag',
-      details: error.message
+      details: error?.message
     }, { status: 500 });
   }
 }

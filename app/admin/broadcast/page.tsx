@@ -11,6 +11,7 @@ import { Input } from '../../components/ui/input';
 import { isAdmin } from '../../utils/isAdmin';
 import { FloatingHeader } from '../../components/ui/FloatingCard';
 import { useToast } from '../../components/ui/use-toast';
+import { emailStyles } from '../../lib/emailTemplates';
 
 interface BroadcastHistory {
   id: string;
@@ -203,12 +204,12 @@ export default function AdminBroadcastPage() {
     }
   };
 
-  // Generate preview HTML
+  // Generate preview HTML - uses emailStyles for consistency with actual emails
   const generatePreviewHtml = () => {
     const baseUrl = 'https://getwewrite.app';
     const ctaSection = ctaText && ctaUrl ? `
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${ctaUrl}" style="background: #000; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
+        <a href="${ctaUrl}" style="${emailStyles.button}">
           ${ctaText}
         </a>
       </div>

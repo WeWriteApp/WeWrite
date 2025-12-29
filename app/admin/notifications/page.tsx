@@ -925,6 +925,7 @@ function AdminEmailsPageContent() {
                     <th className="text-left px-3 py-2 font-medium text-muted-foreground">Template</th>
                     <th className="text-left px-3 py-2 font-medium text-muted-foreground">Username</th>
                     <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Email</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Source</th>
                     <th className="text-right px-3 py-2 font-medium text-muted-foreground">Sent</th>
                   </tr>
                 </thead>
@@ -1003,6 +1004,28 @@ function AdminEmailsPageContent() {
                       <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell">
                         {log.recipientEmail}
                       </td>
+                      <td className="px-3 py-2 hidden md:table-cell">
+                        {(() => {
+                          const sourceConfig: Record<string, { icon: string; label: string; color: string }> = {
+                            cron: { icon: 'Clock', label: 'Cron', color: 'text-blue-500' },
+                            system: { icon: 'Zap', label: 'System', color: 'text-amber-500' },
+                            admin: { icon: 'Shield', label: 'Admin', color: 'text-purple-500' },
+                          };
+                          const source = log.triggerSource;
+                          const config = source ? sourceConfig[source] : null;
+
+                          if (!config) {
+                            return <span className="text-muted-foreground text-xs">—</span>;
+                          }
+
+                          return (
+                            <span className={`inline-flex items-center gap-1 text-xs ${config.color}`}>
+                              <Icon name={config.icon as any} size={12} />
+                              {config.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
                         {formatRelativeTime(log.sentAt)}
                       </td>
@@ -1019,7 +1042,7 @@ function AdminEmailsPageContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="py-6 px-4 container mx-auto max-w-7xl">
+      <div className="py-3 md:py-6 px-2 md:px-4 container mx-auto max-w-7xl">
         {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
         <header className="hidden lg:flex border-b bg-background px-4 py-3 mb-6 items-start justify-between gap-3 lg:px-0 lg:py-4 lg:border-b-0">
           <div>
@@ -1057,10 +1080,10 @@ function AdminEmailsPageContent() {
         </header>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-border">
+        <div className="flex gap-1 mb-4 md:mb-6 border-b border-border overflow-x-auto mobile-scroll-hide">
           <button
             onClick={() => setActiveTab('templates')}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-3 md:px-4 py-2.5 md:py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === 'templates'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1071,7 +1094,7 @@ function AdminEmailsPageContent() {
           </button>
           <button
             onClick={() => setActiveTab('upcoming')}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-3 md:px-4 py-2.5 md:py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === 'upcoming'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1082,7 +1105,7 @@ function AdminEmailsPageContent() {
           </button>
           <button
             onClick={() => setActiveTab('sent')}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-3 md:px-4 py-2.5 md:py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === 'sent'
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -1099,7 +1122,7 @@ function AdminEmailsPageContent() {
         ) : activeTab === 'sent' ? (
           renderSentTab()
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {/* Search */}
             <Input
               placeholder="Search templates..."

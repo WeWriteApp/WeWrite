@@ -252,35 +252,28 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="py-6 px-4 container mx-auto max-w-5xl">
-      <header className="border-b-subtle bg-background px-4 py-3 mb-6 flex items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
+      <div className="py-4 md:py-6 px-2 md:px-4 container mx-auto max-w-5xl">
+      {/* Header - hidden on mobile since drawer provides navigation */}
+      <header className="hidden md:flex border-b-subtle bg-background px-4 py-3 mb-6 items-center justify-between lg:border-b-0 lg:px-0 lg:py-2">
         <div>
           <h1 className="text-3xl font-bold leading-tight">Admin Panel</h1>
           <p className="text-muted-foreground">
             Administrative tools and dashboard access
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push('/')}
-          className="h-10 w-10"
-        >
-          <Icon name="X" size={20} />
-        </Button>
       </header>
 
       {/* Simplified admin interface - no tabs needed */}
-      <div className="space-y-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2">Admin Tools</h2>
-          <p className="text-muted-foreground">Administrative dashboard and testing utilities</p>
+      <div className="space-y-4 md:space-y-6">
+        <div className="mb-4 md:mb-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-1 md:mb-2">Admin Tools</h2>
+          <p className="text-sm md:text-base text-muted-foreground">Administrative dashboard and testing utilities</p>
         </div>
 
           {/* Platform fee revenue moved to admin dashboard */}
 
           {/* Top admin tools - Product KPIs and Monthly Financials */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
             {/* Admin Product KPIs */}
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-3">
@@ -326,7 +319,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Users</h3>

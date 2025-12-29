@@ -160,6 +160,7 @@ export async function POST(request: NextRequest) {
       data: templateData,
       userId,
       scheduledAt,
+      triggerSource: 'admin',
     });
 
     if (result.success) {

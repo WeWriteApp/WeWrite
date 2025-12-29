@@ -28,7 +28,7 @@ import {
   chooseUsernameTemplate,
   getTemplateById,
 } from '../lib/emailTemplates';
-import { logEmailSend } from './emailLogService';
+import { logEmailSend, type EmailTriggerSource } from './emailLogService';
 
 // Lazy-initialize Resend to avoid build-time errors
 let resendInstance: Resend | null = null;
@@ -725,6 +725,7 @@ export { getResend };
  *
  * @param options.scheduledAt - Optional ISO 8601 date string or natural language (e.g., "in 2 days")
  *                              to schedule the email for future delivery (up to 30 days)
+ * @param options.triggerSource - Source of the email trigger: 'cron', 'system', or 'admin'
  */
 export const sendTemplatedEmail = async (options: {
   templateId: string;
@@ -732,10 +733,11 @@ export const sendTemplatedEmail = async (options: {
   data: Record<string, any>;
   userId?: string;
   scheduledAt?: string;
+  triggerSource?: EmailTriggerSource;
 }): Promise<{ success: boolean; resendId?: string; error?: string }> => {
   const sentAt = new Date().toISOString();
   try {
-    const { templateId, to, data, userId, scheduledAt } = options;
+    const { templateId, to, data, userId, scheduledAt, triggerSource } = options;
 
     const template = getTemplateById(templateId);
     if (!template) {
@@ -765,6 +767,7 @@ export const sendTemplatedEmail = async (options: {
         status: 'failed',
         errorMessage: error.message,
         metadata: { ...data, scheduledAt },
+        triggerSource,
         sentAt,
       });
       return { success: false, error: error.message };
@@ -780,6 +783,7 @@ export const sendTemplatedEmail = async (options: {
       status: scheduledAt ? 'scheduled' : 'sent',
       resendId: resendData?.id,
       metadata: { ...data, scheduledAt },
+      triggerSource,
       sentAt,
     });
     return { success: true, resendId: resendData?.id };

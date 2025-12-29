@@ -1,9 +1,13 @@
 "use client";
 
 import React from 'react';
-import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Icon } from '@/components/ui/Icon';
+import {
+  SegmentedControl,
+  SegmentedControlList,
+  SegmentedControlTrigger,
+} from '../ui/segmented-control';
 
 export interface GlobalAnalyticsFilters {
   timeDisplayMode: 'cumulative' | 'overTime';
@@ -44,26 +48,21 @@ export function GlobalAnalyticsFilters({
           <Icon name="BarChart3" size={16} className="text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Display:</span>
         </div>
-        <div className="flex items-center bg-muted rounded-lg p-1">
-          <Button
-            variant={filters.timeDisplayMode === 'cumulative' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => handleTimeDisplayModeChange('cumulative')}
-            className="h-7 px-3 text-xs font-medium"
-          >
-            <Icon name="TrendingUp" size={12} className="mr-1.5" />
-            Cumulative
-          </Button>
-          <Button
-            variant={filters.timeDisplayMode === 'overTime' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => handleTimeDisplayModeChange('overTime')}
-            className="h-7 px-3 text-xs font-medium"
-          >
-            <Icon name="Activity" size={12} className="mr-1.5" />
-            Over Time
-          </Button>
-        </div>
+        <SegmentedControl
+          value={filters.timeDisplayMode}
+          onValueChange={(value) => handleTimeDisplayModeChange(value as 'cumulative' | 'overTime')}
+        >
+          <SegmentedControlList className="h-8 w-auto">
+            <SegmentedControlTrigger value="cumulative" className="text-xs px-3 gap-1.5">
+              <Icon name="TrendingUp" size={12} />
+              Cumulative
+            </SegmentedControlTrigger>
+            <SegmentedControlTrigger value="overTime" className="text-xs px-3 gap-1.5">
+              <Icon name="Activity" size={12} />
+              Over Time
+            </SegmentedControlTrigger>
+          </SegmentedControlList>
+        </SegmentedControl>
       </div>
 
       {/* Vertical Separator */}

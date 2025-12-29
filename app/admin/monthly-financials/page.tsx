@@ -342,7 +342,7 @@ export default function MonthlyFinancialsPage() {
       </div>
 
       {/* Mobile Refresh Button */}
-      <div className="lg:hidden px-4 py-2">
+      <div className="lg:hidden px-3 py-2">
         <Button
           variant="outline"
           size="sm"
@@ -355,7 +355,7 @@ export default function MonthlyFinancialsPage() {
         </Button>
       </div>
 
-      <div className="py-6 px-6 max-w-7xl mx-auto space-y-6">
+      <div className="py-3 px-2 md:py-6 md:px-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Error State */}
         {error && (
           <div className="wewrite-card bg-destructive/10 border-destructive/20">

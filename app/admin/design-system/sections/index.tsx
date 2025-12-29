@@ -16,6 +16,7 @@ import { ColorSystemSection } from './ColorSystemSection';
 import { ContentPageSection } from './ContentPageSection';
 import { ColorTokenReferenceSection } from './ColorTokenReferenceSection';
 import { DrawersModalsSection } from './DrawersModalsSection';
+import { EmailSection } from './EmailSection';
 import { MenuDropdownSection } from './MenuDropdownSection';
 import { MenuSidebarSection } from './MenuSidebarSection';
 import { EmptyStateSection } from './EmptyStateSection';
@@ -58,6 +59,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'color-token-reference', label: 'Color Token Reference', component: ColorTokenReferenceSection },
   { id: 'content-page', label: 'Content Page', component: ContentPageSection },
   { id: 'drawers-modals', label: 'Drawers & Modals', component: DrawersModalsSection },
+  { id: 'email', label: 'Email', component: EmailSection },
   { id: 'menu-dropdown', label: 'Menu (Dropdown)', component: MenuDropdownSection },
   { id: 'menu-sidebar', label: 'Menu (Sidebar)', component: MenuSidebarSection },
   { id: 'empty-state', label: 'Empty State', component: EmptyStateSection },

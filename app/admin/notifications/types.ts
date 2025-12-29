@@ -8,6 +8,8 @@ export interface EmailTemplate {
   subject: string;
 }
 
+export type EmailTriggerSource = 'cron' | 'system' | 'admin';
+
 export interface EmailLogEntry {
   id: string;
   templateId: string;
@@ -20,6 +22,7 @@ export interface EmailLogEntry {
   resendId?: string;
   errorMessage?: string;
   metadata?: Record<string, any>;
+  triggerSource?: EmailTriggerSource;
   sentAt: string;
   createdAt: string;
   // Webhook-updated fields

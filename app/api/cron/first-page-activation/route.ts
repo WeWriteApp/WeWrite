@@ -28,17 +28,15 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Verify cron access
+    // Verify cron access - Vercel sends CRON_SECRET in Authorization header
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    const cronApiKey = process.env.CRON_API_KEY;
 
-    const isAuthorized =
-      (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-      (cronApiKey && authHeader === `Bearer ${cronApiKey}`);
+    // Check Authorization: Bearer <CRON_SECRET> header (Vercel's standard)
+    const isAuthorized = cronSecret && authHeader === `Bearer ${cronSecret}`;
 
     if (!isAuthorized && process.env.NODE_ENV === 'production') {
-      console.warn('[FIRST PAGE ACTIVATION] Unauthorized access attempt');
+      console.warn('[FIRST PAGE ACTIVATION] Unauthorized access attempt - check CRON_SECRET env var');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -153,7 +151,8 @@ export async function GET(request: NextRequest) {
             username: userData.username || userData.displayName || 'there',
             emailSettingsToken
           },
-          userId
+          userId,
+          triggerSource: 'cron'
         });
 
         if (result.success) {

@@ -3,17 +3,17 @@
 import React, { useState, useEffect } from 'react'
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { Badge } from '../ui/badge'
+import { Card } from '../ui/card'
+import { ErrorDisplay } from '../ui/error-display'
 import { useAuth } from '../../providers/AuthProvider';
 import PillLink from '../utils/PillLink'
+import EmptyState from '../ui/EmptyState'
 
 interface DeletedPage {
   id: string
   title: string
   deletedAt: string
   deletedBy: string
-  isPublic: boolean
   lastModified: string
   createdAt: string
 }
@@ -22,8 +22,7 @@ export default function RecentlyDeletedPages() {
   const { user } = useAuth();
   const [deletedPages, setDeletedPages] = useState<DeletedPage[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
+  const [error, setError] = useState<{ message: string; error?: Error } | null>(null)
   const [restoring, setRestoring] = useState<string | null>(null)
   const [permanentlyDeleting, setPermanentlyDeleting] = useState<string | null>(null)
 
@@ -38,7 +37,9 @@ export default function RecentlyDeletedPages() {
       console.log('Fetching deleted pages for user:', user.uid)
 
       // Call API endpoint to get deleted pages
-      const response = await fetch(`/api/pages?userId=${user.uid}&includeDeleted=true&orderBy=deletedAt&orderDirection=desc&limit=100`)
+      // Add cache buster to ensure fresh data (browser caches can be 15min stale)
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/pages?userId=${user.uid}&includeDeleted=true&orderBy=deletedAt&orderDirection=desc&limit=100&_cb=${cacheBuster}`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch deleted pages: ${response.status}`)
@@ -50,7 +51,10 @@ export default function RecentlyDeletedPages() {
         throw new Error(result.error || 'Failed to fetch deleted pages')
       }
 
-      const pages: DeletedPage[] = result.data.pages
+      // Handle different response formats (result.data.pages or result.pages)
+      const pagesData = result.data?.pages || result.pages || []
+
+      const pages: DeletedPage[] = pagesData
         .filter((page: any) => {
           // Only include pages deleted within the last 30 days
           if (!page.deletedAt) return false
@@ -66,7 +70,6 @@ export default function RecentlyDeletedPages() {
           title: page.title || 'Untitled Page',
           deletedAt: page.deletedAt,
           deletedBy: page.deletedBy || page.userId,
-          isPublic: page.isPublic || false,
           lastModified: page.lastModified,
           createdAt: page.createdAt
         }))
@@ -90,7 +93,10 @@ export default function RecentlyDeletedPages() {
         }
       }
 
-      setError(errorMessage)
+      setError({
+        message: errorMessage,
+        error: err instanceof Error ? err : new Error(String(err))
+      })
     } finally {
       setLoading(false)
     }
@@ -144,7 +150,10 @@ export default function RecentlyDeletedPages() {
         }
       }
 
-      setError(errorMessage)
+      setError({
+        message: errorMessage,
+        error: err instanceof Error ? err : new Error(String(err))
+      })
     } finally {
       setRestoring(null)
     }
@@ -194,7 +203,10 @@ export default function RecentlyDeletedPages() {
         }
       }
 
-      setError(errorMessage)
+      setError({
+        message: errorMessage,
+        error: err instanceof Error ? err : new Error(String(err))
+      })
     } finally {
       setPermanentlyDeleting(null)
     }
@@ -227,24 +239,12 @@ export default function RecentlyDeletedPages() {
       setDeletedPages([])
     } catch (err) {
       console.error('Error deleting all pages:', err)
-      setError('Failed to delete all pages')
+      setError({
+        message: 'Failed to delete all pages',
+        error: err instanceof Error ? err : new Error(String(err))
+      })
     } finally {
       setLoading(false)
-    }
-  }
-
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    } catch {
-      return 'Unknown date'
     }
   }
 
@@ -254,20 +254,14 @@ export default function RecentlyDeletedPages() {
       const deletedDate = new Date(deletedAt)
       const expiryDate = new Date(deletedDate)
       expiryDate.setDate(expiryDate.getDate() + 30)
-      
+
       const now = new Date()
       const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      
+
       return Math.max(0, daysLeft)
     } catch {
       return 0
     }
-  }
-
-  // Retry function
-  const retryFetch = () => {
-    setRetryCount(prev => prev + 1)
-    fetchDeletedPages()
   }
 
   useEffect(() => {
@@ -276,185 +270,113 @@ export default function RecentlyDeletedPages() {
 
   if (loading) {
     return (
-      <Card className="wewrite-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground text-lg sm:text-xl">
-            <Icon name="Trash2" size={16} className="sm:h-5 sm:w-5 text-muted-foreground" />
-            Recently Deleted Pages
-          </CardTitle>
-          <CardDescription className="text-sm">
-            Pages deleted within the last 30 days
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6 sm:py-8">
-            <Icon name="Loader" size={28} className="mx-auto" />
-            <p className="mt-2 text-sm text-muted-foreground">Loading deleted pages...</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <div className="text-center py-8">
+          <Icon name="Loader" size={28} className="mx-auto" />
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card className="wewrite-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground text-lg sm:text-xl">
-          <Icon name="Trash2" size={16} className="sm:h-5 sm:w-5 text-muted-foreground" />
-          Recently Deleted Pages
-        </CardTitle>
-        <CardDescription className="text-sm">
-          Pages deleted within the last 30 days. They will be permanently deleted after 30 days.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <div className="mb-4 p-3 sm:p-4 bg-destructive/10 border-theme-strong rounded-lg">
-            <div className="flex items-start gap-2 text-destructive mb-3">
-              <Icon name="AlertTriangle" size={16} className="mt-0.5 shrink-0" />
-              <span className="text-sm font-medium leading-relaxed">{error}</span>
-            </div>
-            {retryCount < 3 && (
-              <Button onClick={retryFetch} variant="secondary" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
-                Try Again {retryCount > 0 && `(${retryCount}/3)`}
-              </Button>
-            )}
-            {retryCount >= 3 && (
-              <div className="space-y-3">
-                <p className="text-xs text-destructive/80 leading-relaxed">
-                  Multiple attempts failed. Please try refreshing the page or contact support.
-                </p>
-                <Button onClick={() => window.location.reload()} variant="secondary" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
-                  Refresh Page
-                </Button>
-              </div>
-            )}
+    <div className="space-y-3">
+      {error && (
+        <ErrorDisplay
+          message={error.message}
+          error={error.error}
+          onRetry={fetchDeletedPages}
+          className="mb-4"
+        />
+      )}
+
+      {deletedPages.length === 0 ? (
+        <EmptyState
+          icon="Trash2"
+          title="No recently deleted pages"
+          description="Pages you delete will appear here for 30 days before being permanently removed."
+        />
+      ) : (
+        <>
+          {/* Header info and delete all button */}
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">
+              {deletedPages.length} page{deletedPages.length !== 1 ? 's' : ''}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={deleteAllPermanently}
+              disabled={loading}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+            >
+              <Icon name="Trash2" size={14} className="mr-1.5" />
+              Delete All
+            </Button>
           </div>
-        )}
 
-        {deletedPages.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 px-4">
-            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
-              <Icon name="Trash2" size={24} className="sm:h-8 sm:w-8 text-muted-foreground/60" />
-            </div>
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No recently deleted pages</h3>
-            <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto leading-relaxed">Pages you delete will appear here for 30 days before being permanently removed.</p>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <p className="text-sm text-muted-foreground">
-                  {deletedPages.length} page{deletedPages.length !== 1 ? 's' : ''} found
-                </p>
-                <div className="hidden sm:block h-1 w-1 bg-muted-foreground/40 rounded-full"></div>
-                <p className="text-sm text-muted-foreground">
-                  Auto-delete in 30 days
-                </p>
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={deleteAllPermanently}
-                disabled={loading}
-                className="w-full sm:w-auto shadow-sm"
-              >
-                <Icon name="Trash2" size={12} className="mr-1" />
-                <span className="hidden xs:inline">Delete All Permanently</span>
-                <span className="xs:hidden">Delete All</span>
-              </Button>
-            </div>
+          {/* Page cards */}
+          <div className="space-y-3">
+            {deletedPages.map((page) => {
+              const daysLeft = getDaysUntilPermanentDeletion(page.deletedAt)
+              const isUrgent = daysLeft <= 7
 
-            <div className="space-y-3 sm:space-y-4">
-              {deletedPages.map((page) => {
-                const daysLeft = getDaysUntilPermanentDeletion(page.deletedAt)
-                const isUrgent = daysLeft <= 7
-
-                return (
-                  <div
-                    key={page.id}
-                    className="group flex flex-col gap-4 p-4 sm:p-6 border-theme-medium rounded-xl hover:border-theme-strong hover:bg-muted/30 transition-all duration-200"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <PillLink
-                            href={`/${page.id}?preview=deleted`}
-                            className="text-sm sm:text-base font-medium"
-                          >
-                            {page.title}
-                          </PillLink>
-                        </div>
-                        <Badge
-                          variant="secondary"
-                          className="shrink-0 self-start text-xs text-muted-foreground border-muted-foreground/30 bg-transparent"
-                        >
-                          {page.isPublic ? "Public" : "Private"}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-col gap-2 text-xs sm:text-sm">
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <Icon name="Calendar" size={12} className="sm:h-3.5 sm:w-3.5" />
-                          Deleted {formatDate(page.deletedAt)}
-                        </span>
-                        <span className={`flex items-center gap-1.5 font-medium ${
-                          isUrgent
-                            ? 'text-destructive'
-                            : daysLeft <= 14
-                              ? 'text-orange-600 dark:text-orange-400'
-                              : 'text-muted-foreground'
-                        }`}>
-                          <div className={`h-2 w-2 rounded-full ${
-                            isUrgent
-                              ? 'bg-destructive'
-                              : daysLeft <= 14
-                                ? 'bg-orange-500'
-                                : 'bg-muted-foreground/40'
-                          }`}></div>
-                          {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50 sm:border-t-0 sm:pt-0 sm:ml-4 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity duration-200">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => restorePage(page.id)}
-                        disabled={restoring === page.id || permanentlyDeleting === page.id}
-                        className="flex-1 sm:flex-none border-theme-medium hover:border-theme-strong hover:bg-muted/50 shadow-sm"
-                      >
-                        {restoring === page.id ? (
-                          <Icon name="Loader" size={12} className="mr-2" />
-                        ) : (
-                          <Icon name="RotateCcw" size={12} className="mr-2" />
-                        )}
-                        <span className="hidden xs:inline">Restore</span>
-                        <span className="xs:hidden">↻</span>
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => permanentlyDeletePage(page.id)}
-                        disabled={restoring === page.id || permanentlyDeleting === page.id}
-                        className="flex-1 sm:flex-none shadow-sm"
-                      >
-                        {permanentlyDeleting === page.id ? (
-                          <Icon name="Loader" size={12} className="mr-2" />
-                        ) : (
-                          <Icon name="Trash2" size={12} className="mr-2" />
-                        )}
-                        <span className="hidden xs:inline">Delete Forever</span>
-                        <span className="xs:hidden">Delete</span>
-                      </Button>
-                    </div>
+              return (
+                <Card key={page.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <PillLink
+                      href={`/${page.id}?preview=deleted`}
+                      className="text-sm font-medium"
+                    >
+                      {page.title}
+                    </PillLink>
+                    <span className={`text-xs font-medium shrink-0 ${
+                      isUrgent
+                        ? 'text-destructive'
+                        : daysLeft <= 14
+                          ? 'text-orange-600 dark:text-orange-400'
+                          : 'text-muted-foreground'
+                    }`}>
+                      {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
+                    </span>
                   </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => restorePage(page.id)}
+                      disabled={restoring === page.id || permanentlyDeleting === page.id}
+                      className="flex-1"
+                    >
+                      {restoring === page.id ? (
+                        <Icon name="Loader" size={14} className="mr-1.5" />
+                      ) : (
+                        <Icon name="RotateCcw" size={14} className="mr-1.5" />
+                      )}
+                      Restore
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => permanentlyDeletePage(page.id)}
+                      disabled={restoring === page.id || permanentlyDeleting === page.id}
+                      className="flex-1"
+                    >
+                      {permanentlyDeleting === page.id ? (
+                        <Icon name="Loader" size={14} className="mr-1.5" />
+                      ) : (
+                        <Icon name="Trash2" size={14} className="mr-1.5" />
+                      )}
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
   )
 }

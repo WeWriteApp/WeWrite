@@ -203,7 +203,7 @@ export default function UserActivationPage() {
   };
 
   return (
-    <div className="p-4 pt-4 space-y-4">
+    <div className="p-2 md:p-4 pt-2 md:pt-4 space-y-3 md:space-y-4">
       <AdminSubpageHeader
         title="User Activation"
         description="Dense matrix view of user activation milestones from signup to engagement."
@@ -219,47 +219,49 @@ export default function UserActivationPage() {
       )}
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div className="flex flex-col gap-2 md:gap-3">
         <div className="text-sm text-muted-foreground">
           {filtered.length} of {users.length} users
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
           <Input
             placeholder="Search username..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-48"
+            className="w-full sm:w-48"
           />
-          <Select value={filterCompleted} onValueChange={(v: any) => setFilterCompleted(v)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="complete">Completed</SelectItem>
-              <SelectItem value="incomplete">Incomplete</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="createdAt">Sort by Date</SelectItem>
-              <SelectItem value="completedCount">Sort by Progress</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-          >
-            {sortDir === 'asc' ? (
-              <Icon name="ArrowUp" size={16} />
-            ) : (
-              <Icon name="ArrowDown" size={16} />
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Select value={filterCompleted} onValueChange={(v: any) => setFilterCompleted(v)}>
+              <SelectTrigger className="flex-1 sm:w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="complete">Completed</SelectItem>
+                <SelectItem value="incomplete">Incomplete</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+              <SelectTrigger className="flex-1 sm:w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="createdAt">Sort by Date</SelectItem>
+                <SelectItem value="completedCount">Sort by Progress</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortDir === 'asc' ? (
+                <Icon name="ArrowUp" size={16} />
+              ) : (
+                <Icon name="ArrowDown" size={16} />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

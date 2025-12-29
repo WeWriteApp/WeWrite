@@ -122,12 +122,13 @@ export default function DesignSystemPage() {
       {/* Main content area - offset for the fixed sidebar on xl+ */}
       <div className="xl:ml-[180px]">
         {/* Mobile header - only shown when TOC is hidden */}
-        <div className="xl:hidden mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Icon name="Palette" size={32} className="text-primary" />
-            <h1 className="text-3xl font-bold">Design System</h1>
+        <div className="xl:hidden mb-4 md:mb-8">
+          <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+            <Icon name="Palette" size={24} className="text-primary md:hidden" />
+            <Icon name="Palette" size={32} className="text-primary hidden md:block" />
+            <h1 className="text-xl md:text-3xl font-bold">Design System</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Interactive component reference
           </p>
         </div>
@@ -141,7 +142,7 @@ export default function DesignSystemPage() {
         </div>
 
         {/* Sections */}
-        <div className="space-y-12">
+        <div className="space-y-6 md:space-y-12">
           {DESIGN_SYSTEM_SECTIONS.map((section) => {
             const SectionComponent = section.component;
             return <SectionComponent key={section.id} id={section.id} />;

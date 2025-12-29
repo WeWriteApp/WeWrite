@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
 
       // Parallel data fetching for all milestones
       const backlinksCollectionName = getCollectionName('backlinks');
-      const allocationsCollectionName = getCollectionName('usd_allocations');
+      const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
       const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
 
       const [

@@ -222,7 +222,20 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
     if (!isGlobalDrawerActive) return;
 
     const handleHashChange = () => {
-      const newConfig = parseHashToDrawerConfig(window.location.hash);
+      const hash = window.location.hash;
+
+      // Only respond to hashes that are relevant to this drawer system
+      // Ignore other hashes (e.g., #email-preview from SideDrawer, #tab from tabs)
+      // This prevents collisions with other components using URL hashes
+      const isRelevantHash = !hash || hash === '#' ||
+        hash.startsWith('#settings') || hash.startsWith('#admin');
+
+      if (!isRelevantHash) {
+        // Not our hash - don't update drawer state
+        return;
+      }
+
+      const newConfig = parseHashToDrawerConfig(hash);
       setDrawerConfig(newConfig);
 
       // Update depth tracking
@@ -300,22 +313,30 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
   const closeDrawer = useCallback(() => {
     if (!isGlobalDrawerActive) return;
 
-    setDrawerConfig({ type: null, subPath: null });
-
-    // Remove hash from URL
-    // If we pushed state, go back in history; otherwise just replace the hash
-    if (hashedStateDepthRef.current > 0) {
-      // Go back to remove the hash state(s)
-      window.history.go(-hashedStateDepthRef.current);
-      hashedStateDepthRef.current = 0;
-    } else {
-      // Just remove the hash
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-
-    // Track analytics
+    // Track analytics before closing
     if (drawerConfig.type) {
       trackDrawerAnalytics(drawerConfig.type, drawerConfig.subPath, 'close');
+    }
+
+    setDrawerConfig({ type: null, subPath: null });
+
+    // Remove hash from URL, but only if the current hash is one we own
+    const currentHash = window.location.hash;
+    const isOurHash = currentHash.startsWith('#settings') || currentHash.startsWith('#admin');
+
+    if (isOurHash) {
+      // If we pushed state, go back in history; otherwise just replace the hash
+      if (hashedStateDepthRef.current > 0) {
+        // Go back to remove the hash state(s)
+        window.history.go(-hashedStateDepthRef.current);
+        hashedStateDepthRef.current = 0;
+      } else {
+        // Just remove the hash
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } else {
+      // Another component owns the hash, don't touch it
+      hashedStateDepthRef.current = 0;
     }
   }, [isGlobalDrawerActive, drawerConfig, trackDrawerAnalytics]);
 

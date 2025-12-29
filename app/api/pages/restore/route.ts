@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { invalidateCache } from '../../../utils/serverCache';
+import { pagesListCache } from '../../../utils/pagesListCache';
 
 // POST endpoint - Restore a soft-deleted page
 export async function POST(request: NextRequest) {
@@ -86,6 +88,16 @@ export async function POST(request: NextRequest) {
     } catch (backlinkError) {
       console.error('Error rebuilding backlinks for restored page:', backlinkError);
       // Don't fail the restoration if backlink rebuild fails
+    }
+
+    // Invalidate caches so page appears in regular pages list and disappears from deleted
+    try {
+      invalidateCache.page(pageId);
+      invalidateCache.user(currentUserId);
+      invalidateCache.pagesList(currentUserId); // Invalidate apiCache pages list entries
+      pagesListCache.invalidateUser(currentUserId);
+    } catch (cacheError) {
+      console.warn('Cache invalidation failed after page restoration:', cacheError);
     }
 
     return createApiResponse({

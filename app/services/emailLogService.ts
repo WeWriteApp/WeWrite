@@ -9,6 +9,8 @@ import { getCollectionNameAsync } from '../utils/environmentConfig';
  * Respects X-Force-Production-Data header for admin panel production mode.
  */
 
+export type EmailTriggerSource = 'cron' | 'system' | 'admin';
+
 export interface EmailLogEntry {
   id?: string;
   templateId: string;
@@ -21,6 +23,7 @@ export interface EmailLogEntry {
   resendId?: string;
   errorMessage?: string;
   metadata?: Record<string, any>;
+  triggerSource?: EmailTriggerSource;
   sentAt: string;
   createdAt: string;
   // Webhook-updated fields

@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { useAuth } from "../../providers/AuthProvider";
 import { usePathname } from "next/navigation";
 import FeedbackModal from "./FeedbackModal";
+import { getSocialUrl } from "@/config/social-links";
 
 interface SiteFooterProps {
   className?: string;
@@ -41,10 +42,10 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
     { href: "#", label: "Feedback", icon: 'MessageSquare', section: 'content', onClick: () => setShowFeedbackModal(true) },
     { href: "/credits", label: "Credits", icon: 'Heart', section: 'content' },
     { href: "/privacy", label: "Privacy", icon: 'Shield', section: 'content' },
-    { href: "/terms", label: "Terms", icon: 'Scale', section: 'content' },
+    { href: "/terms", label: "Terms", icon: 'FileText', section: 'content' },
     { href: "mailto:support@getwewrite.app", label: "Email support", icon: 'Mail', external: true, section: 'external' },
-    { href: "https://x.com/WeWriteApp", label: "Follow on X", icon: 'X', external: true, section: 'external' },
-    { href: "https://github.com/WeWriteApp/WeWrite", label: "Source code", icon: 'Code', external: true, section: 'external' },
+    { href: getSocialUrl('x') || 'https://x.com/WeWriteApp', label: "Follow on X", icon: 'X', external: true, section: 'external' },
+    { href: getSocialUrl('github') || 'https://github.com/WeWriteApp/WeWrite', label: "Source code", icon: 'Code', external: true, section: 'external' },
   ];
 
   return (

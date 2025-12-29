@@ -458,6 +458,8 @@ export const cacheHelpers = {
 export const invalidateCache = {
   user: (userId: string) => userCache.invalidate(`user:${userId}`),
   page: (pageId: string) => pageCache.invalidate(`page:${pageId}`),
+  /** Invalidate all pages list cache entries for a user (both deleted and non-deleted) */
+  pagesList: (userId: string) => apiCache.invalidate(new RegExp(`^pages_${userId}_`)),
   analytics: () => analyticsCache.clear(),
   search: () => apiCache.invalidate(/^search:/),
   all: () => {

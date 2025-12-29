@@ -46,6 +46,32 @@ function DrawerLoadingFallback() {
 }
 
 /**
+ * Map of subPath to display title
+ * These should match the menu titles in useSettingsSections and admin sections
+ */
+const SUBPATH_TITLES: Record<string, string> = {
+  // Settings
+  'fund-account': 'Fund Account',
+  'spend': 'Manage Spending',
+  'earnings': 'Get paid',
+  'profile': 'Profile',
+  'appearance': 'Appearance',
+  'notifications': 'Notifications',
+  'email-preferences': 'Email Preferences',
+  'security': 'Security',
+  'deleted': 'Recently deleted',
+  'advanced': 'Advanced',
+  // Admin
+  'users': 'Users',
+  'user-activation': 'User Activation',
+  'notifications-admin': 'Notifications',
+  'product-kpis': 'Product KPIs',
+  'monthly-financials': 'Monthly Financials',
+  'design-system': 'Design System',
+  'system-diagram': 'System Diagram',
+};
+
+/**
  * Format subPath for display in header
  * Handles nested paths like 'users/abc123' -> 'User Details'
  * Also strips query parameters for display
@@ -63,12 +89,12 @@ function formatSubPathTitle(subPath: string | null): string {
     if (parts[0] === 'users' && parts[1]) {
       return 'User Details';
     }
-    // Generic fallback for nested paths
-    return parts[0].replace(/-/g, ' ');
+    // Generic fallback for nested paths - use title map or format path
+    return SUBPATH_TITLES[parts[0]] || parts[0].replace(/-/g, ' ');
   }
 
-  // Simple path - just format normally
-  return pathWithoutQuery.replace(/-/g, ' ');
+  // Check title map first, then fallback to formatted path
+  return SUBPATH_TITLES[pathWithoutQuery] || pathWithoutQuery.replace(/-/g, ' ');
 }
 
 /**
