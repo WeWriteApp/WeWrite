@@ -10,6 +10,19 @@ bun install && bun dev
 
 ---
 
+## Code Documentation
+
+These READMEs live alongside the code they document:
+
+| README | Contents |
+|--------|----------|
+| [/README.md](../README.md) | Project overview, setup, tech stack |
+| [/app/README.md](../app/README.md) | App directory structure, routes, key files |
+| [/app/api/README.md](../app/api/README.md) | 88 API endpoints by category |
+| [/app/services/README.md](../app/services/README.md) | 70 business logic services |
+
+---
+
 ## Documentation by Category
 
 ### Core Architecture
