@@ -120,50 +120,17 @@ const Editor: React.FC<EditorProps> = ({
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
 
   // Link suggestions hook - always enabled for counting, visibility controlled by showLinkSuggestions prop
+  // Note: insertLinkFromSuggestion is defined later but referenced via callback
+  const insertLinkFromSuggestionRef = useRef<((suggestion: LinkSuggestion) => void) | null>(null);
   const { state: linkSuggestionState, actions: linkSuggestionActions } = useLinkSuggestions({
     enabled: true, // Always enabled to get counts for the button
     minConfidence: 0.3,
     debounceDelay: 1500,
     onSuggestionSelected: (suggestion) => {
-      // When a suggestion is selected, insert the link
-      insertLinkFromSuggestion(suggestion);
+      // When a suggestion is selected, insert the link via ref
+      insertLinkFromSuggestionRef.current?.(suggestion);
     }
   });
-
-  // Extract all page IDs that are already linked in the content
-  const existingLinkedPageIds = useMemo(() => {
-    const pageIds = new Set<string>();
-    if (!editorValue) return pageIds;
-
-    // Recursively find all link elements and extract their pageIds
-    const findLinks = (nodes: Descendant[]) => {
-      for (const node of nodes) {
-        if (Element.isElement(node)) {
-          if (node.type === 'link' && 'pageId' in node && node.pageId) {
-            pageIds.add(node.pageId);
-          }
-          if ('children' in node) {
-            findLinks(node.children as Descendant[]);
-          }
-        }
-      }
-    };
-
-    findLinks(editorValue);
-    return pageIds;
-  }, [editorValue]);
-
-  // Filter suggestions to exclude already-linked pages
-  const filteredSuggestions = useMemo(() => {
-    return linkSuggestionState.allSuggestions.filter(
-      suggestion => !existingLinkedPageIds.has(suggestion.id)
-    );
-  }, [linkSuggestionState.allSuggestions, existingLinkedPageIds]);
-
-  // Notify parent when suggestion count changes (using filtered count)
-  useEffect(() => {
-    onLinkSuggestionCountChange?.(filteredSuggestions.length);
-  }, [filteredSuggestions.length, onLinkSuggestionCountChange]);
 
 
   // Link deletion plugin - allows deleting links with backspace/delete keys
@@ -452,6 +419,42 @@ const Editor: React.FC<EditorProps> = ({
   // Track if the change originated from the editor itself (to prevent resetting on own changes)
   const isInternalChangeRef = useRef(false);
 
+  // Extract all page IDs that are already linked in the content
+  // IMPORTANT: This must come AFTER editorValue is defined to avoid TDZ errors in production
+  const existingLinkedPageIds = useMemo(() => {
+    const pageIds = new Set<string>();
+    if (!editorValue) return pageIds;
+
+    // Recursively find all link elements and extract their pageIds
+    const findLinks = (nodes: Descendant[]) => {
+      for (const node of nodes) {
+        if (Element.isElement(node)) {
+          if (node.type === 'link' && 'pageId' in node && node.pageId) {
+            pageIds.add(node.pageId);
+          }
+          if ('children' in node) {
+            findLinks(node.children as Descendant[]);
+          }
+        }
+      }
+    };
+
+    findLinks(editorValue);
+    return pageIds;
+  }, [editorValue]);
+
+  // Filter suggestions to exclude already-linked pages
+  const filteredSuggestions = useMemo(() => {
+    return linkSuggestionState.allSuggestions.filter(
+      suggestion => !existingLinkedPageIds.has(suggestion.id)
+    );
+  }, [linkSuggestionState.allSuggestions, existingLinkedPageIds]);
+
+  // Notify parent when suggestion count changes (using filtered count)
+  useEffect(() => {
+    onLinkSuggestionCountChange?.(filteredSuggestions.length);
+  }, [filteredSuggestions.length, onLinkSuggestionCountChange]);
+
   useEffect(() => {
     const currentContentStr = JSON.stringify(normalizedInitialContent);
 
@@ -565,6 +568,11 @@ const Editor: React.FC<EditorProps> = ({
       }
     }
   }, [editor, linkSuggestionActions]);
+
+  // Update the ref so the hook callback can use the function
+  useEffect(() => {
+    insertLinkFromSuggestionRef.current = insertLinkFromSuggestion;
+  }, [insertLinkFromSuggestion]);
 
   // Handle clicking on a suggestion underline
   const handleSuggestionClick = useCallback((suggestion: LinkSuggestion) => {
