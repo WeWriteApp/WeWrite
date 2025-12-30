@@ -2,11 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Badge } from '../../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Separator } from '../../components/ui/separator';
 import { FeeConfigurationService } from '../../services/feeConfigurationService';
@@ -119,198 +117,145 @@ export default function PayoutValidationPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Icon name="Calculator" size={32} />
-            Payout Validation Tool
-          </h1>
-          <p className="text-muted-foreground">
-            Validate USD-to-payout calculations and fee structures
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4">
       {/* Current Fee Structure */}
       {feeStructure && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Fee Structure</CardTitle>
-            <CardDescription>
-              Active fee configuration for payouts (Stripe fees are automatically handled)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {formatPercentage(feeStructure.platformFeePercentage)}
-                </div>
-                <div className="text-sm text-muted-foreground">WeWrite Platform Fee</div>
+        <div className="wewrite-card">
+          <h2 className="font-semibold text-sm mb-3">Fee Structure</h2>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="text-lg font-bold text-red-600">
+                {formatPercentage(feeStructure.platformFeePercentage)}
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {formatPercentage(feeStructure.stripeConnectFeePercentage)}
-                </div>
-                <div className="text-sm text-muted-foreground">Stripe Connect Fee (Auto)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {formatCurrency(feeStructure.minimumPayoutThreshold)}
-                </div>
-                <div className="text-sm text-muted-foreground">Minimum Threshold</div>
-              </div>
+              <div className="text-xs text-muted-foreground">Platform</div>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <div className="text-lg font-bold text-orange-600">
+                {formatPercentage(feeStructure.stripeConnectFeePercentage)}
+              </div>
+              <div className="text-xs text-muted-foreground">Stripe</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-primary">
+                {formatCurrency(feeStructure.minimumPayoutThreshold)}
+              </div>
+              <div className="text-xs text-muted-foreground">Min</div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Input Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payout Calculation</CardTitle>
-          <CardDescription>
-            Enter USD cents amount to validate payout calculation
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="usdCents">USD Cents Earned</Label>
-              <Input
-                id="usdCents"
-                type="number"
-                min="0"
-                step="1"
-                value={usdCentsEarned}
-                onChange={(e) => setUsdCentsEarned(parseInt(e.target.value) || 0)}
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                100 cents = $1 USD
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="method">Payout Method</Label>
-              <select
-                id="method"
-                value={payoutMethod}
-                onChange={(e) => setPayoutMethod(e.target.value as 'standard' | 'instant')}
-                className="wewrite-input"
-                className="mt-1 w-full px-3 py-2 border-theme-strong bg-background rounded-md"
-              >
-                <option value="standard">Standard (2-5 days, free)</option>
-                <option value="instant">Instant (1.5% + $0.50)</option>
-              </select>
-            </div>
-            <div className="flex items-end">
-              <Button onClick={validatePayout} disabled={isLoading} className="w-full">
-                {isLoading ? (
-                  <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />
-                ) : (
-                  <Icon name="Calculator" size={16} className="mr-2" />
-                )}
-                Calculate Payout
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="wewrite-card space-y-3">
+        <h2 className="font-semibold text-sm">Calculate Payout</h2>
+
+        <div>
+          <Label htmlFor="usdCents" className="text-xs">USD Cents Earned</Label>
+          <Input
+            id="usdCents"
+            type="number"
+            min="0"
+            step="1"
+            value={usdCentsEarned}
+            onChange={(e) => setUsdCentsEarned(parseInt(e.target.value) || 0)}
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">100 cents = $1</p>
+        </div>
+
+        <div>
+          <Label htmlFor="method" className="text-xs">Payout Method</Label>
+          <select
+            id="method"
+            value={payoutMethod}
+            onChange={(e) => setPayoutMethod(e.target.value as 'standard' | 'instant')}
+            className="mt-1 w-full px-3 py-2 border border-border bg-background rounded-md text-sm"
+          >
+            <option value="standard">Standard (2-5 days)</option>
+            <option value="instant">Instant (1.5% + $0.50)</option>
+          </select>
+        </div>
+
+        <Button onClick={validatePayout} disabled={isLoading} size="sm" className="w-full gap-1.5">
+          {isLoading ? (
+            <Icon name="RefreshCw" size={14} className="animate-spin" />
+          ) : (
+            <Icon name="Calculator" size={14} />
+          )}
+          Calculate
+        </Button>
+      </div>
 
       {/* Validation Results */}
       {validation && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Status Alert */}
           <Alert variant={validation.isValid ? "default" : "destructive"}>
             {validation.isValid ? (
-              <Icon name="CheckCircle" size={16} />
+              <Icon name="CheckCircle" size={14} />
             ) : (
-              <Icon name="AlertCircle" size={16} />
+              <Icon name="AlertCircle" size={14} />
             )}
-            <AlertTitle>
-              {validation.isValid ? 'Payout Validation Passed' : 'Payout Validation Failed'}
+            <AlertTitle className="text-sm">
+              {validation.isValid ? 'Valid' : 'Invalid'}
             </AlertTitle>
-            <AlertDescription>
-              {validation.isValid 
-                ? 'All calculations are correct and within acceptable parameters.'
-                : `${validation.errors.length} issue(s) found with the payout calculation.`
+            <AlertDescription className="text-xs">
+              {validation.isValid
+                ? 'Calculations are correct.'
+                : `${validation.errors.length} issue(s) found.`
               }
             </AlertDescription>
           </Alert>
 
           {/* Error Details */}
           {validation.errors.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-red-600">Validation Errors</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc list-inside space-y-1">
-                  {validation.errors.map((error, index) => (
-                    <li key={index} className="text-red-600 text-sm">{error}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            <div className="wewrite-card">
+              <h3 className="font-semibold text-sm text-red-600 mb-2">Errors</h3>
+              <ul className="space-y-1">
+                {validation.errors.map((error, index) => (
+                  <li key={index} className="text-red-600 text-xs">• {error}</li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {/* Fee Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Fee Breakdown</CardTitle>
-              <CardDescription>
-                Detailed calculation of all fees and net payout amount
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-800">
-                      {formatCurrency(validation.grossAmount)}
-                    </div>
-                    <div className="text-sm text-green-600">Gross Amount</div>
-                    <div className="text-xs text-muted-foreground">
-                      {validation.usdCentsEarned} USD cents
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-800">
-                      {formatCurrency(validation.totalFees)}
-                    </div>
-                    <div className="text-sm text-red-600">Total Fees</div>
-                    <div className="text-xs text-muted-foreground">
-                      {((validation.totalFees / validation.grossAmount) * 100).toFixed(1)}% of gross
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <div className="text-2xl font-bold text-foreground">
-                      {formatCurrency(validation.netAmount)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Net Payout</div>
-                    <div className="text-xs text-muted-foreground">
-                      Amount you receive
-                    </div>
-                  </div>
-                </div>
+          <div className="wewrite-card space-y-3">
+            <h3 className="font-semibold text-sm">Breakdown</h3>
 
-                <Separator />
-
-                {/* Detailed Breakdown */}
-                <div className="space-y-2">
-                  <h4 className="font-medium">Detailed Fee Breakdown:</h4>
-                  {validation.breakdown.map((line, index) => (
-                    <div key={index} className="text-sm font-mono bg-muted p-2 rounded">
-                      {line}
-                    </div>
-                  ))}
+            {/* Summary */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded">
+                <div className="text-base font-bold text-green-700 dark:text-green-400">
+                  {formatCurrency(validation.grossAmount)}
                 </div>
+                <div className="text-xs text-green-600 dark:text-green-500">Gross</div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="p-2 bg-red-50 dark:bg-red-950/30 rounded">
+                <div className="text-base font-bold text-red-700 dark:text-red-400">
+                  {formatCurrency(validation.totalFees)}
+                </div>
+                <div className="text-xs text-red-600 dark:text-red-500">Fees</div>
+              </div>
+              <div className="p-2 bg-muted rounded">
+                <div className="text-base font-bold">
+                  {formatCurrency(validation.netAmount)}
+                </div>
+                <div className="text-xs text-muted-foreground">Net</div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Detailed Breakdown */}
+            <div className="space-y-1">
+              {validation.breakdown.map((line, index) => (
+                <div key={index} className="text-xs font-mono bg-muted p-1.5 rounded">
+                  {line}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

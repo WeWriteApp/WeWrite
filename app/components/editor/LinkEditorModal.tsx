@@ -587,7 +587,7 @@ export default function LinkEditorModal({
           {/* Link Preview Section */}
           <div className="wewrite-card p-4">
             <Label className="text-sm font-medium text-foreground mb-3 block text-center">
-              Link Preview
+              Preview
             </Label>
             <div className="flex items-center justify-center gap-2">
               {(() => {

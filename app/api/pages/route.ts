@@ -906,68 +906,51 @@ export async function PUT(request: NextRequest) {
       };
 
       // If content was NOT updated, create a separate version for the title change
+      // PERFORMANCE: Use inline diff for title changes (no API call needed)
       if (!contentChanged) {
-        try {
-          const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
-          const { getUserProfile } = await import('../../firebase/database/users');
-          const currentUser = await getUserProfile(currentUserId);
+        // Create simple inline diff for title change - much faster than API call
+        const simpleTitleDiff = {
+          added: title.trim().length,
+          removed: (pageData.title || '').length,
+          hasChanges: true,
+          preview: {
+            beforeContext: 'Title: ',
+            addedText: title.trim(),
+            removedText: pageData.title || '',
+            afterContext: '',
+            hasAdditions: true,
+            hasRemovals: !!pageData.title
+          }
+        };
 
-          // Calculate title diff for display
-          const titleDiffResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/diff`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        // Update page with title diff immediately (non-blocking for version creation)
+        pageRef.update({ lastDiff: simpleTitleDiff }).catch(() => {});
+
+        // Create version in background - don't block response
+        (async () => {
+          try {
+            const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
+            const { getUserProfile } = await import('../../firebase/database/users');
+            const currentUser = await getUserProfile(currentUserId);
+
+            // Create version data for title change
+            const titleVersionData = {
+              content: pageData.content, // Keep same content
+              userId: currentUserId,
+              username: currentUser?.username || 'Anonymous',
+              groupId: groupId,
+              changeType: 'title_change',
               titleChange: {
                 oldTitle: pageData.title,
                 newTitle: title.trim()
               }
-            })
-          });
+            };
 
-          let titleDiff = null;
-          if (titleDiffResponse.ok) {
-            titleDiff = await titleDiffResponse.json();
+            await saveNewVersionServer(id, titleVersionData);
+          } catch (versionError) {
+            console.error('Background title version creation failed:', versionError);
           }
-
-          // Create version data for title change
-          const titleVersionData = {
-            content: pageData.content, // Keep same content
-            userId: currentUserId,
-            username: currentUser?.username || 'Anonymous',
-            groupId: groupId,
-            changeType: 'title_change',
-            titleChange: {
-              oldTitle: pageData.title,
-              newTitle: title.trim()
-            }
-          };
-
-          await saveNewVersionServer(id, titleVersionData);
-
-          // Update page with title diff info for recent edits
-          await pageRef.update({
-            lastDiff: titleDiff ? {
-              added: titleDiff.added || 0,
-              removed: titleDiff.removed || 0,
-              hasChanges: true,
-              preview: titleDiff.preview || null
-            } : {
-              added: title.trim().length,
-              removed: (pageData.title || '').length,
-              hasChanges: true,
-              preview: {
-                beforeContext: 'Title: ',
-                addedText: title.trim(),
-                removedText: pageData.title || '',
-                afterContext: '',
-                hasAdditions: true,
-                hasRemovals: !!pageData.title
-              }
-            }
-          });
-        } catch (versionError) {
-          // Error creating version for title change - non-fatal
-        }
+        })();
       }
 
       // Update all links in background - don't block the save response
@@ -1140,7 +1123,7 @@ export async function PUT(request: NextRequest) {
       if (currentUserId) invalidateCache.user(currentUserId);
 
       // 2. Invalidate in-memory page cache (used by GET /api/pages/[id])
-      const { pageCache } = await import('../../utils/pageCache');
+      const { pageCache } = await import('../../utils/serverCache');
       pageCache.invalidate(id);
     } catch (err) {
       // Cache invalidation failed - non-fatal

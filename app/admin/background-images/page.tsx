@@ -4,10 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
-import { isAdmin } from '../../utils/isAdmin';
 import { Button } from '../../components/ui/button';
 import { useToast } from '../../components/ui/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
 
@@ -304,170 +302,112 @@ export default function AdminBackgroundImagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="py-6 px-4 container mx-auto max-w-4xl">
-        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
-        <div className="hidden lg:block mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Default Background Images</h1>
-              <p className="text-muted-foreground">
-                Manage default background images available to all users
-              </p>
-            </div>
+    <div className="space-y-4">
+      {/* Upload Button */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+        id="image-upload"
+        disabled={uploading}
+      />
+      <Button
+        onClick={() => document.getElementById('image-upload')?.click()}
+        disabled={uploading}
+        size="sm"
+        className="gap-1.5 w-full"
+      >
+        {uploading ? (
+          <Icon name="Loader" size={14} />
+        ) : (
+          <Icon name="Plus" size={14} />
+        )}
+        Upload Image
+      </Button>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-                id="image-upload"
-                disabled={uploading}
-              />
-              <Button
-                onClick={() => document.getElementById('image-upload')?.click()}
-                disabled={uploading}
-                className="gap-2"
-              >
-                {uploading ? (
-                  <Icon name="Loader" />
-                ) : (
-                  <Icon name="Plus" size={16} />
-                )}
-                Upload Image
-              </Button>
-            </div>
+      {/* Images List */}
+      <div className="space-y-2">
+        {images.length === 0 ? (
+          <div className="wewrite-card text-center py-8">
+            <Icon name="Image" size={32} className="mx-auto mb-3 text-muted-foreground" />
+            <p className="font-medium text-sm">No background images</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Upload your first image to get started
+            </p>
           </div>
-        </div>
+        ) : (
+          images.map((image) => (
+            <div
+              key={image.id}
+              className={`wewrite-card transition-all ${
+                draggedItem === image.id ? 'opacity-50' : ''
+              }`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, image.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, image.id)}
+            >
+              <div className="flex items-center gap-3">
+                {/* Drag Handle */}
+                <div className="cursor-move text-muted-foreground flex-shrink-0">
+                  <Icon name="GripVertical" size={16} />
+                </div>
 
-        {/* Mobile Upload Button - visible on mobile only */}
-        <div className="lg:hidden mb-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-            id="image-upload-mobile"
-            disabled={uploading}
-          />
-          <Button
-            onClick={() => document.getElementById('image-upload-mobile')?.click()}
-            disabled={uploading}
-            className="gap-2 w-full"
-          >
-            {uploading ? (
-              <Icon name="Loader" />
-            ) : (
-              <Icon name="Plus" size={16} />
-            )}
-            Upload Image
-          </Button>
-        </div>
+                {/* Image Preview */}
+                <div className="w-14 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                  <img
+                    src={image.url}
+                    alt={image.filename}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
-        {/* Images Grid */}
-        <div className="space-y-4">
-          {images.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Icon name="Image" size={48} className=" mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">No background images</h3>
-                <p className="text-muted-foreground mb-4">
-                  Upload your first default background image to get started
-                </p>
-                <Button
-                  onClick={() => document.getElementById('image-upload')?.click()}
-                  disabled={uploading}
-                  className="gap-2"
-                >
-                  <Icon name="Upload" size={16} />
-                  Upload Image
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            images.map((image) => (
-              <Card
-                key={image.id}
-                className={`transition-all duration-200 ${
-                  draggedItem === image.id ? 'opacity-50' : ''
-                }`}
-                draggable
-                onDragStart={(e) => handleDragStart(e, image.id)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, image.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    {/* Drag Handle */}
-                    <div className="cursor-move text-muted-foreground">
-                      <Icon name="GripVertical" size={20} />
-                    </div>
-
-                    {/* Image Preview */}
-                    <div className="w-20 h-12 rounded-lg overflow-hidden bg-muted">
-                      <img
-                        src={image.url}
-                        alt={image.filename}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    {/* Image Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{image.filename}</h3>
-                        <Badge variant={image.active ? "default" : "secondary"}>
-                          {image.active ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Uploaded by {image.uploadedBy} • {new Date(image.uploadedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={image.active}
-                          onCheckedChange={(checked) => handleActiveToggle(image.id, checked)}
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          {image.active ? <Icon name="Eye" size={16} /> : <Icon name="EyeOff" size={16} />}
-                        </span>
-                      </div>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(image.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Icon name="Trash2" size={16} />
-                      </Button>
-                    </div>
+                {/* Image Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{image.filename}</p>
+                    <Badge variant={image.active ? "default" : "secondary"} className="text-xs flex-shrink-0">
+                      {image.active ? "On" : "Off"}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {image.uploadedBy} • {new Date(image.uploadedAt).toLocaleDateString()}
+                  </p>
+                </div>
 
-        {/* Instructions */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="text-lg">Instructions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>• <strong>Upload:</strong> Click "Upload Image" to add new default background images</p>
-            <p>• <strong>Reorder:</strong> Drag and drop images to change their display order</p>
-            <p>• <strong>Toggle:</strong> Use the switch to activate/deactivate images for users</p>
-            <p>• <strong>Delete:</strong> Click the trash icon to permanently remove an image</p>
-            <p>• <strong>File Requirements:</strong> Images should be under 5MB and in common formats (PNG, JPG, WebP)</p>
-          </CardContent>
-        </Card>
+                {/* Controls */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Switch
+                    checked={image.active}
+                    onCheckedChange={(checked) => handleActiveToggle(image.id, checked)}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(image.id)}
+                    className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                  >
+                    <Icon name="Trash2" size={14} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
+
+      {/* Instructions */}
+      <details className="text-xs text-muted-foreground">
+        <summary className="cursor-pointer hover:text-foreground font-medium">
+          Instructions
+        </summary>
+        <div className="mt-2 space-y-1 pl-2">
+          <p>• Drag to reorder images</p>
+          <p>• Toggle switch to activate/deactivate</p>
+          <p>• Max 5MB, PNG/JPG/WebP</p>
+        </div>
+      </details>
     </div>
   );
 }

@@ -3,18 +3,16 @@
  * This ensures that deleted page status appears immediately
  */
 
-import { pageCache } from './pageCache';
+import { pageCache } from './serverCache';
 
 export const clearDeletedPageCaches = (pageId?: string) => {
-  console.log('🧹 Clearing deleted page caches...');
-  
   // Clear page cache
   if (pageId) {
-    pageCache.clearPage(pageId);
+    pageCache.invalidate(pageId);
   } else {
     pageCache.clear();
   }
-  
+
   // Clear API deduplication cache if it exists
   if (typeof window !== 'undefined') {
     try {
@@ -27,23 +25,16 @@ export const clearDeletedPageCaches = (pageId?: string) => {
         }
       }
       cacheKeys.forEach(key => localStorage.removeItem(key));
-      
-      if (cacheKeys.length > 0) {
-        console.log(`🧹 Cleared ${cacheKeys.length} cached API responses`);
-      }
     } catch (error) {
       console.warn('Failed to clear localStorage cache:', error);
     }
   }
-  
-  console.log('✅ Deleted page caches cleared');
 };
 
 // Auto-clear caches on page load to ensure fresh data
 if (typeof window !== 'undefined') {
   // Clear caches when the page loads to ensure we get fresh deleted status
   window.addEventListener('load', () => {
-    console.log('🔄 Page loaded - clearing caches to ensure fresh deleted status');
     clearDeletedPageCaches();
   });
 }

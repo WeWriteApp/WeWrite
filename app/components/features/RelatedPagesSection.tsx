@@ -77,6 +77,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
         loading={loading}
         initialLimit={8}
         hideWhenEmpty={true}
+        pillCounter={true}
       />
 
       {/* More by Same Author */}
@@ -87,6 +88,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
         loading={loading}
         initialLimit={5}
         hideWhenEmpty={true}
+        pillCounter={true}
       />
     </div>
   );

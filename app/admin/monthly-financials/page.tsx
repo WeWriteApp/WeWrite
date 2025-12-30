@@ -321,41 +321,18 @@ export default function MonthlyFinancialsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
-      <div className="hidden lg:block border-b bg-card">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Monthly Financials</h1>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchData}
-              disabled={isLoading}
-            >
-              <Icon name="RefreshCw" size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Refresh Button */}
-      <div className="lg:hidden px-3 py-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchData}
-          disabled={isLoading}
-          className="w-full"
-        >
-          <Icon name="RefreshCw" size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
-      <div className="py-3 px-2 md:py-6 md:px-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="space-y-4">
+      {/* Refresh Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => fetchData()}
+        disabled={isLoading}
+        className="w-full gap-1.5"
+      >
+        <Icon name="RefreshCw" size={14} className={isLoading ? 'animate-spin' : ''} />
+        Refresh
+      </Button>
         {/* Error State */}
         {error && (
           <div className="wewrite-card bg-destructive/10 border-destructive/20">
@@ -1241,7 +1218,6 @@ export default function MonthlyFinancialsPage() {
             </div>
           </>
         )}
-      </div>
 
       {/* User Details Side Drawer */}
       <SideDrawer open={!!selectedUserEmail} onOpenChange={(open) => !open && closeUserDrawer()}>

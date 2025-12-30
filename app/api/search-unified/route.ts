@@ -3,7 +3,7 @@ import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, QuerySn
 import { db } from '../../firebase/database';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker';
-import { recordProductionRead } from '../../utils/productionReadMonitor';
+import { trackFirebaseRead } from '../../utils/costMonitor';
 import { searchPages, searchUsers as algoliaSearchUsers } from '../../lib/algolia';
 import {
   searchPages as typesenseSearchPages,
@@ -758,13 +758,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const cachedResult = getCachedResult(cacheKey);
 
     if (cachedResult) {
-      recordProductionRead('/api/search-unified', 'search-cached', 0, {
-        userId,
-        cacheStatus: 'HIT',
-        responseTime: 0,
-        userAgent: request.headers.get('user-agent'),
-        referer: request.headers.get('referer')
-      });
+      // Track cache hit for cost monitoring
+      trackFirebaseRead('search', 'search-cached', 0, 'api-search-unified');
 
       return NextResponse.json({
         ...cachedResult,
@@ -800,13 +795,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
           setCachedResult(cacheKey, emptySearchResult, SEARCH_CACHE_TTL.EMPTY_SEARCH);
 
-          recordProductionRead('/api/search-unified', 'empty-search', pages?.length || 0, {
-            userId,
-            cacheStatus: 'MISS',
-            responseTime: Date.now() - startTime,
-            userAgent: request.headers.get('user-agent'),
-            referer: request.headers.get('referer')
-          });
+          // Track empty search for cost monitoring
+          trackFirebaseRead('search', 'empty-search', pages?.length || 0, 'api-search-unified');
 
           return NextResponse.json(emptySearchResult, { status: 200 });
         } catch (error) {
@@ -961,14 +951,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     setCachedResult(cacheKey, searchResult, cacheTTL);
 
-    recordProductionRead('/api/search-unified', 'search-fresh',
-      (pagesWithUsernames?.length || 0) + (users?.length || 0), {
-        userId,
-        cacheStatus: 'MISS',
-        responseTime: searchTime,
-        userAgent: request.headers.get('user-agent'),
-        referer: request.headers.get('referer')
-      });
+    // Track fresh search for cost monitoring
+    trackFirebaseRead('search', 'search-fresh', (pagesWithUsernames?.length || 0) + (users?.length || 0), 'api-search-unified');
 
     return NextResponse.json(searchResult, { status: 200 });
 

@@ -76,6 +76,38 @@ export function LoadingStatesSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
+      <StateDemo label="Bordered Loading State (matches EmptyState)">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Small</p>
+            <LoadingState
+              message="Loading..."
+              showBorder
+              size="sm"
+              minHeight="h-24"
+            />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Medium (default)</p>
+            <LoadingState
+              message="Loading content..."
+              showBorder
+              size="md"
+              minHeight="h-32"
+            />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Large</p>
+            <LoadingState
+              message="Loading page data..."
+              showBorder
+              size="lg"
+              minHeight="h-40"
+            />
+          </div>
+        </div>
+      </StateDemo>
+
       <StateDemo label="Real-World Example">
         <div className="wewrite-card p-6 w-full max-w-md">
           <h3 className="text-sm font-medium mb-4">Page Connections</h3>
@@ -96,6 +128,14 @@ export function LoadingStatesSection({ id }: { id: string }) {
 // Size variants
 <Icon name="Loader" size={16} />  // small
 <Icon name="Loader" size={32} />  // large
+
+// Bordered loading state (matches EmptyState style)
+<LoadingState
+  message="Loading content..."
+  showBorder
+  size="md"
+  minHeight="h-32"
+/>
 
 // Skeleton placeholders
 <SkeletonLine width="w-3/4" />

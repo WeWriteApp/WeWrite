@@ -18,6 +18,8 @@ interface LoadingStateProps {
   className?: string;
   /** Whether to show inside a card container */
   showCard?: boolean;
+  /** Whether to show with dotted border (like EmptyState) */
+  showBorder?: boolean;
   /** Minimum height for the container */
   minHeight?: string;
 }
@@ -34,6 +36,7 @@ export function LoadingState({
   size = 'md',
   className,
   showCard = false,
+  showBorder = false,
   minHeight = 'h-64'
 }: LoadingStateProps) {
   const sizeClasses = {
@@ -69,15 +72,7 @@ export function LoadingState({
     switch (variant) {
       case 'spinner':
         return (
-          <div className="relative">
-            {/* Outer glow ring */}
-            <div className={cn(
-              sizes.spinnerContainer,
-              "absolute inset-0 rounded-full bg-accent-30 blur-md animate-pulse"
-            )} />
-            {/* Spinner */}
-            <Icon name="Loader" className="text-accent-80 relative" />
-          </div>
+          <Icon name="Loader" size={sizes.spinner} />
         );
 
       case 'dots':
@@ -88,7 +83,7 @@ export function LoadingState({
                 key={i}
                 className={cn(
                   sizes.dots,
-                  "rounded-full bg-accent-60 animate-bounce"
+                  "rounded-full bg-muted-foreground animate-bounce"
                 )}
                 style={{
                   animationDelay: `${i * 150}ms`,
@@ -105,16 +100,16 @@ export function LoadingState({
             {/* Outer pulse ring */}
             <div className={cn(
               sizes.pulse,
-              "absolute rounded-full bg-accent-20 animate-ping"
+              "absolute rounded-full bg-muted animate-ping"
             )} />
             {/* Middle ring */}
             <div className={cn(
               sizes.pulse,
-              "absolute rounded-full bg-accent-30 animate-pulse"
+              "absolute rounded-full bg-muted animate-pulse"
             )} />
             {/* Inner solid circle */}
             <div className={cn(
-              "rounded-full bg-accent-60",
+              "rounded-full bg-muted-foreground",
               size === 'sm' ? 'h-3 w-3' : size === 'md' ? 'h-4 w-4' : 'h-5 w-5'
             )} />
           </div>
@@ -139,6 +134,7 @@ export function LoadingState({
       "flex flex-col items-center justify-center",
       sizes.gap,
       minHeight,
+      showBorder && "empty-state-border bg-transparent rounded-xl p-4",
       className
     )}>
       {renderIndicator()}

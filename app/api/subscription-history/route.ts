@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../utils/adminSecurity';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -241,10 +242,15 @@ export async function GET(request: NextRequest) {
     const requestedUserId = url.searchParams.get('userId');
     const targetUserId = requestedUserId || userId;
 
-    // For now, only allow users to access their own history
-    // TODO: Add admin access control
+    // Admin access control: Allow admins to view any user's subscription history
     if (targetUserId !== userId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      // Verify admin access
+      const adminAuth = await verifyAdminAccess(request);
+      if (!adminAuth.isAdmin) {
+        console.log('[SUBSCRIPTION HISTORY API] Non-admin user attempted to access another user\'s history');
+        return createAdminUnauthorizedResponse(adminAuth.auditId);
+      }
+      console.log(`[SUBSCRIPTION HISTORY API] Admin ${adminAuth.userEmail} accessing history for user: ${targetUserId}`);
     }
 
     const history = await getSubscriptionHistory(targetUserId, db);

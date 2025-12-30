@@ -4,7 +4,6 @@ import { getCollectionNameAsync, COLLECTIONS } from '../../../../utils/environme
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { trackFirebaseRead } from '../../../../utils/costMonitor';
 import { userCache } from '../../../../utils/userCache';
-import { recordProductionRead } from '../../../../utils/productionReadMonitor';
 import { getDocWithTimeout } from '../../../../utils/firebaseTimeout';
 import { sanitizeUsername } from '../../../../utils/usernameSecurity';
 
@@ -47,14 +46,8 @@ export async function GET(
         `user_${userId.slice(0, 8)}`
       );
 
-      // Record cache hit for production monitoring
-      recordProductionRead('/api/users/profile-data', 'user-profile-cached', 0, {
-        userId: currentUserId,
-        cacheStatus: 'HIT',
-        responseTime,
-        userAgent: request.headers.get('user-agent'),
-        referer: request.headers.get('referer')
-      });
+      // Track cache hit for cost monitoring
+      trackFirebaseRead('users', 'user-profile-cached', 0, 'api-user-profile-data');
 
       // Filter data based on access permissions
       const publicUserData = {
@@ -92,14 +85,6 @@ export async function GET(
     // Track this read for cost monitoring
     trackFirebaseRead('users', 'getUserById', 1, 'api-user-profile-data');
 
-    // Record production read for monitoring
-    recordProductionRead('/api/users/profile-data', 'user-profile-fresh', 1, {
-      userId: currentUserId,
-      cacheStatus: 'MISS',
-      responseTime: 0, // Will be updated later
-      userAgent: request.headers.get('user-agent'),
-      referer: request.headers.get('referer')
-    });
 
     // Get Firebase Admin
     const admin = getFirebaseAdmin();

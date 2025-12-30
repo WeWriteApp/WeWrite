@@ -6,6 +6,7 @@ import './dashboard.css';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
+import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger } from '../../components/ui/segmented-control';
 import { isAdmin } from "../../utils/isAdmin";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -356,20 +357,23 @@ export default function AdminDashboardPage() {
               {/* Column Selector - hidden on mobile since grid is 1 col */}
               <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                 <Icon name="LayoutGrid" size={16} className="text-muted-foreground" />
-                <div className="flex items-center bg-muted rounded-md p-0.5">
-                  {[1, 2, 3, 4].map((cols) => (
-                    <Button
-                      key={cols}
-                      variant={columnCount === cols ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setColumnCount(cols)}
-                      className="h-6 w-6 p-0 text-xs font-medium"
-                      title={`${cols} column${cols > 1 ? 's' : ''}`}
-                    >
-                      {cols}
-                    </Button>
-                  ))}
-                </div>
+                <SegmentedControl
+                  value={columnCount.toString()}
+                  onValueChange={(value) => setColumnCount(parseInt(value, 10))}
+                >
+                  <SegmentedControlList className="h-8">
+                    {[1, 2, 3, 4].map((cols) => (
+                      <SegmentedControlTrigger
+                        key={cols}
+                        value={cols.toString()}
+                        className="text-xs px-2.5"
+                        title={`${cols} column${cols > 1 ? 's' : ''}`}
+                      >
+                        {cols}
+                      </SegmentedControlTrigger>
+                    ))}
+                  </SegmentedControlList>
+                </SegmentedControl>
               </div>
             </div>
           )}

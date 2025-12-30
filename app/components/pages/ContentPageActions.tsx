@@ -318,7 +318,6 @@ export function ContentPageActions({
               size="lg"
               className="gap-2 w-full md:w-auto rounded-2xl font-medium"
               onClick={onInsertLink}
-              disabled={isSaving}
             >
               <Icon name="Link" size={20} />
               <span>Insert Link</span>
@@ -333,7 +332,6 @@ export function ContentPageActions({
                 size="lg"
                 className="gap-2 w-full md:w-auto rounded-2xl font-medium"
                 onClick={() => onToggleLinkSuggestions(!showLinkSuggestions)}
-                disabled={isSaving}
               >
                 <Icon name="Lightbulb" size={20} />
                 <span>

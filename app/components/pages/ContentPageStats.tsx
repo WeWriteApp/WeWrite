@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
-import SimpleSparkline from "../utils/SimpleSparkline";
-import { useDateFormat } from "../../contexts/DateFormatContext";
 import { InlineError } from '../ui/InlineError';
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
-import AnimatedNumber from '../ui/AnimatedNumber';
+import { StatsCard } from '../ui/StatsCard';
 
 interface PageStatsData {
   totalViews: number;
@@ -65,7 +62,6 @@ export default function ContentPageStats({
   includeCurrentView = true,
 }: PageStatsProps) {
   const router = useRouter();
-  const { formatDateString } = useDateFormat();
 
   const [stats, setStats] = useState<PageStatsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,45 +164,27 @@ export default function ContentPageStats({
     };
   }, [pageId, fetchPageStats]);
 
-  // Use CSS variable for accent color instead of hardcoded values
-  const accentColorValue = 'oklch(var(--primary))';
-
-  // Use CSS variable for pill text color that automatically adjusts based on accent lightness
-  const pillTextColor = 'oklch(var(--primary-foreground))';
-
   const handleViewActivity = () => {
     router.push(`/${pageId}/versions`);
   };
 
-  // Loading state - show cards with titles and loader in body with min-height to prevent layout shift
+  // Loading state - show cards with titles and loader
   if (loading) {
     return (
       <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Views Card Loading - min-height matches loaded state */}
-        <div className="wewrite-card min-h-[52px]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon name="Eye" size={20} className="text-muted-foreground" />
-              <span className="text-sm font-medium">Views</span>
-            </div>
-            <div className="flex items-center">
-              <Icon name="Loader" size={20} />
-            </div>
-          </div>
-        </div>
+        {/* Recent Edits Card Loading - first for confidence in save status */}
+        <StatsCard
+          icon="Clock"
+          title="Recent Edits"
+          loading={true}
+        />
 
-        {/* Recent Edits Card Loading - min-height accounts for potential diff preview */}
-        <div className="wewrite-card min-h-[52px]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon name="Clock" size={20} className="text-muted-foreground" />
-              <span className="text-sm font-medium">Recent Edits</span>
-            </div>
-            <div className="flex items-center">
-              <Icon name="Loader" size={20} />
-            </div>
-          </div>
-        </div>
+        {/* Views Card Loading */}
+        <StatsCard
+          icon="Eye"
+          title="Views"
+          loading={true}
+        />
       </div>
     );
   }
@@ -235,84 +213,37 @@ export default function ContentPageStats({
     gridCols = "md:grid-cols-3"; // Three cards
   }
 
+  // Helper to extract text from JSON content (for diff preview)
+  const extractTextFromJson = (text: string) => {
+    if (text && (text.startsWith('[{') || text.startsWith('{"'))) {
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          return parsed.map(node =>
+            node.children?.map((c: any) => c.text || '').join('') || node.text || ''
+          ).join(' ').trim().substring(0, 150) || text;
+        }
+      } catch {
+        // Not valid JSON, use as-is
+      }
+    }
+    return text;
+  };
+
   return (
     <div className={`mt-8 grid grid-cols-1 ${gridCols} gap-4`}>
-      {/* Views Card */}
-      <div className="wewrite-card min-h-[52px]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="Eye" size={20} className="text-muted-foreground" />
-            <span className="text-sm font-medium">Views</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="h-8 w-16 relative">
-                {showSparklines && (
-                  <SimpleSparkline
-                    data={stats.viewData.length > 0 ? stats.viewData : Array(24).fill(0)}
-                    height={30}
-                    color={accentColorValue}
-                  />
-                )}
-              </div>
-              <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
-            </div>
-
-            <div
-              className="text-sm font-medium px-2 py-1 rounded-md"
-              style={{
-                backgroundColor: accentColorValue,
-                color: pillTextColor
-              }}
-            >
-              <AnimatedNumber value={stats.totalViews + (includeCurrentView ? 1 : 0)} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Changes Card */}
-      <div
-        className="wewrite-card min-h-[52px] cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors flex flex-col gap-3"
+      {/* Recent Changes Card - first for confidence in save status */}
+      <StatsCard
+        icon="Clock"
+        title="Recent Edits"
+        value={stats.recentChanges}
+        sparklineData={showSparklines ? (stats.changeData.length > 0 ? stats.changeData : Array(24).fill(0)) : undefined}
+        showSparkline={showSparklines}
         onClick={handleViewActivity}
       >
-        {/* Header with icon, title, and stats */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="Clock" size={20} className="text-muted-foreground" />
-            <span className="text-sm font-medium">Recent Edits</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="h-8 w-16 relative">
-                {showSparklines && (
-                  <SimpleSparkline
-                    data={stats.changeData.length > 0 ? stats.changeData : Array(24).fill(0)}
-                    height={30}
-                    color={accentColorValue}
-                  />
-                )}
-              </div>
-              <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
-            </div>
-
-            <div
-              className="text-sm font-medium px-2 py-1 rounded-md"
-              style={{
-                backgroundColor: accentColorValue,
-                color: pillTextColor
-              }}
-            >
-              <AnimatedNumber value={stats.recentChanges} />
-            </div>
-          </div>
-        </div>
-
         {/* Last edited timestamp and diff preview */}
         {stats.lastEditedAt && (
-          <div className="flex flex-col gap-2 border-t border-neutral-15 pt-3 -mb-1">
+          <div className="flex flex-col gap-2">
             {/* Last edited timestamp */}
             <div className="text-xs text-muted-foreground">
               Last edited {formatRelativeTime(new Date(stats.lastEditedAt))}
@@ -340,23 +271,7 @@ export default function ContentPageStats({
                 {/* Added text - extract from JSON if needed */}
                 {stats.diffPreview.hasAdditions && stats.diffPreview.addedText && (
                   <span className="bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-400 px-0.5 rounded">
-                    {(() => {
-                      const text = stats.diffPreview.addedText;
-                      // Check if it looks like raw JSON content
-                      if (text && (text.startsWith('[{') || text.startsWith('{"'))) {
-                        try {
-                          const parsed = JSON.parse(text);
-                          if (Array.isArray(parsed)) {
-                            return parsed.map(node =>
-                              node.children?.map((c: any) => c.text || '').join('') || node.text || ''
-                            ).join(' ').trim().substring(0, 150) || text;
-                          }
-                        } catch {
-                          // Not valid JSON, use as-is
-                        }
-                      }
-                      return text;
-                    })()}
+                    {extractTextFromJson(stats.diffPreview.addedText)}
                   </span>
                 )}
 
@@ -368,44 +283,28 @@ export default function ContentPageStats({
             )}
           </div>
         )}
-      </div>
+      </StatsCard>
+
+      {/* Views Card */}
+      <StatsCard
+        icon="Eye"
+        title="Views"
+        value={stats.totalViews + (includeCurrentView ? 1 : 0)}
+        sparklineData={showSparklines ? (stats.viewData.length > 0 ? stats.viewData : Array(24).fill(0)) : undefined}
+        showSparkline={showSparklines}
+      />
 
       {/* Supporters Card - only show if data is provided */}
       {hasSupporters && (
-        <div className="wewrite-card min-h-[52px] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon name="Heart" size={20} className="text-muted-foreground" />
-            <span className="text-sm font-medium">Supporters</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <div className="h-8 w-16 relative">
-                {showSparklines && (
-                  <SimpleSparkline
-                    data={stats.supporterData.length > 0 ? stats.supporterData : Array(24).fill(0)}
-                    height={30}
-                    color={accentColorValue}
-                  />
-                )}
-              </div>
-              <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
-            </div>
-
-            <div
-              className="text-sm font-medium px-2 py-1 rounded-md"
-              style={{
-                backgroundColor: accentColorValue,
-                color: pillTextColor
-              }}
-            >
-              {stats.supporterCount.toLocaleString()}
-            </div>
-          </div>
-        </div>
+        <StatsCard
+          icon="Heart"
+          title="Supporters"
+          value={stats.supporterCount}
+          sparklineData={showSparklines ? (stats.supporterData.length > 0 ? stats.supporterData : Array(24).fill(0)) : undefined}
+          showSparkline={showSparklines}
+          animateValue={false}
+        />
       )}
-
-
     </div>
   );
 }

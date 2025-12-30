@@ -35,10 +35,10 @@ export default function EmptyLinesAlert({
 
   return (
     <Button
-      variant="secondary"
+      variant="destructive-secondary"
       size="lg"
       onClick={onDeleteAllEmptyLines}
-      className={`w-full gap-2 rounded-2xl font-medium border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 ${className}`}
+      className={`w-full gap-2 rounded-2xl font-medium ${className}`}
     >
       <Icon name="Trash2" size={20} />
       Delete {emptyLinesCount} empty {emptyLinesCount === 1 ? 'line' : 'lines'}

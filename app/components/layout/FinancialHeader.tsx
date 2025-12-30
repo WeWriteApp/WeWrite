@@ -50,6 +50,12 @@ export default function FinancialHeader({
 
   // Scroll detection for conditional shadow
   const [isScrolled, setIsScrolled] = useState(false);
+  // Track if we've hydrated to avoid SSR/client mismatch
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -102,7 +108,8 @@ export default function FinancialHeader({
   }, [pathname, showSaveBanner]);
 
   // Don't render the header if it should be hidden
-  if (shouldHideHeader) {
+  // Also wait for hydration to avoid SSR/client mismatch
+  if (!isHydrated || shouldHideHeader) {
     return null;
   }
 

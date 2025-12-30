@@ -239,10 +239,9 @@ class BatchManager {
       }
 
       await batch.commit();
-      console.log(`✅ Committed batch ${batchKey} with ${operations.length} operations`);
-      
+
     } catch (error) {
-      console.error(`❌ Failed to commit batch ${batchKey}:`, error);
+      console.error(`Failed to commit batch ${batchKey}:`, error);
       throw error;
     } finally {
       this.batches.delete(batchKey);
@@ -433,7 +432,6 @@ export async function preloadCriticalData(userId?: string): Promise<void> {
   );
 
   await Promise.all(preloadPromises);
-  console.log('✅ Critical data preloaded');
 }
 
 /**
@@ -474,7 +472,7 @@ class QueryCostMonitor {
   }
 
   private sendAlert(type: 'read' | 'write', count: number): void {
-    console.warn(`🚨 FIRESTORE COST ALERT: Daily ${type} operations exceeded threshold: ${count}`);
+    console.warn(`FIRESTORE COST ALERT: Daily ${type} operations exceeded threshold: ${count}`);
 
     // In production, send to monitoring service
     if (process.env.NODE_ENV === 'production') {

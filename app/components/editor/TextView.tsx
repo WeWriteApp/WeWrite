@@ -59,6 +59,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
+import { InlineError } from "../ui/InlineError";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { Icon } from "@/components/ui/Icon";
 import Modal from "../ui/modal";
@@ -715,28 +716,20 @@ const TextView: React.FC<TextViewProps> = ({
       </div>
     );
   } catch (error) {
+    const err = error as Error;
     return (
-      <div className="p-6 text-center space-y-4">
-        <div className="text-muted-foreground">
-          <p className="font-medium">Unable to display page content</p>
-          <p className="text-sm mt-2">
-            There was an error rendering this page. This could be due to corrupted data or a temporary issue.
-          </p>
-        </div>
-        <div className="flex gap-2 justify-center">
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
-          >
-            Refresh Page
-          </button>
-          <button
-            onClick={() => window.history.back()}
-            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm hover:bg-secondary/90"
-          >
-            Go Back
-          </button>
-        </div>
+      <div className="p-6">
+        <InlineError
+          title="Unable to display page content"
+          message="There was an error rendering this page. This could be due to corrupted data or a temporary issue."
+          variant="error"
+          size="lg"
+          errorDetails={`Error: ${err?.name || 'Unknown'}\n${err?.message || 'No message'}\n\nStack:\n${err?.stack || 'No stack trace'}`}
+          onRetry={() => window.location.reload()}
+          retryLabel="Refresh Page"
+          showCopy={true}
+          showCollapsible={true}
+        />
       </div>
     );
   }

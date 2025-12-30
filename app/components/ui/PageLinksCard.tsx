@@ -55,6 +55,8 @@ interface PageLinksCardProps {
   headerAction?: React.ReactNode;
   /** Optional footer content */
   footer?: React.ReactNode;
+  /** Use pill-style counter on right instead of parentheses (matches stats card pattern) */
+  pillCounter?: boolean;
 }
 
 export function PageLinksCard({
@@ -71,6 +73,7 @@ export function PageLinksCard({
   hideWhenEmpty = true,
   headerAction,
   footer,
+  pillCounter = false,
 }: PageLinksCardProps) {
   const [showAll, setShowAll] = useState(false);
 
@@ -103,13 +106,26 @@ export function PageLinksCard({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Icon name={icon} size={16} className="text-muted-foreground" />
+          <Icon name={icon} size={pillCounter ? 20 : 16} className="text-muted-foreground" />
           <span className="text-sm font-medium">{title}</span>
-          {!loading && count > 0 && (
+          {!pillCounter && !loading && count > 0 && (
             <span className="text-xs text-muted-foreground">({count})</span>
           )}
         </div>
-        {headerAction}
+        <div className="flex items-center gap-2">
+          {pillCounter && !loading && count > 0 && (
+            <div
+              className="text-sm font-medium px-2 py-1 rounded-md"
+              style={{
+                backgroundColor: 'oklch(var(--primary))',
+                color: 'oklch(var(--primary-foreground))'
+              }}
+            >
+              {count.toLocaleString()}
+            </div>
+          )}
+          {headerAction}
+        </div>
       </div>
 
       {/* Loading State */}
@@ -172,6 +188,8 @@ interface PageLinksCardHeaderProps {
   loading?: boolean;
   className?: string;
   children?: React.ReactNode;
+  /** Use pill-style counter on right instead of parentheses (matches stats card pattern) */
+  pillCounter?: boolean;
 }
 
 export function PageLinksCardHeader({
@@ -181,17 +199,31 @@ export function PageLinksCardHeader({
   loading = false,
   className,
   children,
+  pillCounter = false,
 }: PageLinksCardHeaderProps) {
   return (
     <div className={cn("flex items-center justify-between", className)}>
       <div className="flex items-center gap-2">
-        <Icon name={icon} size={16} className="text-muted-foreground" />
+        <Icon name={icon} size={pillCounter ? 20 : 16} className="text-muted-foreground" />
         <span className="text-sm font-medium">{title}</span>
-        {!loading && count !== undefined && count > 0 && (
+        {!pillCounter && !loading && count !== undefined && count > 0 && (
           <span className="text-xs text-muted-foreground">({count})</span>
         )}
       </div>
-      {children}
+      <div className="flex items-center gap-2">
+        {pillCounter && !loading && count !== undefined && count > 0 && (
+          <div
+            className="text-sm font-medium px-2 py-1 rounded-md"
+            style={{
+              backgroundColor: 'oklch(var(--primary))',
+              color: 'oklch(var(--primary-foreground))'
+            }}
+          >
+            {count.toLocaleString()}
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

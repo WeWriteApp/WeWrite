@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
 
         const { initializeApp, getApps, cert } = await import('firebase-admin/app');
         const { getFirestore } = await import('firebase-admin/firestore');
-        const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { UsdEarningsService } = await import('../../../services/usdEarningsService');
         const { getCurrentMonth } = await import('../../../utils/usdConstants');
 
         // Get Firebase Admin instance
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
         const { initializeApp, getApps, cert } = await import('firebase-admin/app');
         const { getFirestore } = await import('firebase-admin/firestore');
         const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
-        const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { UsdEarningsService } = await import('../../../services/usdEarningsService');
         const { getCurrentMonth } = await import('../../../utils/usdConstants');
 
         // Get Firebase Admin instance
@@ -393,7 +393,7 @@ export async function GET(request: NextRequest) {
         console.log(`🧪 PAYOUT PROCESSING: Testing payout for ${userId}`);
 
         // Get current balance
-        const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { UsdEarningsService } = await import('../../../services/usdEarningsService');
         const currentBalance = await UsdEarningsService.getWriterUsdBalance(userId);
 
         if (!currentBalance || currentBalance.availableUsdCents === 0) {
@@ -438,7 +438,7 @@ export async function GET(request: NextRequest) {
       }
     } else if (action === 'monthly-processing') {
       // Test monthly processing system
-      const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+      const { UsdEarningsService } = await import('../../../services/usdEarningsService');
 
       try {
         console.log(`🧪 MONTHLY PROCESSING: Processing earnings for current month`);
@@ -477,7 +477,7 @@ export async function GET(request: NextRequest) {
       }
     } else if (action === 'pending-earnings') {
       // Test pending earnings by directly calling the service
-      const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+      const { UsdEarningsService } = await import('../../../services/usdEarningsService');
 
       try {
         // Get earnings balance first

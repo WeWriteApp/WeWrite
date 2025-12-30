@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionNameAsync, COLLECTIONS } from '../../../../utils/environmentConfig';
 import { trackFirebaseRead } from '../../../../utils/costMonitor';
-import { recordProductionRead } from '../../../../utils/productionReadMonitor';
 
 /**
  * User Profile Stats API
@@ -187,14 +186,8 @@ export async function GET(
     const responseTime = Date.now() - startTime;
     console.log(`[User Stats API] Stats fetched for ${userId} in ${responseTime}ms`);
 
-    recordProductionRead('/api/users/stats', 'user-stats', 4, {
-      userId,
-      responseTime,
-      pageCount,
-      sponsorsCount,
-      sponsoringCount,
-      hasRealSnapshots: filteredDocs.length >= 7,
-    });
+    // Track the read for cost monitoring
+    trackFirebaseRead('users', 'user-stats', 4, 'api-user-stats');
 
     const response = NextResponse.json({
       success: true,

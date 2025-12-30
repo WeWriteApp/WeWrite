@@ -23,55 +23,31 @@ import AllocationBar from "../payments/AllocationBar";
 
 // PERFORMANCE: Lazy-load below-the-fold components to reduce initial bundle size
 // These components are heavy and not needed for initial page render
-// Loading fallbacks hidden in print via no-print class
+// No loading fallbacks - instant render when ready (no skeleton flicker)
 const RelatedPagesSection = dynamic(() => import("../features/RelatedPagesSection"), {
-  ssr: false,
-  loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
-      <div className="h-5 w-32 bg-muted rounded mb-3" />
-      <div className="flex flex-wrap gap-2">
-        {[1, 2, 3].map(i => <div key={i} className="h-8 w-24 bg-muted rounded-full" />)}
-      </div>
-    </div>
-  )
+  ssr: false
 });
 
 const RepliesSection = dynamic(() => import("../features/RepliesSection"), {
-  ssr: false,
-  loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
-      <div className="h-5 w-24 bg-muted rounded mb-3" />
-      <div className="space-y-2">
-        {[1, 2].map(i => <div key={i} className="h-12 bg-muted rounded" />)}
-      </div>
-    </div>
-  )
+  ssr: false
 });
 
 const PageGraphView = dynamic(() => import("./PageGraphView"), {
-  ssr: false,
-  loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
-      <div className="h-5 w-36 bg-muted rounded mb-3" />
-      <div className="h-48 bg-muted rounded" />
-    </div>
-  )
+  ssr: false
 });
 
 const WhatLinksHere = dynamic(() => import("./WhatLinksHere"), {
-  ssr: false,
-  loading: () => (
-    <div className="p-4 rounded-2xl border border-border bg-card animate-pulse no-print">
-      <div className="h-5 w-32 bg-muted rounded mb-3" />
-      <div className="flex flex-wrap gap-2">
-        {[1, 2, 3].map(i => <div key={i} className="h-6 w-20 bg-muted rounded-full" />)}
-      </div>
-    </div>
-  )
+  ssr: false
+});
+
+// Writing ideas banner - shown for new pages to suggest topics
+const WritingIdeasBanner = dynamic(() => import("../writing/WritingIdeasBanner").then(mod => ({ default: mod.WritingIdeasBanner })), {
+  ssr: false
 });
 
 import DeletedPageBanner from "../utils/DeletedPageBanner";
 import { Button } from "../ui/button";
+import { InlineError } from "../ui/InlineError";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import { UnifiedErrorBoundary } from "../utils/UnifiedErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -85,6 +61,7 @@ import StickySaveHeader from "../layout/StickySaveHeader";
 import AutoSaveIndicator from "../layout/AutoSaveIndicator";
 import { motion } from "framer-motion";
 import { ContentPageSkeleton, ContentPageMinimalSkeleton } from "./ContentPageSkeleton";
+import { LoadingState } from "../ui/LoadingState";
 
 
 
@@ -92,9 +69,12 @@ import { ContentPageSkeleton, ContentPageMinimalSkeleton } from "./ContentPageSk
 const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
   ssr: false,
   loading: () => (
-    <div className="p-4 text-center">
-      <div className="animate-pulse">Loading content...</div>
-    </div>
+    <LoadingState
+      message="Loading content..."
+      showBorder
+      size="md"
+      minHeight="h-32"
+    />
   )
 });
 
@@ -151,10 +131,21 @@ const extractReplyType = (content: any): 'agree' | 'disagree' | 'neutral' => {
 
 /**
  * PageView - Consolidated TypeScript page viewing component
- * 
+ *
  * This component replaces SinglePageView.js, ClientPage.tsx, and consolidates
  * all page viewing functionality into a single maintainable TypeScript component.
- * 
+ *
+ * VISIBILITY RULES: The source of truth for element visibility is defined in:
+ * app/config/contentPageVisibility.ts
+ *
+ * That file documents what elements are shown/hidden for:
+ * - myPageSaved: Viewing/editing my own saved page
+ * - myPageNew: Creating a new page (not yet saved)
+ * - otherPage: Viewing someone else's page
+ *
+ * The design system (admin/design-system) displays a table generated from that config.
+ * When making visibility changes, update both this component and the config.
+ *
  * Features:
  * - Page loading and Firebase listeners
  * - Edit/view mode switching
@@ -2065,13 +2056,17 @@ export default function ContentPageView({
               >
                 <div ref={contentRef} data-page-content>
                     <UnifiedErrorBoundary fallback={({ error, resetError }) => (
-                      <div className="p-4 text-muted-foreground">
-                        <p>Unable to display page content. The page may have formatting issues.</p>
-                        <p className="text-sm mt-2">Page ID: {page?.id || pageId}</p>
-                        <button onClick={resetError} className="mt-2 text-sm underline">
-                          Try again
-                        </button>
-                      </div>
+                      <InlineError
+                        title="Unable to display page content"
+                        message="The page may have formatting issues or corrupted data."
+                        variant="error"
+                        size="lg"
+                        errorDetails={`Page ID: ${page?.id || pageId}\n\nError: ${error?.name || 'Unknown'}\n${error?.message || 'No message'}\n\nStack:\n${error?.stack || 'No stack trace'}`}
+                        onRetry={resetError}
+                        retryLabel="Try Again"
+                        showCopy={true}
+                        showCollapsible={true}
+                      />
                     )}>
 
                       {/* Unified content display system */}
@@ -2113,6 +2108,19 @@ export default function ContentPageView({
                                   status={autoSaveStatus}
                                   lastSavedAt={lastSavedAt}
                                   error={autoSaveError}
+                                />
+                              </div>
+                            )}
+
+                            {/* Writing ideas banner - shown for new pages to help with topic selection */}
+                            {isNewPageMode && page?.isNewPage && !page?.replyTo && (
+                              <div className="mt-6 no-print">
+                                <WritingIdeasBanner
+                                  onIdeaSelect={(ideaTitle, placeholder) => {
+                                    // Set the page title when an idea is selected
+                                    handleTitleChange(ideaTitle);
+                                  }}
+                                  selectedTitle={title}
                                 />
                               </div>
                             )}
@@ -2162,8 +2170,8 @@ export default function ContentPageView({
 
             {/* Page Actions for non-owners are now rendered inside ContentPageFooter */}
 
-            {/* Page Connections and Related Pages - show for all pages (hidden in print) */}
-            {page && (
+            {/* Page Connections and Related Pages - hide for new pages to focus on creation (hidden in print) */}
+            {page && !page.isNewPage && (
               <div className="px-4 space-y-4 no-print">
                 {/* Page Graph View */}
                 <PageGraphView
@@ -2237,17 +2245,18 @@ export default function ContentPageView({
               </div>
             )}
 
-            {/* Delete button - positioned at the very bottom for page owners (hidden in print) */}
+            {/* Delete/Cancel button - positioned at the very bottom for page owners (hidden in print) */}
+            {/* Shows "Cancel" for new pages, "Delete" for existing pages */}
             {page && canEdit && (
               <div className="mt-8 mb-6 px-4 no-print">
                 <Button
-                  variant="destructive"
+                  variant={page.isNewPage ? "secondary" : "destructive"}
                   size="lg"
-                  className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
-                  onClick={handleDelete}
+                  className={`gap-2 w-full md:w-auto rounded-2xl font-medium ${page.isNewPage ? '' : 'text-white'}`}
+                  onClick={page.isNewPage ? handleCancel : handleDelete}
                 >
-                  <Icon name="Trash2" size={20} />
-                  <span>Delete</span>
+                  <Icon name={page.isNewPage ? "X" : "Trash2"} size={20} />
+                  <span>{page.isNewPage ? "Cancel" : "Delete"}</span>
                 </Button>
               </div>
             )}

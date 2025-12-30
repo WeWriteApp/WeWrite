@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, BarChart, Bar } from 'recharts';
-import { Button } from '../ui/button';
+import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger } from '../ui/segmented-control';
 
 // Hook to measure container dimensions
 function useContainerSize(ref: React.RefObject<HTMLDivElement>) {
@@ -1032,26 +1032,19 @@ export function DesktopOptimizedDashboard({
         {/* Chart Type Toggle */}
         <div className="flex items-center gap-2">
           <span className="text-xs">Chart:</span>
-          <div className="flex items-center bg-background rounded-md p-0.5 border border-border">
-            <Button
-              variant={chartType === 'line' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handleChartTypeChange('line')}
-              className="h-6 px-2 text-xs"
-              title="Line chart"
-            >
-              <Icon name="TrendingUp" size={14} />
-            </Button>
-            <Button
-              variant={chartType === 'bar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => handleChartTypeChange('bar')}
-              className="h-6 px-2 text-xs"
-              title="Bar chart"
-            >
-              <Icon name="BarChart3" size={14} />
-            </Button>
-          </div>
+          <SegmentedControl
+            value={chartType}
+            onValueChange={(value) => handleChartTypeChange(value as ChartType)}
+          >
+            <SegmentedControlList className="h-8">
+              <SegmentedControlTrigger value="line" className="px-2.5" title="Line chart">
+                <Icon name="TrendingUp" size={14} />
+              </SegmentedControlTrigger>
+              <SegmentedControlTrigger value="bar" className="px-2.5" title="Bar chart">
+                <Icon name="BarChart3" size={14} />
+              </SegmentedControlTrigger>
+            </SegmentedControlList>
+          </SegmentedControl>
         </div>
       </div>
 

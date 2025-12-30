@@ -89,15 +89,14 @@ class SmartPollingManager {
     priority: 'critical' | 'high' | 'medium' | 'low' = 'medium',
     customConfig?: Partial<PollingConfig>
   ): string {
-    // 🚨 EMERGENCY: Disable all smart polling to prevent excessive Firebase reads
-    console.warn('🚨 EMERGENCY: Smart polling disabled to prevent excessive database reads (20K-30K reads/min crisis)');
+    // EMERGENCY: Disable all smart polling to prevent excessive Firebase reads
+    console.warn('EMERGENCY: Smart polling disabled to prevent excessive database reads (20K-30K reads/min crisis)');
     // DISABLED: All smart polling to prevent database read overload
     return sessionId;
 
     this.sessions.set(sessionId, session);
     this.scheduleNextPoll(sessionId);
 
-    console.log(`📊 [SmartPolling] Started polling session: ${sessionId} (${priority} priority)`);
     return sessionId;
   }
 
@@ -112,7 +111,6 @@ class SmartPollingManager {
       }
       session.isActive = false;
       this.sessions.delete(sessionId);
-      console.log(`📊 [SmartPolling] Stopped polling session: ${sessionId}`);
     }
   }
 
@@ -159,7 +157,6 @@ class SmartPollingManager {
       if (JSON.stringify(data) !== JSON.stringify(session.lastData)) {
         session.callback(data);
         session.lastData = data;
-        console.log(`📊 [SmartPolling] Data updated for ${sessionId} (fetch: ${fetchTime}ms)`);
       }
 
       session.lastFetch = Date.now();
@@ -170,7 +167,7 @@ class SmartPollingManager {
 
     } catch (error) {
       session.errorCount++;
-      console.error(`📊 [SmartPolling] Error in session ${sessionId}:`, error);
+      console.error(`[SmartPolling] Error in session ${sessionId}:`, error);
 
       // Increase interval on errors (exponential backoff)
       if (session.errorCount > 3) {
@@ -237,7 +234,6 @@ class SmartPollingManager {
 
       this.sessions.forEach((session, sessionId) => {
         if (now - session.lastActivity > inactiveThreshold) {
-          console.log(`📊 [SmartPolling] Cleaning up inactive session: ${sessionId}`);
           this.stopPolling(sessionId);
         }
       });

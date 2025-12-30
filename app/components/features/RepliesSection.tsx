@@ -216,6 +216,13 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
     },
   ];
 
+  // Hide entire section for own pages with no replies
+  // Only show empty state with CTA for other people's pages
+  // See: app/config/contentPageVisibility.ts for visibility rules
+  if (!loading && isOwnPage && counts.total === 0) {
+    return null;
+  }
+
   return (
     <div className={cn("wewrite-card", className)}>
       <div className="p-4">
@@ -225,6 +232,7 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
           count={counts.total}
           loading={loading}
           className="mb-3"
+          pillCounter={true}
         />
 
         {/* Filter Buttons - only show if there are replies */}
@@ -339,23 +347,21 @@ export default function RepliesSection({ pageId, pageTitle, pageUserId, pageUser
           </div>
         )}
 
-        {/* Empty State - No Replies at All */}
+        {/* Empty State - No Replies at All (only shown for other people's pages) */}
         {!loading && !error && counts.total === 0 && (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-3">
-              {isOwnPage ? 'No replies yet.' : 'No replies yet. Be the first to reply!'}
+              No replies yet. Be the first to reply!
             </p>
-            {!isOwnPage && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-2"
-                onClick={() => setIsReplyPickerOpen(true)}
-              >
-                <Icon name="Reply" size={16} />
-                Reply
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2"
+              onClick={() => setIsReplyPickerOpen(true)}
+            >
+              <Icon name="Reply" size={16} />
+              Reply
+            </Button>
           </div>
         )}
 

@@ -24,7 +24,7 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   line_numbers: false,
   onboarding_tutorial: false,
   ui_labels: false,
-  auto_save: false,
+  auto_save: true,
 };
 
 const STORAGE_KEY = 'wewrite_feature_flags';

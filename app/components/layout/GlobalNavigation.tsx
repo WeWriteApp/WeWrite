@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import { usePathname } from 'next/navigation';
 import { SidebarProvider } from './DesktopSidebar';
@@ -25,11 +25,26 @@ import { TutorialOverlay } from '../onboarding/TutorialOverlay';
  * handle their own visibility logic based on the current route.
  */
 export default function GlobalNavigation({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const pathname = usePathname();
+
+  // Track if we've hydrated to avoid SSR/client mismatch
+  // On server and during initial hydration, we render only children
+  // After hydration, we can safely render navigation elements
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Skip navigation on /welcome pages - show only the landing page content
   const isWelcomePage = pathname?.startsWith('/welcome');
+
+  // During SSR and initial hydration, render only children to avoid mismatch
+  // The server doesn't know auth state, so we must wait for client hydration
+  if (!isHydrated) {
+    return <>{children}</>;
+  }
 
   // Only render navigation for authenticated users (and not on /welcome)
   if (!isAuthenticated || !user || isWelcomePage) {

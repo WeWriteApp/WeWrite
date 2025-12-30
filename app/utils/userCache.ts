@@ -78,7 +78,6 @@ class EnhancedUserCache {
     this.stats.hits++;
     this.stats.costSavings += 0.00036 / 1000; // Firestore read cost saved
 
-    console.log(`🚀 USER CACHE: Hit for ${userId} ${dataType} (tier: ${entry.tier}, access: ${entry.accessCount})`);
     return entry.data;
   }
 
@@ -107,8 +106,6 @@ class EnhancedUserCache {
       tier,
       dataType
     });
-
-    console.log(`💾 USER CACHE: Stored ${userId} ${dataType} (tier: ${tier}, size: ${this.cache.size})`);
   }
 
   /**
@@ -123,8 +120,6 @@ class EnhancedUserCache {
 
     // Cache miss - fetch from API
     try {
-      console.log(`💸 USER CACHE: Profile cache miss for ${userId} - fetching from API`);
-      
       const response = await fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -137,7 +132,7 @@ class EnhancedUserCache {
         return profileData;
       }
     } catch (error) {
-      console.error(`❌ USER CACHE: Failed to fetch profile for ${userId}:`, error);
+      console.error(`USER CACHE: Failed to fetch profile for ${userId}:`, error);
     }
 
     return null;
@@ -160,8 +155,6 @@ class EnhancedUserCache {
       }
     }
 
-    console.log(`🔍 USER CACHE: Batch request - ${Object.keys(results).length} cached, ${uncachedIds.length} need fetching`);
-
     // Fetch uncached users
     if (uncachedIds.length > 0) {
       try {
@@ -175,7 +168,7 @@ class EnhancedUserCache {
           results[userId] = userData;
         }
       } catch (error) {
-        console.error('❌ USER CACHE: Batch fetch failed:', error);
+        console.error('USER CACHE: Batch fetch failed:', error);
       }
     }
 
@@ -208,7 +201,6 @@ class EnhancedUserCache {
     if (leastUsefulKey) {
       this.cache.delete(leastUsefulKey);
       this.stats.evictions++;
-      console.log(`🗑️  USER CACHE: Evicted ${leastUsefulKey} (score: ${leastUsefulScore.toFixed(3)})`);
     }
   }
 
@@ -223,9 +215,8 @@ class EnhancedUserCache {
         keysToDelete.push(key);
       }
     }
-    
+
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log(`🗑️  USER CACHE: Invalidated ${keysToDelete.length} entries for user ${userId}`);
   }
 
   /**
@@ -255,7 +246,6 @@ class EnhancedUserCache {
   clear(): void {
     this.cache.clear();
     this.stats = { hits: 0, misses: 0, evictions: 0, totalRequests: 0, costSavings: 0 };
-    console.log('🧹 USER CACHE: Cleared all entries');
   }
 
   /**
@@ -273,10 +263,6 @@ class EnhancedUserCache {
     }
 
     keysToDelete.forEach(key => this.cache.delete(key));
-    
-    if (keysToDelete.length > 0) {
-      console.log(`🧹 USER CACHE: Cleaned up ${keysToDelete.length} expired entries`);
-    }
   }
 
   /**
@@ -284,9 +270,8 @@ class EnhancedUserCache {
    */
   async preloadUsers(userIds: string[]): Promise<void> {
     const uncachedIds = userIds.filter(id => !this.get(id, 'profile'));
-    
+
     if (uncachedIds.length > 0) {
-      console.log(`🔄 USER CACHE: Preloading ${uncachedIds.length} users`);
       await this.getBatchProfiles(uncachedIds);
     }
   }

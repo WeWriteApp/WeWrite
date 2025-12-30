@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getCollectionNameAsync, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { trackQuery } from '../../../utils/costOptimizationMonitor';
+import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
 // EMERGENCY COST OPTIMIZATION: Global cache for recent edits
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     const queryTime = Date.now() - queryStartTime;
 
     // Track query for cost optimization monitoring
-    trackQuery('global-recent-edits', pagesSnapshot.docs.length, queryTime, true);
+    trackFirebaseRead('pages', 'global-recent-edits', pagesSnapshot.docs.length, 'api-recent-edits');
 
     if (pagesSnapshot.empty) {
       return NextResponse.json({

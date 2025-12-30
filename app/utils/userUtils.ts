@@ -18,13 +18,11 @@ import { getEffectiveTier } from './subscriptionTiers';
  */
 export const getUsernameById = async (userId: string): Promise<string> => {
   if (!userId) {
-    console.log('👤 [USER UTILS] No userId provided');
     return "Missing username";
   }
 
   try {
     // Client-side: Use API endpoint
-    console.log('👤 [USER UTILS] Fetching user data via API for:', userId);
     const response = await userProfileApi.getProfile(userId);
 
     if (response.success && response.data) {
@@ -35,29 +33,14 @@ export const getUsernameById = async (userId: string): Promise<string> => {
           userData.username !== "Anonymous" &&
           userData.username !== "Missing username" &&
           userData.username.trim() !== "") {
-        console.log('👤 [USER UTILS] Found valid username:', userData.username);
         return userData.username.trim();
       }
-
-      console.log('👤 [USER UTILS] User data found but no valid username:', {
-        hasUsername: !!userData.username,
-        username: userData.username,
-        userId
-      });
-    } else {
-      console.log('👤 [USER UTILS] API call failed or returned no data:', {
-        success: response.success,
-        hasData: !!response.data,
-        error: response.error,
-        userId
-      });
     }
 
     // If no valid username found, return default
-    console.log('👤 [USER UTILS] No valid username found for user:', userId);
     return "Missing username";
   } catch (error) {
-    console.error("👤 [USER UTILS] Error fetching username by ID:", error);
+    console.error("Error fetching username by ID:", error);
     return "Missing username";
   }
 };
@@ -69,7 +52,7 @@ export const getUsernameById = async (userId: string): Promise<string> => {
  */
 export const getCurrentUsername = async (): Promise<string> => {
   // DEPRECATED: This function should not be used - use auth provider context instead
-  console.warn('👤 [USER UTILS] getCurrentUsername is deprecated - use auth provider context instead');
+  console.warn('getCurrentUsername is deprecated - use auth provider context instead');
   return "Missing username";
 };
 
@@ -131,7 +114,6 @@ export const getUserSubscriptionTier = async (userId: string): Promise<Subscript
     const response = await fetch(`/api/account-subscription?userId=${userId}`);
 
     if (!response.ok) {
-      console.log('No subscription data found for user:', userId);
       return { tier: null, status: null, amount: null };
     }
 

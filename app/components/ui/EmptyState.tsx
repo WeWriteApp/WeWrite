@@ -9,8 +9,10 @@ interface EmptyStateProps {
   /** Icon to display (optional - omit to hide icon) */
   icon?: IconName;
   title: string;
-  description: string;
+  description?: string;
   className?: string;
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
   /** Action button config (optional - omit to hide button) */
   action?: {
     label: string;
@@ -19,6 +21,30 @@ interface EmptyStateProps {
     variant?: 'default' | 'outline';
   };
 }
+
+const sizeConfig = {
+  sm: {
+    padding: 'p-3',
+    iconSize: 24,
+    titleClass: 'text-sm font-medium mb-0.5',
+    descClass: 'text-xs',
+    iconMargin: 'mb-2',
+  },
+  md: {
+    padding: 'p-4',
+    iconSize: 32,
+    titleClass: 'text-base font-medium mb-1',
+    descClass: 'text-sm',
+    iconMargin: 'mb-3',
+  },
+  lg: {
+    padding: 'p-6',
+    iconSize: 40,
+    titleClass: 'text-lg font-medium mb-2',
+    descClass: 'text-base',
+    iconMargin: 'mb-4',
+  },
+};
 
 /**
  * Standardized Empty State Component
@@ -30,23 +56,29 @@ export default function EmptyState({
   title,
   description,
   className,
+  size = 'md',
   action
 }: EmptyStateProps) {
+  const config = sizeConfig[size];
+
   return (
     <div className={cn(
-      "empty-state-border bg-transparent rounded-xl p-4",
+      "empty-state-border bg-transparent rounded-xl",
+      config.padding,
       "text-center text-muted-foreground",
       className
     )}>
       {icon && (
-        <Icon name={icon} size={32} className="mx-auto opacity-50 mb-3" />
+        <Icon name={icon} size={config.iconSize} className={cn("mx-auto opacity-50", config.iconMargin)} />
       )}
-      <h3 className="text-base font-medium mb-1">
+      <h3 className={config.titleClass}>
         {title}
       </h3>
-      <p className="text-sm">
-        {description}
-      </p>
+      {description && (
+        <p className={config.descClass}>
+          {description}
+        </p>
+      )}
       {action && (
         <Button
           variant={action.variant || 'default'}

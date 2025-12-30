@@ -5,6 +5,7 @@ import React from 'react';
 // Import all section components
 import { ActivityCardSection } from './ActivityCardSection';
 import { AlertSection } from './AlertSection';
+import { AnimationsSection } from './AnimationsSection';
 import { AllocationBarSection } from './AllocationBarSection';
 import { BadgeSection } from './BadgeSection';
 import { BannerSystemSection } from './BannerSystemSection';
@@ -48,6 +49,7 @@ export interface DesignSystemSection {
 const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'activity-card', label: 'Activity Card', component: ActivityCardSection },
   { id: 'alert', label: 'Alert', component: AlertSection },
+  { id: 'animations', label: 'Animations', component: AnimationsSection },
   { id: 'allocation-bar', label: 'Allocation Bar', component: AllocationBarSection },
   { id: 'badge', label: 'Badge', component: BadgeSection },
   { id: 'banner-system', label: 'Banner System', component: BannerSystemSection },

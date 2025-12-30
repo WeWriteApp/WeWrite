@@ -149,6 +149,7 @@ export default function SameTitlePages({
       emptyMessage={`No one else has written a page titled "${pageTitle}" yet.`}
       hideWhenEmpty={isOwner} // Hide when empty only for owners
       footer={footerContent}
+      pillCounter={true}
     />
   );
 }

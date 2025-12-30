@@ -210,6 +210,93 @@ export function PieChartSection({ id }: { id: string }) {
           </div>
         </div>
 
+        {/* Partial Fill (Gauge) Variant */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Partial Fill (Gauge Style)</h4>
+          <p className="text-xs text-muted-foreground mb-3">
+            Shows progress toward a goal with a background track. Set <code className="text-xs bg-muted px-1 rounded">showTrack=true</code> and <code className="text-xs bg-muted px-1 rounded">maxValue</code> to enable.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 bg-muted/20 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-3">25% Progress</p>
+              <PieChart
+                segments={[
+                  {
+                    id: 'progress',
+                    value: 25,
+                    label: 'Completed',
+                    color: 'fill-primary',
+                    bgColor: 'bg-primary',
+                    textColor: 'text-primary',
+                  },
+                ]}
+                size={100}
+                strokeWidth={14}
+                showPercentage={true}
+                centerLabel="complete"
+                showTrack={true}
+                maxValue={100}
+                gap={0}
+                formatValue={(value) => `${value}%`}
+              />
+            </div>
+            <div className="p-4 bg-muted/20 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-3">65% Progress</p>
+              <PieChart
+                segments={[
+                  {
+                    id: 'progress',
+                    value: 65,
+                    label: 'Completed',
+                    color: 'fill-green-500',
+                    bgColor: 'bg-green-500',
+                    textColor: 'text-green-500',
+                  },
+                ]}
+                size={100}
+                strokeWidth={14}
+                showPercentage={true}
+                centerLabel="complete"
+                showTrack={true}
+                maxValue={100}
+                gap={0}
+                formatValue={(value) => `${value}%`}
+              />
+            </div>
+            <div className="p-4 bg-muted/20 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-3">Multi-segment Progress (45%)</p>
+              <PieChart
+                segments={[
+                  {
+                    id: 'done',
+                    value: 30,
+                    label: 'Done',
+                    color: 'fill-green-500',
+                    bgColor: 'bg-green-500',
+                    textColor: 'text-green-500',
+                  },
+                  {
+                    id: 'in-progress',
+                    value: 15,
+                    label: 'In Progress',
+                    color: 'fill-amber-500',
+                    bgColor: 'bg-amber-500',
+                    textColor: 'text-amber-500',
+                  },
+                ]}
+                size={100}
+                strokeWidth={14}
+                showPercentage={true}
+                centerLabel="progress"
+                showTrack={true}
+                maxValue={100}
+                gap={4}
+                formatValue={(value) => `${value}%`}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Size Variations */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-muted-foreground">Size Variations</h4>
@@ -279,6 +366,18 @@ export function PieChartSection({ id }: { id: string }) {
             <div className="flex gap-2 items-start flex-wrap">
               <code className="px-2 py-1 bg-muted rounded text-xs">totalLabel?: string</code>
               <span className="text-muted-foreground">- Label for total row (default: 'Total')</span>
+            </div>
+            <div className="flex gap-2 items-start flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">showTrack?: boolean</code>
+              <span className="text-muted-foreground">- Show background track for partial fill (default: false)</span>
+            </div>
+            <div className="flex gap-2 items-start flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">trackColor?: string</code>
+              <span className="text-muted-foreground">- Background track color (default: 'rgba(0,0,0,0.08)')</span>
+            </div>
+            <div className="flex gap-2 items-start flex-wrap">
+              <code className="px-2 py-1 bg-muted rounded text-xs">maxValue?: number</code>
+              <span className="text-muted-foreground">- Max value for partial fill mode (enables gauge-style display)</span>
             </div>
           </div>
         </div>

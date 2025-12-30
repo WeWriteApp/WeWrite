@@ -11,6 +11,46 @@ import { checkEmailVerificationOnStartup } from '../services/emailVerificationNo
 // Create context
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// localStorage key for caching auth state (not sensitive - just for UI hydration)
+const AUTH_CACHE_KEY = 'wewrite_auth_cache';
+
+// Helper to get cached auth state from localStorage
+const getCachedAuthState = (): User | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const cached = localStorage.getItem(AUTH_CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // Only use cache if it's less than 24 hours old
+      if (parsed.cachedAt && Date.now() - parsed.cachedAt < 24 * 60 * 60 * 1000) {
+        return parsed.user;
+      }
+      // Clear stale cache
+      localStorage.removeItem(AUTH_CACHE_KEY);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+  return null;
+};
+
+// Helper to cache auth state
+const setCachedAuthState = (user: User | null) => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (user) {
+      localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({
+        user,
+        cachedAt: Date.now()
+      }));
+    } else {
+      localStorage.removeItem(AUTH_CACHE_KEY);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
 // Custom hook to use the context
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
@@ -38,11 +78,25 @@ interface AuthProviderProps {
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    isLoading: true,
-    isAuthenticated: false,
-    error: null
+
+  // Initialize with cached user for immediate UI hydration
+  // The server will validate and update if needed
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    const cachedUser = getCachedAuthState();
+    if (cachedUser) {
+      return {
+        user: cachedUser,
+        isLoading: true, // Still loading to validate with server
+        isAuthenticated: true, // Show as authenticated immediately
+        error: null
+      };
+    }
+    return {
+      user: null,
+      isLoading: true,
+      isAuthenticated: false,
+      error: null
+    };
   });
 
   // Clear error
@@ -69,6 +123,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           isAdmin: user.isAdmin === true || isAdmin(user.email),
         }
       : null;
+
+    // Cache the auth state for faster hydration on next page load
+    setCachedAuthState(enrichedUser);
 
     setAuthState(prev => ({
       ...prev,

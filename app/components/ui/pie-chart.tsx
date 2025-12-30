@@ -8,9 +8,67 @@ export interface PieChartSegment {
   id: string;
   value: number;
   label: string;
-  color: string; // Tailwind fill class like 'fill-primary' or 'fill-green-500'
+  color: string; // Tailwind fill class like 'fill-primary' or 'fill-green-500', or hex color like '#3b82f6'
   bgColor: string; // Tailwind bg class for legend dot
   textColor?: string; // Optional text color for the value
+}
+
+/**
+ * Maps common Tailwind color classes to their hex values
+ * This is needed because dynamically generated class names aren't picked up by Tailwind's JIT compiler
+ */
+const COLOR_MAP: Record<string, string> = {
+  // Primary colors
+  'fill-primary': 'var(--primary)',
+  'stroke-primary': 'var(--primary)',
+  'bg-primary': 'var(--primary)',
+  // Blue
+  'fill-blue-500': '#3b82f6',
+  'stroke-blue-500': '#3b82f6',
+  'bg-blue-500': '#3b82f6',
+  'fill-blue-600': '#2563eb',
+  'stroke-blue-600': '#2563eb',
+  // Green
+  'fill-green-500': '#22c55e',
+  'stroke-green-500': '#22c55e',
+  'bg-green-500': '#22c55e',
+  'fill-green-600': '#16a34a',
+  'stroke-green-600': '#16a34a',
+  // Red
+  'fill-red-500': '#ef4444',
+  'stroke-red-500': '#ef4444',
+  'bg-red-500': '#ef4444',
+  // Yellow/Amber
+  'fill-yellow-500': '#eab308',
+  'stroke-yellow-500': '#eab308',
+  'bg-yellow-500': '#eab308',
+  'fill-amber-500': '#f59e0b',
+  'stroke-amber-500': '#f59e0b',
+  'bg-amber-500': '#f59e0b',
+  // Orange
+  'fill-orange-500': '#f97316',
+  'stroke-orange-500': '#f97316',
+  'bg-orange-500': '#f97316',
+  // Purple
+  'fill-purple-500': '#a855f7',
+  'stroke-purple-500': '#a855f7',
+  'bg-purple-500': '#a855f7',
+  // Muted
+  'fill-muted-foreground': 'var(--muted-foreground)',
+  'stroke-muted-foreground': 'var(--muted-foreground)',
+  'bg-muted-foreground': 'var(--muted-foreground)',
+};
+
+/**
+ * Converts a Tailwind color class to a usable fill value
+ */
+function getColorValue(colorClass: string): string {
+  // If it's already a hex color or CSS variable, return as-is
+  if (colorClass.startsWith('#') || colorClass.startsWith('var(') || colorClass.startsWith('rgb')) {
+    return colorClass;
+  }
+  // Look up in color map
+  return COLOR_MAP[colorClass] || COLOR_MAP[colorClass.replace('stroke-', 'fill-')] || 'currentColor';
 }
 
 interface PieChartProps {
@@ -28,6 +86,22 @@ interface PieChartProps {
   gap?: number;
   /** Corner radius for segment ends */
   cornerRadius?: number;
+  /**
+   * Show background track for partial fill effect (gauge-style)
+   * When true, renders a neutral background ring behind segments
+   */
+  showTrack?: boolean;
+  /**
+   * Color for the background track
+   * @default 'rgba(0,0,0,0.08)' (neutral-alpha-10 equivalent)
+   */
+  trackColor?: string;
+  /**
+   * For partial fill mode: the maximum value representing 100% of the ring
+   * If set, segments fill proportionally based on their total vs this max
+   * Leave undefined for standard pie chart where all segments fill the whole ring
+   */
+  maxValue?: number;
 }
 
 /**
@@ -138,6 +212,9 @@ export function PieChart({
   totalLabel = 'Total',
   gap = 6, // Gap in degrees between segments
   cornerRadius = 3, // Corner radius in pixels
+  showTrack = false,
+  trackColor = 'rgba(0,0,0,0.08)',
+  maxValue,
 }: PieChartProps) {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
@@ -152,29 +229,44 @@ export function PieChart({
   // Calculate total
   const total = segments.reduce((sum, seg) => sum + seg.value, 0);
 
+  // For partial fill mode, calculate what percentage of the ring to fill
+  const isPartialFill = maxValue !== undefined && maxValue > 0;
+  const fillRatio = isPartialFill ? Math.min(total / maxValue, 1) : 1;
+
   // Count active segments (with value > 0)
   const activeSegments = segments.filter(seg => seg.value > 0);
   const numActiveSegments = activeSegments.length;
 
-  // Total gap space in degrees
-  const totalGapDegrees = numActiveSegments > 0 ? gap * numActiveSegments : 0;
+  // Total gap space in degrees (only between active segments in partial fill mode)
+  const totalGapDegrees = numActiveSegments > 1 ? gap * (numActiveSegments - 1) : 0;
 
-  // Available degrees after gaps
-  const availableDegrees = 360 - totalGapDegrees;
+  // Available degrees for content
+  // For partial fill: use fillRatio of 360 degrees minus gaps
+  // For standard: use full 360 minus gap per segment
+  const availableDegrees = isPartialFill
+    ? (360 * fillRatio) - totalGapDegrees
+    : 360 - (numActiveSegments > 0 ? gap * numActiveSegments : 0);
 
   // Build segment data with angles
-  // Start at top (0 degrees after the -90 offset in polarToCartesian) with half gap offset, go clockwise
-  let currentAngle = gap / 2;
+  // Start at top (0 degrees after the -90 offset in polarToCartesian)
+  let currentAngle = isPartialFill ? 0 : gap / 2;
 
-  const segmentData = segments.map((segment) => {
-    const percentage = total > 0 ? (segment.value / total) * 100 : 0;
+  const segmentData = segments.map((segment, index) => {
+    // For partial fill: percentage is relative to maxValue
+    // For standard: percentage is relative to total
+    const percentage = isPartialFill
+      ? (maxValue! > 0 ? (segment.value / maxValue!) * 100 : 0)
+      : (total > 0 ? (segment.value / total) * 100 : 0);
+
+    // Sweep angle calculation
     const sweepAngle = total > 0 ? (segment.value / total) * availableDegrees : 0;
     const startAngle = currentAngle;
     const endAngle = currentAngle + sweepAngle;
 
-    // Move to next position
+    // Move to next position (add gap only between segments, not after last)
     if (segment.value > 0) {
-      currentAngle = endAngle + gap;
+      const isLast = index === segments.length - 1 || segments.slice(index + 1).every(s => s.value <= 0);
+      currentAngle = endAngle + (isLast ? 0 : gap);
     }
 
     return {
@@ -186,8 +278,12 @@ export function PieChart({
     };
   });
 
-  // Find the first segment's percentage for center display
-  const primaryPercentage = segmentData[0]?.percentage || 0;
+  // For center display:
+  // - Partial fill: show total as percentage of maxValue
+  // - Standard: show first segment's percentage
+  const primaryPercentage = isPartialFill
+    ? (maxValue! > 0 ? (total / maxValue!) * 100 : 0)
+    : (segmentData[0]?.percentage || 0);
 
   const handleSegmentInteraction = (id: string | null) => {
     setHoveredSegment(id);
@@ -207,6 +303,18 @@ export function PieChart({
           viewBox={`0 0 ${effectiveSize} ${effectiveSize}`}
           style={{ overflow: 'visible' }}
         >
+          {/* Background track for partial fill mode */}
+          {showTrack && (
+            <circle
+              cx={center}
+              cy={center}
+              r={outerRadius - strokeWidth / 2}
+              fill="none"
+              stroke={trackColor}
+              strokeWidth={strokeWidth}
+            />
+          )}
+
           {/* Render segments as paths with rounded corners */}
           {segmentData.map((segment) => {
             // Skip segments with no value
@@ -230,15 +338,15 @@ export function PieChart({
               cornerRadius
             );
 
-            // Convert stroke class to fill class
-            const fillClass = segment.color.replace('stroke-', 'fill-');
+            // Get actual color value (hex or CSS var) instead of relying on Tailwind class
+            const fillColor = getColorValue(segment.color);
 
             return (
               <path
                 key={segment.id}
                 d={path}
+                fill={fillColor}
                 className={cn(
-                  fillClass,
                   'transition-all duration-200 cursor-pointer',
                   isHovered && 'opacity-100',
                   isOtherHovered && 'opacity-40'
@@ -246,6 +354,7 @@ export function PieChart({
                 onMouseEnter={() => handleSegmentInteraction(segment.id)}
                 onTouchStart={() => handleSegmentInteraction(segment.id)}
                 style={{
+                  opacity: isOtherHovered ? 0.4 : 1,
                   transition: 'opacity 0.2s ease-out, d 0.2s ease-out'
                 }}
               />
@@ -278,6 +387,9 @@ export function PieChart({
           const isHovered = hoveredSegment === segment.id;
           const isOtherHovered = hoveredSegment !== null && hoveredSegment !== segment.id;
 
+          // Get color for the legend dot
+          const dotColor = getColorValue(segment.bgColor);
+
           return (
             <div
               key={segment.id}
@@ -292,7 +404,10 @@ export function PieChart({
               onTouchEnd={() => handleSegmentInteraction(null)}
             >
               <div className="flex items-center gap-2">
-                <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 transition-transform duration-200", segment.bgColor, isHovered && "scale-125")} />
+                <div
+                  className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 transition-transform duration-200", isHovered && "scale-125")}
+                  style={{ backgroundColor: dotColor }}
+                />
                 <span className="text-sm text-muted-foreground">{segment.label}</span>
               </div>
               <span className={cn("font-medium text-sm tabular-nums", segment.textColor || "text-foreground")}>

@@ -95,6 +95,7 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     // VERSION BATCHING: If batchWithGroup is true and we have a groupId,
     // try to update the existing version with the same groupId instead of creating a new one.
     // This prevents rapid auto-saves from creating dozens of versions during a typing session.
+    // PERFORMANCE OPTIMIZATION: Diff calculation is done in background for batched saves.
     if (data.batchWithGroup && data.groupId && !isNewPage) {
       console.log("🔵 VERSION SERVER: Checking for existing version to batch with", {
         groupId: data.groupId,
@@ -112,71 +113,90 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
         if (!existingVersionSnapshot.empty) {
           const existingVersionDoc = existingVersionSnapshot.docs[0];
           const existingVersionId = existingVersionDoc.id;
+          const existingVersionData = existingVersionDoc.data();
 
           console.log("🔵 VERSION SERVER: Found existing version to batch with", {
             existingVersionId,
             groupId: data.groupId
           });
 
-          // Calculate diff from the ORIGINAL content (before any edits in this session)
-          // We need to get the content from the version BEFORE this group started
-          const existingVersionData = existingVersionDoc.data();
-          const originalContent = existingVersionData.originalContent || existingVersionData.previousContent || pageData?.content;
-
-          let diffResult = null;
-          try {
-            const { calculateDiff } = await import('../../utils/diffService');
-            diffResult = await calculateDiff(contentForDiff, originalContent);
-            console.log("✅ VERSION SERVER: Batch diff calculated:", {
-              added: diffResult.added,
-              removed: diffResult.removed
-            });
-          } catch (diffError) {
-            console.error("🔴 VERSION SERVER: Error calculating batch diff (non-fatal):", diffError);
-          }
-
-          // Update the existing version instead of creating a new one
+          // PERFORMANCE: Save content immediately WITHOUT waiting for diff calculation
           const now = new Date().toISOString();
-          const updateData = {
+          const batchCount = (existingVersionData.batchCount || 1) + 1;
+
+          // Update version with content immediately (keep existing diff data for now)
+          const immediateUpdateData = {
             content: contentString,
             updatedAt: now,
-            // Keep the original createdAt but track when it was last updated
             lastBatchedAt: now,
-            batchCount: (existingVersionData.batchCount || 1) + 1,
-            // Update diff data
-            diff: diffResult ? {
-              added: diffResult.added || 0,
-              removed: diffResult.removed || 0,
-              hasChanges: (diffResult.added > 0 || diffResult.removed > 0)
-            } : existingVersionData.diff,
-            diffPreview: diffResult?.preview || existingVersionData.diffPreview
+            batchCount
           };
 
-          await existingVersionDoc.ref.update(updateData);
-          console.log("✅ VERSION SERVER: Batched into existing version", {
+          // Update page content immediately
+          const immediatePageUpdate = {
+            content: contentForDiff,
+            lastModified: now
+          };
+
+          // Execute both updates in parallel for speed
+          await Promise.all([
+            existingVersionDoc.ref.update(immediateUpdateData),
+            pageRef.update(immediatePageUpdate)
+          ]);
+
+          console.log("✅ VERSION SERVER: Batched into existing version (fast path)", {
             versionId: existingVersionId,
-            batchCount: updateData.batchCount
+            batchCount
           });
 
-          // Update the page document
-          await pageRef.update({
-            content: contentForDiff,
-            lastModified: now,
-            lastDiff: diffResult ? {
-              added: diffResult.added || 0,
-              removed: diffResult.removed || 0,
-              hasChanges: (diffResult.added > 0 || diffResult.removed > 0),
-              isNewPage: false,
-              preview: diffResult.preview || null
-            } : pageData?.lastDiff
-          });
+          // BACKGROUND: Calculate diff and update version/page asynchronously
+          // This doesn't block the save response
+          const originalContent = existingVersionData.originalContent || existingVersionData.previousContent || pageData?.content;
+
+          (async () => {
+            try {
+              const { calculateDiff } = await import('../../utils/diffService');
+              const diffResult = await calculateDiff(contentForDiff, originalContent);
+
+              if (diffResult) {
+                const diffUpdateData = {
+                  diff: {
+                    added: diffResult.added || 0,
+                    removed: diffResult.removed || 0,
+                    hasChanges: (diffResult.added > 0 || diffResult.removed > 0)
+                  },
+                  diffPreview: diffResult.preview || null
+                };
+
+                // Update version and page with diff data in background
+                await Promise.all([
+                  existingVersionDoc.ref.update(diffUpdateData),
+                  pageRef.update({
+                    lastDiff: {
+                      added: diffResult.added || 0,
+                      removed: diffResult.removed || 0,
+                      hasChanges: (diffResult.added > 0 || diffResult.removed > 0),
+                      isNewPage: false,
+                      preview: diffResult.preview || null
+                    }
+                  })
+                ]);
+                console.log("✅ [BG] Batch diff calculated and saved:", {
+                  added: diffResult.added,
+                  removed: diffResult.removed
+                });
+              }
+            } catch (diffError) {
+              console.error("⚠️ [BG] Batch diff calculation failed (non-fatal):", diffError);
+            }
+          })();
 
           return {
             success: true,
             versionId: existingVersionId,
             isNoOp: false,
             wasBatched: true,
-            batchCount: updateData.batchCount
+            batchCount
           };
         } else {
           console.log("🔵 VERSION SERVER: No existing version with groupId found, creating new version", {

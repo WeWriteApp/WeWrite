@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
-// CACHING DISABLED: pageCache removed to ensure editor always gets fresh data
-// import { pageCache } from '../../../utils/pageCache';
 import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { isAdminUserId, hasAdminAccess } from '../../../utils/adminConfig';

@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     // Get user's available balance using calculated balance (Phase 2)
     const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
     const { getCollectionName } = await import('../../../utils/environmentConfig');
-    const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+    const { UsdEarningsService } = await import('../../../services/usdEarningsService');
 
     const admin = getFirebaseAdmin();
     if (!admin) {

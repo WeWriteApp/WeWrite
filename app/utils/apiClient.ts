@@ -210,8 +210,8 @@ export const invalidatePageDeletedStatus = (pageId: string) => {
   consolidatedClient.invalidateCache(new RegExp(`page.*${pageId}`));
 
   // Also clear the page cache if available
-  import('./pageCache').then(({ pageCache }) => {
-    pageCache.clearPage(pageId);
+  import('./serverCache').then(({ pageCache }) => {
+    pageCache.invalidate(pageId);
   }).catch(() => {});
 
   // Clear InternalLinkWithTitle caches

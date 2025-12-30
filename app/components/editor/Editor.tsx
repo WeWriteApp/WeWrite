@@ -19,6 +19,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/button';
+import { AnimatedPresenceItem } from '@/components/ui/AnimatedStack';
 import { createEditor, Descendant, Editor as SlateEditor, Element, Element as SlateElement, Node as SlateNode, Range, Text, Transforms, Path, NodeEntry } from 'slate';
 import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
 import { withHistory } from 'slate-history';
@@ -33,6 +35,14 @@ import { useAuth } from '../../providers/AuthProvider';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { PillLink } from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
+import { useMediaQuery } from '../../hooks/use-media-query';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from '../ui/drawer';
 
 // Simple error boundary - no complex recovery mechanisms
 class SimpleErrorBoundary extends React.Component<
@@ -98,6 +108,7 @@ const Editor: React.FC<EditorProps> = ({
 }) => {
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
   const { user } = useAuth();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Simple state management - no complex state
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -119,10 +130,40 @@ const Editor: React.FC<EditorProps> = ({
     }
   });
 
-  // Notify parent when suggestion count changes
+  // Extract all page IDs that are already linked in the content
+  const existingLinkedPageIds = useMemo(() => {
+    const pageIds = new Set<string>();
+    if (!editorValue) return pageIds;
+
+    // Recursively find all link elements and extract their pageIds
+    const findLinks = (nodes: Descendant[]) => {
+      for (const node of nodes) {
+        if (Element.isElement(node)) {
+          if (node.type === 'link' && 'pageId' in node && node.pageId) {
+            pageIds.add(node.pageId);
+          }
+          if ('children' in node) {
+            findLinks(node.children as Descendant[]);
+          }
+        }
+      }
+    };
+
+    findLinks(editorValue);
+    return pageIds;
+  }, [editorValue]);
+
+  // Filter suggestions to exclude already-linked pages
+  const filteredSuggestions = useMemo(() => {
+    return linkSuggestionState.allSuggestions.filter(
+      suggestion => !existingLinkedPageIds.has(suggestion.id)
+    );
+  }, [linkSuggestionState.allSuggestions, existingLinkedPageIds]);
+
+  // Notify parent when suggestion count changes (using filtered count)
   useEffect(() => {
-    onLinkSuggestionCountChange?.(linkSuggestionState.allSuggestions.length);
-  }, [linkSuggestionState.allSuggestions.length, onLinkSuggestionCountChange]);
+    onLinkSuggestionCountChange?.(filteredSuggestions.length);
+  }, [filteredSuggestions.length, onLinkSuggestionCountChange]);
 
 
   // Link deletion plugin - allows deleting links with backspace/delete keys
@@ -531,11 +572,33 @@ const Editor: React.FC<EditorProps> = ({
     setShowSuggestionModal(true);
   }, []);
 
+  // Check if a path is inside a link element
+  const isPathInsideLink = useCallback((path: Path): boolean => {
+    // Walk up the path to check ancestors
+    for (let i = path.length - 1; i >= 0; i--) {
+      const ancestorPath = path.slice(0, i);
+      try {
+        const node = SlateNode.get(editor, ancestorPath);
+        if (Element.isElement(node) && node.type === 'link') {
+          return true;
+        }
+      } catch {
+        // Path doesn't exist, continue
+      }
+    }
+    return false;
+  }, [editor]);
+
   // Decorate function to add suggestion underlines
   const decorate = useCallback(([node, path]: NodeEntry): Range[] => {
     const ranges: Range[] = [];
 
-    if (!showLinkSuggestions || !Text.isText(node) || !linkSuggestionState.allSuggestions.length) {
+    if (!showLinkSuggestions || !Text.isText(node) || !filteredSuggestions.length) {
+      return ranges;
+    }
+
+    // Don't decorate text that's inside a link
+    if (isPathInsideLink(path)) {
       return ranges;
     }
 
@@ -543,7 +606,7 @@ const Editor: React.FC<EditorProps> = ({
     const textLower = text.toLowerCase();
 
     // Find all suggestions that match text in this node (case insensitive)
-    for (const suggestion of linkSuggestionState.allSuggestions) {
+    for (const suggestion of filteredSuggestions) {
       const searchText = suggestion.matchedText.toLowerCase();
       let index = textLower.indexOf(searchText);
 
@@ -560,7 +623,7 @@ const Editor: React.FC<EditorProps> = ({
     }
 
     return ranges;
-  }, [showLinkSuggestions, linkSuggestionState.allSuggestions]);
+  }, [showLinkSuggestions, filteredSuggestions, isPathInsideLink]);
 
   // Simple link insertion - no complex timing dependencies
   const insertLink = useCallback((linkData: any) => {
@@ -805,11 +868,12 @@ const Editor: React.FC<EditorProps> = ({
     });
   }, []);
 
-  // Count empty paragraphs (excluding the first one which is the default typing area)
+  // Count empty paragraphs (excluding the first and last - user may be typing there)
   const emptyParagraphCount = useMemo(() => {
-    if (!editorValue || editorValue.length <= 1) return 0;
-    // Skip the first paragraph, count empty ones after that
-    return editorValue.slice(1).filter((node: any) => {
+    if (!editorValue || editorValue.length <= 2) return 0;
+
+    // Helper to check if a node is an empty paragraph
+    const isEmptyNode = (node: any) => {
       if (node.type !== 'paragraph' && node.type !== undefined) return false;
       if (!node.children || node.children.length === 0) return true;
       return node.children.every((child: any) => {
@@ -818,7 +882,12 @@ const Editor: React.FC<EditorProps> = ({
         }
         return false;
       });
-    }).length;
+    };
+
+    // Skip the first paragraph (title area) and last paragraph (user might be typing)
+    // Only count empty paragraphs in the middle section
+    const middleParagraphs = editorValue.slice(1, -1);
+    return middleParagraphs.filter(isEmptyNode).length;
   }, [editorValue]);
 
   // Check if an element is the first paragraph in the document
@@ -841,70 +910,55 @@ const Editor: React.FC<EditorProps> = ({
     }
   }, [editor, editorValue.length]);
 
-  // Track if we should show the delayed highlight for the last empty line
-  const [showLastEmptyHighlight, setShowLastEmptyHighlight] = useState(false);
-  const lastEmptyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track indices pending animated deletion
+  const [pendingDeletionIndices, setPendingDeletionIndices] = useState<Set<number>>(new Set());
+  const deletionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if the last paragraph is empty and manage the delayed highlight
-  useEffect(() => {
-    if (readOnly || !editorValue || editorValue.length === 0) {
-      setShowLastEmptyHighlight(false);
-      return;
-    }
+  // Animation duration for deletion (in ms)
+  const DELETION_ANIMATION_MS = 200;
 
-    const lastNode = editorValue[editorValue.length - 1] as any;
-    const isLastEmpty = (lastNode.type === 'paragraph' || lastNode.type === undefined) &&
-      lastNode.children?.every((child: any) => Text.isText(child) && child.text === '');
-
-    // Don't highlight if it's the only paragraph (that's the default typing area)
-    const shouldDelay = isLastEmpty && editorValue.length > 1;
-
-    if (shouldDelay) {
-      // Clear any existing timeout
-      if (lastEmptyTimeoutRef.current) {
-        clearTimeout(lastEmptyTimeoutRef.current);
+  // Actually perform the deletion after animation
+  const performDeletion = useCallback((indicesToDelete: number[]) => {
+    // Delete in reverse order to maintain correct paths
+    const sortedIndices = [...indicesToDelete].sort((a, b) => b - a);
+    sortedIndices.forEach(index => {
+      try {
+        Transforms.removeNodes(editor, { at: [index] });
+      } catch (error) {
+        // Error deleting empty paragraph
       }
-      // Reset highlight immediately when content changes
-      setShowLastEmptyHighlight(false);
-      // Set a 1 second delay before showing the highlight
-      lastEmptyTimeoutRef.current = setTimeout(() => {
-        setShowLastEmptyHighlight(true);
-      }, 1000);
-    } else {
-      // Last paragraph is not empty, clear highlight and timeout
-      if (lastEmptyTimeoutRef.current) {
-        clearTimeout(lastEmptyTimeoutRef.current);
-      }
-      setShowLastEmptyHighlight(false);
-    }
+    });
+    setPendingDeletionIndices(new Set());
+  }, [editor]);
 
-    return () => {
-      if (lastEmptyTimeoutRef.current) {
-        clearTimeout(lastEmptyTimeoutRef.current);
-      }
-    };
-  }, [editorValue, readOnly]);
-
-  // Delete an empty paragraph
+  // Delete an empty paragraph with animation
   const deleteEmptyParagraph = useCallback((element: any) => {
     try {
       const path = ReactEditor.findPath(editor, element);
+      const index = path[0];
       // Don't delete if it's the only paragraph in the document
       if (editorValue.length <= 1) {
         return;
       }
-      Transforms.removeNodes(editor, { at: path });
+
+      // Mark for animated deletion
+      setPendingDeletionIndices(new Set([index]));
+
+      // Actually delete after animation completes
+      setTimeout(() => {
+        performDeletion([index]);
+      }, DELETION_ANIMATION_MS);
     } catch (error) {
       // Error deleting empty paragraph
     }
-  }, [editor, editorValue.length]);
+  }, [editor, editorValue.length, performDeletion]);
 
-  // Delete all empty paragraphs (except the first one)
+  // Delete all empty paragraphs (except the first one) with animation
   const deleteAllEmptyParagraphs = useCallback(() => {
     if (!editorValue || editorValue.length <= 1) return;
 
-    // Find all empty paragraph paths (in reverse order to avoid path shifting issues)
-    const emptyPaths: Path[] = [];
+    // Find all empty paragraph indices
+    const emptyIndices: number[] = [];
     editorValue.forEach((node: any, index: number) => {
       // Skip the first paragraph
       if (index === 0) return;
@@ -913,19 +967,20 @@ const Editor: React.FC<EditorProps> = ({
         node.children?.every((child: any) => Text.isText(child) && child.text === '');
 
       if (isEmpty) {
-        emptyPaths.push([index]);
+        emptyIndices.push(index);
       }
     });
 
-    // Delete in reverse order to maintain correct paths
-    emptyPaths.reverse().forEach(path => {
-      try {
-        Transforms.removeNodes(editor, { at: path });
-      } catch (error) {
-        // Error deleting empty paragraph at path
-      }
-    });
-  }, [editor, editorValue]);
+    if (emptyIndices.length === 0) return;
+
+    // Mark all for animated deletion
+    setPendingDeletionIndices(new Set(emptyIndices));
+
+    // Actually delete after animation completes
+    setTimeout(() => {
+      performDeletion(emptyIndices);
+    }, DELETION_ANIMATION_MS);
+  }, [editorValue, performDeletion]);
 
   // Simple element renderer - renders inline pill links using LinkNode
   const renderElement = useCallback((props: any) => {
@@ -1006,22 +1061,36 @@ const Editor: React.FC<EditorProps> = ({
         const isEmpty = isEmptyParagraph(element);
         const isFirst = isFirstParagraph(element);
         const isLast = isLastParagraph(element);
-        // For the last empty paragraph, only highlight after the 1s delay
-        // For other empty paragraphs (middle ones), highlight immediately
-        // Never highlight the first paragraph (that's where users type)
-        const shouldHighlight = isEmpty && !isFirst && !readOnly && (!isLast || showLastEmptyHighlight);
-        const canDelete = !readOnly && isEmpty && !isFirst && editorValue.length > 1 && (!isLast || showLastEmptyHighlight);
+        // Never highlight the first or last paragraph (user may be typing there)
+        // Only highlight empty paragraphs in the middle of the document
+        const shouldHighlight = isEmpty && !isFirst && !isLast && !readOnly;
+        const canDelete = !readOnly && isEmpty && !isFirst && !isLast && editorValue.length > 1;
+
+        // Check if this element is pending deletion for animation
+        let isPendingDeletion = false;
+        try {
+          const path = ReactEditor.findPath(editor, element);
+          isPendingDeletion = pendingDeletionIndices.has(path[0]);
+        } catch {
+          // Ignore path errors
+        }
 
         if (shouldHighlight) {
           return (
-            <div {...attributes} className="relative">
+            <div
+              {...attributes}
+              className={cn(
+                "relative flex items-center transition-all duration-200",
+                isPendingDeletion && "opacity-0 scale-95 -translate-x-4"
+              )}
+            >
               <p className={cn(
-                "rounded-md transition-colors",
-                "bg-orange-100/80 dark:bg-orange-950/50"
+                "flex-1 rounded-md transition-colors",
+                "bg-error-10"
               )}>
                 {children}
               </p>
-              {canDelete && (
+              {canDelete && !isPendingDeletion && (
                 <button
                   contentEditable={false}
                   onClick={(e) => {
@@ -1030,17 +1099,16 @@ const Editor: React.FC<EditorProps> = ({
                     deleteEmptyParagraph(element);
                   }}
                   className={cn(
-                    "absolute right-2 top-1/2 -translate-y-1/2",
-                    "p-1 rounded-md",
-                    "bg-orange-200/80 dark:bg-orange-900/60",
-                    "hover:bg-orange-300 dark:hover:bg-orange-800/80",
+                    "absolute right-2 flex items-center justify-center",
+                    "p-1",
                     "active:scale-95",
-                    "text-orange-700 dark:text-orange-300",
-                    "cursor-pointer transition-all"
+                    "text-error",
+                    "hover:text-error/80",
+                    "cursor-pointer transition-colors"
                   )}
                   title="Delete empty line"
                 >
-                  <Icon name="Trash2" size={24} className="w-3.5 h-3.5" />
+                  <Icon name="Trash2" size={16} />
                 </button>
               )}
             </div>
@@ -1049,7 +1117,7 @@ const Editor: React.FC<EditorProps> = ({
 
         return <p {...attributes}>{children}</p>;
     }
-  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, isLastParagraph, deleteEmptyParagraph, editorValue.length, showLastEmptyHighlight]);
+  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, isLastParagraph, deleteEmptyParagraph, editorValue.length, pendingDeletionIndices]);
 
   // Simple leaf renderer with suggestion underline support
   const renderLeaf = useCallback((props: any) => {
@@ -1073,7 +1141,7 @@ const Editor: React.FC<EditorProps> = ({
       return (
         <span
           {...props.attributes}
-          className="border-b-2 border-dotted border-primary/50 cursor-pointer hover:border-primary hover:bg-primary/10 transition-colors"
+          className="border-b-2 border-dotted border-[oklch(var(--accent-base)/0.5)] cursor-pointer hover:border-[oklch(var(--accent-base))] hover:bg-[oklch(var(--accent-base)/0.1)] transition-colors"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1162,25 +1230,23 @@ const Editor: React.FC<EditorProps> = ({
             </div>
           </div>
 
-          {/* Delete all empty lines button - only show when there are empty lines to delete */}
-          {!readOnly && emptyParagraphCount > 0 && (
-            <div className="mt-3 flex justify-end">
-              <button
-                onClick={deleteAllEmptyParagraphs}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm",
-                  "bg-orange-100/80 dark:bg-orange-950/50",
-                  "hover:bg-orange-200 dark:hover:bg-orange-900/60",
-                  "active:scale-[0.98]",
-                  "text-orange-700 dark:text-orange-300",
-                  "transition-all"
-                )}
-              >
-                <Icon name="Trash2" size={24} className="w-3.5 h-3.5" />
-                <span>Delete {emptyParagraphCount} empty {emptyParagraphCount === 1 ? 'line' : 'lines'}</span>
-              </button>
-            </div>
-          )}
+          {/* Delete all empty lines button - animated in/out to prevent layout shifts */}
+          <AnimatedPresenceItem
+            show={!readOnly && emptyParagraphCount > 0}
+            gap={12}
+            preset="default"
+            gapPosition="top"
+          >
+            <Button
+              variant="destructive-secondary"
+              size="lg"
+              onClick={deleteAllEmptyParagraphs}
+              className="w-full gap-2 rounded-2xl font-medium"
+            >
+              <Icon name="Trash2" size={20} />
+              Delete {emptyParagraphCount} empty {emptyParagraphCount === 1 ? 'line' : 'lines'}
+            </Button>
+          </AnimatedPresenceItem>
         </Slate>
 
         {/* Loading indicator for link suggestions */}
@@ -1208,77 +1274,151 @@ const Editor: React.FC<EditorProps> = ({
           document.body
         )}
 
-        {/* Link Suggestion Modal */}
-        {showSuggestionModal && activeSuggestionForModal && typeof document !== 'undefined' && createPortal(
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-            onClick={() => {
-              setShowSuggestionModal(false);
-              setActiveSuggestionForModal(null);
-            }}
-          >
-            <div
-              className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
-              onClick={(e) => e.stopPropagation()}
+        {/* Link Suggestion Modal - Responsive: Drawer on mobile, Dialog on desktop */}
+        {activeSuggestionForModal && (
+          isMobile ? (
+            // Mobile: Use Drawer
+            <Drawer
+              open={showSuggestionModal}
+              onOpenChange={(open) => {
+                setShowSuggestionModal(open);
+                if (!open) setActiveSuggestionForModal(null);
+              }}
             >
-              <h3 className="text-lg font-semibold mb-2">Link Suggestion</h3>
-              <p className="text-muted-foreground mb-4">
-                Link "<span className="font-medium text-foreground">{activeSuggestionForModal.matchedText}</span>" to:
-              </p>
-              <div className="bg-neutral-alpha-5 rounded-lg p-4 mb-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <PillLink
-                    href={`/${activeSuggestionForModal.id}`}
-                    pageId={activeSuggestionForModal.id}
-                    clickable={false}
-                  >
-                    {activeSuggestionForModal.title}
-                  </PillLink>
-                  {activeSuggestionForModal.username && activeSuggestionForModal.username !== activeSuggestionForModal.userId && (
-                    <span className="text-sm text-muted-foreground">
-                      by <UsernameBadge
-                        username={activeSuggestionForModal.username}
-                        userId={activeSuggestionForModal.userId}
-                        showBadge={false}
-                        size="sm"
-                      />
-                    </span>
-                  )}
+              <DrawerContent accessibleTitle="Link Suggestion">
+                <DrawerHeader>
+                  <DrawerTitle>Link Suggestion</DrawerTitle>
+                  <DrawerDescription>
+                    Link "<span className="font-medium text-foreground">{activeSuggestionForModal.matchedText}</span>" to:
+                  </DrawerDescription>
+                </DrawerHeader>
+                <div className="px-4 pb-6">
+                  <div className="bg-neutral-alpha-5 rounded-lg p-4 mb-6">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PillLink
+                        href={`/${activeSuggestionForModal.id}`}
+                        pageId={activeSuggestionForModal.id}
+                        clickable={false}
+                      >
+                        {activeSuggestionForModal.title}
+                      </PillLink>
+                      {activeSuggestionForModal.username && activeSuggestionForModal.username !== activeSuggestionForModal.userId && (
+                        <span className="text-sm text-muted-foreground">
+                          by <UsernameBadge
+                            username={activeSuggestionForModal.username}
+                            userId={activeSuggestionForModal.userId}
+                            showBadge={false}
+                            size="sm"
+                          />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                      onClick={() => insertLinkFromSuggestion(activeSuggestionForModal)}
+                    >
+                      Accept Suggestion
+                    </button>
+                    <button
+                      className="w-full px-4 py-3 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors"
+                      onClick={() => {
+                        setSelectedText(activeSuggestionForModal.matchedText);
+                        setShowSuggestionModal(false);
+                        setActiveSuggestionForModal(null);
+                        setShowLinkModal(true);
+                      }}
+                    >
+                      Choose Different Link
+                    </button>
+                    <button
+                      className="w-full px-4 py-3 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => {
+                        linkSuggestionActions.dismissSuggestion(activeSuggestionForModal.matchedText);
+                        setShowSuggestionModal(false);
+                        setActiveSuggestionForModal(null);
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
-                  onClick={() => insertLinkFromSuggestion(activeSuggestionForModal)}
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            // Desktop: Use Dialog via portal
+            showSuggestionModal && typeof document !== 'undefined' && createPortal(
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+                onClick={() => {
+                  setShowSuggestionModal(false);
+                  setActiveSuggestionForModal(null);
+                }}
+              >
+                <div
+                  className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Accept Suggestion
-                </button>
-                <button
-                  className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors"
-                  onClick={() => {
-                    // Open the link editor modal with this text selected
-                    setSelectedText(activeSuggestionForModal.matchedText);
-                    setShowSuggestionModal(false);
-                    setActiveSuggestionForModal(null);
-                    setShowLinkModal(true);
-                  }}
-                >
-                  Choose Different Link
-                </button>
-                <button
-                  className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => {
-                    linkSuggestionActions.dismissSuggestion(activeSuggestionForModal.matchedText);
-                    setShowSuggestionModal(false);
-                    setActiveSuggestionForModal(null);
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
+                  <h3 className="text-lg font-semibold mb-2">Link Suggestion</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Link "<span className="font-medium text-foreground">{activeSuggestionForModal.matchedText}</span>" to:
+                  </p>
+                  <div className="bg-neutral-alpha-5 rounded-lg p-4 mb-6">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PillLink
+                        href={`/${activeSuggestionForModal.id}`}
+                        pageId={activeSuggestionForModal.id}
+                        clickable={false}
+                      >
+                        {activeSuggestionForModal.title}
+                      </PillLink>
+                      {activeSuggestionForModal.username && activeSuggestionForModal.username !== activeSuggestionForModal.userId && (
+                        <span className="text-sm text-muted-foreground">
+                          by <UsernameBadge
+                            username={activeSuggestionForModal.username}
+                            userId={activeSuggestionForModal.userId}
+                            showBadge={false}
+                            size="sm"
+                          />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                      onClick={() => insertLinkFromSuggestion(activeSuggestionForModal)}
+                    >
+                      Accept Suggestion
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/80 transition-colors"
+                      onClick={() => {
+                        setSelectedText(activeSuggestionForModal.matchedText);
+                        setShowSuggestionModal(false);
+                        setActiveSuggestionForModal(null);
+                        setShowLinkModal(true);
+                      }}
+                    >
+                      Choose Different Link
+                    </button>
+                    <button
+                      className="w-full px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => {
+                        linkSuggestionActions.dismissSuggestion(activeSuggestionForModal.matchedText);
+                        setShowSuggestionModal(false);
+                        setActiveSuggestionForModal(null);
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            )
+          )
         )}
       </div>
     </SimpleErrorBoundary>

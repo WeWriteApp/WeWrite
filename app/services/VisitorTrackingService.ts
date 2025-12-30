@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getCollectionName } from '../utils/environmentConfig';
-import { trackBatch, trackImmediateWrite } from '../utils/costOptimizationMonitor';
+import { trackFirebaseRead } from '../utils/costMonitor';
 
 import { BotDetectionService, type VisitorFingerprint } from './BotDetectionService';
 
@@ -365,8 +365,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
       // Error processing batch update
     } finally {
       // Track batch processing for cost optimization monitoring
-      const processingTime = Date.now() - batchStartTime;
-      trackBatch('visitor', batchSize, processingTime, success);
+      trackFirebaseRead('siteVisitors', 'batch_update', batchSize, 'visitor-tracking');
     }
   }
 

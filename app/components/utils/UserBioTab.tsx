@@ -7,6 +7,7 @@ import { toast } from "../ui/use-toast";
 // REMOVED: recordBioEditActivity - bio activity tracking disabled for cost optimization
 import dynamic from "next/dynamic";
 import { useAuth } from '../../providers/AuthProvider';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 import EmptyContentState from './EmptyContentState';
 import { UserBioSkeleton } from "../ui/page-skeleton";
@@ -15,6 +16,7 @@ import TextView from "../editor/TextView";
 import HoverEditContent from './HoverEditContent';
 import ContentPageFooter from "../pages/ContentPageFooter";
 import StickySaveHeader from "../layout/StickySaveHeader";
+import AutoSaveIndicator from "../layout/AutoSaveIndicator";
 import type { UserBioTabProps } from "../../types/components";
 import type { EditorContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
@@ -24,6 +26,11 @@ const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), { ssr:
 
 const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const { user } = useAuth();
+  const { isEnabled } = useFeatureFlags();
+
+  // Check if auto-save is enabled via feature flag
+  const autoSaveEnabled = isEnabled('auto_save');
+
   // Always editing mode - bio is always editable for the owner
   const isProfileOwner = user?.uid === profile.uid;
   const [isEditing, setIsEditing] = useState<boolean>(isProfileOwner); // Always true for owner
@@ -33,6 +40,18 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const [error, setError] = useState<string | null>(null);
   const [lastEditor, setLastEditor] = useState<string | null>(null);
   const [lastEditTime, setLastEditTime] = useState<string | null>(null);
+
+  // Auto-save state (only used when auto_save feature flag is enabled)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Refs to track current content for auto-save comparison (avoids stale closures)
+  const currentContentRef = useRef<EditorContent | string>("");
+  const lastSavedContentRef = useRef<EditorContent | string>("");
+  const autoSaveBaselineInitialized = useRef<boolean>(false);
+  const autoSaveBaselineJustInitialized = useRef<boolean>(false);
 
   // Link insertion trigger function
   const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
@@ -87,6 +106,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           if (bioData.bio) {
             setBioContent(bioData.bio);
             setOriginalContent(bioData.bio);
+            // Initialize auto-save baseline refs
+            currentContentRef.current = bioData.bio;
+            lastSavedContentRef.current = bioData.bio;
+            autoSaveBaselineInitialized.current = true;
+            autoSaveBaselineJustInitialized.current = true;
           }
           if (bioData.bioLastEditor) {
             setLastEditor(bioData.bioLastEditor);
@@ -103,6 +127,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
             if (userData.bio) {
               setBioContent(userData.bio);
               setOriginalContent(userData.bio);
+              // Initialize auto-save baseline refs
+              currentContentRef.current = userData.bio;
+              lastSavedContentRef.current = userData.bio;
+              autoSaveBaselineInitialized.current = true;
+              autoSaveBaselineJustInitialized.current = true;
             }
             if (userData.bioLastEditor) {
               setLastEditor(userData.bioLastEditor);
@@ -161,6 +190,8 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       console.log("Bio edit activity recording disabled for cost optimization");
 
       setOriginalContent(contentToSave);
+      // Update the last saved content ref for auto-save comparison
+      lastSavedContentRef.current = contentToSave;
       // Don't exit editing mode for owners (always-editing mode)
       if (!isProfileOwner) {
         handleSetIsEditing(false);
@@ -219,6 +250,8 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     // Ensure we're storing the content in the correct format
     // If it's already an object/array, use it directly; otherwise stringify it
     setBioContent(content);
+    // Update current content ref for auto-save comparison
+    currentContentRef.current = content;
     console.log("Bio content updated:", content);
   };
 
@@ -252,6 +285,105 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isProfileOwner, hasUnsavedChanges, isLoading, handleSave, handleCancel]);
 
+  // Auto-save effect: triggers save after 1 second of inactivity when there are changes
+  // Only active when auto_save feature flag is enabled
+  useEffect(() => {
+    // Skip if auto-save is disabled via feature flag
+    if (!autoSaveEnabled) {
+      return;
+    }
+
+    // Don't auto-save if:
+    // - Not the profile owner (canEdit is false)
+    // - Currently saving or just saved (prevent infinite loop)
+    // - Auto-save baseline not initialized yet (content not ready)
+    if (!isProfileOwner || isLoading || !autoSaveBaselineInitialized.current) {
+      return;
+    }
+
+    // Skip the first run immediately after baseline initialization
+    // This prevents false positive "unsaved changes" on initial page load
+    if (autoSaveBaselineJustInitialized.current) {
+      autoSaveBaselineJustInitialized.current = false;
+      return;
+    }
+
+    // Prevent re-triggering while save is in progress or just completed
+    // This is the key guard against infinite loops
+    if (autoSaveStatus === 'saving' || autoSaveStatus === 'saved') {
+      return;
+    }
+
+    // Check for actual changes using refs
+    const currentContent = currentContentRef.current;
+    const savedContent = lastSavedContentRef.current;
+
+    let contentChanged = false;
+    if (savedContent && currentContent) {
+      try {
+        contentChanged = JSON.stringify(savedContent) !== JSON.stringify(currentContent);
+      } catch {
+        contentChanged = false;
+      }
+    }
+
+    // If no actual changes, don't proceed - stay in idle state
+    if (!contentChanged) {
+      return;
+    }
+
+    // Clear any existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Show "pending" state IMMEDIATELY when changes are detected
+    setAutoSaveStatus('pending');
+
+    // Set a new timeout for auto-save after 1 second of inactivity
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      // Re-check for actual changes using refs
+      const latestContent = currentContentRef.current;
+      const latestSavedContent = lastSavedContentRef.current;
+
+      let latestContentChanged = false;
+      if (latestSavedContent && latestContent) {
+        try {
+          latestContentChanged = JSON.stringify(latestSavedContent) !== JSON.stringify(latestContent);
+        } catch {
+          latestContentChanged = false;
+        }
+      }
+
+      // If no actual changes, go back to idle state
+      if (!latestContentChanged) {
+        setAutoSaveStatus('idle');
+        return;
+      }
+
+      setAutoSaveStatus('saving');
+      setAutoSaveError(null);
+
+      try {
+        await handleSave();
+        setAutoSaveStatus('saved');
+        setLastSavedAt(new Date());
+        // Transition to idle after showing saved state
+        setTimeout(() => setAutoSaveStatus('idle'), 3000);
+      } catch (err) {
+        setAutoSaveStatus('error');
+        setAutoSaveError(err instanceof Error ? err.message : 'Auto-save failed');
+      }
+    }, 1000); // 1 second delay
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [autoSaveEnabled, bioContent, isProfileOwner, isLoading, handleSave, autoSaveStatus]);
+
   // Handle link insertion request - memoized to prevent infinite loops
   const handleInsertLinkRequest = useCallback((triggerFn) => {
     setLinkInsertionTrigger(() => triggerFn);
@@ -283,14 +415,28 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
   return (
     <>
-      {/* Sticky Save Header - slides down from top when there are unsaved changes */}
-      <StickySaveHeader
-        hasUnsavedChanges={hasUnsavedChanges && isProfileOwner}
-        onSave={handleSave}
-        onCancel={handleCancel}
-        isSaving={isLoading}
-        isAnimatingOut={false}
-      />
+      {/* Save UI - Either StickySaveHeader (manual) or AutoSaveIndicator (auto) */}
+      {autoSaveEnabled ? (
+        /* Auto-save mode: Show indicator instead of save bar */
+        isProfileOwner && (
+          <div className="flex justify-end px-4 py-2">
+            <AutoSaveIndicator
+              status={autoSaveStatus}
+              lastSavedAt={lastSavedAt}
+              error={autoSaveError}
+            />
+          </div>
+        )
+      ) : (
+        /* Manual save mode: Show sticky save header */
+        <StickySaveHeader
+          hasUnsavedChanges={hasUnsavedChanges && isProfileOwner}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          isSaving={isLoading}
+          isAnimatingOut={false}
+        />
+      )}
 
       <div className="space-y-4 page-content-wrapper">
       {/* Content display or editor - unified container structure */}
@@ -310,30 +456,32 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
                   // Remove onSave and onCancel - handled by bottom save bar
                 />
 
-              {/* Page Footer with bottom save bar */}
-              <ContentPageFooter
-                page={null} // Bio doesn't have page data
-                content={bioContent}
-                linkedPageIds={[]} // Bio doesn't have linked pages
-                isEditing={isEditing}
-                canEdit={isProfileOwner}
-                isOwner={isProfileOwner}
-                title="" // Bio doesn't have a title
-                location={null} // Bio doesn't have location
-                onTitleChange={() => {}} // Bio doesn't have title
-                onLocationChange={() => {}} // Bio doesn't have location
-                onSave={async () => {
-                  const success = await handleSave();
-                  return success;
-                }}
-                onCancel={handleCancel}
-                onDelete={null} // Bio doesn't have delete
-                onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
-                isSaving={isLoading}
-                error={error}
-                titleError={false}
-                hasUnsavedChanges={hasUnsavedChanges}
-              />
+              {/* Page Footer with bottom save bar - hidden when auto-save is enabled */}
+              {!autoSaveEnabled && (
+                <ContentPageFooter
+                  page={null} // Bio doesn't have page data
+                  content={bioContent}
+                  linkedPageIds={[]} // Bio doesn't have linked pages
+                  isEditing={isEditing}
+                  canEdit={isProfileOwner}
+                  isOwner={isProfileOwner}
+                  title="" // Bio doesn't have a title
+                  location={null} // Bio doesn't have location
+                  onTitleChange={() => {}} // Bio doesn't have title
+                  onLocationChange={() => {}} // Bio doesn't have location
+                  onSave={async () => {
+                    const success = await handleSave();
+                    return success;
+                  }}
+                  onCancel={handleCancel}
+                  onDelete={null} // Bio doesn't have delete
+                  onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
+                  isSaving={isLoading}
+                  error={error}
+                  titleError={false}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                />
+              )}
             </PageProvider>
           </div>
         ) : (

@@ -81,8 +81,7 @@ export async function POST(
       console.log('🗑️ [SET CURRENT VERSION] Invalidating cache for page:', pageId);
 
       // Import cache invalidation utilities
-      const { invalidateCache } = await import('../../../../utils/serverCache');
-      const { pageCache } = await import('../../../../utils/pageCache');
+      const { invalidateCache, pageCache } = await import('../../../../utils/serverCache');
 
       // Invalidate server cache
       invalidateCache.page(pageId);

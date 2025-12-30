@@ -4,12 +4,8 @@ import { useEffect, useState } from "react";
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../providers/AuthProvider";
-import { isAdmin } from "../../utils/isAdmin";
-import { FloatingHeader } from "../../components/ui/FloatingCard";
-import { Card } from "../../components/ui/card";
 import { Switch } from "../../components/ui/switch";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import { Separator } from "../../components/ui/separator";
 
 export default function FeatureFlagsPage() {
@@ -152,136 +148,103 @@ export default function FeatureFlagsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="py-6 px-4 container mx-auto max-w-4xl">
-        {/* Desktop Header - hidden on mobile (drawer handles navigation) */}
-        <div className="hidden lg:flex mb-6 items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold leading-tight">Feature Flags</h1>
-            <p className="text-muted-foreground">Admin-only preview controls</p>
+    <div className="space-y-4">
+      {/* Line Numbers Feature Flag */}
+      <div className="wewrite-card space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold">Line numbers & dense mode</h2>
+            <p className="text-sm text-muted-foreground">
+              Enabled for: {enabledFraction} users
+            </p>
           </div>
+          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
         </div>
 
-        <div className="pt-24 lg:pt-0 space-y-6">
-          {/* Line Numbers Feature Flag */}
-          <Card className="p-4 space-y-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-xl font-semibold">Line numbers &amp; dense mode</h2>
-                <p className="text-sm text-muted-foreground">
-                  Control the line number feature flag. Disable by default for everyone.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enabled for: {enabledFraction} users
-                </p>
-              </div>
-              <Badge variant="outline">Admin only</Badge>
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for me</p>
+              <p className="text-xs text-muted-foreground">Personal override</p>
             </div>
+            <Switch checked={lineNumbersEnabled} onCheckedChange={handleLineNumbersPersonalToggle} disabled={saving} />
+          </div>
 
-            <Separator className="my-4" />
-
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Enable for me</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Personal override for the current admin account.
-                  </p>
-                </div>
-                <Switch checked={lineNumbersEnabled} onCheckedChange={handleLineNumbersPersonalToggle} disabled={saving} />
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Enable for all users</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Sets the global default. Users can still be opted out via overrides.
-                  </p>
-                </div>
-                <Switch checked={lineNumbersGlobal} onCheckedChange={handleLineNumbersGlobalToggle} disabled={saving} />
-              </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for all users</p>
+              <p className="text-xs text-muted-foreground">Sets global default</p>
             </div>
-          </Card>
+            <Switch checked={lineNumbersGlobal} onCheckedChange={handleLineNumbersGlobalToggle} disabled={saving} />
+          </div>
+        </div>
+      </div>
 
-          {/* Onboarding Tutorial Feature Flag */}
-          <Card className="p-4 space-y-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-xl font-semibold">Onboarding Tutorial</h2>
-                <p className="text-sm text-muted-foreground">
-                  Interactive guided tutorial for new users. Shows tooltips and highlights UI elements.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enabled for: {onboardingEnabledFraction} users
-                </p>
-              </div>
-              <Badge variant="outline">Admin only</Badge>
+      {/* Onboarding Tutorial Feature Flag */}
+      <div className="wewrite-card space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold">Onboarding Tutorial</h2>
+            <p className="text-sm text-muted-foreground">
+              Enabled for: {onboardingEnabledFraction} users
+            </p>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for me</p>
+              <p className="text-xs text-muted-foreground">Personal override</p>
             </div>
+            <Switch checked={onboardingEnabled} onCheckedChange={handleOnboardingPersonalToggle} disabled={saving} />
+          </div>
 
-            <Separator className="my-4" />
-
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Enable for me</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Personal override for the current admin account.
-                  </p>
-                </div>
-                <Switch checked={onboardingEnabled} onCheckedChange={handleOnboardingPersonalToggle} disabled={saving} />
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Enable for all users</h3>
-                  <p className="text-sm text-muted-foreground">
-                    When enabled, new users will see the onboarding tutorial on first login.
-                  </p>
-                </div>
-                <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} />
-              </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for all users</p>
+              <p className="text-xs text-muted-foreground">New users see tutorial</p>
             </div>
-          </Card>
+            <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} />
+          </div>
+        </div>
+      </div>
 
-          {/* Auto-Save Feature Flag */}
-          <Card className="p-4 space-y-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="text-xl font-semibold">Auto-Save</h2>
-                <p className="text-sm text-muted-foreground">
-                  Automatically saves page content after a brief pause in typing. Shows an indicator when content is saved.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enabled for: {autoSaveEnabledFraction} users
-                </p>
-              </div>
-              <Badge variant="outline">Admin only</Badge>
+      {/* Auto-Save Feature Flag */}
+      <div className="wewrite-card space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold">Auto-Save</h2>
+            <p className="text-sm text-muted-foreground">
+              Enabled for: {autoSaveEnabledFraction} users
+            </p>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for me</p>
+              <p className="text-xs text-muted-foreground">Personal override</p>
             </div>
+            <Switch checked={autoSaveEnabled} onCheckedChange={handleAutoSavePersonalToggle} disabled={saving} />
+          </div>
 
-            <Separator className="my-4" />
-
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Enable for me</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Personal override for the current admin account.
-                  </p>
-                </div>
-                <Switch checked={autoSaveEnabled} onCheckedChange={handleAutoSavePersonalToggle} disabled={saving} />
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">Enable for all users</h3>
-                  <p className="text-sm text-muted-foreground">
-                    When enabled, pages will auto-save instead of showing the manual save banner.
-                  </p>
-                </div>
-                <Switch checked={autoSaveGlobal} onCheckedChange={handleAutoSaveGlobalToggle} disabled={saving} />
-              </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for all users</p>
+              <p className="text-xs text-muted-foreground">Auto-save instead of manual</p>
             </div>
-          </Card>
+            <Switch checked={autoSaveGlobal} onCheckedChange={handleAutoSaveGlobalToggle} disabled={saving} />
+          </div>
         </div>
       </div>
     </div>
