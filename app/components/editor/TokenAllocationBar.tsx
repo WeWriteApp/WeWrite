@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import ActionModal from '../utils/ActionModal';
+import { ActionModal } from '../utils/UnifiedModal';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import './ui/tooltip.css';
@@ -304,10 +304,22 @@ const TokenAllocationBar: React.FC<TokenAllocationBarProps> = ({
         <ActionModal
           isOpen={showSubscriptionLimitModal}
           onClose={() => setShowSubscriptionLimitModal(false)}
+          title="Subscription Limit Reached"
           message="You've reached your subscription limit. Would you like to adjust your subscription amount to pledge more?"
-          primaryActionLabel="Adjust Subscription"
-          primaryActionHref="/settings"
-          secondaryActionLabel="Cancel"
+          actions={[
+            {
+              label: "Adjust Subscription",
+              onClick: () => {
+                window.location.href = "/settings";
+              },
+              variant: "default"
+            },
+            {
+              label: "Cancel",
+              onClick: () => setShowSubscriptionLimitModal(false),
+              variant: "outline"
+            }
+          ]}
         />,
         document.body
       )}

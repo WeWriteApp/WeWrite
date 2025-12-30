@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import TokenAllocationBar from '../editor/TokenAllocationBar';
 import { updateUsername } from "../../firebase/usernameHistory";
 import { useAlert } from '../../hooks/useAlert';
-import AlertModal from '../utils/AlertModal';
+import { AlertModal } from '../utils/UnifiedModal';
 
 interface Pledge {
   id: string;

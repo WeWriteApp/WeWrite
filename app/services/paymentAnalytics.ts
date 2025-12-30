@@ -6,14 +6,14 @@
  */
 
 // Firebase imports removed - now using API endpoints
-import { 
+import {
   SubscriptionConversionFunnelData,
   SubscriptionMetrics,
   RevenueMetrics,
   TokenAllocationMetrics,
   PaymentAnalyticsData
 } from '../types/database';
-import { DateRange } from './dashboardAnalytics';
+import { DateRange } from './adminAnalytics';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 
 // Cache configuration

@@ -5,8 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { payoutService } from '../../../services/payoutService';
-import { stripePayoutService } from '../../../services/stripePayoutService';
+import { payoutService, PayoutService } from '../../../services/payoutService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
     const existingRecipient = await payoutService.getPayoutRecipient(userId);
     if (existingRecipient) {
       // Verify Stripe account status for existing recipient
-      const accountStatus = await stripePayoutService.verifyStripeAccount(stripeConnectedAccountId);
+      const accountStatus = await PayoutService.verifyStripeAccount(stripeConnectedAccountId);
 
       return NextResponse.json({
         success: true,
@@ -71,7 +70,7 @@ export async function POST(request: NextRequest) {
     // or if forceCreate is true
     if (!forceCreate) {
       // Just verify account status without creating recipient
-      const accountStatus = await stripePayoutService.verifyStripeAccount(stripeConnectedAccountId);
+      const accountStatus = await PayoutService.verifyStripeAccount(stripeConnectedAccountId);
 
       return NextResponse.json({
         success: true,
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify Stripe account status
-    const accountStatus = await stripePayoutService.verifyStripeAccount(stripeConnectedAccountId);
+    const accountStatus = await PayoutService.verifyStripeAccount(stripeConnectedAccountId);
 
     // Create payout recipient
     const recipientResult = await payoutService.createPayoutRecipient(userId, stripeConnectedAccountId);
@@ -99,7 +98,7 @@ export async function POST(request: NextRequest) {
     // Get international payout info if country provided
     let internationalInfo = null;
     if (country) {
-      internationalInfo = await stripePayoutService.getInternationalPayoutInfo(country);
+      internationalInfo = await PayoutService.getInternationalPayoutInfo(country);
     }
 
     // Create default revenue splits for user's existing pages
@@ -164,7 +163,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify Stripe account status
-    const accountStatus = await stripePayoutService.verifyStripeAccount(
+    const accountStatus = await PayoutService.verifyStripeAccount(
       recipient.stripeConnectedAccountId
     );
 

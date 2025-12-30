@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/Icon";
@@ -45,6 +45,13 @@ export function Modal({
   const [isMobile, setIsMobile] = useState(false);
 
   const { containerRef, handleKeyDown } = useFocusTrap(isOpen);
+
+  // Memoize ref callback to prevent infinite re-renders with Radix UI compose-refs
+  const combinedRef = useCallback((node: HTMLDivElement | null) => {
+    // Use type assertion since we're manually managing the ref
+    (modalRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [containerRef]);
 
   useEffect(() => {
     setMounted(true);
@@ -161,10 +168,7 @@ export function Modal({
           />
 
           <motion.div
-            ref={(node) => {
-              if (modalRef.current !== node) modalRef.current = node;
-              if (containerRef.current !== node) containerRef.current = node;
-            }}
+            ref={combinedRef}
             className={cn(
               "relative z-10",
               "bg-[var(--card-bg)] border border-[var(--card-border)] backdrop-blur-md",

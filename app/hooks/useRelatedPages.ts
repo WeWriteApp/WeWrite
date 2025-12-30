@@ -11,7 +11,7 @@ export interface RelatedPage {
   isPublic?: boolean;
 }
 
-export interface RelatedPagesV2Data {
+export interface RelatedPagesData {
   relatedByOthers: RelatedPage[];
   relatedByAuthor: RelatedPage[];
   authorUsername: string | null;
@@ -19,7 +19,7 @@ export interface RelatedPagesV2Data {
   error: string | null;
 }
 
-interface UseRelatedPagesV2Options {
+interface UseRelatedPagesOptions {
   pageId: string;
   pageTitle?: string;
   pageContent?: string;
@@ -31,10 +31,10 @@ interface UseRelatedPagesV2Options {
 }
 
 /**
- * Hook to fetch related pages using Algolia-powered v2 API
+ * Hook to fetch related pages using Algolia-powered API
  * Returns both "related by others" and "more by same author" sections
  */
-export function useRelatedPagesV2({
+export function useRelatedPages({
   pageId,
   pageTitle,
   pageContent,
@@ -43,7 +43,7 @@ export function useRelatedPagesV2({
   excludePageIds = [],
   limitByOthers = 8,
   limitByAuthor = 5,
-}: UseRelatedPagesV2Options): RelatedPagesV2Data & { refresh: () => void } {
+}: UseRelatedPagesOptions): RelatedPagesData & { refresh: () => void } {
   const [relatedByOthers, setRelatedByOthers] = useState<RelatedPage[]>([]);
   const [relatedByAuthor, setRelatedByAuthor] = useState<RelatedPage[]>([]);
   const [resultAuthorUsername, setResultAuthorUsername] = useState<string | null>(null);
@@ -90,7 +90,7 @@ export function useRelatedPagesV2({
         params.append('excludePageIds', excludePageIds.join(','));
       }
 
-      const response = await fetch(`/api/related-pages-v2?${params.toString()}`);
+      const response = await fetch(`/api/related-pages?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

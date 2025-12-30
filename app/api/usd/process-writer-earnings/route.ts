@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ServerUsdEarningsService } from '../../../services/usdEarningsService.server';
+import { UsdEarningsService } from '../../../services/usdEarningsService';
 import { getCurrentMonth, getPreviousMonth } from '../../../utils/subscriptionTiers';
 
 /**
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const targetPeriod = getPreviousMonth();
     console.log(`[CRON] Processing writer USD earnings for period: ${targetPeriod}`);
 
-    const result = await ServerUsdEarningsService.processMonthlyDistribution(targetPeriod);
+    const result = await UsdEarningsService.processMonthlyDistribution(targetPeriod);
 
     if (!result) {
       console.error('[CRON] Failed to process monthly USD distribution');
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     let result;
     if (!dryRun) {
       // Process the monthly distribution for writers
-      result = await ServerUsdEarningsService.processMonthlyDistribution(targetPeriod);
+      result = await UsdEarningsService.processMonthlyDistribution(targetPeriod);
 
       if (!result) {
         return NextResponse.json({

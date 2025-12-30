@@ -319,7 +319,7 @@ export default function EmailPreferencesContent({ onClose }: EmailPreferencesCon
           >
             {saving ? (
               <>
-                <Icon name="Loader" size={16} className="animate-spin" />
+                <Icon name="Loader" size={16} />
                 Saving...
               </>
             ) : (

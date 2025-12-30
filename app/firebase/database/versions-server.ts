@@ -13,6 +13,8 @@ export interface VersionData {
   userId: string;
   username: string;
   groupId?: string;
+  /** When true, update existing version with same groupId instead of creating new one */
+  batchWithGroup?: boolean;
 }
 
 /**
@@ -90,6 +92,104 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       }
     }
 
+    // VERSION BATCHING: If batchWithGroup is true and we have a groupId,
+    // try to update the existing version with the same groupId instead of creating a new one.
+    // This prevents rapid auto-saves from creating dozens of versions during a typing session.
+    if (data.batchWithGroup && data.groupId && !isNewPage) {
+      console.log("🔵 VERSION SERVER: Checking for existing version to batch with", {
+        groupId: data.groupId,
+        pageId
+      });
+
+      try {
+        // Look for an existing version with the same groupId
+        const existingVersionQuery = pageRef.collection("versions")
+          .where("groupId", "==", data.groupId)
+          .limit(1);
+
+        const existingVersionSnapshot = await existingVersionQuery.get();
+
+        if (!existingVersionSnapshot.empty) {
+          const existingVersionDoc = existingVersionSnapshot.docs[0];
+          const existingVersionId = existingVersionDoc.id;
+
+          console.log("🔵 VERSION SERVER: Found existing version to batch with", {
+            existingVersionId,
+            groupId: data.groupId
+          });
+
+          // Calculate diff from the ORIGINAL content (before any edits in this session)
+          // We need to get the content from the version BEFORE this group started
+          const existingVersionData = existingVersionDoc.data();
+          const originalContent = existingVersionData.originalContent || existingVersionData.previousContent || pageData?.content;
+
+          let diffResult = null;
+          try {
+            const { calculateDiff } = await import('../../utils/diffService');
+            diffResult = await calculateDiff(contentForDiff, originalContent);
+            console.log("✅ VERSION SERVER: Batch diff calculated:", {
+              added: diffResult.added,
+              removed: diffResult.removed
+            });
+          } catch (diffError) {
+            console.error("🔴 VERSION SERVER: Error calculating batch diff (non-fatal):", diffError);
+          }
+
+          // Update the existing version instead of creating a new one
+          const now = new Date().toISOString();
+          const updateData = {
+            content: contentString,
+            updatedAt: now,
+            // Keep the original createdAt but track when it was last updated
+            lastBatchedAt: now,
+            batchCount: (existingVersionData.batchCount || 1) + 1,
+            // Update diff data
+            diff: diffResult ? {
+              added: diffResult.added || 0,
+              removed: diffResult.removed || 0,
+              hasChanges: (diffResult.added > 0 || diffResult.removed > 0)
+            } : existingVersionData.diff,
+            diffPreview: diffResult?.preview || existingVersionData.diffPreview
+          };
+
+          await existingVersionDoc.ref.update(updateData);
+          console.log("✅ VERSION SERVER: Batched into existing version", {
+            versionId: existingVersionId,
+            batchCount: updateData.batchCount
+          });
+
+          // Update the page document
+          await pageRef.update({
+            content: contentForDiff,
+            lastModified: now,
+            lastDiff: diffResult ? {
+              added: diffResult.added || 0,
+              removed: diffResult.removed || 0,
+              hasChanges: (diffResult.added > 0 || diffResult.removed > 0),
+              isNewPage: false,
+              preview: diffResult.preview || null
+            } : pageData?.lastDiff
+          });
+
+          return {
+            success: true,
+            versionId: existingVersionId,
+            isNoOp: false,
+            wasBatched: true,
+            batchCount: updateData.batchCount
+          };
+        } else {
+          console.log("🔵 VERSION SERVER: No existing version with groupId found, creating new version", {
+            groupId: data.groupId
+          });
+          // Fall through to create a new version with originalContent tracking
+        }
+      } catch (batchError) {
+        console.error("🔴 VERSION SERVER: Error during version batching (non-fatal, will create new version):", batchError);
+        // Fall through to create a new version
+      }
+    }
+
     // Create timestamp - use ISO string for consistency with client-side
     const now = new Date().toISOString();
 
@@ -112,7 +212,7 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     }
 
     // Prepare version data with diff information
-    const versionData = {
+    const versionData: Record<string, any> = {
       content: contentString,
       title: pageData?.title || 'Untitled',
       createdAt: now,
@@ -146,6 +246,15 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       isNewPage: isNewPage,
       isNoOp: false
     };
+
+    // VERSION BATCHING: If this is the first version in a batch group,
+    // store the original content so subsequent batches can calculate accurate diffs
+    if (data.batchWithGroup && data.groupId) {
+      // Store the content that existed BEFORE this edit session started
+      // This is used for calculating cumulative diffs across batch updates
+      versionData.originalContent = pageData?.content || null;
+      versionData.batchCount = 1;
+    }
 
     console.log('🔵 VERSION SERVER: Creating new version document', {
       pageId,

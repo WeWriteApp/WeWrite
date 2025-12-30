@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
-import { useRelatedPagesV2, type RelatedPage } from '../../hooks/useRelatedPagesV2';
+import { useRelatedPages, type RelatedPage } from '../../hooks/useRelatedPages';
 
 interface RelatedPagesSectionProps {
   page: {
@@ -19,14 +19,14 @@ interface RelatedPagesSectionProps {
 export default function RelatedPagesSection({ page, linkedPageIds = [] }: RelatedPagesSectionProps) {
   const [mounted, setMounted] = useState(false);
 
-  // Use the v2 hook with Algolia-powered search
+  // Use Algolia-powered search
   const {
     relatedByOthers,
     relatedByAuthor,
     authorUsername,
     loading,
     error,
-  } = useRelatedPagesV2({
+  } = useRelatedPages({
     pageId: page?.id || '',
     pageTitle: page?.title,
     pageContent: typeof page?.content === 'string' ? page.content : JSON.stringify(page?.content || ''),

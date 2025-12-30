@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getCurrentMonth } from '../../../utils/usdConstants';
@@ -155,8 +155,8 @@ async function getRecipientPendingAllocations(userId: string) {
  */
 async function getUserAllocationSummary(userId: string) {
   try {
-    const balance = await ServerUsdService.getUserUsdBalance(userId);
-    const allocations = await ServerUsdService.getUserUsdAllocations(userId);
+    const balance = await UsdService.getUserUsdBalance(userId);
+    const allocations = await UsdService.getUserUsdAllocations(userId);
 
     // Simple deadline calculation - end of current month
     const now = new Date();

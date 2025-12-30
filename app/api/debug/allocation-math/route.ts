@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       potentialCauses,
       edgeCases,
       recommendations: [
-        'Check ServerUsdService.calculateActualAllocatedUsdCents() for accuracy',
+        'Check UsdService.calculateActualAllocatedUsdCents() for accuracy',
         'Verify allocation update transactions are atomic',
         'Check for race conditions in optimistic updates',
         'Validate allocation deletion properly updates totals',

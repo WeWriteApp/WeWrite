@@ -405,10 +405,8 @@ export default function DailyNotesCarousel({
   if (loading) {
     return (
       <div
-        className="w-full overflow-x-auto scrollbar-hide"
+        className="w-full overflow-x-auto scrollbar-hide px-4"
         style={{
-          paddingLeft: '1rem',
-          paddingRight: '1rem',
           paddingTop: '0.5rem',
           paddingBottom: '3rem' // Extra space for Today pill
         }}
@@ -429,13 +427,11 @@ export default function DailyNotesCarousel({
     <div
       ref={carouselRef}
       id="daily-notes-carousel"
-      className="w-screen overflow-x-auto overflow-y-visible scrollbar-hide -mx-4 md:-mx-6 lg:-mx-8"
+      className="w-full overflow-x-auto overflow-y-visible scrollbar-hide px-4"
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
         WebkitOverflowScrolling: 'touch',
-        paddingLeft: '1rem',
-        paddingRight: '1rem',
         paddingTop: '0.5rem',
         paddingBottom: '3rem' // Extra space for Today pill and any other elements
       }}

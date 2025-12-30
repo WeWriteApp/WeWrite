@@ -18,8 +18,7 @@ import { Label } from "../../components/ui/label";
 import { EmailVerificationStatus } from '../../components/utils/EmailVerificationStatus';
 import { useAlert } from '../../hooks/useAlert';
 import { useConfirmation } from '../../hooks/useConfirmation';
-import AlertModal from '../../components/utils/AlertModal';
-import ConfirmationModal from '../../components/utils/ConfirmationModal';
+import { AlertModal, ConfirmationModal } from '../../components/utils/UnifiedModal';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();

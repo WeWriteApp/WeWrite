@@ -1,6 +1,6 @@
 "use client";
 
-import { createNotification } from './notificationsApi';
+import { createNotification } from './notificationsService';
 import { isValidUsername } from '../hooks/useUsernameStatus';
 
 /**

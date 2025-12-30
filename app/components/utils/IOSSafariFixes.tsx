@@ -8,7 +8,7 @@ import {
   emergencyReset
 } from "../../utils/ios-safari-fixes";
 import { useAlert } from '../../hooks/useAlert';
-import AlertModal from './AlertModal';
+import { AlertModal } from './UnifiedModal';
 
 /**
  * Component that initializes iOS Safari fixes and provides emergency recovery

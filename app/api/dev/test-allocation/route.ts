@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { formatUsdCents } from '../../../utils/formatCurrency';
 
 export async function POST(request: NextRequest) {
@@ -24,11 +24,11 @@ export async function POST(request: NextRequest) {
     console.log(`🧪 TEST ALLOCATION: ${formatUsdCents(Math.abs(usdCentsChange))} from ${fromUserId} to page ${pageId}`);
 
     // Perform the allocation
-    await ServerUsdService.allocateUsdToPage(fromUserId, pageId, usdCentsChange);
+    await UsdService.allocateUsdToPage(fromUserId, pageId, usdCentsChange);
 
     // Get updated balance
-    const updatedBalance = await ServerUsdService.getUserUsdBalance(fromUserId);
-    const currentAllocation = await ServerUsdService.getCurrentPageAllocation(fromUserId, pageId);
+    const updatedBalance = await UsdService.getUserUsdBalance(fromUserId);
+    const currentAllocation = await UsdService.getCurrentPageAllocation(fromUserId, pageId);
 
     console.log(`🧪 TEST ALLOCATION SUCCESS:`, {
       newAllocation: formatUsdCents(currentAllocation),
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
 
         const { initializeApp, getApps, cert } = await import('firebase-admin/app');
         const { getFirestore } = await import('firebase-admin/firestore');
-        const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
         const { getCurrentMonth } = await import('../../../utils/usdConstants');
 
         // Get Firebase Admin instance
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
         const { initializeApp, getApps, cert } = await import('firebase-admin/app');
         const { getFirestore } = await import('firebase-admin/firestore');
         const { getCollectionName, USD_COLLECTIONS } = await import('../../../utils/environmentConfig');
-        const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
         const { getCurrentMonth } = await import('../../../utils/usdConstants');
 
         // Get Firebase Admin instance
@@ -348,7 +348,7 @@ export async function GET(request: NextRequest) {
 
             if (allocation.recipientUserId) {
               // Process this allocation into earnings
-              await ServerUsdEarningsService.processUsdAllocation(
+              await UsdEarningsService.processUsdAllocation(
                 allocation.userId,
                 allocation.recipientUserId,
                 allocation.resourceId,
@@ -393,8 +393,8 @@ export async function GET(request: NextRequest) {
         console.log(`🧪 PAYOUT PROCESSING: Testing payout for ${userId}`);
 
         // Get current balance
-        const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
-        const currentBalance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+        const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
+        const currentBalance = await UsdEarningsService.getWriterUsdBalance(userId);
 
         if (!currentBalance || currentBalance.availableUsdCents === 0) {
           return NextResponse.json({
@@ -438,17 +438,17 @@ export async function GET(request: NextRequest) {
       }
     } else if (action === 'monthly-processing') {
       // Test monthly processing system
-      const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+      const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
 
       try {
         console.log(`🧪 MONTHLY PROCESSING: Processing earnings for current month`);
 
         // Process monthly earnings for the current month
         const currentMonth = '2025-08'; // Current month from our test data
-        const result = await ServerUsdEarningsService.processMonthlyDistribution(currentMonth);
+        const result = await UsdEarningsService.processMonthlyDistribution(currentMonth);
 
         // Get updated balance
-        const updatedBalance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+        const updatedBalance = await UsdEarningsService.getWriterUsdBalance(userId);
 
         console.log(`🧪 MONTHLY PROCESSING SUCCESS:`, {
           processedCount: result.processedCount,
@@ -477,11 +477,11 @@ export async function GET(request: NextRequest) {
       }
     } else if (action === 'pending-earnings') {
       // Test pending earnings by directly calling the service
-      const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+      const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
 
       try {
         // Get earnings balance first
-        const earningsBalance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+        const earningsBalance = await UsdEarningsService.getWriterUsdBalance(userId);
 
         // Try to get earnings records directly from Firestore without complex queries
         const { initializeApp, getApps, cert } = await import('firebase-admin/app');

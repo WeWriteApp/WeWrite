@@ -35,20 +35,107 @@ const ChartTooltip = ({ active, payload, label, valueFormatter }: any) => {
 };
 
 /**
- * Transform data to cumulative format
- * Takes an array of data points and a key, returns the same array with cumulative values
+ * Aggregate data to a specific number of buckets for consistent chart granularity
+ * This ensures all charts have the same number of data points regardless of the date range,
+ * making them visually comparable.
+ *
+ * @param data - Array of data points with date/label and numeric values
+ * @param targetBuckets - Target number of buckets (data points) in the output
+ * @param valueKeys - Keys containing numeric values to aggregate (will be summed)
+ * @param labelKey - Key containing the label (default: 'label')
+ * @param dateKey - Key containing the date (default: 'date')
  */
-function transformToCumulative<T extends Record<string, any>>(data: T[], valueKey: string): T[] {
+function aggregateToGranularity<T extends Record<string, any>>(
+  data: T[],
+  targetBuckets: number,
+  valueKeys: string[],
+  labelKey: string = 'label',
+  dateKey: string = 'date'
+): T[] {
+  if (!Array.isArray(data) || data.length === 0 || targetBuckets <= 0) {
+    return data;
+  }
+
+  // If data already has fewer or equal points than target, return as-is
+  if (data.length <= targetBuckets) {
+    return data;
+  }
+
+  // Calculate how many source items per bucket
+  const itemsPerBucket = data.length / targetBuckets;
+  const result: T[] = [];
+
+  for (let i = 0; i < targetBuckets; i++) {
+    const startIdx = Math.floor(i * itemsPerBucket);
+    const endIdx = Math.floor((i + 1) * itemsPerBucket);
+    const bucketItems = data.slice(startIdx, endIdx);
+
+    if (bucketItems.length === 0) continue;
+
+    // Create aggregated bucket
+    const aggregated: Record<string, any> = {};
+
+    // Use the last item's label/date for the bucket (represents the end of the period)
+    const lastItem = bucketItems[bucketItems.length - 1];
+    aggregated[labelKey] = lastItem[labelKey];
+    aggregated[dateKey] = lastItem[dateKey];
+
+    // Sum all numeric value keys
+    valueKeys.forEach(key => {
+      aggregated[key] = bucketItems.reduce((sum, item) => {
+        const value = typeof item[key] === 'number' ? item[key] : 0;
+        return sum + value;
+      }, 0);
+    });
+
+    // Copy any non-aggregated fields from the last item
+    Object.keys(lastItem).forEach(key => {
+      if (!(key in aggregated)) {
+        aggregated[key] = lastItem[key];
+      }
+    });
+
+    result.push(aggregated as T);
+  }
+
+  return result;
+}
+
+/**
+ * Transform data to cumulative format
+ * Takes an array of data points and keys to transform, returns the same array with cumulative values.
+ *
+ * @param data - Array of data points
+ * @param valueKeys - Single key or array of keys to transform to cumulative values
+ *
+ * Examples:
+ * - Single key: transformToCumulative(data, 'count') - transforms just 'count'
+ * - Multiple keys: transformToCumulative(data, ['agree', 'disagree', 'neutral', 'total']) - transforms all
+ *
+ * This allows multi-series charts (replies, notifications) to have all their series
+ * properly cumulated, not just the main valueKey.
+ */
+function transformToCumulative<T extends Record<string, any>>(data: T[], valueKeys: string | string[]): T[] {
   if (!Array.isArray(data) || data.length === 0) return data;
 
-  let runningTotal = 0;
+  // Normalize to array
+  const keys = Array.isArray(valueKeys) ? valueKeys : [valueKeys];
+
+  // Initialize running totals for each key
+  const runningTotals: Record<string, number> = {};
+  keys.forEach(key => { runningTotals[key] = 0; });
+
   return data.map(item => {
-    const value = typeof item[valueKey] === 'number' ? item[valueKey] : 0;
-    runningTotal += value;
-    return {
-      ...item,
-      [valueKey]: runningTotal
-    };
+    // Create mutable copy with explicit type
+    const transformed: Record<string, any> = { ...item };
+
+    keys.forEach(key => {
+      const value = typeof item[key] === 'number' ? item[key] : 0;
+      runningTotals[key] += value;
+      transformed[key] = runningTotals[key];
+    });
+
+    return transformed as T;
   });
 }
 
@@ -85,7 +172,21 @@ interface DashboardRow {
   id: string;
   title: string;
   hook: any;
-  valueKey: string; // The key used for the main value (for cumulative transformation)
+  valueKey: string; // The key used for the main value (for display/formatting)
+  /**
+   * Keys to transform when applying cumulative mode.
+   * - If not provided, defaults to [valueKey]
+   * - For multi-series charts, specify all numeric keys that should be cumulated
+   * - Example: ['agree', 'disagree', 'neutral', 'total'] for replies chart
+   */
+  cumulativeKeys?: string[];
+  /**
+   * Keys containing numeric values that should be aggregated (summed) when
+   * reducing data points to match granularity.
+   * - If not provided, defaults to [valueKey]
+   * - For multi-series charts, specify all numeric keys
+   */
+  aggregateKeys?: string[];
   valueFormatter: (data: any[], stats?: any, metadata?: any) => string;
   tooltipFormatter?: (value: number) => string;
   chartComponent: React.ComponentType<any>;
@@ -168,17 +269,18 @@ const GenericChart = ({
   );
 };
 
-// Stacked bar chart component for notifications (emails + push)
-const StackedBarChart = ({
+// Multi-series chart component for notifications (emails + push)
+// Supports both stacked bar chart and multi-line chart modes
+const NotificationsChart = ({
   data,
   height,
-  tooltipFormatter,
-  labelKey = 'label'
+  labelKey = 'label',
+  chartType = 'bar'
 }: {
   data: any[];
   height: number;
-  tooltipFormatter?: (value: number) => string;
   labelKey?: string;
+  chartType?: 'line' | 'bar';
 }) => {
   const xAxisProps = {
     dataKey: labelKey,
@@ -196,8 +298,8 @@ const StackedBarChart = ({
     width: 30
   };
 
-  // Custom tooltip for stacked data
-  const StackedTooltip = ({ active, payload, label }: any) => {
+  // Custom tooltip for multi-series data
+  const NotificationsMultiSeriesTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !Array.isArray(payload) || payload.length === 0) {
       return null;
     }
@@ -209,7 +311,7 @@ const StackedBarChart = ({
             <p key={index} className="font-medium text-foreground flex items-center gap-2">
               <span
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: entry.fill }}
+                style={{ backgroundColor: entry.stroke || entry.fill }}
               />
               {entry.name}: {entry.value?.toLocaleString()}
             </p>
@@ -219,13 +321,30 @@ const StackedBarChart = ({
     );
   };
 
+  // Line chart mode - multi-line chart
+  if (chartType === 'line') {
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+          <XAxis {...xAxisProps} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<NotificationsMultiSeriesTooltip />} />
+          <Line type="monotone" dataKey="emails" stroke="oklch(var(--primary))" strokeWidth={1.5} dot={false} name="Emails" />
+          <Line type="monotone" dataKey="pushNotifications" stroke="oklch(var(--foreground) / 0.6)" strokeWidth={1.5} dot={false} name="Push Notifications" />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // Bar chart mode - stacked bar chart
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
         <XAxis {...xAxisProps} />
         <YAxis {...yAxisProps} />
-        <Tooltip content={<StackedTooltip />} />
+        <Tooltip content={<NotificationsMultiSeriesTooltip />} />
         <Bar
           dataKey="emails"
           stackId="notifications"
@@ -245,15 +364,18 @@ const StackedBarChart = ({
   );
 };
 
-// Stacked bar chart component for replies (agree, disagree, neutral)
-const RepliesStackedBarChart = ({
+// Multi-series chart component for replies (agree, disagree, neutral)
+// Supports both stacked bar chart and multi-line chart modes
+const RepliesChart = ({
   data,
   height,
-  labelKey = 'label'
+  labelKey = 'label',
+  chartType = 'bar'
 }: {
   data: any[];
   height: number;
   labelKey?: string;
+  chartType?: 'line' | 'bar';
 }) => {
   const xAxisProps = {
     dataKey: labelKey,
@@ -271,8 +393,8 @@ const RepliesStackedBarChart = ({
     width: 30
   };
 
-  // Custom tooltip for stacked data
-  const RepliesStackedTooltip = ({ active, payload, label }: any) => {
+  // Custom tooltip for multi-series data
+  const RepliesMultiSeriesTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload || !Array.isArray(payload) || payload.length === 0) {
       return null;
     }
@@ -284,7 +406,7 @@ const RepliesStackedBarChart = ({
             <p key={index} className="font-medium text-foreground flex items-center gap-2">
               <span
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: entry.fill }}
+                style={{ backgroundColor: entry.stroke || entry.fill }}
               />
               {entry.name}: {entry.value?.toLocaleString()}
             </p>
@@ -294,13 +416,55 @@ const RepliesStackedBarChart = ({
     );
   };
 
+  // Line chart mode - multi-line chart with one line per reply type
+  if (chartType === 'line') {
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
+          <XAxis {...xAxisProps} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<RepliesMultiSeriesTooltip />} />
+          <Line
+            type="monotone"
+            dataKey="agree"
+            stroke="#22c55e"
+            strokeWidth={1.5}
+            dot={false}
+            activeDot={{ r: 4, fill: '#22c55e' }}
+            name="Agree"
+          />
+          <Line
+            type="monotone"
+            dataKey="neutral"
+            stroke="oklch(var(--muted-foreground))"
+            strokeWidth={1.5}
+            dot={false}
+            activeDot={{ r: 4, fill: 'oklch(var(--muted-foreground))' }}
+            name="Neutral"
+          />
+          <Line
+            type="monotone"
+            dataKey="disagree"
+            stroke="#ef4444"
+            strokeWidth={1.5}
+            dot={false}
+            activeDot={{ r: 4, fill: '#ef4444' }}
+            name="Disagree"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // Bar chart mode - stacked bar chart
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
         <XAxis {...xAxisProps} />
         <YAxis {...yAxisProps} />
-        <Tooltip content={<RepliesStackedTooltip />} />
+        <Tooltip content={<RepliesMultiSeriesTooltip />} />
         <Bar
           dataKey="agree"
           stackId="replies"
@@ -488,6 +652,8 @@ export function DesktopOptimizedDashboard({
       title: isCumulative ? 'Total Replies (Cumulative)' : 'Replies',
       hook: (dateRange: DateRange, granularity: number) => useRepliesMetrics(dateRange, granularity),
       valueKey: 'total',
+      // Multi-series: transform all reply types for proper cumulative charts
+      cumulativeKeys: ['agree', 'disagree', 'neutral', 'total'],
       valueFormatter: (data) => {
         if (isCumulative && data.length > 0) {
           return data[data.length - 1]?.total?.toLocaleString() || '0';
@@ -495,11 +661,12 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
         return total.toLocaleString();
       },
-      // Always use stacked bar chart for replies (ignores chartType toggle)
-      chartComponent: ({ data, height }) => (
-        <RepliesStackedBarChart
+      // Multi-series chart: stacked bar or multi-line based on chartType toggle
+      chartComponent: ({ data, height, chartType }) => (
+        <RepliesChart
           data={data}
           height={height}
+          chartType={chartType}
         />
       )
     },
@@ -516,6 +683,8 @@ export function DesktopOptimizedDashboard({
         return { ...result, data: dataWithTotal };
       },
       valueKey: 'totalChanges',
+      // Aggregate all character change fields
+      aggregateKeys: ['charactersAdded', 'charactersDeleted', 'totalChanges'],
       valueFormatter: (data) => {
         if (isCumulative && data.length > 0) {
           return data[data.length - 1]?.totalChanges?.toLocaleString() || '0';
@@ -686,6 +855,8 @@ export function DesktopOptimizedDashboard({
       title: isCumulative ? 'Total Notifications Sent (Cumulative)' : 'Notifications Sent',
       hook: (dateRange: DateRange, granularity: number) => useNotificationsSentMetrics(dateRange, granularity),
       valueKey: 'total',
+      // Multi-series: transform all notification types for proper cumulative charts
+      cumulativeKeys: ['emails', 'pushNotifications', 'total'],
       valueFormatter: (data) => {
         if (isCumulative && data.length > 0) {
           return data[data.length - 1]?.total?.toLocaleString() || '0';
@@ -693,11 +864,12 @@ export function DesktopOptimizedDashboard({
         const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
         return total.toLocaleString();
       },
-      // Always use stacked bar chart for notifications (ignores chartType toggle)
-      chartComponent: ({ data, height }) => (
-        <StackedBarChart
+      // Multi-series chart supporting both stacked bar and line modes
+      chartComponent: ({ data, height, chartType }) => (
+        <NotificationsChart
           data={data}
           height={height}
+          chartType={chartType}
         />
       )
     }
@@ -798,13 +970,26 @@ function DashboardRow({
   // Check if cumulative mode is enabled
   const isCumulative = globalFilters?.timeDisplayMode === 'cumulative';
 
-  // Apply cumulative transformation for rows that don't natively support it
+  // Step 1: Aggregate data to match granularity (ensures all charts have same number of points)
+  // This makes charts visually comparable across different time ranges
+  const aggregatedData = useMemo(() => {
+    if (rawData.length === 0) return rawData;
+
+    // Use aggregateKeys if specified, otherwise use cumulativeKeys, otherwise use valueKey
+    const keysToAggregate = row.aggregateKeys || row.cumulativeKeys || [row.valueKey];
+    return aggregateToGranularity(rawData, granularity, keysToAggregate);
+  }, [rawData, granularity, row.aggregateKeys, row.cumulativeKeys, row.valueKey]);
+
+  // Step 2: Apply cumulative transformation for rows that don't natively support it
+  // Use cumulativeKeys if provided, otherwise fall back to valueKey
   const normalizedData = useMemo(() => {
-    if (!isCumulative || row.supportsNativeCumulative || rawData.length === 0) {
-      return rawData;
+    if (!isCumulative || row.supportsNativeCumulative || aggregatedData.length === 0) {
+      return aggregatedData;
     }
-    return transformToCumulative(rawData, row.valueKey);
-  }, [rawData, isCumulative, row.supportsNativeCumulative, row.valueKey]);
+    // Use cumulativeKeys if specified, otherwise use valueKey
+    const keysToTransform = row.cumulativeKeys || [row.valueKey];
+    return transformToCumulative(aggregatedData, keysToTransform);
+  }, [aggregatedData, isCumulative, row.supportsNativeCumulative, row.valueKey, row.cumulativeKeys]);
 
   // Calculate the formatted total value
   const formattedValue = useMemo(() => {

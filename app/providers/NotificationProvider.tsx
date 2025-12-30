@@ -9,12 +9,11 @@ import {
   getUnreadNotificationsCount,
   markNotificationAsRead,
   markNotificationAsUnread,
-  markAllNotificationsAsRead
-} from "../services/notificationsApi";
+  markAllNotificationsAsRead,
+  notificationsService
+} from "../services/notificationsService";
 import { checkEmailVerificationPeriodically } from "../services/emailVerificationNotifications";
 import { preloadUserData } from "../firebase/batchUserData";
-// 🚨 EMERGENCY: Import optimized notifications service for 90% read reduction
-import { optimizedNotificationsService } from "../services/optimizedNotificationsService";
 
 /**
  * Notification context interface
@@ -67,8 +66,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       try {
         setLoading(true);
 
-        // Use optimized notifications service for 90% read reduction
-        const result = await optimizedNotificationsService.getNotifications(user.uid, 20);
+        // Use notifications service for 90% read reduction
+        const result = await notificationsService.getNotifications(user.uid, 20);
         const notificationData = result.notifications || [];
 
         // Extract unique user IDs from notifications for batch fetching
@@ -89,8 +88,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
           }
         }
 
-        // Use optimized unread count with aggressive caching
-        const unreadCount = await optimizedNotificationsService.getUnreadCount(user.uid);
+        // Use unread count with aggressive caching
+        const unreadCount = await notificationsService.getUnreadCount(user.uid);
 
         setUnreadCount(unreadCount);
         setNotifications(notificationData);
@@ -165,8 +164,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const notification = notifications.find(n => n.id === notificationId);
       const wasUnread = notification && !notification.read;
 
-      // 🚨 EMERGENCY: Use optimized service with optimistic updates
-      await optimizedNotificationsService.markAsRead(user.uid, notificationId);
+      // Use service with optimistic updates
+      await notificationsService.markAsRead(user.uid, notificationId);
 
       // Update local state
       setNotifications(prev =>
@@ -234,8 +233,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       console.log('markAllAsRead called - current unreadCount:', unreadCount);
       console.log('markAllAsRead called - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
 
-      // 🚨 EMERGENCY: Use optimized service with optimistic updates
-      await optimizedNotificationsService.markAllAsRead(user.uid);
+      // Use service with optimistic updates
+      await notificationsService.markAllAsRead(user.uid);
 
       // Update local state
       setNotifications(prev =>

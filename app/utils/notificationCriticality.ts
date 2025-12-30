@@ -5,7 +5,7 @@
  * and utilities for managing notification importance.
  */
 
-import type { NotificationCriticality } from '../services/notificationsApi';
+import type { NotificationCriticality } from '../services/notificationsService';
 import type { NotificationType } from '../types/database';
 
 /**

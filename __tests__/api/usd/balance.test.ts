@@ -4,11 +4,11 @@
 
 import { createMocks } from 'node-mocks-http';
 import { GET, POST } from '../../../app/api/usd/balance/route';
-import { ServerUsdService } from '../../../app/services/usdService.server';
+import { UsdService } from '../../../app/services/usdService';
 
-// Mock the ServerUsdService
-jest.mock('../../../app/services/usdService.server');
-const mockServerUsdService = ServerUsdService as jest.Mocked<typeof ServerUsdService>;
+// Mock the UsdService
+jest.mock('../../../app/services/usdService');
+const mockUsdService = UsdService as jest.Mocked<typeof UsdService>;
 
 // Mock the auth utility
 jest.mock('../../../app/utils/auth', () => ({
@@ -38,8 +38,8 @@ describe('/api/usd/balance', () => {
       };
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue(mockBalance);
-      mockServerUsdService.getUserUsdAllocations.mockResolvedValue([]);
+      mockUsdService.getUserUsdBalance.mockResolvedValue(mockBalance);
+      mockUsdService.getUserUsdAllocations.mockResolvedValue([]);
 
       const { req } = createMocks({ method: 'GET' });
       const response = await GET(req);
@@ -68,7 +68,7 @@ describe('/api/usd/balance', () => {
       const mockUserId = 'test-user-123';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue(null);
+      mockUsdService.getUserUsdBalance.mockResolvedValue(null);
 
       const { req } = createMocks({ method: 'GET' });
       const response = await GET(req);
@@ -84,7 +84,7 @@ describe('/api/usd/balance', () => {
       const mockUserId = 'test-user-123';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.getUserUsdBalance.mockRejectedValue(new Error('Database error'));
+      mockUsdService.getUserUsdBalance.mockRejectedValue(new Error('Database error'));
 
       const { req } = createMocks({ method: 'GET' });
       const response = await GET(req);
@@ -111,8 +111,8 @@ describe('/api/usd/balance', () => {
       };
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.updateMonthlyUsdAllocation.mockResolvedValue(undefined);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue(mockBalance);
+      mockUsdService.updateMonthlyUsdAllocation.mockResolvedValue(undefined);
+      mockUsdService.getUserUsdBalance.mockResolvedValue(mockBalance);
 
       const { req } = createMocks({
         method: 'POST',
@@ -129,7 +129,7 @@ describe('/api/usd/balance', () => {
       expect(data.success).toBe(true);
       expect(data.balance).toEqual(mockBalance);
       expect(data.message).toContain('initialized successfully');
-      expect(mockServerUsdService.updateMonthlyUsdAllocation).toHaveBeenCalledWith(mockUserId, subscriptionAmount);
+      expect(mockUsdService.updateMonthlyUsdAllocation).toHaveBeenCalledWith(mockUserId, subscriptionAmount);
     });
 
     test('returns 401 for unauthenticated user', async () => {
@@ -213,7 +213,7 @@ describe('/api/usd/balance', () => {
       const mockUserId = 'test-user-123';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.updateMonthlyUsdAllocation.mockRejectedValue(new Error('Database error'));
+      mockUsdService.updateMonthlyUsdAllocation.mockRejectedValue(new Error('Database error'));
 
       const { req } = createMocks({
         method: 'POST',
@@ -267,8 +267,8 @@ describe('/api/usd/balance', () => {
       };
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.updateMonthlyUsdAllocation.mockResolvedValue(undefined);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue(mockBalance);
+      mockUsdService.updateMonthlyUsdAllocation.mockResolvedValue(undefined);
+      mockUsdService.getUserUsdBalance.mockResolvedValue(mockBalance);
 
       const { req } = createMocks({
         method: 'POST',

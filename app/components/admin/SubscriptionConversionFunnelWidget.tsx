@@ -3,7 +3,7 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useSubscriptionConversionFunnel } from '../../hooks/usePaymentAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../services/adminAnalytics';
 import { ErrorCard } from '../ui/ErrorCard';
 
 interface SubscriptionConversionFunnelWidgetProps {

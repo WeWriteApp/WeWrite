@@ -84,19 +84,9 @@ export class FinancialOperationsService {
       async () => {
         // Convert amount to cents if provided
         const amountCents = amount ? Math.round(amount * 100) : undefined;
-        const result = await UsdEarningsService.requestPayout(userId, amountCents);
-
-        if (result.success) {
-          return {
-            success: true,
-            data: { payoutId: result.data?.payoutId || '' }
-          };
-        } else {
-          return {
-            success: false,
-            error: result.error
-          };
-        }
+        // Note: UsdEarningsService doesn't have requestPayout method
+        // This needs to be called through an API endpoint
+        throw new Error('requestPayout should be called through API endpoint /api/payouts/request');
       },
       config,
       corrId,

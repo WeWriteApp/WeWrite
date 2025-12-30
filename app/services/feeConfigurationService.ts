@@ -108,44 +108,15 @@ export class FeeConfigurationService {
   }
 
   /**
-   * Subscribe to real-time fee structure changes - DISABLED FOR COST OPTIMIZATION
+   * Subscribe to real-time fee structure changes
+   * DISABLED: Real-time listener disabled to reduce Firebase costs - using static defaults
    */
   static subscribeFeeChanges(
     callback: (feeStructure: ComprehensiveFeeStructure) => void
   ): Unsubscribe {
-    console.warn('🚨 COST OPTIMIZATION: Fee structure real-time subscription disabled. Using static defaults.');
-
     // Immediately call with default structure
     callback(DEFAULT_FEE_STRUCTURE);
-
-    // Return no-op unsubscribe
     return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
-    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-    console.warn('🚨 COST OPTIMIZATION: Fee configuration real-time listener disabled');
-
-    // Return mock data and no-op unsubscribe
-    setTimeout(() => callback(null), 100);
-    return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION
-    return onSnapshot(
-      doc(db, getCollectionName(this.COLLECTION_NAME), this.CONFIG_DOC_ID),
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data() as ComprehensiveFeeStructure;
-          callback({ ...DEFAULT_FEE_STRUCTURE, ...data });
-        } else {
-          callback(DEFAULT_FEE_STRUCTURE);
-        }
-      },
-      (error) => {
-        console.error('Error in fee structure subscription:', error);
-        callback(DEFAULT_FEE_STRUCTURE);
-      }
-    );
-    */
   }
 
   /**

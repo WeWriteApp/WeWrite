@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { determineTierFromAmount } from '../../../utils/subscriptionTiers';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { serverTimestamp } from 'firebase-admin/firestore';
 
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     await subscriptionRef.update(subscriptionData);
 
     // Update user's USD allocation
-    await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
+    await UsdService.updateMonthlyUsdAllocation(userId, amount);
 
     console.log(`[SUBSCRIPTION REACTIVATE] Successfully reactivated subscription for user ${userId}`);
 

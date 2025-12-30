@@ -15,6 +15,38 @@ import { getDiff } from '../../utils/diffService';
 import PageVersionsHeader from '../../components/pages/PageVersionsHeader';
 import { useAuth } from '../../providers/AuthProvider';
 
+interface PageVersion {
+  id: string;
+  content: any;
+  createdAt?: any;
+  timestamp?: any;
+  changeType?: string;
+  titleChange?: boolean;
+  diff?: { added: number; removed: number; hasChanges: boolean };
+  versionId?: string;
+  username?: string;
+  subscriptionTier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
+  hasActiveSubscription?: boolean;
+  title?: string;
+}
+
+interface ActivityItem extends PageVersion {
+  pageId: string;
+  pageName: string;
+  userId: string | null;
+  displayName: string | null;
+  previousContent?: any;
+}
+
+interface PageData {
+  id: string;
+  title?: string;
+  content?: any;
+  userId?: string;
+}
+
 interface PageVersionsPageProps {
   params: Promise<{ id: string }> | { id: string };
 }
@@ -32,11 +64,11 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
 
   const { id } = unwrappedParams;
   const { user, isLoading: authLoading } = useAuth();
-  const [page, setPage] = useState(null);
-  const [versions, setVersions] = useState([]);
-  const [activities, setActivities] = useState([]);
+  const [page, setPage] = useState<PageData | null>(null);
+  const [versions, setVersions] = useState<PageVersion[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {

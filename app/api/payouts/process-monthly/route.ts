@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PayoutService } from '../../../services/payoutServiceUnified';
+import { PayoutService } from '../../../services/payoutService';
 
 export async function POST(request: NextRequest) {
   try {

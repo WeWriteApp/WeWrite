@@ -14,7 +14,7 @@ import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '..
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionAnalyticsService } from '../../../services/subscriptionAnalyticsService';
 import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 
 // Firebase Admin initialization function
 async function getFirebaseAdminAndDb() {

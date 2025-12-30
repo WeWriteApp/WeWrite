@@ -1,172 +1,275 @@
 /**
- * Related Pages API Endpoint
- * 
- * Finds pages related to a given page based on content similarity
+ * Related Pages API - Algolia-Powered
+ *
+ * Enhanced related pages that uses Algolia search for better text similarity
+ * and includes both "related by content" and "more by same author" sections.
+ *
+ * Query params:
+ * - pageId: Current page ID (required)
+ * - pageTitle: Page title for similarity search
+ * - authorId: Author's user ID for "more by author" results
+ * - authorUsername: Author's username for display
+ * - excludePageIds: Comma-separated page IDs to exclude (e.g., already linked pages)
+ * - limitByOthers: Max results for "by others" (default: 8)
+ * - limitByAuthor: Max results for "by author" (default: 5)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../utils/environmentConfig';
+import { getSearchClient, getAlgoliaIndexName, ALGOLIA_INDICES, type AlgoliaPageRecord } from '../../lib/algolia';
 
-// Extract meaningful words from text
-function extractMeaningfulWords(text: string): string[] {
-  if (!text) return [];
-  
-  const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
-    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those',
-    'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your',
-    'his', 'her', 'its', 'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs'
-  ]);
+// Extended stop words list for better keyword extraction
+const STOP_WORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+  'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those',
+  'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'my', 'your', 'his', 'her', 'its', 'our',
+  'just', 'like', 'about', 'into', 'over', 'after', 'than', 'then', 'when', 'where', 'which',
+  'who', 'what', 'how', 'why', 'from', 'out', 'up', 'down', 'off', 'all', 'any', 'both', 'each',
+  'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
+  'very', 'too', 'also', 'back', 'even', 'still', 'way', 'well', 'new', 'now', 'old', 'see',
+  'get', 'got', 'make', 'made', 'take', 'took', 'give', 'gave', 'go', 'went', 'come', 'came',
+  'say', 'said', 'think', 'thought', 'know', 'knew', 'want', 'wanted', 'use', 'used', 'find',
+  'found', 'tell', 'told', 'ask', 'asked', 'work', 'worked', 'seem', 'seemed', 'feel', 'felt',
+  'try', 'tried', 'leave', 'left', 'call', 'called', 'need', 'needed', 'keep', 'kept', 'let',
+  'begin', 'began', 'seem', 'seemed', 'help', 'helped', 'show', 'showed', 'hear', 'heard',
+  'play', 'played', 'run', 'ran', 'move', 'moved', 'live', 'lived', 'believe', 'believed',
+  'bring', 'brought', 'happen', 'happened', 'write', 'wrote', 'provide', 'provided', 'sit',
+  'sat', 'stand', 'stood', 'lose', 'lost', 'pay', 'paid', 'meet', 'met', 'include', 'included',
+  'continue', 'continued', 'set', 'learn', 'learned', 'change', 'changed', 'lead', 'led',
+  'understand', 'understood', 'watch', 'watched', 'follow', 'followed', 'stop', 'stopped',
+  'create', 'created', 'speak', 'spoke', 'read', 'allow', 'allowed', 'add', 'added', 'spend',
+  'spent', 'grow', 'grew', 'open', 'opened', 'walk', 'walked', 'win', 'won', 'offer', 'offered',
+  'remember', 'remembered', 'love', 'loved', 'consider', 'considered', 'appear', 'appeared',
+  'buy', 'bought', 'wait', 'waited', 'serve', 'served', 'die', 'died', 'send', 'sent', 'expect',
+  'expected', 'build', 'built', 'stay', 'stayed', 'fall', 'fell', 'cut', 'reach', 'reached',
+  'kill', 'killed', 'remain', 'remained', 'text', 'type', 'children', 'paragraph', 'true', 'false',
+  'null', 'undefined', 'object', 'array', 'string', 'number', 'boolean', 'function', 'class'
+]);
 
-  return text
+// Extract key terms from text for better search
+function extractSearchTerms(text: string, maxWords: number = 10): string {
+  if (!text) return '';
+
+  // Clean up JSON artifacts if content is stringified JSON
+  let cleanText = text;
+  try {
+    // Try to parse as JSON and extract text nodes
+    if (text.startsWith('[') || text.startsWith('{')) {
+      const parsed = JSON.parse(text);
+      cleanText = extractTextFromSlateContent(parsed);
+    }
+  } catch {
+    // Not JSON, use as-is
+  }
+
+  return cleanText
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.has(word))
-    .slice(0, 40); // Limit to top 40 words for better matching
+    .filter(word => word.length > 2 && !STOP_WORDS.has(word))
+    .slice(0, maxWords)
+    .join(' ');
 }
 
-// Calculate similarity score between two sets of words
-function calculateSimilarity(words1: string[], words2: string[]): number {
-  if (words1.length === 0 || words2.length === 0) return 0;
-  
-  const set1 = new Set(words1);
-  const set2 = new Set(words2);
-  const intersection = new Set([...set1].filter(x => set2.has(x)));
-  const union = new Set([...set1, ...set2]);
-  
-  return intersection.size / union.size; // Jaccard similarity
+// Extract plain text from Slate.js JSON content
+function extractTextFromSlateContent(content: any): string {
+  if (!content) return '';
+
+  // Handle array of nodes (top-level Slate content)
+  if (Array.isArray(content)) {
+    return content.map(node => extractTextFromSlateContent(node)).join(' ');
+  }
+
+  // Handle text leaf nodes
+  if (typeof content === 'object') {
+    if (content.text) {
+      return content.text;
+    }
+    // Handle element nodes with children
+    if (content.children) {
+      return extractTextFromSlateContent(content.children);
+    }
+  }
+
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  return '';
+}
+
+// Extract significant keywords with frequency analysis
+function extractKeywords(text: string, maxKeywords: number = 15): string[] {
+  if (!text) return [];
+
+  // Clean up JSON artifacts if content is stringified JSON
+  let cleanText = text;
+  try {
+    if (text.startsWith('[') || text.startsWith('{')) {
+      const parsed = JSON.parse(text);
+      cleanText = extractTextFromSlateContent(parsed);
+    }
+  } catch {
+    // Not JSON, use as-is
+  }
+
+  const words = cleanText
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !STOP_WORDS.has(word));
+
+  // Count word frequency
+  const wordFreq: Record<string, number> = {};
+  for (const word of words) {
+    wordFreq[word] = (wordFreq[word] || 0) + 1;
+  }
+
+  // Sort by frequency and return top keywords
+  return Object.entries(wordFreq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxKeywords)
+    .map(([word]) => word);
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      return NextResponse.json({
-        error: 'Firebase Admin not initialized',
-        timestamp: new Date().toISOString(),
-      }, { status: 500 });
-    }
+  const startTime = Date.now();
 
-    const db = admin.firestore();
+  try {
     const searchParams = request.nextUrl.searchParams;
     const pageId = searchParams.get('pageId');
     const pageTitle = searchParams.get('pageTitle') || '';
     const pageContent = searchParams.get('pageContent') || '';
-    const linkedPageIds = searchParams.get('linkedPageIds')?.split(',').filter(Boolean) || [];
-    const excludeUsername = searchParams.get('excludeUsername');
-    const excludeUserId = searchParams.get('excludeUserId');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const authorId = searchParams.get('authorId');
+    const authorUsername = searchParams.get('authorUsername');
+    const excludePageIds = searchParams.get('excludePageIds')?.split(',').filter(Boolean) || [];
+    const limitByOthers = parseInt(searchParams.get('limitByOthers') || '8');
+    const limitByAuthor = parseInt(searchParams.get('limitByAuthor') || '5');
 
     if (!pageId) {
-      console.warn('Related pages API called without pageId');
       return NextResponse.json({
         error: 'pageId parameter is required',
-        relatedPages: [], // Return empty array to prevent UI errors
-        timestamp: new Date().toISOString(),
-      }, { status: 200 }); // Return 200 instead of 400 to prevent console errors
-    }
-
-    console.log(`📄 [RELATED_PAGES_API] Finding related pages for ${pageId}`);
-    console.log(`📄 [RELATED_PAGES_API] Title: "${pageTitle}", Content length: ${pageContent.length}`);
-    console.log(`📄 [RELATED_PAGES_API] Excluding username: "${excludeUsername || 'none'}", userId: "${excludeUserId || 'none'}"`);
-
-    // Extract meaningful words from title and content
-    const titleWords = extractMeaningfulWords(pageTitle);
-    const contentWords = extractMeaningfulWords(pageContent.substring(0, 1000)); // First 1000 chars
-    const allWords = [...new Set([...titleWords, ...contentWords])];
-
-    if (allWords.length === 0) {
-      console.log('📄 [RELATED_PAGES_API] No meaningful words found');
-      return NextResponse.json({
-        relatedPages: [],
+        relatedByOthers: [],
+        relatedByAuthor: [],
         timestamp: new Date().toISOString(),
       }, { status: 200 });
     }
 
-    console.log(`📄 [RELATED_PAGES_API] Extracted ${allWords.length} meaningful words:`, allWords.slice(0, 10));
+    console.log(`🔍 [RELATED_PAGES] Finding related pages for ${pageId}`);
+    console.log(`🔍 [RELATED_PAGES] Title: "${pageTitle}", Author: ${authorUsername || authorId || 'unknown'}`);
+    console.log(`🔍 [RELATED_PAGES] Content length: ${pageContent?.length || 0} chars`);
 
-    // Get candidate pages (simplified query to avoid index requirements)
-    // OPTIMIZATION: Use select() to only fetch needed fields and reduce data transfer
-    // Also reduced limit from 500 to 200 for faster queries while still getting good results
-    const pagesSnapshot = await db.collection(getCollectionName('pages'))
-      .where('isPublic', '==', true)
-      .select('title', 'content', 'username', 'userId', 'lastModified', 'isPublic', 'deleted')
-      .limit(200)
-      .get();
+    // Build exclusion list
+    const excludeIds = new Set([pageId, ...excludePageIds]);
 
-    const candidates = [];
-    
-    for (const doc of pagesSnapshot.docs) {
-      const pageData = doc.data();
-      
-      // Skip the current page, already linked pages, deleted pages, pages without titles, and excluded user's pages
-      if (doc.id === pageId ||
-          linkedPageIds.includes(doc.id) ||
-          !pageData.title ||
-          pageData.deleted ||
-          (excludeUsername && pageData.username === excludeUsername) ||
-          (excludeUserId && pageData.userId === excludeUserId)) {
-        continue;
-      }
+    // Extract search terms from title (prioritized) and content keywords (frequency-based)
+    const titleTerms = extractSearchTerms(pageTitle, 8);
+    const contentKeywords = extractKeywords(pageContent, 12);
 
-      // Extract words from candidate page
-      const candidateTitleWords = extractMeaningfulWords(pageData.title);
+    console.log(`🔍 [RELATED_PAGES] Title terms: "${titleTerms}"`);
+    console.log(`🔍 [RELATED_PAGES] Content keywords: [${contentKeywords.join(', ')}]`);
 
-      // Handle content - it might be a string or Slate.js nodes array
-      let contentText = '';
-      if (pageData.content) {
-        if (typeof pageData.content === 'string') {
-          contentText = pageData.content.substring(0, 1000);
-        } else if (Array.isArray(pageData.content)) {
-          // Extract text from Slate.js nodes
-          contentText = JSON.stringify(pageData.content).substring(0, 1000);
-        }
-      }
+    // Build a more effective search query:
+    // - Title terms appear twice (higher weight)
+    // - Content keywords from frequency analysis
+    // - Join keywords for phrase-like matching
+    const searchQuery = [
+      titleTerms,
+      titleTerms, // Repeat for higher weight
+      contentKeywords.join(' ')
+    ].filter(Boolean).join(' ').trim();
 
-      const candidateContentWords = contentText
-        ? extractMeaningfulWords(contentText)
-        : [];
-      const candidateWords = [...new Set([...candidateTitleWords, ...candidateContentWords])];
+    const client = getSearchClient();
+    const indexName = getAlgoliaIndexName(ALGOLIA_INDICES.PAGES);
 
-      // Calculate similarity
-      const similarity = calculateSimilarity(allWords, candidateWords);
+    // Parallel requests for both categories
+    const [byOthersResponse, byAuthorResponse] = await Promise.all([
+      // Search for related pages by OTHER authors
+      searchQuery ? client.searchSingleIndex<AlgoliaPageRecord>({
+        indexName,
+        searchParams: {
+          query: searchQuery,
+          hitsPerPage: limitByOthers + excludeIds.size + 5, // Extra to account for filtering
+          filters: authorId
+            ? `isPublic:true AND NOT authorId:${authorId}`
+            : 'isPublic:true',
+          attributesToRetrieve: [
+            'objectID',
+            'title',
+            'authorId',
+            'authorUsername',
+            'isPublic',
+            'lastModified'
+          ],
+        },
+      }) : Promise.resolve({ hits: [] }),
 
-      if (similarity > 0.05) { // Lowered threshold for more matches
-        candidates.push({
-          id: doc.id,
-          title: pageData.title,
-          username: pageData.username || 'Unknown',
-          lastModified: pageData.lastModified,
-          isPublic: pageData.isPublic,
-          similarity
-        });
-      }
-    }
+      // Get more pages by the SAME author
+      authorId ? client.searchSingleIndex<AlgoliaPageRecord>({
+        indexName,
+        searchParams: {
+          query: '', // Empty query to get all
+          hitsPerPage: limitByAuthor + excludeIds.size + 2,
+          filters: `isPublic:true AND authorId:${authorId}`,
+          attributesToRetrieve: [
+            'objectID',
+            'title',
+            'authorId',
+            'authorUsername',
+            'isPublic',
+            'lastModified'
+          ],
+        },
+      }) : Promise.resolve({ hits: [] }),
+    ]);
 
-    // Sort by similarity and take top results
-    const relatedPages = candidates
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, limit)
-      .map(({ similarity, ...page }) => page); // Remove similarity from final result
+    // Filter out excluded pages and format results
+    const relatedByOthers = byOthersResponse.hits
+      .filter((hit: AlgoliaPageRecord) => !excludeIds.has(hit.objectID))
+      .slice(0, limitByOthers)
+      .map((hit: AlgoliaPageRecord) => ({
+        id: hit.objectID,
+        title: hit.title,
+        username: hit.authorUsername || 'Unknown',
+        authorId: hit.authorId,
+        lastModified: hit.lastModified,
+        isPublic: hit.isPublic,
+      }));
 
-    console.log(`📄 [RELATED_PAGES_API] Found ${relatedPages.length} related pages (excluding ${excludeUsername ? `username: ${excludeUsername}` : ''}${excludeUserId ? ` userId: ${excludeUserId}` : ''}${!excludeUsername && !excludeUserId ? 'no user filter' : ''})`);
+    const relatedByAuthor = byAuthorResponse.hits
+      .filter((hit: AlgoliaPageRecord) => !excludeIds.has(hit.objectID))
+      .slice(0, limitByAuthor)
+      .map((hit: AlgoliaPageRecord) => ({
+        id: hit.objectID,
+        title: hit.title,
+        username: hit.authorUsername || authorUsername || 'Unknown',
+        authorId: hit.authorId,
+        lastModified: hit.lastModified,
+        isPublic: hit.isPublic,
+      }));
+
+    const responseTime = Date.now() - startTime;
+    console.log(`🔍 [RELATED_PAGES] Found ${relatedByOthers.length} by others, ${relatedByAuthor.length} by author in ${responseTime}ms`);
 
     return NextResponse.json({
-      relatedPages,
+      relatedByOthers,
+      relatedByAuthor,
+      authorUsername: authorUsername || null,
+      searchQuery: searchQuery || null,
+      responseTime,
       timestamp: new Date().toISOString(),
     }, { status: 200 });
 
   } catch (error) {
     console.error('Related pages API error:', error);
 
-    // Always return a valid response to prevent 404s and console errors
     return NextResponse.json({
       error: 'Failed to fetch related pages',
-      relatedPages: [], // Return empty array to prevent UI errors
-      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Internal server error',
+      relatedByOthers: [],
+      relatedByAuthor: [],
+      details: process.env.NODE_ENV === 'development'
+        ? (error instanceof Error ? error.message : 'Unknown error')
+        : 'Internal server error',
       timestamp: new Date().toISOString(),
     }, { status: 200 }); // Return 200 to prevent console errors
   }

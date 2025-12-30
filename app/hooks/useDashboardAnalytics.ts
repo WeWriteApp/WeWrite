@@ -581,7 +581,11 @@ export function usePWANotificationsMetrics(dateRange: DateRange, granularity?: n
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
-    if (!debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      setLoading(false);
       return;
     }
 
@@ -1097,7 +1101,9 @@ export function useFollowedUsersMetrics(dateRange: DateRange, granularity?: numb
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
     if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
         isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      setLoading(false);
       return;
     }
 

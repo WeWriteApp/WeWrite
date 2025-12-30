@@ -18,7 +18,7 @@ import {
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { payoutStatusService } from '../../../services/payoutStatusService';
 import { payoutRetryService } from '../../../services/payoutRetryService';
-import { StripePayoutService } from '../../../services/stripePayoutService';
+import { PayoutService } from '../../../services/payoutService';
 import { PayoutMonitoringService } from '../../../services/payoutMonitoringService';
 import { FinancialUtils } from '../../../types/financial';
 import { adminRateLimiter } from '../../../utils/rateLimiter';
@@ -247,8 +247,7 @@ export async function POST(request: NextRequest) {
 
       case 'reprocess':
         // Reprocess a payout through Stripe
-        const stripeService = StripePayoutService.getInstance();
-        const reprocessResult = await stripeService.processPayout(payoutId);
+        const reprocessResult = await PayoutService.processPayout(payoutId);
 
         if (reprocessResult.success) {
           return NextResponse.json({

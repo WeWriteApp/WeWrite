@@ -563,8 +563,9 @@ async function batchFetchEarnings(
 
         existing.totalCents += earnedCents;
 
-        // Available balance includes pending and available status earnings
-        if (data.status === 'available' || data.status === 'pending') {
+        // Available balance only includes 'available' status earnings (not pending, not paid_out)
+        // Pending earnings from current month don't count toward payout threshold
+        if (data.status === 'available') {
           existing.availableCents += earnedCents;
         }
 

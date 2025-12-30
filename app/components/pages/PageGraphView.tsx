@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { LoadingState } from '../ui/LoadingState';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
-import { useRelatedPagesV2 } from '../../hooks/useRelatedPagesV2';
+import { useRelatedPages } from '../../hooks/useRelatedPages';
 import { useAuth } from '../../providers/AuthProvider';
 import SubscriptionGate from '../subscription/SubscriptionGate';
 import { PillLink } from '../utils/PillLink';
@@ -115,8 +115,8 @@ export default function PageGraphView({
     refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
 
-  // Use related pages hook - V2 returns relatedByOthers (pages by other authors)
-  const { relatedByOthers: relatedPages, loading: relatedLoading } = useRelatedPagesV2({
+  // Use related pages hook - returns relatedByOthers (pages by other authors)
+  const { relatedByOthers: relatedPages, loading: relatedLoading } = useRelatedPages({
     pageId,
     pageTitle,
     limitByOthers: 10,

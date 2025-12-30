@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { PayoutService } from '../../../services/payoutServiceUnified';
+import { PayoutService } from '../../../services/payoutService';
 import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
 
 export async function POST(request: NextRequest) {
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     // Get user's available balance using calculated balance (Phase 2)
     const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
     const { getCollectionName } = await import('../../../utils/environmentConfig');
-    const { ServerUsdEarningsService } = await import('../../../services/usdEarningsService.server');
+    const { UsdEarningsService } = await import('../../../services/usdEarningsService.server');
 
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
 
     // Get balance calculated from earnings (Phase 2 - single source of truth)
-    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+    const balance = await UsdEarningsService.getWriterUsdBalance(userId);
     const availableCents = balance?.availableUsdCents || 0;
     const availableDollars = availableCents / 100;
 

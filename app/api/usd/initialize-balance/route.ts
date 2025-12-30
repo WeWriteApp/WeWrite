@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
 
 /**
@@ -76,11 +76,11 @@ export async function POST(request: NextRequest) {
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
 
     // Check if balance already exists
-    const existingBalance = await ServerUsdService.getUserUsdBalance(userId);
+    const existingBalance = await UsdService.getUserUsdBalance(userId);
 
     if (existingBalance) {
       // Update existing balance with new subscription amount
-      await ServerUsdService.updateMonthlyUsdAllocation(userId, subscription.amount);
+      await UsdService.updateMonthlyUsdAllocation(userId, subscription.amount);
 
       console.log(`🎯 USD Initialize Balance: Updated existing balance for user ${userId}:`, {
         previousAmount: formatUsdCents(existingBalance.totalUsdCents),
@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new USD balance
-      await ServerUsdService.updateMonthlyUsdAllocation(userId, subscription.amount);
-      const newBalance = await ServerUsdService.getUserUsdBalance(userId);
+      await UsdService.updateMonthlyUsdAllocation(userId, subscription.amount);
+      const newBalance = await UsdService.getUserUsdBalance(userId);
 
       if (!newBalance) {
         return NextResponse.json(

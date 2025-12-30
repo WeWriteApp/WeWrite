@@ -1,62 +1,43 @@
 /**
- * USD Earnings Service for WeWrite Writers
- * 
+ * Server-side USD Earnings Service for WeWrite
+ *
  * Manages USD earnings tracking, monthly processing, and payout functionality
- * for content creators who receive USD allocations from subscribers.
- * 
- * This replaces the TokenEarningsService with a USD-based system.
+ * for content creators using Firebase Admin SDK for elevated permissions.
+ *
+ * This file should ONLY be imported in API routes and server components.
  */
 
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  writeBatch,
-  serverTimestamp,
-  orderBy,
-  limit,
-  Timestamp,
-  runTransaction
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { getFirebaseAdmin, FieldValue } from '../firebase/firebaseAdmin';
+
+// Use shared Firebase Admin initialization
+function getFirebaseAdminAndDb() {
+  const admin = getFirebaseAdmin();
+  const db = admin.firestore();
+  return { admin, db };
+}
 import { WriterUsdEarnings, WriterUsdBalance, UsdPayout, UsdAllocation } from '../types/database';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
-import { getCurrentMonth, getPreviousMonth } from '../utils/subscriptionTiers';
+import { getCurrentMonth } from '../utils/subscriptionTiers';
 import { centsToDollars, dollarsToCents } from '../utils/formatCurrency';
-import {
-  FinancialOperationResult,
-  FinancialError,
-  FinancialErrorCode,
-  FinancialUtils,
-  FinancialLogger,
-  CorrelationId
-} from '../types/financial';
-import { FinancialValidationService } from './financialValidationService';
-import { getMinimumPayoutThreshold } from '../utils/feeCalculations';
 
 export class UsdEarningsService {
   
   /**
-   * Get writer's USD balance (pending + available + paid out)
+   * Get writer's USD balance (server-side)
    *
    * Phase 2 Simplification: Now calculates balance from writerUsdEarnings records
    * instead of reading from stored writerUsdBalances collection.
+   * This eliminates drift between stored and actual values.
    */
   static async getWriterUsdBalance(userId: string): Promise<WriterUsdBalance | null> {
     try {
+      const { db } = getFirebaseAdminAndDb();
 
       // Calculate balance from earnings records (Phase 2 - single source of truth)
-      const earningsQuery = query(
-        collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
-        where('userId', '==', userId)
-      );
+      const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+        .where('userId', '==', userId);
 
-      const earningsSnapshot = await getDocs(earningsQuery);
+      const earningsSnapshot = await earningsQuery.get();
 
       // If no earnings, return null (user has no balance)
       if (earningsSnapshot.empty) {
@@ -71,7 +52,7 @@ export class UsdEarningsService {
       let lastProcessedMonth = '';
 
       earningsSnapshot.docs.forEach(doc => {
-        const earnings = doc.data() as WriterUsdEarnings;
+        const earnings = doc.data();
         totalUsdCentsEarned += earnings.totalUsdCentsReceived || 0;
 
         if (earnings.status === 'pending') {
@@ -87,18 +68,16 @@ export class UsdEarningsService {
         }
       });
 
-      const balance: WriterUsdBalance = {
+      return {
         userId,
         totalUsdCentsEarned,
         pendingUsdCents,
         availableUsdCents,
         paidOutUsdCents,
         lastProcessedMonth,
-        createdAt: new Date().toISOString() as any,
-        updatedAt: new Date().toISOString() as any
+        createdAt: new Date().toISOString(), // Placeholder since calculated
+        updatedAt: new Date().toISOString()
       };
-
-      return balance;
     } catch (error) {
       console.error('[UsdEarningsService] Error getting writer USD balance:', error);
       throw error;
@@ -106,20 +85,31 @@ export class UsdEarningsService {
   }
 
   /**
-   * Get writer's earnings history
+   * Get writer's earnings history (server-side)
    */
   static async getWriterEarningsHistory(userId: string, limitCount: number = 12): Promise<WriterUsdEarnings[]> {
     try {
-      const earningsQuery = query(
-        collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
-        where('userId', '==', userId),
-        orderBy('month', 'desc'),
-        limit(limitCount)
-      );
+      const { db } = getFirebaseAdminAndDb();
+      const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+        .where('userId', '==', userId)
+        .orderBy('month', 'desc')
+        .limit(limitCount);
 
-      const earningsSnapshot = await getDocs(earningsQuery);
-      const earnings = earningsSnapshot.docs.map(doc => doc.data() as WriterUsdEarnings);
-      return earnings;
+      const earningsSnapshot = await earningsQuery.get();
+      return earningsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userId: data.userId,
+          month: data.month,
+          totalUsdCentsReceived: data.totalUsdCentsReceived || 0,
+          status: data.status || 'pending',
+          allocations: data.allocations || [],
+          processedAt: data.processedAt,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt
+        } as WriterUsdEarnings;
+      });
     } catch (error) {
       console.error('[UsdEarningsService] Error getting writer earnings history:', error);
       return [];
@@ -127,459 +117,334 @@ export class UsdEarningsService {
   }
 
   /**
-   * Process monthly USD earnings for a writer
+   * Process USD allocation for a writer (server-side)
    * Called when USD is allocated to their content
    *
-   * ATOMIC OPERATION: Uses Firestore transaction to ensure data consistency
-   * and prevent race conditions when multiple allocations happen simultaneously
+   * CRITICAL: Only records the FUNDED portion of the allocation.
+   * If a sponsor has over-allocated beyond their subscription, we apply a funding ratio
+   * so recipients only see/receive what the sponsor can actually fund.
    */
   static async processUsdAllocation(
-    allocation: UsdAllocation,
-    correlationId?: CorrelationId
-  ): Promise<FinancialOperationResult<void>> {
-    const corrId = correlationId || FinancialUtils.generateCorrelationId();
-    const operation = 'USD_ALLOCATION';
+    fromUserId: string,
+    recipientUserId: string,
+    resourceId: string,
+    resourceType: 'page' | 'user_bio' | 'user' | 'referral',
+    usdCentsChange: number,
+    month: string
+  ): Promise<void> {
+    const startTime = Date.now();
+    const correlationId = `alloc_${fromUserId}_${recipientUserId}_${Date.now()}`;
 
     try {
-      const { recipientUserId, usdCents, month, userId: fromUserId, resourceType, resourceId } = allocation;
-
-      // Validate USD amount
-      const usdAmount = centsToDollars(usdCents);
-      if (!FinancialUtils.validateUsdAmount(usdAmount)) {
-        const error = FinancialUtils.createError(
-          FinancialErrorCode.INVALID_AMOUNT,
-          `Invalid USD amount: ${usdAmount}`,
-          corrId,
-          false,
-          { usdCents, usdAmount, operation, userId: fromUserId }
-        );
-        FinancialLogger.logOperationError(operation, corrId, error);
-        return FinancialUtils.createErrorResult(error, operation, fromUserId);
+      // Validate inputs
+      if (!fromUserId || !recipientUserId || !resourceId || usdCentsChange <= 0) {
+        throw new Error(`[${correlationId}] Invalid allocation parameters: fromUserId=${fromUserId}, recipientUserId=${recipientUserId}, resourceId=${resourceId}, usdCentsChange=${usdCentsChange}`);
       }
 
-      FinancialLogger.logOperationStart(operation, corrId, {
-        fromUserId,
-        recipientUserId,
-        usdCents,
-        usdAmount,
-        resourceType,
-        resourceId,
-        month
-      });
+      const { db } = getFirebaseAdminAndDb();
+
+      // Calculate the funded portion of this allocation
+      // Recipients should only receive earnings for allocations that are backed by actual subscription funds
+      let fundedUsdCents = usdCentsChange;
+
+      try {
+        const sponsorBalanceDoc = await db.collection(getCollectionName(USD_COLLECTIONS.USD_BALANCES))
+          .doc(fromUserId)
+          .get();
+
+        if (sponsorBalanceDoc.exists) {
+          const sponsorBalance = sponsorBalanceDoc.data();
+          const sponsorSubscriptionCents = sponsorBalance?.totalUsdCents || 0;
+          const sponsorAllocatedCents = sponsorBalance?.allocatedUsdCents || 0;
+
+          // Check if sponsor is over-allocated (unfunded allocations exist)
+          if (sponsorAllocatedCents > sponsorSubscriptionCents && sponsorAllocatedCents > 0) {
+            // Calculate funding ratio: what percentage of allocations are actually funded
+            const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
+            fundedUsdCents = Math.round(usdCentsChange * fundingRatio);
+            console.log(`💰 [EARNINGS] [${correlationId}] Applied funding ratio`, {
+              fromUserId,
+              recipientUserId,
+              fundingRatio: fundingRatio.toFixed(4),
+              originalUsdCents: usdCentsChange,
+              fundedUsdCents,
+              sponsorSubscriptionCents,
+              sponsorAllocatedCents
+            });
+          } else {
+            console.log(`💰 [EARNINGS] [${correlationId}] Sponsor fully funded`, {
+              fromUserId,
+              recipientUserId,
+              usdCents: fundedUsdCents,
+              sponsorSubscriptionCents,
+              sponsorAllocatedCents
+            });
+          }
+        } else {
+          // No balance record means no subscription - allocation is completely unfunded
+          fundedUsdCents = 0;
+          console.log(`💰 [EARNINGS] [${correlationId}] No sponsor balance record (unfunded)`, {
+            fromUserId,
+            recipientUserId,
+            originalUsdCents: usdCentsChange
+          });
+        }
+      } catch (balanceError) {
+        console.warn(`[UsdEarningsService] [${correlationId}] Error checking sponsor balance:`, balanceError);
+        // If we can't check, default to recording the full amount (fail open)
+      }
+
+      // Skip recording if there's nothing funded
+      if (fundedUsdCents <= 0) {
+        console.log(`💰 [EARNINGS SKIPPED] [${correlationId}] No funded amount for allocation`, {
+          fromUserId,
+          recipientUserId,
+          resourceId,
+          resourceType,
+          originalUsdCents: usdCentsChange,
+          fundedUsdCents,
+          reason: 'Allocation is unfunded (sponsor has no active subscription or is over-allocated)'
+        });
+        return;
+      }
+
+      const earningsId = `${recipientUserId}_${month}`;
+      const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
+      // Phase 2: No longer need balance ref - balance is calculated from earnings on-demand
 
       // Use transaction to ensure atomicity
-      await runTransaction(db, async (transaction) => {
-        const earningsId = `${recipientUserId}_${month}`;
-        const earningsRef = doc(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS), earningsId);
-
-        // Read current state within transaction
+      await db.runTransaction(async (transaction) => {
         const earningsDoc = await transaction.get(earningsRef);
 
+        // CRITICAL: Store the FUNDED amount, not the raw allocation amount
         const allocationData = {
-          allocationId: allocation.id,
+          allocationId: `${fromUserId}_${resourceId}_${Date.now()}`,
           fromUserId,
           resourceType,
           resourceId,
-          usdCents,
-          correlationId: corrId,
-          timestamp: serverTimestamp()
+          usdCents: fundedUsdCents, // Store funded amount only
+          originalUsdCents: usdCentsChange, // Keep track of original for auditing
+          timestamp: new Date() // Use regular Date instead of FieldValue.serverTimestamp() in arrays
         };
 
-        // Update or create earnings record
-        if (earningsDoc.exists()) {
+        if (earningsDoc.exists) {
           // Update existing earnings
-          const currentEarnings = earningsDoc.data() as WriterUsdEarnings;
-          const updatedAllocations = [...currentEarnings.allocations, allocationData];
+          const currentEarnings = earningsDoc.data();
+          const updatedAllocations = [...(currentEarnings?.allocations || []), allocationData];
           const totalUsdCents = updatedAllocations.reduce((sum, alloc) => sum + alloc.usdCents, 0);
 
-          const updatedEarnings = {
+          transaction.update(earningsRef, {
             totalUsdCentsReceived: totalUsdCents,
             allocations: updatedAllocations,
-            updatedAt: serverTimestamp(),
-            lastCorrelationId: corrId
-          };
-
-          transaction.update(earningsRef, updatedEarnings);
+            updatedAt: FieldValue.serverTimestamp()
+          });
         } else {
-          // Create new earnings record
-          const newEarnings: Omit<WriterUsdEarnings, 'id'> = {
+          // Create new earnings record with funded amount
+          const newEarnings = {
             userId: recipientUserId,
             month,
-            totalUsdCentsReceived: usdCents,
+            totalUsdCentsReceived: fundedUsdCents,
             status: 'pending',
             allocations: [allocationData],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
           };
 
-          const fullEarnings = {
-            id: earningsId,
-            ...newEarnings
-          };
-
-          transaction.set(earningsRef, fullEarnings);
+          transaction.set(earningsRef, newEarnings);
         }
 
         // Phase 2: No longer update writerUsdBalances - balance is calculated on-demand from earnings
       });
 
-      FinancialLogger.logOperationSuccess(operation, corrId, {
+      // Log successful earnings recording
+      const duration = Date.now() - startTime;
+      console.log(`💰 [EARNINGS SUCCESS] [${correlationId}] Recorded earnings (${duration}ms)`, {
+        fromUserId,
         recipientUserId,
-        usdCents,
-        usdAmount,
-        month
+        resourceId,
+        resourceType,
+        fundedUsdCents,
+        originalUsdCents: usdCentsChange,
+        month,
+        earningsId: `${recipientUserId}_${month}`
+      });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`[UsdEarningsService] [${correlationId}] Error processing USD allocation (${duration}ms):`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fromUserId,
+        recipientUserId,
+        resourceId,
+        resourceType,
+        usdCentsChange,
+        month,
+        stack: error instanceof Error ? error.stack : undefined
       });
 
-      return FinancialUtils.createSuccessResult(undefined, corrId, operation, fromUserId);
-
-    } catch (error: any) {
-      const financialError = FinancialUtils.createError(
-        FinancialErrorCode.DATABASE_ERROR,
-        `Failed to process USD allocation: ${error.message}`,
-        corrId,
-        true,
-        { originalError: error.message, operation, allocation }
-      );
-
-      FinancialLogger.logOperationError(operation, corrId, financialError);
-      return FinancialUtils.createErrorResult(financialError, operation, allocation.userId);
+      // Re-throw with correlation ID for better tracking
+      const enhancedError = new Error(`[${correlationId}] USD allocation processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      enhancedError.cause = error;
+      throw enhancedError;
     }
   }
 
   /**
-   * Process monthly USD distribution (move pending to available)
-   * Called at the end of each month
+   * Process monthly USD distribution (server-side)
+   * Move pending earnings to available status
    */
-  static async processMonthlyDistribution(
-    month: string,
-    correlationId?: CorrelationId
-  ): Promise<FinancialOperationResult<{ processedCount: number; affectedWriters: number }>> {
-    const corrId = correlationId || FinancialUtils.generateCorrelationId();
-    const operation = 'MONTHLY_USD_DISTRIBUTION';
-
+  static async processMonthlyDistribution(month: string): Promise<{
+    processedCount: number;
+    affectedWriters: number;
+  }> {
     try {
-      FinancialLogger.logOperationStart(operation, corrId, { month });
+      const { db } = getFirebaseAdminAndDb();
 
-      // Get all earnings for the specified month
-      const earningsQuery = query(
-        collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
-        where('month', '==', month),
-        where('status', '==', 'pending')
-      );
+      // Get all pending earnings for the specified month
+      const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+        .where('month', '==', month)
+        .where('status', '==', 'pending');
 
-      const earningsSnapshot = await getDocs(earningsQuery);
-      const batch = writeBatch(db);
+      const earningsSnapshot = await earningsQuery.get();
+      const batch = db.batch();
 
       // Mark all earnings as available
       earningsSnapshot.docs.forEach(doc => {
         batch.update(doc.ref, {
           status: 'available',
-          processedAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          processedCorrelationId: corrId
+          processedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
         });
       });
 
       await batch.commit();
 
-      // Track affected writers for reporting (Phase 2: no longer update balances - calculated on-demand)
+      // Phase 2: No longer update writerUsdBalances - balance is calculated on-demand
+      // Just track affected writers for reporting
       const affectedWriters = new Set<string>();
       earningsSnapshot.docs.forEach(doc => {
-        const earnings = doc.data() as WriterUsdEarnings;
+        const earnings = doc.data();
         affectedWriters.add(earnings.userId);
       });
 
-      const result = {
+      return {
         processedCount: earningsSnapshot.size,
         affectedWriters: affectedWriters.size
       };
 
-      FinancialLogger.logOperationSuccess(operation, corrId, result);
-
-      return FinancialUtils.createSuccessResult(result, corrId, operation);
-
-    } catch (error: any) {
-      const financialError = FinancialUtils.createError(
-        FinancialErrorCode.DATABASE_ERROR,
-        `Failed to process monthly USD distribution: ${error.message}`,
-        corrId,
-        true,
-        { originalError: error.message, operation, month }
-      );
-
-      FinancialLogger.logOperationError(operation, corrId, financialError);
-      return FinancialUtils.createErrorResult(financialError, operation);
+    } catch (error) {
+      console.error('[UsdEarningsService] Error processing monthly distribution:', error);
+      throw error;
     }
   }
 
   /**
-   * Request payout for available USD
+   * Process referral earnings when a referred user gets a payout
+   *
+   * Called after a successful writer payout. The referrer earns 30% of the 10% platform fee.
+   * Referral earnings are immediately "available" since they're based on completed payouts.
+   *
+   * @param referrerUserId - The user who referred the writer
+   * @param referredUserId - The writer who received the payout
+   * @param referredUsername - Username of the referred writer (for display)
+   * @param payoutId - The payout ID this referral earning is based on
+   * @param payoutAmountCents - The total payout amount (before platform fee)
+   * @param platformFeeCents - The platform fee (10% of payout)
    */
-  static async requestPayout(
-    userId: string,
-    amountCents?: number,
-    correlationId?: CorrelationId
-  ): Promise<FinancialOperationResult<{ payoutId: string }>> {
-    const corrId = correlationId || FinancialUtils.generateCorrelationId();
-    const operation = 'USD_PAYOUT_REQUEST';
+  static async processReferralEarning(
+    referrerUserId: string,
+    referredUserId: string,
+    referredUsername: string,
+    payoutId: string,
+    payoutAmountCents: number,
+    platformFeeCents: number
+  ): Promise<{ success: boolean; referralEarningsCents: number; error?: string }> {
+    const REFERRAL_SHARE = 0.30; // Referrer gets 30% of platform fee
 
     try {
-      const balance = await this.getWriterUsdBalance(userId);
-      if (!balance) {
-        const error = FinancialUtils.createError(
-          FinancialErrorCode.USER_NOT_FOUND,
-          'No USD balance found for user',
-          corrId,
-          false,
-          { userId, operation }
-        );
-        FinancialLogger.logOperationError(operation, corrId, error);
-        return FinancialUtils.createErrorResult(error, operation, userId);
+      const { db } = getFirebaseAdminAndDb();
+
+      // Calculate referral earnings: 30% of the 10% platform fee = 3% of payout
+      const referralEarningsCents = Math.round(platformFeeCents * REFERRAL_SHARE);
+
+      if (referralEarningsCents <= 0) {
+        console.log(`[REFERRAL EARNINGS] Skipping - no earnings for payout ${payoutId}`);
+        return { success: true, referralEarningsCents: 0 };
       }
 
-      const requestedAmountCents = amountCents || balance.availableUsdCents;
-      const requestedAmountDollars = centsToDollars(requestedAmountCents);
-
-      // Validate payout request
-      if (!FinancialUtils.validateUsdAmount(requestedAmountDollars)) {
-        const error = FinancialUtils.createError(
-          FinancialErrorCode.INVALID_AMOUNT,
-          `Invalid payout amount: ${requestedAmountDollars}`,
-          corrId,
-          false,
-          { requestedAmountCents, requestedAmountDollars, operation, userId }
-        );
-        FinancialLogger.logOperationError(operation, corrId, error);
-        return FinancialUtils.createErrorResult(error, operation, userId);
-      }
-
-      if (requestedAmountCents > balance.availableUsdCents) {
-        const error = FinancialUtils.createError(
-          FinancialErrorCode.INSUFFICIENT_BALANCE,
-          'Insufficient available USD for payout',
-          corrId,
-          false,
-          {
-            requestedAmountCents,
-            availableUsdCents: balance.availableUsdCents,
-            operation,
-            userId
-          }
-        );
-        FinancialLogger.logOperationError(operation, corrId, error);
-        return FinancialUtils.createErrorResult(error, operation, userId);
-      }
-
-      const minimumThreshold = getMinimumPayoutThreshold();
-      if (requestedAmountDollars < minimumThreshold) {
-        const error = FinancialUtils.createError(
-          FinancialErrorCode.MINIMUM_THRESHOLD_NOT_MET,
-          `Payout amount below minimum threshold of $${minimumThreshold}`,
-          corrId,
-          false,
-          {
-            requestedAmountDollars,
-            minimumThreshold,
-            operation,
-            userId
-          }
-        );
-        FinancialLogger.logOperationError(operation, corrId, error);
-        return FinancialUtils.createErrorResult(error, operation, userId);
-      }
-
-      FinancialLogger.logOperationStart(operation, corrId, {
-        userId,
-        requestedAmountCents,
-        requestedAmountDollars,
-        availableUsdCents: balance.availableUsdCents
-      });
-
-      // Create payout request
-      const payoutId = `usd_payout_${userId}_${Date.now()}`;
-
-      const payout: Omit<UsdPayout, 'id'> = {
-        userId,
-        amountCents: requestedAmountCents,
-        currency: 'usd',
-        status: 'pending',
-        earningsIds: [], // Would need to fetch relevant earnings
-        requestedAt: serverTimestamp(),
-        minimumThresholdMet: requestedAmountDollars >= minimumThreshold
-      };
-
-      await setDoc(doc(db, getCollectionName(USD_COLLECTIONS.USD_PAYOUTS), payoutId), {
-        id: payoutId,
-        ...payout
-      });
-
-      FinancialLogger.logOperationSuccess(operation, corrId, {
+      console.log(`💰 [REFERRAL EARNINGS] Processing referral for ${referrerUserId}`, {
+        referredUserId,
+        referredUsername,
         payoutId,
-        requestedAmountCents,
-        requestedAmountDollars
+        payoutAmountCents,
+        platformFeeCents,
+        referralEarningsCents,
+        referralSharePercent: REFERRAL_SHARE * 100
       });
 
-      return FinancialUtils.createSuccessResult({ payoutId }, corrId, operation, userId);
+      // Get current month for the earnings record
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    } catch (error: any) {
-      const financialError = FinancialUtils.createError(
-        FinancialErrorCode.DATABASE_ERROR,
-        `Failed to request USD payout: ${error.message}`,
-        corrId,
-        true,
-        { originalError: error.message, operation, userId, amountCents }
-      );
+      const earningsId = `${referrerUserId}_${month}`;
+      const earningsRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc(earningsId);
 
-      FinancialLogger.logOperationError(operation, corrId, financialError);
-      return FinancialUtils.createErrorResult(financialError, operation, userId);
-    }
-  }
-
-  /**
-   * Get payout history for a writer
-   */
-  static async getPayoutHistory(userId: string, limitCount: number = 10): Promise<UsdPayout[]> {
-    try {
-      const payoutsQuery = query(
-        collection(db, getCollectionName(USD_COLLECTIONS.USD_PAYOUTS)),
-        where('userId', '==', userId),
-        orderBy('requestedAt', 'desc'),
-        limit(limitCount)
-      );
-
-      const payoutsSnapshot = await getDocs(payoutsQuery);
-      return payoutsSnapshot.docs.map(doc => doc.data() as UsdPayout);
-    } catch (error) {
-      console.error('Error getting USD payout history:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get unfunded USD earnings for a writer
-   * Aggregates USD from logged-out users and users without subscriptions
-   */
-  static async getUnfundedEarnings(userId: string): Promise<{
-    totalUnfundedUsdCents: number;
-    totalUnfundedUsdAmount: number;
-    loggedOutUsdCents: number;
-    loggedOutUsdAmount: number;
-    noSubscriptionUsdCents: number;
-    noSubscriptionUsdAmount: number;
-    allocations: any[];
-    message: string;
-  } | null> {
-    try {
-      const response = await fetch('/api/usd/unfunded-earnings');
-      if (!response.ok) {
-        console.error('Failed to fetch unfunded USD earnings:', response.status);
-        return null;
-      }
-
-      const data = await response.json();
-      return data.success ? data.data : null;
-    } catch (error) {
-      console.error('Error getting unfunded USD earnings:', error);
-      return null;
-    }
-  }
-
-
-
-  /**
-   * Get complete writer earnings data including funded, pending, and unfunded USD
-   */
-  static async getCompleteWriterEarnings(userId: string): Promise<{
-    balance: WriterUsdBalance | null;
-    earnings: WriterUsdEarnings[];
-    unfunded: any | null;
-    pendingAllocations: any | null;
-  }> {
-    try {
-      const [balance, earnings, unfunded, pendingData] = await Promise.all([
-        this.getWriterUsdBalance(userId),
-        this.getWriterEarningsHistory(userId, 6),
-        this.getUnfundedEarnings(userId),
-        // Fetch pending allocations for this user as recipient
-        fetch('/api/usd/pending-allocations?mode=recipient')
-          .then(res => res.json())
-          .then(data => data.success ? data.data : null)
-          .catch(() => null)
-      ]);
-
-      return {
-        balance,
-        earnings,
-        unfunded,
-        pendingAllocations: pendingData
+      // Referral earnings are immediately available since they're from completed payouts
+      const allocationData = {
+        allocationId: `referral_${referredUserId}_${payoutId}_${Date.now()}`,
+        fromUserId: referredUserId, // The referred user who triggered this earning
+        fromUsername: referredUsername,
+        resourceType: 'referral' as const,
+        resourceId: payoutId, // Reference to the payout that triggered this
+        resourceTitle: `Referral from @${referredUsername}'s payout`,
+        usdCents: referralEarningsCents,
+        timestamp: new Date()
       };
-    } catch (error) {
-      console.error('[UsdEarningsService] Error loading complete writer earnings:', error);
-      return {
-        balance: null,
-        earnings: [],
-        unfunded: null,
-        pendingAllocations: null
-      };
-    }
-  }
 
-  /**
-   * Get current month earnings for a writer
-   */
-  static async getCurrentMonthEarnings(userId: string): Promise<WriterUsdEarnings | null> {
-    try {
-      const currentMonth = getCurrentMonth();
-      const earningsId = `${userId}_${currentMonth}`;
-      const earningsRef = doc(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS), earningsId);
-      const earningsDoc = await getDoc(earningsRef);
+      await db.runTransaction(async (transaction) => {
+        const earningsDoc = await transaction.get(earningsRef);
 
-      if (earningsDoc.exists()) {
-        return earningsDoc.data() as WriterUsdEarnings;
-      }
+        if (earningsDoc.exists) {
+          // Update existing earnings record
+          const currentEarnings = earningsDoc.data();
+          const updatedAllocations = [...(currentEarnings?.allocations || []), allocationData];
+          const totalUsdCents = updatedAllocations.reduce((sum, alloc) => sum + alloc.usdCents, 0);
 
-      return null;
-    } catch (error) {
-      console.error('Error getting current month USD earnings:', error);
-      return null;
-    }
-  }
+          transaction.update(earningsRef, {
+            totalUsdCentsReceived: totalUsdCents,
+            allocations: updatedAllocations,
+            // Keep existing status - don't override to 'available' if some allocations are pending
+            updatedAt: FieldValue.serverTimestamp()
+          });
+        } else {
+          // Create new earnings record - immediately available since it's from a completed payout
+          const newEarnings = {
+            userId: referrerUserId,
+            month,
+            totalUsdCentsReceived: referralEarningsCents,
+            status: 'available', // Referral earnings are immediately available
+            allocations: [allocationData],
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp()
+          };
 
-  /**
-   * Get total earnings for a specific month across all writers
-   */
-  static async getMonthlyEarningsTotal(month: string): Promise<{
-    totalUsdCents: number;
-    totalUsdAmount: number;
-    writerCount: number;
-  }> {
-    try {
-      const earningsQuery = query(
-        collection(db, getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)),
-        where('month', '==', month)
-      );
-
-      const earningsSnapshot = await getDocs(earningsQuery);
-      let totalUsdCents = 0;
-      let writerCount = 0;
-
-      earningsSnapshot.docs.forEach(doc => {
-        const earnings = doc.data() as WriterUsdEarnings;
-        totalUsdCents += earnings.totalUsdCentsReceived;
-        writerCount++;
+          transaction.set(earningsRef, newEarnings);
+        }
       });
 
-      return {
-        totalUsdCents,
-        totalUsdAmount: centsToDollars(totalUsdCents),
-        writerCount
-      };
+      console.log(`✅ [REFERRAL EARNINGS] Recorded $${(referralEarningsCents / 100).toFixed(2)} for ${referrerUserId}`, {
+        earningsId,
+        referredUserId,
+        payoutId
+      });
+
+      return { success: true, referralEarningsCents };
+
     } catch (error) {
-      console.error('Error getting monthly earnings total:', error);
+      console.error('[UsdEarningsService] Error processing referral earning:', error);
       return {
-        totalUsdCents: 0,
-        totalUsdAmount: 0,
-        writerCount: 0
+        success: false,
+        referralEarningsCents: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }

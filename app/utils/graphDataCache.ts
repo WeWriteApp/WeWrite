@@ -134,7 +134,7 @@ class GraphDataCache {
   }
 
   /**
-   * Get related pages with caching
+   * Get related pages with caching (using Algolia-powered API)
    */
   async getRelatedPages(pageId: string, pageTitle?: string, pageContent?: string, excludeUsername?: string): Promise<RelatedPagesData> {
     const cacheKey = `related:${pageId}:${pageTitle?.substring(0, 20) || ''}:${excludeUsername || ''}`;
@@ -150,7 +150,8 @@ class GraphDataCache {
     try {
       const params = new URLSearchParams({
         pageId,
-        limit: '10'
+        limitByOthers: '10',
+        limitByAuthor: '0'
       });
 
       if (pageTitle) {
@@ -161,24 +162,20 @@ class GraphDataCache {
         params.append('pageContent', pageContent.substring(0, 1000));
       }
 
-      if (excludeUsername) {
-        params.append('excludeUsername', excludeUsername);
-      }
-
       const response = await fetch(`/api/related-pages?${params.toString()}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
       const relatedData: RelatedPagesData = {
-        relatedPages: data.relatedPages || []
+        relatedPages: data.relatedByOthers || []
       };
 
       this.set(cacheKey, relatedData, this.RELATED_PAGES_TTL);
       return relatedData;
-      
+
     } catch (error) {
       console.error('Error fetching related pages:', error);
       return { relatedPages: [] };

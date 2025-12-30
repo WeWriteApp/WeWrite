@@ -10,8 +10,9 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { centsToDollars } from '../../../utils/formatCurrency';
-import { ServerUsdEarningsService } from '../../../services/usdEarningsService.server';
 import { UsdEarningsService } from '../../../services/usdEarningsService';
+import { getMinimumPayoutThreshold } from '../../../utils/feeCalculations';
+import type { UsdPayout } from '../../../types/database';
 
 /**
  * Calculate funded pending allocations for current month
@@ -75,8 +76,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`[USD Earnings API] Loading earnings data for user: ${userId}`);
 
-    // Use ServerUsdEarningsService to get balance (single source of truth)
-    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+    // Use UsdEarningsService to get balance (single source of truth)
+    const balance = await UsdEarningsService.getWriterUsdBalance(userId);
 
     // Calculate funded pending from current month allocations
     const totalFundedPendingCents = await calculateFundedPendingAllocations(userId);
@@ -129,25 +130,74 @@ export async function POST(request: NextRequest) {
         amountCents = Math.round(amount * 100);
       }
 
-      // Request payout using UsdEarningsService
-      const result = await UsdEarningsService.requestPayout(userId, amountCents);
+      // Get writer balance to validate payout request
+      const balance = await UsdEarningsService.getWriterUsdBalance(userId);
+      if (!balance) {
+        return NextResponse.json({
+          error: 'No USD balance found for user'
+        }, { status: 404 });
+      }
 
-      if (result.success) {
+      const requestedAmountCents = amountCents || balance.availableUsdCents;
+      const requestedAmountDollars = centsToDollars(requestedAmountCents);
+
+      // Validate payout request
+      if (requestedAmountCents > balance.availableUsdCents) {
         return NextResponse.json({
-          success: true,
-          data: {
-            payoutId: result.data?.payoutId,
-            amountCents: amountCents,
-            amountDollars: amountCents ? centsToDollars(amountCents) : undefined
-          },
-          message: 'USD payout requested successfully'
-        });
-      } else {
-        return NextResponse.json({
-          error: result.error?.message || 'USD payout request failed',
-          code: result.error?.code
+          error: 'Insufficient available USD for payout',
+          details: {
+            requestedAmountCents,
+            availableUsdCents: balance.availableUsdCents
+          }
         }, { status: 400 });
       }
+
+      const minimumThreshold = getMinimumPayoutThreshold();
+      if (requestedAmountDollars < minimumThreshold) {
+        return NextResponse.json({
+          error: `Payout amount below minimum threshold of $${minimumThreshold}`,
+          details: {
+            requestedAmountDollars,
+            minimumThreshold
+          }
+        }, { status: 400 });
+      }
+
+      // Create payout request using Admin SDK
+      const admin = getFirebaseAdmin();
+      if (!admin) {
+        return NextResponse.json({
+          error: 'Database not available'
+        }, { status: 500 });
+      }
+
+      const db = admin.firestore();
+      const payoutId = `usd_payout_${userId}_${Date.now()}`;
+
+      const payout: Omit<UsdPayout, 'id'> = {
+        userId,
+        amountCents: requestedAmountCents,
+        currency: 'usd',
+        status: 'pending',
+        earningsIds: [], // Would need to fetch relevant earnings
+        requestedAt: new Date(),
+        minimumThresholdMet: requestedAmountDollars >= minimumThreshold
+      };
+
+      await db.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS)).doc(payoutId).set({
+        id: payoutId,
+        ...payout
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          payoutId: payoutId,
+          amountCents: requestedAmountCents,
+          amountDollars: requestedAmountDollars
+        },
+        message: 'USD payout requested successfully'
+      });
     }
 
     return NextResponse.json({

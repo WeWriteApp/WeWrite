@@ -5166,3 +5166,30 @@ button.bg-transparent[type] {
     padding: 0 !important;
   }
 }
+
+/* Auto-save checkmark animation */
+@keyframes draw-circle {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Green highlight flash for saved content */
+@keyframes highlight-flash {
+  0% {
+    background-color: rgb(34 197 94 / 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.auto-save-highlight {
+  animation: highlight-flash 1.5s ease-out forwards;
+}

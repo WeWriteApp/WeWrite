@@ -63,6 +63,8 @@ export default function WritingIdeasPage() {
   }
 
   return (
-    <WritingIdeasManager />
+    <div className="h-[calc(100vh-theme(spacing.24))]">
+      <WritingIdeasManager />
+    </div>
   );
 }

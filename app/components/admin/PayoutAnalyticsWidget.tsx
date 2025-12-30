@@ -6,7 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../services/adminAnalytics';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ErrorCard } from '../ui/ErrorCard';

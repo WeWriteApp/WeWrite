@@ -25,12 +25,11 @@ import {
 import { cn } from '../../lib/utils';
 
 // Icon usage counts across the codebase (generated from search)
-// Note: Loader uses PulseLoader, LoaderGrid uses GridLoader from react-spinners
+// Note: Loader uses PulseLoader from react-spinners
 const ICON_USAGE_COUNTS: Record<string, number> = {
   Loader: 150, // Combined from former Loader + Loader2
   Check: 70,
   X: 66,
-  LoaderGrid: 0,
   AlertTriangle: 50,
   RefreshCw: 48,
   DollarSign: 47,

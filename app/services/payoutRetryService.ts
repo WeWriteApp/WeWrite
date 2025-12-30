@@ -22,7 +22,7 @@ import {
 } from 'firebase/firestore';
 import { getCollectionName } from '../utils/environmentConfig';
 import { payoutStatusService } from './payoutStatusService';
-import { StripePayoutService } from './stripePayoutService';
+import { PayoutService } from './payoutService';
 import { payoutNotificationService } from './payoutNotificationService';
 import { FinancialLogger } from '../types/financial';
 import type { Payout } from '../types/payout';
@@ -207,8 +207,7 @@ export class PayoutRetryService {
         try {
 
           // Attempt to process the payout
-          const stripePayoutService = StripePayoutService.getInstance();
-          const result = await stripePayoutService.processPayout(payout.id);
+          const result = await PayoutService.processPayout(payout.id);
 
           if (result.success) {
             successful++;

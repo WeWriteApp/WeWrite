@@ -165,29 +165,6 @@ export function LoadingState({
 }
 
 /**
- * LoadingSpinner - Simple inline spinner
- *
- * Use for button loading states or inline indicators.
- */
-export function LoadingSpinner({
-  className,
-  size = 'md'
-}: {
-  className?: string;
-  size?: LoadingSize;
-}) {
-  const sizes = {
-    sm: 12,
-    md: 16,
-    lg: 20
-  };
-
-  return (
-    <Icon name="Loader" size={sizes[size]} className={className} />
-  );
-}
-
-/**
  * LoadingDots - Three bouncing dots
  *
  * Use for inline "typing" or processing indicators.

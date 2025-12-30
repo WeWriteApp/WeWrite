@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { dollarsToCents, centsToDollars, formatUsdCents } from '../../../utils/formatCurrency';
 import { AllocationError, ALLOCATION_ERROR_CODES } from '../../../types/allocation';
 
@@ -38,11 +38,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform the allocation
-    await ServerUsdService.allocateUsdToPage(userId, pageId, usdCentsChange);
+    await UsdService.allocateUsdToPage(userId, pageId, usdCentsChange);
 
     // Get updated balance
-    const updatedBalance = await ServerUsdService.getUserUsdBalance(userId);
-    const currentAllocation = await ServerUsdService.getCurrentPageAllocation(userId, pageId);
+    const updatedBalance = await UsdService.getUserUsdBalance(userId);
+    const currentAllocation = await UsdService.getCurrentPageAllocation(userId, pageId);
 
     console.log(`🎯 USD Allocation API: Allocation successful:`, {
       newAllocation: formatUsdCents(currentAllocation),
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🎯 USD Allocation API: Getting allocation for user ${userId}, page ${pageId}`);
 
-    const currentAllocation = await ServerUsdService.getCurrentPageAllocation(userId, pageId);
+    const currentAllocation = await UsdService.getCurrentPageAllocation(userId, pageId);
 
     console.log(`🎯 USD Allocation API: Current allocation:`, {
       pageId,

@@ -106,16 +106,13 @@ export const getPagePledgeStats = async (pageId: string): Promise<PagePledgeStat
 
 /**
  * Subscribe to real-time page pledge statistics updates
- * Returns an unsubscribe function to clean up the listener
+ * DISABLED: Real-time listener disabled to reduce Firebase costs - use API polling instead
  */
 export const subscribeToPagePledgeStats = (
   pageId: string,
   callback: (stats: PagePledgeStats) => void
 ): Unsubscribe => {
-  // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-  console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled');
-
-  // Return mock data and no-op unsubscribe
+  // Return mock data to prevent breaking UI
   setTimeout(() => callback({
     sponsorCount: 0,
     totalPledgedTokens: 0,

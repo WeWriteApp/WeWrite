@@ -129,7 +129,6 @@ function DrawerNavigationRoot({ children, className }: DrawerNavigationRootProps
     <div
       className={cn(
         'absolute inset-0 transition-transform ease-out',
-        `duration-[${ANIMATION_DURATION}ms]`,
         getAnimationClasses(),
         // Only show when visible or animating out
         (isVisible || isAnimating) ? 'visible' : 'invisible',

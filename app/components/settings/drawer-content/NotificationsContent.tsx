@@ -480,7 +480,7 @@ export default function NotificationsContent({ onClose }: NotificationsContentPr
             >
               {saving ? (
                 <>
-                  <Icon name="Loader" size={16} className="animate-spin" />
+                  <Icon name="Loader" size={16} />
                   Saving...
                 </>
               ) : (

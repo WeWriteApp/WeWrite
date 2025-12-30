@@ -123,11 +123,11 @@ const nextConfig = {
     '/api/**/*': ['./node_modules/jose/**/*', './node_modules/jwks-rsa/**/*'],
   },
 
-  // Enhanced logging for development - increase verbosity for debugging
+  // Logging configuration
   logging: {
     fetches: {
-      fullUrl: true,
-      hmrRefreshes: true,
+      fullUrl: false, // Reduce noise from fetch logging
+      hmrRefreshes: false, // Disable spammy Fast Refresh logs
     },
   },
 

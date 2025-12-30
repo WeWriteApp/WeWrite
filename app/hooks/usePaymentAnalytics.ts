@@ -34,7 +34,9 @@ export function useSubscriptionConversionFunnel(dateRange: DateRange) {
 
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -72,7 +74,9 @@ export function useSubscriptionsOverTime(dateRange: DateRange, granularity?: num
 
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -110,7 +114,9 @@ export function useSubscriptionRevenue(dateRange: DateRange, granularity?: numbe
 
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -148,7 +154,9 @@ export function useTokenAllocationMetrics(dateRange: DateRange, granularity?: nu
 
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -192,7 +200,9 @@ export function useAllPaymentAnalytics(dateRange: DateRange, granularity?: numbe
 
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -300,7 +310,9 @@ export function useTokenAllocationSummaryStats(dateRange: DateRange) {
 
   const fetchData = useCallback(async () => {
     // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -361,7 +373,9 @@ export function useWriterPayouts(dateRange: DateRange, cumulative: boolean = fal
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -421,7 +435,9 @@ export function useUsdAllocations(dateRange: DateRange, granularity?: number, cu
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -485,7 +501,9 @@ export function useWriterEarnings(dateRange: DateRange, cumulative: boolean = fa
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }
@@ -537,7 +555,11 @@ export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = f
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+    // Early return if dateRange is not properly initialized
+    // This prevents fetch errors during initial hydration
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
       setLoading(false);
       return;
     }

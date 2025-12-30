@@ -456,8 +456,11 @@ export const COLLECTIONS = {
   // Note: admin_settings uses snake_case in Firestore for historical reasons
   ADMIN_SETTINGS: 'admin_settings',
   ADMIN_STATS: 'admin_stats',
+  ADMIN_AUDIT_LOG: 'adminAuditLog',
   BROADCAST_HISTORY: 'broadcast_history',
   WEBHOOK_ERRORS: 'webhookErrors',
+  PAYOUT_APPROVAL_QUEUE: 'payoutApprovalQueue',
+  PAYOUT_BLOCKED_ATTEMPTS: 'payoutBlockedAttempts',
 
   // User stats snapshots for historical sparklines (60-day rolling)
   USER_STATS_SNAPSHOTS: 'userStatsSnapshots',

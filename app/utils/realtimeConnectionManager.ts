@@ -98,52 +98,8 @@ class RealtimeConnectionManager {
       this.optimizeConnections();
     }
 
-    // DISABLED FOR COST OPTIMIZATION - Replace with polling
-    console.warn('🚨 COST OPTIMIZATION: RTDB real-time connection disabled. Use API polling instead.');
-
-    // Return mock connection and call callback with null data
+    // Real-time connections disabled for cost optimization - use API polling instead
     setTimeout(() => callback(null), 100);
-
-    const mockUnsubscribe = () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION
-    // Create new connection
-    try {
-      const dbRef = ref(rtdb, path);
-      const unsubscribe = onValue(dbRef, (snapshot) => {
-        this.handleDataUpdate(connectionId, snapshot.val());
-      }, (error) => {
-        console.error(`[RealtimeConnectionManager] Connection error for ${path}:`, error);
-        this.handleConnectionError(connectionId, error);
-      });
-
-      const connection: ManagedConnection = {
-        id: connectionId,
-        path,
-        unsubscribe,
-        callbacks: new Set([callback]),
-        createdAt: Date.now(),
-        lastActivity: Date.now(),
-        dataTransferred: 0,
-        isActive: true,
-        priority
-      };
-
-      this.connections.set(connectionId, connection);
-      this.metrics.totalConnections++;
-      this.metrics.activeConnections++;
-
-      console.log(`[RealtimeConnectionManager] Created new connection: ${path} (Priority: ${priority})`);
-
-      return connectionId;
-    } catch (error) {
-      console.error(`[RealtimeConnectionManager] Failed to create connection for ${path}:`, error);
-      this.metrics.failedConnections++;
-      throw error;
-    }
-    */
-
-    // Return mock connection ID for disabled real-time connections
     return connectionId;
   }
 

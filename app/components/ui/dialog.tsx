@@ -159,6 +159,17 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
 >(({ className, children, showOverlay = true, blurOverlay = false, showCloseButton = false, ...props }, ref) => {
+  // Check if children includes DialogHeader, DialogBody, or DialogFooter
+  // If so, don't add default padding (they handle their own padding)
+  // If not, wrap with default padding
+  const childArray = React.Children.toArray(children);
+  const hasStructuredContent = childArray.some((child) => {
+    if (React.isValidElement(child)) {
+      const displayName = (child.type as any)?.displayName;
+      return displayName === 'DialogHeader' || displayName === 'DialogBody' || displayName === 'DialogFooter';
+    }
+    return false;
+  });
   // Determine overlay classes based on options
   const overlayClasses = cn(
     "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -195,7 +206,11 @@ const DialogContent = React.forwardRef<
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       )}
-      {children}
+      {/* If using structured components (DialogHeader/Body/Footer), render as-is.
+          Otherwise, wrap content in a div with default padding for consistent spacing */}
+      {hasStructuredContent ? children : (
+        <div className="p-6">{children}</div>
+      )}
     </DialogPrimitive.Content>
   </DialogPortal>
   )
@@ -240,7 +255,8 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 shrink-0 p-6 pt-4 border-t border-border/60",
+      // Footer without border - use Separator component explicitly if separator needed
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 shrink-0 p-6 pt-4",
       className
     )}
     {...props}

@@ -30,71 +30,17 @@ class FeeService {
   }
 
   /**
-   * Initialize real-time listener for fee structure changes - DISABLED FOR COST OPTIMIZATION
+   * Initialize fee structure
+   * Real-time listener disabled for cost optimization - using static defaults
    */
   private initializeListener() {
-    console.warn('🚨 COST OPTIMIZATION: Fee structure real-time listener disabled. Using static defaults.');
-
     // Use static default instead of real-time listener
     this.currentFeeStructure = {
       platformFeePercentage: 0.0,
       lastUpdated: new Date(),
       updatedBy: 'system'
     };
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
-    const feeDocRef = doc(db, 'systemConfig', 'feeStructure');
-
-    // DISABLED FOR COST OPTIMIZATION - Real-time listener causing excessive reads
-    console.warn('🚨 COST OPTIMIZATION: Fee service real-time listener disabled');
     this.unsubscribe = () => {};
-    return;
-
-    /* DISABLED FOR COST OPTIMIZATION
-    this.unsubscribe = onSnapshot(feeDocRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        this.currentFeeStructure = {
-          platformFeePercentage: data.platformFeePercentage || 0.0,
-          lastUpdated: data.lastUpdated?.toDate() || new Date(),
-          updatedBy: data.updatedBy || 'unknown'
-        };
-      } else {
-        // Default structure if document doesn't exist
-        this.currentFeeStructure = {
-          platformFeePercentage: 0.0,
-          lastUpdated: new Date(),
-          updatedBy: 'system'
-        };
-      }
-
-      // Notify all listeners
-      this.listeners.forEach(listener => {
-        if (this.currentFeeStructure) {
-          listener(this.currentFeeStructure);
-        }
-      });
-    }, (error) => {
-      console.error('Error listening to fee structure changes:', error);
-
-      // Fallback to default structure on permission error
-      if (error.code === 'permission-denied') {
-        console.warn('Permission denied for fee structure, using default values');
-        this.currentFeeStructure = {
-          platformFeePercentage: 0.0,
-          lastUpdated: new Date(),
-          updatedBy: 'system-fallback'
-        };
-
-        // Notify listeners with fallback data
-        this.listeners.forEach(listener => {
-          if (this.currentFeeStructure) {
-            listener(this.currentFeeStructure);
-          }
-        });
-      }
-    });
-    */
   }
 
   /**

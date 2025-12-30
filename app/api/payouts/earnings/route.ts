@@ -4,7 +4,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { PayoutService } from '../../../services/payoutServiceUnified';
+import { PayoutService } from '../../../services/payoutService';
+import { UsdEarningsService } from '../../../services/usdEarningsService';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { db } from '../../../firebase/config';
 import {
   collection,
@@ -19,7 +21,6 @@ import {
   setDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { StripePayoutService } from '../../../services/stripePayoutService';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { FinancialUtils } from '../../../types/financial';
 import { getCollectionName, USD_COLLECTIONS } from "../../../utils/environmentConfig";
@@ -79,7 +80,14 @@ export async function GET(request: NextRequest) {
     const recipientId = `recipient_${userId}`;
 
     // Get USD earnings data using UsdEarningsService
-    const completeUsdData = await UsdEarningsService.getCompleteWriterEarnings(userId);
+    const balance = await UsdEarningsService.getWriterUsdBalance(userId);
+    const earningsHistory = await UsdEarningsService.getWriterEarningsHistory(userId, 6);
+    const completeUsdData = {
+      balance,
+      earnings: earningsHistory,
+      unfunded: null,
+      pendingAllocations: null
+    };
 
     let earnings = [];
     let payouts = [];
@@ -101,25 +109,39 @@ export async function GET(request: NextRequest) {
     }
 
     if (!type || type === 'payouts') {
-      // Get USD payouts using UsdEarningsService
-      const usdPayouts = await UsdEarningsService.getPayoutHistory(userId);
-      payouts = await Promise.all(usdPayouts.map(async (payout) => {
-        const feeBreakdown = await calculatePayoutFees(centsToDollars(payout.amountCents));
+      // Get USD payouts using Admin SDK
+      const admin = getFirebaseAdmin();
+      if (admin) {
+        const adminDb = admin.firestore();
+        const payoutsQuery = adminDb.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
+          .where('userId', '==', userId)
+          .orderBy('requestedAt', 'desc')
+          .limit(10);
 
-        return {
-          id: payout.id,
-          amount: centsToDollars(payout.amountCents),
-          currency: payout.currency,
-          status: payout.status,
-          period: payout.month,
-          scheduledAt: payout.requestedAt,
-          processedAt: payout.processedAt?.toDate?.()?.toISOString() || payout.processedAt,
-          completedAt: payout.completedAt?.toDate?.()?.toISOString() || payout.completedAt,
-          failureReason: payout.failureReason,
-          retryCount: payout.retryCount || 0,
-          feeBreakdown
-        };
-      }));
+        const payoutsSnapshot = await payoutsQuery.get();
+        const usdPayouts = payoutsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        payouts = await Promise.all(usdPayouts.map(async (payout: any) => {
+          const feeBreakdown = await calculatePayoutFees(centsToDollars(payout.amountCents));
+
+          return {
+            id: payout.id,
+            amount: centsToDollars(payout.amountCents),
+            currency: payout.currency,
+            status: payout.status,
+            period: payout.month,
+            scheduledAt: payout.requestedAt,
+            processedAt: payout.processedAt?.toDate?.()?.toISOString() || payout.processedAt,
+            completedAt: payout.completedAt?.toDate?.()?.toISOString() || payout.completedAt,
+            failureReason: payout.failureReason,
+            retryCount: payout.retryCount || 0,
+            feeBreakdown
+          };
+        }));
+      }
     }
 
     // Create USD earnings breakdown

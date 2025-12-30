@@ -22,7 +22,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 
-import { stripePayoutService } from './stripePayoutService';
+import { payoutService } from './payoutService';
 import { TransactionTrackingService } from './transactionTrackingService';
 import { FinancialOperationsService } from './financialOperationsService';
 import {
@@ -531,7 +531,7 @@ export class AutomatedPayoutService {
       }
 
       // Process the payout through Stripe
-      const stripeResult = await stripePayoutService.processPayout(payout.id);
+      const stripeResult = await payoutService.processPayout(payout.id);
 
       if (!stripeResult.success) {
         // Handle retry logic

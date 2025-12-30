@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useUsdAllocations } from '../../hooks/usePaymentAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../services/adminAnalytics';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';

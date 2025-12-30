@@ -19,9 +19,12 @@ export default function FeatureFlagsPage() {
   const [lineNumbersGlobal, setLineNumbersGlobal] = useState(false);
   const [onboardingEnabled, setOnboardingEnabled] = useState(false);
   const [onboardingGlobal, setOnboardingGlobal] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const [autoSaveGlobal, setAutoSaveGlobal] = useState(false);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [enabledUsers, setEnabledUsers] = useState<number | null>(null);
   const [onboardingEnabledUsers, setOnboardingEnabledUsers] = useState<number | null>(null);
+  const [autoSaveEnabledUsers, setAutoSaveEnabledUsers] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const enabledFraction =
     totalUsers && totalUsers > 0
@@ -30,6 +33,10 @@ export default function FeatureFlagsPage() {
   const onboardingEnabledFraction =
     totalUsers && totalUsers > 0
       ? `${onboardingEnabledUsers ?? 0}/${totalUsers}`
+      : "—";
+  const autoSaveEnabledFraction =
+    totalUsers && totalUsers > 0
+      ? `${autoSaveEnabledUsers ?? 0}/${totalUsers}`
       : "—";
 
   useEffect(() => {
@@ -53,6 +60,7 @@ export default function FeatureFlagsPage() {
       if (res.ok && data?.flags) {
         setLineNumbersEnabled(Boolean(data.flags.line_numbers));
         setOnboardingEnabled(Boolean(data.flags.onboarding_tutorial));
+        setAutoSaveEnabled(Boolean(data.flags.auto_save));
       }
       const summaryRes = await fetch("/api/feature-flags?summary=1", { credentials: "include" });
       const summaryData = await summaryRes.json();
@@ -67,6 +75,13 @@ export default function FeatureFlagsPage() {
       if (onboardingSummaryRes.ok && onboardingSummaryData?.summary) {
         setOnboardingEnabledUsers(onboardingSummaryData.summary.enabledCount ?? null);
         setOnboardingGlobal(Boolean(onboardingSummaryData.summary.defaultEnabled));
+      }
+      // Load auto-save summary
+      const autoSaveSummaryRes = await fetch("/api/feature-flags?summary=1&flag=auto_save", { credentials: "include" });
+      const autoSaveSummaryData = await autoSaveSummaryRes.json();
+      if (autoSaveSummaryRes.ok && autoSaveSummaryData?.summary) {
+        setAutoSaveEnabledUsers(autoSaveSummaryData.summary.enabledCount ?? null);
+        setAutoSaveGlobal(Boolean(autoSaveSummaryData.summary.defaultEnabled));
       }
     } catch (err) {
       console.warn("[FeatureFlagsPage] Failed to load flag data", err);
@@ -94,6 +109,12 @@ export default function FeatureFlagsPage() {
         } else {
           setOnboardingGlobal(enabled);
         }
+      } else if (flagName === "auto_save") {
+        if (scope === "user") {
+          setAutoSaveEnabled(enabled);
+        } else {
+          setAutoSaveGlobal(enabled);
+        }
       }
       // Refresh summary after change
       await loadFlags();
@@ -108,6 +129,8 @@ export default function FeatureFlagsPage() {
   const handleLineNumbersGlobalToggle = (checked: boolean) => updateFlag("line_numbers", "global", checked);
   const handleOnboardingPersonalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "user", checked);
   const handleOnboardingGlobalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "global", checked);
+  const handleAutoSavePersonalToggle = (checked: boolean) => updateFlag("auto_save", "user", checked);
+  const handleAutoSaveGlobalToggle = (checked: boolean) => updateFlag("auto_save", "global", checked);
 
   if (isLoading || !user) {
     return (
@@ -216,6 +239,46 @@ export default function FeatureFlagsPage() {
                   </p>
                 </div>
                 <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} />
+              </div>
+            </div>
+          </Card>
+
+          {/* Auto-Save Feature Flag */}
+          <Card className="p-4 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-xl font-semibold">Auto-Save</h2>
+                <p className="text-sm text-muted-foreground">
+                  Automatically saves page content after a brief pause in typing. Shows an indicator when content is saved.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enabled for: {autoSaveEnabledFraction} users
+                </p>
+              </div>
+              <Badge variant="outline">Admin only</Badge>
+            </div>
+
+            <Separator className="my-4" />
+
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">Enable for me</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Personal override for the current admin account.
+                  </p>
+                </div>
+                <Switch checked={autoSaveEnabled} onCheckedChange={handleAutoSavePersonalToggle} disabled={saving} />
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">Enable for all users</h3>
+                  <p className="text-sm text-muted-foreground">
+                    When enabled, pages will auto-save instead of showing the manual save banner.
+                  </p>
+                </div>
+                <Switch checked={autoSaveGlobal} onCheckedChange={handleAutoSaveGlobalToggle} disabled={saving} />
               </div>
             </div>
           </Card>

@@ -243,8 +243,8 @@ export class FinancialReconciliationService {
         const expectedUsdEarnings = FinancialUtils.tokensToUsd(totalAllocatedTokens);
         
         // Get actual earnings for this user
-        const balance = await UsdEarningsService.getCompleteWriterEarnings(recipientUserId);
-        const actualEarnings = balance?.balance?.totalUsdEarned || 0;
+        const balance = await UsdEarningsService.getWriterUsdBalance(recipientUserId);
+        const actualEarnings = balance?.totalUsdCentsEarned ? balance.totalUsdCentsEarned / 100 : 0;
         
         const difference = Math.abs(expectedUsdEarnings - actualEarnings);
         

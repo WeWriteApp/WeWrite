@@ -10,13 +10,14 @@ import { headers } from 'next/headers';
 import { doc, updateDoc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
-import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-import { ServerUsdService } from '../../../services/usdService.server';
-import { dollarsToCents, formatUsdCents } from '../../../utils/formatCurrency';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { UsdService } from '../../../services/usdService';
+import { dollarsToCents, formatUsdCents, centsToDollars } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
 import { sendSubscriptionConfirmation } from '../../../services/emailService';
 import { getOrCreateEmailSettingsToken } from '../../../services/emailSettingsTokenService';
+import { webhookIdempotencyService } from '../../../services/webhookIdempotencyService';
 
 // Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
@@ -24,9 +25,12 @@ import { parseStripeError, createDetailedErrorLog } from '../../../utils/stripeE
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20'});
+  apiVersion: '2024-12-18.acacia'
+});
 
 export async function POST(request: NextRequest) {
+  let event: Stripe.Event | undefined;
+
   try {
     const body = await request.text();
     const headersList = headers();
@@ -37,7 +41,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify webhook signature
-    let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(
         body,
@@ -46,6 +49,38 @@ export async function POST(request: NextRequest) {
       );
     } catch (err) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    // Check idempotency - prevent duplicate processing
+    const isProcessed = await webhookIdempotencyService.isEventProcessed(event.id);
+    if (isProcessed) {
+      console.log(`[Webhook] Duplicate event detected: ${event.id} (${event.type})`);
+      return NextResponse.json({
+        received: true,
+        duplicate: true,
+        eventId: event.id,
+        eventType: event.type
+      });
+    }
+
+    // Mark event as processing atomically
+    const marked = await webhookIdempotencyService.markEventProcessing(
+      event.id,
+      event.type,
+      'stripe-subscription',
+      {
+        apiVersion: event.api_version,
+        created: event.created
+      }
+    );
+
+    if (!marked) {
+      console.log(`[Webhook] Event ${event.id} is already being processed`);
+      return NextResponse.json({
+        received: true,
+        duplicate: true,
+        eventId: event.id
+      });
     }
 
     // Handle different event types
@@ -74,10 +109,29 @@ export async function POST(request: NextRequest) {
         await handlePaymentFailed(event.data.object as Stripe.Invoice);
         break;
 
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge);
+        break;
+
+      case 'charge.dispute.created':
+        await handleDisputeCreated(event.data.object as Stripe.Dispute);
+        break;
+
+      case 'charge.dispute.closed':
+        await handleDisputeClosed(event.data.object as Stripe.Dispute);
+        break;
+
       default:
         // Silently ignore unhandled event types
         break;
     }
+
+    // Mark event as completed
+    await webhookIdempotencyService.markEventCompleted(event.id, {
+      processedEventType: event.type,
+      processedAt: new Date().toISOString()
+    });
+
     return NextResponse.json({
       received: true,
       eventType: event.type,
@@ -85,7 +139,15 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    // Mark event as failed if we have an event ID
+    if (event?.id) {
+      await webhookIdempotencyService.markEventFailed(
+        event.id,
+        error?.message || 'Unknown error'
+      );
+    }
+
     return NextResponse.json({
       error: 'Webhook processing failed',
       eventType: event?.type || 'unknown',
@@ -226,7 +288,7 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
     }
 
     // Reset USD allocation to 0
-    await ServerUsdService.updateMonthlyUsdAllocation(userId, 0);
+    await UsdService.updateMonthlyUsdAllocation(userId, 0);
 
   } catch (error) {
     throw error;
@@ -385,7 +447,7 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
 
-    await ServerUsdService.updateMonthlyUsdAllocation(userId, amount);
+    await UsdService.updateMonthlyUsdAllocation(userId, amount);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance
     // Reuse the correlationId from the sync operation above
@@ -538,7 +600,7 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
     // Revoke allocations until a successful payment occurs
     try {
-      await ServerUsdService.updateMonthlyUsdAllocation(userId, 0);
+      await UsdService.updateMonthlyUsdAllocation(userId, 0);
     } catch (allocError) {
       // Failed to clear USD allocation - non-fatal
     }
@@ -556,7 +618,7 @@ async function createFailedPaymentNotification(
 ) {
   try {
     // Import notification function from API service
-    const { createNotification } = await import('../../../services/notificationsApi');
+    const { createNotification } = await import('../../../services/notificationsService');
 
     const amount = invoice.amount_due / 100; // Convert from cents
 
@@ -589,6 +651,466 @@ async function createFailedPaymentNotification(
     });
   } catch (error) {
     // Notification creation failed - non-fatal
+  }
+}
+
+/**
+ * Handle charge refund events
+ * Processes full and partial refunds by reducing USD allocations proportionally
+ */
+export async function handleChargeRefunded(charge: Stripe.Charge) {
+  try {
+    const correlationId = `refund_${charge.id}_${Date.now()}`;
+
+    // Get the invoice associated with this charge
+    if (!charge.invoice) {
+      console.warn(`[REFUND] Charge ${charge.id} has no associated invoice - skipping`);
+      return;
+    }
+
+    const invoice = await stripe.invoices.retrieve(charge.invoice as string);
+    if (!invoice.subscription) {
+      console.warn(`[REFUND] Invoice ${invoice.id} has no associated subscription - skipping`);
+      return;
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+    const userId = subscription.metadata.firebaseUID;
+
+    if (!userId) {
+      console.warn(`[REFUND] Subscription ${subscription.id} has no firebaseUID metadata`);
+      return;
+    }
+
+    // Calculate refund details
+    const originalAmount = charge.amount / 100; // Convert from cents
+    const refundedAmount = charge.amount_refunded / 100; // Convert from cents
+    const refundPercentage = refundedAmount / originalAmount;
+    const isFullRefund = refundPercentage >= 0.99; // Allow for rounding
+
+    // Get current USD allocation
+    const currentBalance = await UsdService.getUserUsdBalance(userId);
+    if (!currentBalance) {
+      console.warn(`[REFUND] No USD balance found for user ${userId}`);
+      return;
+    }
+
+    // Calculate the amount to reduce from allocations
+    const currentAllocatedCents = currentBalance.allocatedUsdCents;
+    const refundReductionCents = Math.round(currentAllocatedCents * refundPercentage);
+
+    // Get all active allocations for this month
+    const allocations = await UsdService.getUserUsdAllocations(userId);
+
+    // Mark allocations as refunded/at_risk and reduce amounts proportionally
+    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+
+    const batch = db.batch();
+    let totalReduced = 0;
+
+    for (const allocation of allocations) {
+      const allocationRef = doc(db, allocationsCollectionName, allocation.id);
+      const reductionCents = Math.round(allocation.usdCents * refundPercentage);
+      const newAmount = Math.max(0, allocation.usdCents - reductionCents);
+
+      batch.update(allocationRef, {
+        usdCents: newAmount,
+        status: isFullRefund ? 'refunded' : 'at_risk',
+        refundedAt: new Date().toISOString(),
+        refundAmount: reductionCents,
+        refundPercentage,
+        originalAmount: allocation.usdCents,
+        chargeId: charge.id,
+        updatedAt: serverTimestamp()
+      });
+
+      totalReduced += reductionCents;
+    }
+
+    // Update the USD balance to reflect the refund
+    if (isFullRefund) {
+      await UsdService.updateMonthlyUsdAllocation(userId, 0);
+    } else {
+      const newMonthlyAllocation = Math.max(0, (currentBalance.monthlyAllocationCents - dollarsToCents(refundedAmount)) / 100);
+      await UsdService.updateMonthlyUsdAllocation(userId, newMonthlyAllocation);
+    }
+
+    await batch.commit();
+
+    // Log refund to audit trail
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+      await subscriptionAuditService.logEvent({
+        userId,
+        eventType: 'payment_failed' as any, // Using closest match
+        description: `Charge refunded: ${isFullRefund ? 'Full' : 'Partial'} refund of $${refundedAmount.toFixed(2)}`,
+        entityType: 'subscription',
+        entityId: subscription.id,
+        beforeState: {
+          allocatedCents: currentAllocatedCents,
+          monthlyAllocationCents: currentBalance.monthlyAllocationCents
+        },
+        afterState: {
+          allocatedCents: currentAllocatedCents - totalReduced,
+          refundedAmount,
+          refundPercentage
+        },
+        metadata: {
+          chargeId: charge.id,
+          invoiceId: invoice.id,
+          subscriptionId: subscription.id,
+          isFullRefund,
+          refundedAmount,
+          refundPercentage,
+          allocationsAffected: allocations.length
+        },
+        source: 'stripe',
+        correlationId,
+        severity: isFullRefund ? 'warning' : 'info'
+      });
+    } catch (auditError) {
+      console.error('[REFUND] Failed to log audit event:', auditError);
+    }
+
+    // Create critical notification for admin
+    await createCriticalAlert({
+      type: 'charge_refunded',
+      title: `${isFullRefund ? 'Full' : 'Partial'} Charge Refund`,
+      message: `User ${userId} received a ${isFullRefund ? 'full' : 'partial'} refund of $${refundedAmount.toFixed(2)}. ${allocations.length} allocations affected.`,
+      userId: 'admin',
+      metadata: {
+        affectedUserId: userId,
+        chargeId: charge.id,
+        invoiceId: invoice.id,
+        subscriptionId: subscription.id,
+        refundedAmount,
+        refundPercentage,
+        allocationsAffected: allocations.length,
+        totalReduced: centsToDollars(totalReduced)
+      }
+    });
+
+    // Notify the affected user
+    const { createNotification } = await import('../../../services/notificationsService');
+    await createNotification({
+      userId,
+      type: 'refund_processed',
+      title: 'Refund Processed',
+      message: `A ${isFullRefund ? 'full' : 'partial'} refund of $${refundedAmount.toFixed(2)} has been processed for your subscription. Your allocations have been adjusted accordingly.`,
+      metadata: {
+        chargeId: charge.id,
+        refundedAmount,
+        isFullRefund
+      }
+    });
+
+  } catch (error) {
+    console.error('[REFUND] Error handling charge refund:', error);
+    // Don't throw - we don't want to fail the webhook
+  }
+}
+
+/**
+ * Handle dispute creation events
+ * Freezes USD allocations and prevents payouts for disputed amounts
+ */
+export async function handleDisputeCreated(dispute: Stripe.Dispute) {
+  try {
+    const correlationId = `dispute_created_${dispute.id}_${Date.now()}`;
+    const charge = await stripe.charges.retrieve(dispute.charge as string);
+
+    // Get the invoice associated with this charge
+    if (!charge.invoice) {
+      console.warn(`[DISPUTE] Charge ${charge.id} has no associated invoice - skipping`);
+      return;
+    }
+
+    const invoice = await stripe.invoices.retrieve(charge.invoice as string);
+    if (!invoice.subscription) {
+      console.warn(`[DISPUTE] Invoice ${invoice.id} has no associated subscription - skipping`);
+      return;
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+    const userId = subscription.metadata.firebaseUID;
+
+    if (!userId) {
+      console.warn(`[DISPUTE] Subscription ${subscription.id} has no firebaseUID metadata`);
+      return;
+    }
+
+    const disputedAmount = dispute.amount / 100; // Convert from cents
+
+    // Get all active allocations
+    const allocations = await UsdService.getUserUsdAllocations(userId);
+
+    // Freeze all allocations by marking them as disputed
+    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+    const batch = db.batch();
+
+    for (const allocation of allocations) {
+      const allocationRef = doc(db, allocationsCollectionName, allocation.id);
+      batch.update(allocationRef, {
+        status: 'disputed',
+        disputedAt: new Date().toISOString(),
+        disputeId: dispute.id,
+        chargeId: charge.id,
+        frozenAmount: allocation.usdCents,
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    await batch.commit();
+
+    // Log dispute to audit trail
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+      await subscriptionAuditService.logEvent({
+        userId,
+        eventType: 'payment_failed' as any,
+        description: `Payment dispute created for $${disputedAmount.toFixed(2)} - Allocations frozen`,
+        entityType: 'subscription',
+        entityId: subscription.id,
+        beforeState: {
+          allocations: allocations.map(a => ({ id: a.id, status: a.status, usdCents: a.usdCents }))
+        },
+        afterState: {
+          disputeStatus: 'frozen',
+          allocationsAffected: allocations.length
+        },
+        metadata: {
+          disputeId: dispute.id,
+          chargeId: charge.id,
+          invoiceId: invoice.id,
+          subscriptionId: subscription.id,
+          disputedAmount,
+          disputeReason: dispute.reason,
+          allocationsAffected: allocations.length
+        },
+        source: 'stripe',
+        correlationId,
+        severity: 'critical'
+      });
+    } catch (auditError) {
+      console.error('[DISPUTE] Failed to log audit event:', auditError);
+    }
+
+    // Create critical alert for admin
+    await createCriticalAlert({
+      type: 'dispute_created',
+      title: 'Payment Dispute Created',
+      message: `CRITICAL: Payment dispute filed for user ${userId}. Amount: $${disputedAmount.toFixed(2)}. Reason: ${dispute.reason}. All allocations frozen.`,
+      userId: 'admin',
+      metadata: {
+        affectedUserId: userId,
+        disputeId: dispute.id,
+        chargeId: charge.id,
+        invoiceId: invoice.id,
+        subscriptionId: subscription.id,
+        disputedAmount,
+        disputeReason: dispute.reason,
+        allocationsAffected: allocations.length,
+        urgency: 'critical'
+      }
+    });
+
+    // Notify the affected user
+    const { createNotification } = await import('../../../services/notificationsService');
+    await createNotification({
+      userId,
+      type: 'dispute_created',
+      title: 'Payment Dispute Filed',
+      message: `A payment dispute has been filed for your subscription payment of $${disputedAmount.toFixed(2)}. Your allocations have been temporarily frozen pending resolution.`,
+      metadata: {
+        disputeId: dispute.id,
+        disputedAmount,
+        disputeReason: dispute.reason
+      }
+    });
+
+  } catch (error) {
+    console.error('[DISPUTE] Error handling dispute creation:', error);
+    // Don't throw - we don't want to fail the webhook
+  }
+}
+
+/**
+ * Handle dispute closure events
+ * Unfreezes allocations if won, or finalizes refund if lost
+ */
+export async function handleDisputeClosed(dispute: Stripe.Dispute) {
+  try {
+    const correlationId = `dispute_closed_${dispute.id}_${Date.now()}`;
+    const charge = await stripe.charges.retrieve(dispute.charge as string);
+
+    // Get the invoice associated with this charge
+    if (!charge.invoice) {
+      console.warn(`[DISPUTE] Charge ${charge.id} has no associated invoice - skipping`);
+      return;
+    }
+
+    const invoice = await stripe.invoices.retrieve(charge.invoice as string);
+    if (!invoice.subscription) {
+      console.warn(`[DISPUTE] Invoice ${invoice.id} has no associated subscription - skipping`);
+      return;
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+    const userId = subscription.metadata.firebaseUID;
+
+    if (!userId) {
+      console.warn(`[DISPUTE] Subscription ${subscription.id} has no firebaseUID metadata`);
+      return;
+    }
+
+    const disputedAmount = dispute.amount / 100; // Convert from cents
+    const won = dispute.status === 'won';
+
+    // Get all disputed allocations - use Firebase Admin SDK for queries
+    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      throw new Error('Firebase Admin not available');
+    }
+    const adminDb = admin.firestore();
+
+    const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
+    const allocationsRef = adminDb.collection(allocationsCollectionName);
+    const allocationsQuery = allocationsRef
+      .where('userId', '==', userId)
+      .where('disputeId', '==', dispute.id)
+      .where('status', '==', 'disputed');
+
+    const snapshot = await allocationsQuery.get();
+    const batch = adminDb.batch();
+
+    if (won) {
+      // Dispute won - unfreeze allocations
+      snapshot.forEach(doc => {
+        batch.update(doc.ref, {
+          status: 'active',
+          disputeResolvedAt: new Date().toISOString(),
+          disputeOutcome: 'won',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+    } else {
+      // Dispute lost - mark allocations as refunded and reduce to 0
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        batch.update(doc.ref, {
+          status: 'refunded',
+          usdCents: 0,
+          disputeResolvedAt: new Date().toISOString(),
+          disputeOutcome: 'lost',
+          refundedAmount: data.frozenAmount || data.usdCents,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+
+      // Update USD balance to 0 since we lost the dispute
+      await UsdService.updateMonthlyUsdAllocation(userId, 0);
+    }
+
+    await batch.commit();
+
+    // Log dispute resolution to audit trail
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+      await subscriptionAuditService.logEvent({
+        userId,
+        eventType: won ? 'payment_recovered' : ('payment_failed' as any),
+        description: `Payment dispute ${won ? 'won' : 'lost'} for $${disputedAmount.toFixed(2)} - Allocations ${won ? 'unfrozen' : 'refunded'}`,
+        entityType: 'subscription',
+        entityId: subscription.id,
+        beforeState: {
+          disputeStatus: 'frozen',
+          allocationsAffected: snapshot.size
+        },
+        afterState: {
+          disputeStatus: won ? 'resolved_won' : 'resolved_lost',
+          allocationsAffected: snapshot.size
+        },
+        metadata: {
+          disputeId: dispute.id,
+          chargeId: charge.id,
+          invoiceId: invoice.id,
+          subscriptionId: subscription.id,
+          disputedAmount,
+          disputeOutcome: won ? 'won' : 'lost',
+          allocationsAffected: snapshot.size
+        },
+        source: 'stripe',
+        correlationId,
+        severity: won ? 'info' : 'warning'
+      });
+    } catch (auditError) {
+      console.error('[DISPUTE] Failed to log audit event:', auditError);
+    }
+
+    // Create alert for admin
+    await createCriticalAlert({
+      type: 'dispute_closed',
+      title: `Payment Dispute ${won ? 'Won' : 'Lost'}`,
+      message: `Dispute ${dispute.id} for user ${userId} was ${won ? 'won' : 'lost'}. Amount: $${disputedAmount.toFixed(2)}. Allocations ${won ? 'unfrozen' : 'refunded'}.`,
+      userId: 'admin',
+      metadata: {
+        affectedUserId: userId,
+        disputeId: dispute.id,
+        chargeId: charge.id,
+        invoiceId: invoice.id,
+        subscriptionId: subscription.id,
+        disputedAmount,
+        disputeOutcome: won ? 'won' : 'lost',
+        allocationsAffected: snapshot.size
+      }
+    });
+
+    // Notify the affected user
+    const { createNotification } = await import('../../../services/notificationsService');
+    await createNotification({
+      userId,
+      type: won ? 'dispute_won' : 'dispute_lost',
+      title: `Payment Dispute ${won ? 'Resolved' : 'Lost'}`,
+      message: won
+        ? `The payment dispute for $${disputedAmount.toFixed(2)} has been resolved in your favor. Your allocations have been unfrozen.`
+        : `The payment dispute for $${disputedAmount.toFixed(2)} was not resolved in your favor. Your allocations have been refunded and you may need to update your payment method.`,
+      metadata: {
+        disputeId: dispute.id,
+        disputedAmount,
+        disputeOutcome: won ? 'won' : 'lost'
+      }
+    });
+
+  } catch (error) {
+    console.error('[DISPUTE] Error handling dispute closure:', error);
+    // Don't throw - we don't want to fail the webhook
+  }
+}
+
+/**
+ * Create a critical alert for admin monitoring
+ */
+async function createCriticalAlert(alert: {
+  type: string;
+  title: string;
+  message: string;
+  userId: string;
+  metadata: Record<string, any>;
+}): Promise<void> {
+  try {
+    const criticalAlert = {
+      ...alert,
+      severity: 'critical',
+      timestamp: serverTimestamp(),
+      requiresAttention: true,
+      resolved: false
+    };
+
+    // Log to critical alerts collection for admin dashboard
+    await addDoc(collection(db, 'criticalAlerts'), criticalAlert);
+  } catch (error) {
+    console.error('[CRITICAL ALERT] Failed to create critical alert:', error);
   }
 }
 

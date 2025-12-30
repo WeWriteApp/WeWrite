@@ -4,7 +4,7 @@ import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useVisitorMetrics } from '../../hooks/useDashboardAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../services/adminAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface VisitorAnalyticsWidgetProps {

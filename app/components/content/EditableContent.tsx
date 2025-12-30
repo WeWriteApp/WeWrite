@@ -46,7 +46,7 @@ interface EditableContentProps {
   onInsertLinkRequest?: (triggerFn: () => void) => void;
   pageId?: string;
   showLinkSuggestions?: boolean;
-  onLinkSuggestionsLoadingChange?: (isLoading: boolean) => void;
+  onLinkSuggestionCountChange?: (count: number) => void;
   className?: string;
 }
 
@@ -73,7 +73,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
   onInsertLinkRequest,
   pageId,
   showLinkSuggestions = false,
-  onLinkSuggestionsLoadingChange,
+  onLinkSuggestionCountChange,
   initialSelectionPath,
   className = ''
 }) => {
@@ -131,7 +131,7 @@ const EditableContent: React.FC<EditableContentProps> = ({
         onInsertLinkRequest={onInsertLinkRequest}
         initialSelectionPath={initialSelectionPath}
         showLinkSuggestions={showLinkSuggestions}
-        onLinkSuggestionsLoadingChange={onLinkSuggestionsLoadingChange}
+        onLinkSuggestionCountChange={onLinkSuggestionCountChange}
       />
     </div>
   );

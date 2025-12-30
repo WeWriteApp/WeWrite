@@ -9,7 +9,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../../utils/environmentConfig';
 import { determineTierFromAmount } from '../../../utils/subscriptionTiers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { invalidateCache } from '../../../utils/internalApi';
 
 // Initialize Firebase Admin lazily

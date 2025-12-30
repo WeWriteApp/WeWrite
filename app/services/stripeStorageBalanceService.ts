@@ -116,7 +116,8 @@ export class StripeStorageBalanceService {
     destinationAccountId: string,
     userId: string,
     description: string,
-    platformFeeAmount?: number
+    platformFeeAmount?: number,
+    payoutId?: string
   ): Promise<{ success: boolean; transferId?: string; feeTransferId?: string; error?: string }> {
     try {
       const grossAmountCents = Math.round(amount * 100);
@@ -147,6 +148,7 @@ export class StripeStorageBalanceService {
         metadata: {
           type: 'writer_payout',
           userId,
+          payoutId: payoutId || '',
           grossAmountCents: grossAmountCents.toString(),
           netAmountCents: netAmountCents.toString(),
           platformFeeCents: feeCents.toString(),

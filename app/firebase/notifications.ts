@@ -7,7 +7,7 @@
  * All notification operations go through the /api/notifications endpoint.
  */
 
-// Re-export types and functions from the API service
+// Re-export types and functions from the notification service
 export {
   type NotificationData,
   type Notification,
@@ -20,13 +20,13 @@ export {
   createNotification,
   deleteNotification,
   createEmailVerificationNotification
-} from '../services/notificationsApi';
+} from '../services/notificationsService';
 
 // Legacy function for backward compatibility - now uses API service
-import { createNotification as apiCreateNotification } from '../services/notificationsApi';
+import { createNotification as apiCreateNotification } from '../services/notificationsService';
 
 /**
- * @deprecated Use createNotification from '../services/notificationsApi' instead
+ * @deprecated Use createNotification from '../services/notificationsService' instead
  * This function is kept for backward compatibility and will be removed in a future version.
  */
 export const createTestNotification = async (userId: string): Promise<string | null> => {

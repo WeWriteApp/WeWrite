@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import MapPicker from './MapPicker';
-import { ConfirmationModal } from '../utils/ConfirmationModal';
+import { ConfirmationModal } from '../utils/UnifiedModal';
 
 interface Location {
   lat: number;

@@ -47,7 +47,7 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
       userEmail = userSession.email;
       sessionIsAdmin = userSession.isAdmin === true;
     } catch (error) {
-      console.log('[Middleware] Error parsing simpleUserSession cookie:', error);
+      console.log('[Proxy] Error parsing simpleUserSession cookie:', error);
     }
   } else if (userSessionCookie) {
     // Fallback to legacy userSession cookie
@@ -57,7 +57,7 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
       userEmail = userSession.email;
       sessionIsAdmin = userSession.isAdmin === true;
     } catch (error) {
-      console.log('[Middleware] Error parsing userSession cookie:', error);
+      console.log('[Proxy] Error parsing userSession cookie:', error);
     }
   }
 
@@ -101,7 +101,7 @@ function getPathChecks(path: string): PathChecks {
   };
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Clone the URL so we can modify it
   const url = request.nextUrl.clone();
   const path = url.pathname;
@@ -282,16 +282,16 @@ function handleAdminAccess(
   if (path.startsWith('/api/admin/')) {
     const userEmail = getUserEmailForAdmin(request, auth);
 
-    console.log('[Middleware] Admin API route detected:', path);
-    console.log('[Middleware] User email from cookie:', userEmail);
+    console.log('[Proxy] Admin API route detected:', path);
+    console.log('[Proxy] User email from cookie:', userEmail);
 
     if (userEmail) {
       const response = NextResponse.next();
       response.headers.set('x-user-email', userEmail);
-      console.log('[Middleware] Set x-user-email header:', userEmail);
+      console.log('[Proxy] Set x-user-email header:', userEmail);
       return response;
     } else {
-      console.log('[Middleware] No user email found in any cookies');
+      console.log('[Proxy] No user email found in any cookies');
     }
   }
 
@@ -318,7 +318,7 @@ function getUserEmailForAdmin(request: NextRequest, auth: AuthenticationState): 
         const sessionData: UserSession = JSON.parse(userSessionCookie);
         userEmail = sessionData.email;
       } catch (error) {
-        console.log('[Middleware] Error parsing userSession cookie:', error);
+        console.log('[Proxy] Error parsing userSession cookie:', error);
       }
     }
   }
@@ -331,7 +331,7 @@ function getUserEmailForAdmin(request: NextRequest, auth: AuthenticationState): 
         const sessionData: UserSession = JSON.parse(simpleSessionCookie);
         userEmail = sessionData.email;
       } catch (error) {
-        console.log('[Middleware] Error parsing simpleUserSession cookie:', error);
+        console.log('[Proxy] Error parsing simpleUserSession cookie:', error);
       }
     }
   }
@@ -339,7 +339,7 @@ function getUserEmailForAdmin(request: NextRequest, auth: AuthenticationState): 
   return userEmail;
 }
 
-// Configure which routes to run middleware on
+// Configure which routes to run proxy on
 export const config = {
   matcher: [
     /*
@@ -351,6 +351,5 @@ export const config = {
      */
     "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
-  // Run middleware on Node.js runtime (Bun doesn't support Vercel middleware yet)
-  runtime: "nodejs",
+  // Note: proxy always runs on Node.js runtime (not Edge)
 };

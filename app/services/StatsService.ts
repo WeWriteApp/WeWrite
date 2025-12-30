@@ -13,35 +13,35 @@ const STATS_CACHE_TTL = UNIFIED_CACHE_TTL.LIVE_STATS; // 2 minutes
 const LIVE_STATS_CACHE_TTL = UNIFIED_CACHE_TTL.LIVE_STATS; // 2 minutes for live stats
 const USER_STATS_CACHE_TTL = UNIFIED_CACHE_TTL.ANALYTICS_DATA; // 3 hours for user stats
 
-export interface UnifiedPageStats {
+export interface PageStats {
   pageId: string;
-  
+
   // View statistics
   totalViews: number;
   viewsLast24h: number;
   viewData: number[]; // Hourly view data for sparklines
-  
+
   // Activity statistics
   recentChanges: number;
   changeData: number[]; // Hourly change data for sparklines
   editorsCount: number;
-  
+
   // Live statistics
   liveReaders: number;
   totalReaders: number;
-  
+
   // Supporter/Pledge statistics
   supporterCount: number;
   totalPledgedTokens: number;
   supporterData: number[]; // Hourly supporter data for sparklines
   uniqueSponsors: string[];
-  
+
   // Metadata
   lastUpdated: number;
   cached: boolean;
 }
 
-export interface UnifiedUserStats {
+export interface UserStats {
   userId: string;
   pageCount: number;
   totalViews: number;
@@ -54,22 +54,22 @@ export interface UnifiedUserStats {
 }
 
 export interface BatchStatsResult {
-  pageStats: Record<string, UnifiedPageStats>;
-  userStats: Record<string, UnifiedUserStats>;
+  pageStats: Record<string, PageStats>;
+  userStats: Record<string, UserStats>;
   cached: string[];
   fetched: string[];
   loadTime: number;
 }
 
 /**
- * Unified Statistics Service
- * 
+ * Statistics Service
+ *
  * Consolidates:
  * - CachedStatsService.ts
- * - PageStatsService.ts  
+ * - PageStatsService.ts
  * - pledgeStatsService.ts
  * - /api/tokens/page-stats functionality
- * 
+ *
  * Features:
  * - Single source of truth for all statistics
  * - Unified caching strategy
@@ -77,9 +77,9 @@ export interface BatchStatsResult {
  * - Batch operations for performance
  * - Consistent error handling
  */
-class UnifiedStatsService {
-  private pageStatsCache = new Map<string, { data: UnifiedPageStats; timestamp: number }>();
-  private userStatsCache = new Map<string, { data: UnifiedUserStats; timestamp: number }>();
+class StatsService {
+  private pageStatsCache = new Map<string, { data: PageStats; timestamp: number }>();
+  private userStatsCache = new Map<string, { data: UserStats; timestamp: number }>();
   private activeSubscriptions = new Map<string, () => void>();
   private rtdb: Database;
 
@@ -90,8 +90,8 @@ class UnifiedStatsService {
   /**
    * Get comprehensive page statistics with caching
    */
-  async getPageStats(pageId: string, forceRefresh = false): Promise<UnifiedPageStats> {
-    const cacheKey = generateCacheKey('unifiedPageStats', pageId);
+  async getPageStats(pageId: string, forceRefresh = false): Promise<PageStats> {
+    const cacheKey = generateCacheKey('pageStats', pageId);
     
     // Check memory cache first
     if (!forceRefresh) {
@@ -101,7 +101,7 @@ class UnifiedStatsService {
       }
 
       // Check localStorage cache
-      const cachedStats = getCacheItem<UnifiedPageStats>(cacheKey);
+      const cachedStats = getCacheItem<PageStats>(cacheKey);
       if (cachedStats) {
         // Update memory cache
         this.pageStatsCache.set(pageId, {
@@ -128,8 +128,8 @@ class UnifiedStatsService {
   /**
    * Get user statistics with caching
    */
-  async getUserStats(userId: string, forceRefresh = false): Promise<UnifiedUserStats> {
-    const cacheKey = generateCacheKey('unifiedUserStats', userId);
+  async getUserStats(userId: string, forceRefresh = false): Promise<UserStats> {
+    const cacheKey = generateCacheKey('userStats', userId);
     
     // Check memory cache first
     if (!forceRefresh) {
@@ -139,7 +139,7 @@ class UnifiedStatsService {
       }
 
       // Check localStorage cache
-      const cachedStats = getCacheItem<UnifiedUserStats>(cacheKey);
+      const cachedStats = getCacheItem<UserStats>(cacheKey);
       if (cachedStats) {
         // Update memory cache
         this.userStatsCache.set(userId, {
@@ -208,85 +208,18 @@ class UnifiedStatsService {
   }
 
   /**
-   * Subscribe to real-time page statistics updates - DISABLED FOR COST OPTIMIZATION
-   * Use API polling instead of real-time listeners to reduce Firebase costs
+   * Subscribe to real-time page statistics updates
+   * DISABLED: Real-time listeners disabled to reduce Firebase costs - use API polling instead
    */
-  subscribeToPageStats(pageId: string, callback: (stats: UnifiedPageStats) => void): () => void {
-    console.warn('🚨 COST OPTIMIZATION: Page stats real-time listeners disabled. Use API polling instead.');
-
+  subscribeToPageStats(pageId: string, callback: (stats: PageStats) => void): () => void {
     // Return a no-op unsubscriber to prevent breaking the UI
     return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
-    const subscriptionKey = `pageStats:${pageId}`;
-
-    // Clean up existing subscription
-    this.unsubscribe(subscriptionKey);
-
-    // Set up multiple real-time listeners
-    const unsubscribers: (() => void)[] = [];
-
-    try {
-      // RTDB listeners for live stats
-      const recentChangesRef = ref(this.rtdb, `pageStats/${pageId}/recentChanges`);
-      const editorsRef = ref(this.rtdb, `pageStats/${pageId}/editors`);
-      const liveReadersRef = ref(this.rtdb, `liveReaders/${pageId}/count`);
-
-      // DISABLED FOR COST OPTIMIZATION - Replace RTDB listeners with polling
-      console.warn('🚨 COST OPTIMIZATION: RTDB real-time listeners disabled. Use API polling instead.');
-
-      // Use polling instead of real-time listeners
-      const rtdbPollInterval = setInterval(() => {
-        this.handleStatsUpdate(pageId, callback);
-      }, 45000); // Poll every 45 seconds instead of real-time
-
-      unsubscribers.push(() => clearInterval(rtdbPollInterval));
-
-      // DISABLED FOR COST OPTIMIZATION - Firestore listener for pledge stats
-      console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled.');
-
-      // DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
-      const pledgesQuery = query(
-        collection(db, getCollectionName('pledges')),
-        where('pageId', '==', pageId),
-        where('status', 'in', ['active', 'completed'])
-      );
-
-      // DISABLED FOR COST OPTIMIZATION - Replace with API polling
-      console.warn('🚨 COST OPTIMIZATION: Pledges real-time listener disabled. Use API polling instead.');
-
-      // Use polling instead of real-time listener
-      const pollInterval = setInterval(() => {
-        this.handleStatsUpdate(pageId, callback);
-      }, 30000); // Poll every 30 seconds instead of real-time
-
-      unsubscribers.push(() => clearInterval(pollInterval));
-
-    } catch (error) {
-      console.error('Error setting up page stats subscription:', error);
-    }
-
-    // Combined unsubscriber
-    const combinedUnsubscriber = () => {
-      unsubscribers.forEach(unsub => {
-        try {
-          unsub();
-        } catch (error) {
-          console.error('Error unsubscribing:', error);
-        }
-      });
-      this.activeSubscriptions.delete(subscriptionKey);
-    };
-
-    this.activeSubscriptions.set(subscriptionKey, combinedUnsubscriber);
-    return combinedUnsubscriber;
-    */
   }
 
   /**
    * Subscribe to real-time user statistics updates
    */
-  subscribeToUserStats(userId: string, callback: (stats: UnifiedUserStats) => void): () => void {
+  subscribeToUserStats(userId: string, callback: (stats: UserStats) => void): () => void {
     const subscriptionKey = `userStats:${userId}`;
     
     // Clean up existing subscription
@@ -346,12 +279,12 @@ class UnifiedStatsService {
   clearCache(): void {
     this.pageStatsCache.clear();
     this.userStatsCache.clear();
-    
+
     // Clear localStorage cache
     if (typeof window !== 'undefined') {
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
-        if (key.includes('unifiedPageStats') || key.includes('unifiedUserStats')) {
+        if (key.includes('pageStats') || key.includes('userStats')) {
           localStorage.removeItem(key);
         }
       });
@@ -361,7 +294,7 @@ class UnifiedStatsService {
   /**
    * Handle stats update from real-time listeners
    */
-  private async handleStatsUpdate(pageId: string, callback: (stats: UnifiedPageStats) => void): Promise<void> {
+  private async handleStatsUpdate(pageId: string, callback: (stats: PageStats) => void): Promise<void> {
     try {
       // Invalidate cache and fetch fresh data
       this.pageStatsCache.delete(pageId);
@@ -375,7 +308,7 @@ class UnifiedStatsService {
   /**
    * Fetch page stats from all sources (RTDB + Firestore)
    */
-  private async fetchPageStatsFromSources(pageId: string): Promise<UnifiedPageStats> {
+  private async fetchPageStatsFromSources(pageId: string): Promise<PageStats> {
     try {
       // Fetch from multiple sources in parallel
       const [
@@ -424,7 +357,7 @@ class UnifiedStatsService {
   /**
    * Fetch user stats from all sources
    */
-  private async fetchUserStatsFromSources(userId: string): Promise<UnifiedUserStats> {
+  private async fetchUserStatsFromSources(userId: string): Promise<UserStats> {
     try {
       // Fetch user stats from Firestore
       const userDoc = await getDoc(doc(db, 'users', userId));
@@ -684,7 +617,7 @@ class UnifiedStatsService {
   /**
    * Get empty page stats structure
    */
-  private getEmptyPageStats(pageId: string): UnifiedPageStats {
+  private getEmptyPageStats(pageId: string): PageStats {
     return {
       pageId,
       totalViews: 0,
@@ -707,7 +640,7 @@ class UnifiedStatsService {
   /**
    * Get empty user stats structure
    */
-  private getEmptyUserStats(userId: string): UnifiedUserStats {
+  private getEmptyUserStats(userId: string): UserStats {
     return {
       userId,
       pageCount: 0,
@@ -723,20 +656,25 @@ class UnifiedStatsService {
 }
 
 // Create singleton instance
-export const unifiedStatsService = new UnifiedStatsService();
+export const statsService = new StatsService();
 
 // Export convenience functions for backward compatibility
 export const getPageStats = (pageId: string, forceRefresh = false) =>
-  unifiedStatsService.getPageStats(pageId, forceRefresh);
+  statsService.getPageStats(pageId, forceRefresh);
 
 export const getUserStats = (userId: string, forceRefresh = false) =>
-  unifiedStatsService.getUserStats(userId, forceRefresh);
+  statsService.getUserStats(userId, forceRefresh);
 
 export const getBatchStats = (pageIds: string[] = [], userIds: string[] = []) =>
-  unifiedStatsService.getBatchStats(pageIds, userIds);
+  statsService.getBatchStats(pageIds, userIds);
 
-export const subscribeToPageStats = (pageId: string, callback: (stats: UnifiedPageStats) => void) =>
-  unifiedStatsService.subscribeToPageStats(pageId, callback);
+export const subscribeToPageStats = (pageId: string, callback: (stats: PageStats) => void) =>
+  statsService.subscribeToPageStats(pageId, callback);
 
-export const subscribeToUserStats = (userId: string, callback: (stats: UnifiedUserStats) => void) =>
-  unifiedStatsService.subscribeToUserStats(userId, callback);
+export const subscribeToUserStats = (userId: string, callback: (stats: UserStats) => void) =>
+  statsService.subscribeToUserStats(userId, callback);
+
+// Backward compatibility exports
+export const unifiedStatsService = statsService;
+export type UnifiedPageStats = PageStats;
+export type UnifiedUserStats = UserStats;

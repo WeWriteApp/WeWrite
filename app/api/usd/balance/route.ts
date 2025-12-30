@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { getUserSubscriptionServer } from '../../../firebase/subscription-server';
 
 /**
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Get USD balance (fast path - no heavy operations)
-    const balance = await ServerUsdService.getUserUsdBalance(userId);
+    const balance = await UsdService.getUserUsdBalance(userId);
 
     console.log(`🎯 USD Balance API: Retrieved balance:`, balance);
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Get current allocations (fast path - only essential data)
-    const allocations = await ServerUsdService.getUserUsdAllocations(userId);
+    const allocations = await UsdService.getUserUsdAllocations(userId);
 
     const response = {
       balance: finalBalance,
@@ -127,10 +127,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Initialize the USD balance using server-side service with admin permissions
-      await ServerUsdService.updateMonthlyUsdAllocation(userId, subscriptionAmount);
+      await UsdService.updateMonthlyUsdAllocation(userId, subscriptionAmount);
 
       // Get the newly created balance
-      const balance = await ServerUsdService.getUserUsdBalance(userId);
+      const balance = await UsdService.getUserUsdBalance(userId);
 
       if (!balance) {
         return NextResponse.json({

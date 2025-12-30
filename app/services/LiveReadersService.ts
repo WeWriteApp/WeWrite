@@ -58,70 +58,12 @@ class LiveReadersService {
   }
 
   /**
-   * Track a reader on a page with optimized batching and throttling
-   * DISABLED FOR COST OPTIMIZATION - Use API polling instead of real-time tracking
+   * Track a reader on a page
+   * DISABLED: Real-time reader tracking disabled to reduce Firebase costs
    */
   trackReader(pageId: string, userId: string): void {
-    console.warn('🚨 COST OPTIMIZATION: Live reader tracking disabled to reduce Firebase costs.');
-
-    // Return early to disable tracking completely
+    // Real-time reader tracking disabled for cost optimization
     return;
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
-    if (!pageId || !userId) return;
-
-    const cacheKey = `${pageId}_${userId}`;
-    const now = Date.now();
-    const existingEntry = this.readerCache.get(cacheKey);
-
-    // Smart throttle updates per user to reduce costs
-    const throttleInterval = this.getThrottleInterval(pageId);
-    if (existingEntry && (now - existingEntry.timestamp) < throttleInterval) {
-      console.log(`[LiveReaders] Smart throttling reader update for ${userId} on ${pageId} (${throttleInterval}ms interval)`);
-      return;
-    }
-
-    try {
-      // Update local cache
-      this.readerCache.set(cacheKey, {
-        pageId,
-        userId,
-        timestamp: now,
-        isActive: true
-      });
-
-      // Add to batch updates
-      if (!this.batchUpdates.has(pageId)) {
-        this.batchUpdates.set(pageId, {
-          pageId,
-          readers: new Set(),
-          lastUpdate: now
-        });
-      }
-
-      const batch = this.batchUpdates.get(pageId)!;
-
-      // Limit readers per page to control costs
-      if (batch.readers.size < this.MAX_READERS_PER_PAGE) {
-        batch.readers.add(userId);
-        batch.lastUpdate = now;
-        console.log(`[LiveReaders] Added ${userId} to batch for ${pageId} (${batch.readers.size}/${this.MAX_READERS_PER_PAGE})`);
-      } else {
-        console.warn(`[LiveReaders] Max readers reached for ${pageId}, skipping ${userId}`);
-      }
-
-      // Set up disconnect handling (this is still immediate for UX)
-      const readerRef = ref(this.db, `liveReaders/${pageId}/readers/${userId}`);
-      onDisconnect(readerRef).remove();
-
-      // Set up count decrement on disconnect
-      const countRef = ref(this.db, `liveReaders/${pageId}/count`);
-      onDisconnect(countRef).set(increment(-1));
-
-    } catch (error) {
-      console.error('Error tracking reader:', error);
-    }
-    */
   }
 
   /**
@@ -199,41 +141,13 @@ class LiveReadersService {
   }
 
   /**
-   * Subscribe to the reader count for a page with caching - DISABLED FOR COST OPTIMIZATION
-   * Use API polling instead of real-time listeners to reduce Firebase costs
+   * Subscribe to reader count updates
+   * DISABLED: Real-time listeners disabled to reduce Firebase costs - use API polling instead
    */
   subscribeToReaderCount(pageId: string, callback: (count: number) => void): Unsubscribe | null {
-    console.warn('🚨 COST OPTIMIZATION: Live reader count real-time listener disabled. Use API polling instead.');
-
-    // Return mock data and no-op unsubscribe to prevent breaking the UI
-    setTimeout(() => {
-      callback(0);
-    }, 100);
-
-    // Return a no-op unsubscribe function
+    // Return mock data to prevent breaking UI
+    setTimeout(() => callback(0), 100);
     return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
-    if (!pageId || !callback) return null;
-
-    try {
-      const countRef = ref(this.db, `liveReaders/${pageId}/count`);
-
-      // Subscribe to changes in the reader count
-      const unsubscribe = onValue(countRef, (snapshot) => {
-        const count = snapshot.exists() ? snapshot.val() : 0;
-        callback(count);
-      });
-
-      // Store the subscription for cleanup
-      this.activeSubscriptions.set(`${pageId}-count`, unsubscribe);
-
-      return unsubscribe;
-    } catch (error) {
-      console.error('Error subscribing to reader count:', error);
-      return null;
-    }
-    */
   }
 
   /**

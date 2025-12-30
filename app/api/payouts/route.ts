@@ -9,8 +9,8 @@ import { getUserIdFromRequest } from '../auth-helper';
 import { payoutRateLimiter } from '../../utils/rateLimiter';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
-import { PayoutService } from '../../services/payoutServiceUnified';
-import { ServerUsdEarningsService } from '../../services/usdEarningsService.server';
+import { PayoutService } from '../../services/payoutService';
+import { UsdEarningsService } from '../../services/usdEarningsService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const stripeConnectedAccountId = userData.stripeConnectedAccountId || null;
 
     // Get balances calculated from earnings (Phase 2 - single source of truth)
-    const balance = await ServerUsdEarningsService.getWriterUsdBalance(userId);
+    const balance = await UsdEarningsService.getWriterUsdBalance(userId);
     const availableCents = balance?.availableUsdCents || 0;
     const totalEarnedCents = balance?.totalUsdCentsEarned || 0;
 

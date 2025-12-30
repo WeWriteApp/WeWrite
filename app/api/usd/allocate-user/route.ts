@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { formatUsdCents } from '../../../utils/formatCurrency';
 
 /**
@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform the allocation
-    await ServerUsdService.allocateUsdToUser(userId, recipientUserId, usdCentsChange);
+    await UsdService.allocateUsdToUser(userId, recipientUserId, usdCentsChange);
 
     // Get updated balance
-    const updatedBalance = await ServerUsdService.getUserUsdBalance(userId);
-    const currentAllocation = await ServerUsdService.getCurrentUserAllocation(userId, recipientUserId);
+    const updatedBalance = await UsdService.getUserUsdBalance(userId);
+    const currentAllocation = await UsdService.getCurrentUserAllocation(userId, recipientUserId);
 
     console.log(`🎯 USD User Allocation API: Allocation successful:`, {
       newAllocation: formatUsdCents(currentAllocation),
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🎯 USD User Allocation API: Getting allocation for user ${userId}, recipient ${recipientUserId}`);
 
-    const currentAllocation = await ServerUsdService.getCurrentUserAllocation(userId, recipientUserId);
+    const currentAllocation = await UsdService.getCurrentUserAllocation(userId, recipientUserId);
 
     console.log(`🎯 USD User Allocation API: Current allocation:`, {
       recipientUserId,

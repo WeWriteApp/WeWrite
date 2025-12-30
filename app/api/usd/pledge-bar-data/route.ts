@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { formatUsdCents } from '../../../utils/formatCurrency';
 import { trackDatabaseRead } from '../../../utils/databaseReadTracker';
 
@@ -55,11 +55,11 @@ export async function GET(request: NextRequest) {
 
     // Get essential data in parallel for speed
     const [balance, currentAllocation] = await Promise.all([
-      ServerUsdService.getUserUsdBalance(userId),
+      UsdService.getUserUsdBalance(userId),
       pageId
-        ? ServerUsdService.getCurrentPageAllocation(userId, pageId)
+        ? UsdService.getCurrentPageAllocation(userId, pageId)
         : recipientUserId
-        ? ServerUsdService.getCurrentUserAllocation(userId, recipientUserId)
+        ? UsdService.getCurrentUserAllocation(userId, recipientUserId)
         : Promise.resolve(0)
     ]);
 

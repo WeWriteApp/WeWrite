@@ -1,13 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Card, CardContent } from '../ui/card';
 import { useToast } from '../ui/use-toast';
 import { type WritingIdea } from '../../data/writingIdeas';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 
 interface WritingIdeasManagerProps {
   className?: string;
@@ -22,14 +28,15 @@ interface StoredWritingIdea extends WritingIdea {
 
 export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
   const [ideas, setIdeas] = useState<StoredWritingIdea[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newIdea, setNewIdea] = useState<WritingIdea>({ title: '', placeholder: '' });
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newIdea, setNewIdea] = useState<WritingIdea>({ title: '', placeholder: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const { toast } = useToast();
 
   // Load ideas from API
@@ -70,19 +77,17 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
     idea.placeholder.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleEdit = (id: string) => {
-    setEditingId(id);
-    setIsAddingNew(false);
-  };
+  const handleSave = async (id: string, field: 'title' | 'placeholder', value: string) => {
+    const idea = ideas.find(i => i.id === id);
+    if (!idea) return;
 
-  const handleSave = async (id: string, updatedIdea: WritingIdea) => {
+    const updatedIdea = { ...idea, [field]: value };
+
     try {
-      setIsSaving(true);
+      setSavingIds(prev => new Set(prev).add(id));
       const response = await fetch('/api/admin/writing-ideas', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id,
           title: updatedIdea.title,
@@ -93,18 +98,13 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
       const result = await response.json();
 
       if (result.success) {
-        setIdeas(prev => prev.map(idea =>
-          idea.id === id ? { ...idea, ...updatedIdea, updatedAt: new Date().toISOString() } : idea
+        setIdeas(prev => prev.map(i =>
+          i.id === id ? { ...i, [field]: value, updatedAt: new Date().toISOString() } : i
         ));
-        setEditingId(null);
-        toast({
-          title: "Success",
-          description: "Writing idea updated successfully"
-        });
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to update writing idea",
+          description: result.error || "Failed to update",
           variant: "destructive"
         });
       }
@@ -112,21 +112,25 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
       console.error('Error updating idea:', error);
       toast({
         title: "Error",
-        description: "Failed to update writing idea",
+        description: "Failed to update",
         variant: "destructive"
       });
     } finally {
-      setIsSaving(false);
+      setSavingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this writing idea?')) {
-      return;
-    }
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+    const id = deleteConfirm.id;
+    setDeleteConfirm(null);
 
     try {
-      setIsSaving(true);
+      setSavingIds(prev => new Set(prev).add(id));
       const response = await fetch(`/api/admin/writing-ideas?id=${encodeURIComponent(id)}`, {
         method: 'DELETE'
       });
@@ -135,14 +139,16 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
 
       if (result.success) {
         setIdeas(prev => prev.filter(idea => idea.id !== id));
-        toast({
-          title: "Success",
-          description: "Writing idea deleted successfully"
+        setSelectedIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
         });
+        toast({ title: "Deleted", description: "Writing idea deleted" });
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to delete writing idea",
+          description: result.error || "Failed to delete",
           variant: "destructive"
         });
       }
@@ -150,11 +156,15 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
       console.error('Error deleting idea:', error);
       toast({
         title: "Error",
-        description: "Failed to delete writing idea",
+        description: "Failed to delete",
         variant: "destructive"
       });
     } finally {
-      setIsSaving(false);
+      setSavingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -169,12 +179,10 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
     }
 
     try {
-      setIsSaving(true);
+      setIsLoading(true);
       const response = await fetch('/api/admin/writing-ideas', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: newIdea.title.trim(),
           placeholder: newIdea.placeholder.trim()
@@ -191,14 +199,11 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
         setIdeas(prev => [ideaToAdd, ...prev]);
         setNewIdea({ title: '', placeholder: '' });
         setIsAddingNew(false);
-        toast({
-          title: "Success",
-          description: "Writing idea added successfully"
-        });
+        toast({ title: "Added", description: "Writing idea added" });
       } else {
         toast({
           title: "Error",
-          description: result.error || "Failed to add writing idea",
+          description: result.error || "Failed to add",
           variant: "destructive"
         });
       }
@@ -206,18 +211,12 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
       console.error('Error adding idea:', error);
       toast({
         title: "Error",
-        description: "Failed to add writing idea",
+        description: "Failed to add",
         variant: "destructive"
       });
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setIsAddingNew(false);
-    setNewIdea({ title: '', placeholder: '' });
   };
 
   // Bulk selection handlers
@@ -240,50 +239,34 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
   };
 
   // Bulk delete handler
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteConfirm = async () => {
     if (selectedIds.size === 0) return;
-
-    const confirmMessage = `Are you sure you want to delete ${selectedIds.size} writing idea${selectedIds.size > 1 ? 's' : ''}?`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    setBulkDeleteConfirm(false);
 
     try {
       setIsDeleting(true);
       const deletePromises = Array.from(selectedIds).map(id =>
-        fetch(`/api/admin/writing-ideas?id=${encodeURIComponent(id)}`, {
-          method: 'DELETE'
-        })
+        fetch(`/api/admin/writing-ideas?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
       );
 
       const responses = await Promise.all(deletePromises);
       const results = await Promise.all(responses.map(r => r.json()));
 
       const successfulDeletes = results.filter(r => r.success).length;
-      const failedDeletes = results.length - successfulDeletes;
 
       if (successfulDeletes > 0) {
         setIdeas(prev => prev.filter(idea => !selectedIds.has(idea.id)));
         setSelectedIds(new Set());
-
         toast({
-          title: "Success",
-          description: `${successfulDeletes} writing idea${successfulDeletes > 1 ? 's' : ''} deleted successfully${failedDeletes > 0 ? ` (${failedDeletes} failed)` : ''}`
-        });
-      }
-
-      if (failedDeletes > 0 && successfulDeletes === 0) {
-        toast({
-          title: "Error",
-          description: "Failed to delete writing ideas",
-          variant: "destructive"
+          title: "Deleted",
+          description: `${successfulDeletes} idea${successfulDeletes > 1 ? 's' : ''} deleted`
         });
       }
     } catch (error) {
-      console.error('Error bulk deleting ideas:', error);
+      console.error('Error bulk deleting:', error);
       toast({
         title: "Error",
-        description: "Failed to delete writing ideas",
+        description: "Failed to delete",
         variant: "destructive"
       });
     } finally {
@@ -292,10 +275,10 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
   };
 
   return (
-    <div className={className}>
+    <div className={`flex flex-col h-full ${className || ''}`}>
       {/* Header with search and actions */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+      <div className="flex-shrink-0 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
           <div className="flex-1">
             <Input
               placeholder="Search ideas..."
@@ -307,270 +290,311 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
             />
           </div>
           <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <Button
+                onClick={() => setBulkDeleteConfirm(true)}
+                variant="destructive"
+                size="sm"
+                disabled={isDeleting}
+              >
+                <Icon name="Trash2" size={14} className="mr-1" />
+                Delete {selectedIds.size}
+              </Button>
+            )}
             <Button
               onClick={loadIdeas}
               variant="outline"
               size="sm"
               disabled={isLoading}
             >
-              <Icon name="RefreshCw" size={16} className={isLoading ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline ml-2">Refresh</span>
+              <Icon name="RefreshCw" size={14} className={isLoading ? 'animate-spin' : ''} />
             </Button>
             <Button
               onClick={() => setIsAddingNew(true)}
-              disabled={isAddingNew || isLoading || isSaving}
+              disabled={isAddingNew || isLoading}
               size="sm"
             >
-              <Icon name="Plus" size={16} />
-              <span className="hidden sm:inline ml-2">Add New</span>
+              <Icon name="Plus" size={14} className="mr-1" />
+              Add
             </Button>
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {isLoading ? 'Loading...' : `${ideas.length} writing ideas`}
-          </p>
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {selectedIds.size} selected
-              </span>
-              <Button
-                onClick={handleBulkDelete}
-                variant="destructive"
-                size="sm"
-                disabled={isDeleting || isSaving}
-              >
-                <Icon name="Trash2" size={16} className="mr-2" />
-                {isDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
-              </Button>
-            </div>
-          )}
-        </div>
+        <p className="text-xs text-muted-foreground">
+          {isLoading ? 'Loading...' : `${filteredIdeas.length} of ${ideas.length} ideas`}
+        </p>
       </div>
 
-      {/* Content */}
-      <div>
-        <div className="space-y-4">
-          {/* Add New Idea Form */}
-          {isAddingNew && (
-            <Card>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium">Title</label>
-                    <Input
-                      value={newIdea.title}
-                      onChange={(e) => setNewIdea(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder="Enter idea title..."
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Placeholder Text</label>
-                    <Textarea
-                      value={newIdea.placeholder}
-                      onChange={(e) => setNewIdea(prev => ({ ...prev, placeholder: e.target.value }))}
-                      placeholder="Enter placeholder text..."
-                      className="mt-1"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleAddNew}
-                      size="sm"
-                      disabled={isSaving || !newIdea.title.trim() || !newIdea.placeholder.trim()}
-                    >
-                      <Icon name="Save" size={16} className="mr-2" />
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </Button>
-                    <Button onClick={handleCancel} variant="secondary" size="sm" disabled={isSaving}>
-                      <Icon name="X" size={16} className="mr-2" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      {/* Add New Row */}
+      {isAddingNew && (
+        <div className="flex-shrink-0 mb-3 p-3 border border-dashed border-primary rounded-lg bg-primary/5">
+          <div className="flex items-center gap-2">
+            <Input
+              value={newIdea.title}
+              onChange={(e) => setNewIdea(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Title..."
+              className="flex-1 h-8 text-sm"
+            />
+            <Input
+              value={newIdea.placeholder}
+              onChange={(e) => setNewIdea(prev => ({ ...prev, placeholder: e.target.value }))}
+              placeholder="Placeholder text..."
+              className="flex-[2] h-8 text-sm"
+            />
+            <Button onClick={handleAddNew} size="sm" className="h-8" disabled={!newIdea.title.trim() || !newIdea.placeholder.trim()}>
+              <Icon name="Check" size={14} />
+            </Button>
+            <Button onClick={() => { setIsAddingNew(false); setNewIdea({ title: '', placeholder: '' }); }} variant="ghost" size="sm" className="h-8">
+              <Icon name="X" size={14} />
+            </Button>
+          </div>
+        </div>
+      )}
 
-          {/* Ideas List */}
-          {isLoading ? (
-            <div className="text-center py-8">
-              <Icon name="RefreshCw" size={24} className="animate-spin mx-auto mb-2" />
-              <p className="text-muted-foreground">Loading writing ideas...</p>
-            </div>
-          ) : (
-            <>
-              {filteredIdeas.length > 0 && (
-                <div className="flex items-center gap-2 pb-2 border-b">
+      {/* Table */}
+      <div className="flex-1 min-h-0 overflow-auto border rounded-lg">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Icon name="RefreshCw" size={20} className="animate-spin mr-2" />
+            <span className="text-muted-foreground text-sm">Loading...</span>
+          </div>
+        ) : filteredIdeas.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+            {searchTerm ? `No ideas matching "${searchTerm}"` : 'No writing ideas yet'}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 sticky top-0">
+              <tr className="border-b">
+                <th className="w-8 p-2 text-left">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === filteredIdeas.length && filteredIdeas.length > 0}
                     onChange={handleSelectAll}
                     className="rounded border-border"
-                    disabled={isLoading || isSaving || isDeleting}
                   />
-                  <label className="text-sm font-medium">
-                    Select All ({filteredIdeas.length})
-                  </label>
-                </div>
-              )}
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {filteredIdeas.map((idea) => (
-                  <IdeaRow
-                    key={idea.id}
-                    idea={idea}
-                    isEditing={editingId === idea.id}
-                    isSelected={selectedIds.has(idea.id)}
-                    onSelect={() => handleSelectIdea(idea.id)}
-                    onEdit={() => handleEdit(idea.id)}
-                    onSave={(updatedIdea) => handleSave(idea.id, updatedIdea)}
-                    onDelete={() => handleDelete(idea.id)}
-                    onCancel={handleCancel}
-                    isSaving={isSaving}
-                    isDeleting={isDeleting}
-                  />
-                ))}
-              </div>
-
-              {filteredIdeas.length === 0 && searchTerm && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No ideas found matching "{searchTerm}"
-                </div>
-              )}
-
-              {filteredIdeas.length === 0 && !searchTerm && !isLoading && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No writing ideas found. Add your first idea above.
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                </th>
+                <th className="p-2 text-left font-medium text-muted-foreground w-1/3">Title</th>
+                <th className="p-2 text-left font-medium text-muted-foreground">Placeholder</th>
+                <th className="w-10 p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredIdeas.map((idea) => (
+                <EditableRow
+                  key={idea.id}
+                  idea={idea}
+                  isSelected={selectedIds.has(idea.id)}
+                  isSaving={savingIds.has(idea.id)}
+                  onSelect={() => handleSelectIdea(idea.id)}
+                  onSave={handleSave}
+                  onDelete={() => setDeleteConfirm({ id: idea.id, title: idea.title })}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {/* Single Delete Confirmation Modal */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Writing Idea</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteConfirm?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2 sm:justify-center">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Dialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} Writing Idea{selectedIds.size > 1 ? 's' : ''}</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedIds.size} selected idea{selectedIds.size > 1 ? 's' : ''}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row gap-2 sm:justify-center">
+            <Button variant="outline" onClick={() => setBulkDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDeleteConfirm}>
+              Delete {selectedIds.size}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-interface IdeaRowProps {
+interface EditableRowProps {
   idea: StoredWritingIdea;
-  isEditing: boolean;
   isSelected: boolean;
-  onSelect: () => void;
-  onEdit: () => void;
-  onSave: (idea: WritingIdea) => void;
-  onDelete: () => void;
-  onCancel: () => void;
   isSaving: boolean;
-  isDeleting: boolean;
+  onSelect: () => void;
+  onSave: (id: string, field: 'title' | 'placeholder', value: string) => void;
+  onDelete: () => void;
 }
 
-function IdeaRow({ idea, isEditing, isSelected, onSelect, onEdit, onSave, onDelete, onCancel, isSaving, isDeleting }: IdeaRowProps) {
-  const [editTitle, setEditTitle] = useState(idea.title);
-  const [editPlaceholder, setEditPlaceholder] = useState(idea.placeholder);
+function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete }: EditableRowProps) {
+  const [editingField, setEditingField] = useState<'title' | 'placeholder' | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isEditing) {
-      setEditTitle(idea.title);
-      setEditPlaceholder(idea.placeholder);
+    if (editingField && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [isEditing, idea]);
+  }, [editingField]);
+
+  const handleStartEdit = (field: 'title' | 'placeholder') => {
+    setEditingField(field);
+    setEditValue(idea[field]);
+  };
 
   const handleSave = () => {
-    if (editTitle.trim() && editPlaceholder.trim()) {
-      onSave({ title: editTitle.trim(), placeholder: editPlaceholder.trim() });
+    if (editingField && editValue.trim() && editValue.trim() !== idea[editingField]) {
+      onSave(idea.id, editingField, editValue.trim());
+    }
+    setEditingField(null);
+  };
+
+  const handleRevert = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    } else if (e.key === 'Escape') {
+      handleRevert();
     }
   };
 
-  if (isEditing) {
-    return (
-      <Card>
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium">Title</label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Placeholder Text</label>
-              <Textarea
-                value={editPlaceholder}
-                onChange={(e) => setEditPlaceholder(e.target.value)}
-                className="mt-1"
-                rows={2}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSave}
-                size="sm"
-                disabled={isSaving || !editTitle.trim() || !editPlaceholder.trim()}
-              >
-                <Icon name="Save" size={16} className="mr-2" />
-                {isSaving ? 'Saving...' : 'Save'}
-              </Button>
-              <Button onClick={onCancel} variant="secondary" size="sm" disabled={isSaving}>
-                <Icon name="X" size={16} className="mr-2" />
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const hasChanges = editingField && editValue.trim() !== idea[editingField];
 
   return (
-    <Card className={`transition-colors ${isSelected ? 'ring-2 ring-primary' : ''}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={onSelect}
-            className="mt-1 rounded border-border"
-            disabled={isSaving || isDeleting}
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium text-sm">{idea.title}</h4>
-              {idea.isNew && (
-                <span className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded">
-                  New
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {idea.placeholder}
-            </p>
-          </div>
-          <div className="flex gap-1">
+    <tr className={`border-b hover:bg-muted/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+      <td className="p-2">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onSelect}
+          className="rounded border-border"
+          disabled={isSaving}
+        />
+      </td>
+      <td className="p-2">
+        {editingField === 'title' ? (
+          <div className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 px-2 py-1 text-sm border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
             <Button
-              onClick={onEdit}
-              variant="ghost"
+              onClick={handleSave}
               size="sm"
-              disabled={isSaving || isDeleting}
+              className="h-7 w-7 p-0"
+              disabled={!editValue.trim()}
+              title="Save (Enter)"
             >
-              <Icon name="Edit2" size={16} />
+              <Icon name="Check" size={14} />
             </Button>
             <Button
-              onClick={onDelete}
+              onClick={handleRevert}
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive"
-              disabled={isSaving || isDeleting}
+              className="h-7 w-7 p-0"
+              title="Revert (Escape)"
             >
-              <Icon name="Trash2" size={16} />
+              <Icon name="X" size={14} />
             </Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        ) : (
+          <div
+            className="px-2 py-1 cursor-text hover:bg-muted/50 rounded min-h-[28px] flex items-center"
+            onClick={() => handleStartEdit('title')}
+          >
+            <span className="font-medium">{idea.title}</span>
+            {idea.isNew && (
+              <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground rounded">
+                New
+              </span>
+            )}
+          </div>
+        )}
+      </td>
+      <td className="p-2">
+        {editingField === 'placeholder' ? (
+          <div className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="flex-1 px-2 py-1 text-sm border rounded bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <Button
+              onClick={handleSave}
+              size="sm"
+              className="h-7 w-7 p-0"
+              disabled={!editValue.trim()}
+              title="Save (Enter)"
+            >
+              <Icon name="Check" size={14} />
+            </Button>
+            <Button
+              onClick={handleRevert}
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              title="Revert (Escape)"
+            >
+              <Icon name="X" size={14} />
+            </Button>
+          </div>
+        ) : (
+          <div
+            className="px-2 py-1 cursor-text hover:bg-muted/50 rounded text-muted-foreground min-h-[28px] flex items-center truncate"
+            onClick={() => handleStartEdit('placeholder')}
+          >
+            {idea.placeholder}
+          </div>
+        )}
+      </td>
+      <td className="p-2">
+        <Button
+          onClick={onDelete}
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <Icon name="Loader" size={14} />
+          ) : (
+            <Icon name="Trash2" size={14} />
+          )}
+        </Button>
+      </td>
+    </tr>
   );
 }

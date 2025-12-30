@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
     console.log(`🎯 USD Allocations API: Getting enhanced allocations for user ${userId} (with user allocation fix v3)`);
 
     // Get USD balance and allocations
-    const balance = await ServerUsdService.getUserUsdBalance(userId);
-    const allocations = await ServerUsdService.getUserUsdAllocations(userId);
+    const balance = await UsdService.getUserUsdBalance(userId);
+    const allocations = await UsdService.getUserUsdAllocations(userId);
 
     if (!balance) {
       return NextResponse.json({

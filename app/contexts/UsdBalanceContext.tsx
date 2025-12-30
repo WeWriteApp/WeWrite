@@ -7,7 +7,7 @@ import { UsdDataService, type UsdBalance } from '../services/usdDataService';
 import { usdBalanceCache } from '../utils/financialDataCache';
 import { useSubscription } from './SubscriptionContext';
 import { useShouldUseDemoBalance } from './DemoBalanceContext';
-import { createNotification } from '../services/notificationsApi';
+import { createNotification } from '../services/notificationsService';
 import { getCurrentMonth } from '../utils/usdConstants';
 
 /**

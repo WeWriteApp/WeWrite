@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { usePWA } from '../../providers/PWAProvider';
 import { getPWAInstallInstructions } from '../../utils/pwa-detection';
 import { useAlert } from '../../hooks/useAlert';
-import AlertModal from './AlertModal';
+import { AlertModal } from './UnifiedModal';
 import {
   Collapsible,
   CollapsibleContent,

@@ -1,4 +1,4 @@
-import { createNotification } from '../services/notificationsApi';
+import { createNotification } from '../services/notificationsService';
 
 type NotificationPayload = {
   type: string;

@@ -465,8 +465,8 @@ const DrawerFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      // Footer with comfortable bottom padding for buttons
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-3 pb-6 flex-shrink-0 border-t-subtle",
+      // Footer with comfortable bottom padding for buttons - no border (use Separator if needed)
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-4 pt-3 pb-6 flex-shrink-0",
       className
     )}
     {...props}

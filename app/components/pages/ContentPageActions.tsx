@@ -34,12 +34,13 @@ import { rtdbApi } from "../../utils/apiClient";
 
 import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
-import ConfirmationModal from '../utils/ConfirmationModal';
+import { ConfirmationModal } from '../utils/UnifiedModal';
 import { navigateAfterPageDeletion } from "../../utils/postDeletionNavigation";
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 import AddToPageButton from '../utils/AddToPageButton';
+import { Reveal } from '../ui/reveal';
 
 /**
  * PageActions Component
@@ -97,7 +98,7 @@ interface PageActionsProps {
   onInsertLink?: () => void; // Add insert link callback
   isSaving?: boolean; // Add saving state
   showLinkSuggestions?: boolean; // Link suggestions toggle state
-  isLoadingSuggestions?: boolean; // Loading state for link suggestions
+  linkSuggestionCount?: number; // Number of available link suggestions (no loading state - only shown when count > 0)
   onToggleLinkSuggestions?: (enabled: boolean) => void; // Callback when toggle changes
 }
 
@@ -112,7 +113,7 @@ export function ContentPageActions({
   onInsertLink,
   isSaving = false,
   showLinkSuggestions = false,
-  isLoadingSuggestions = false,
+  linkSuggestionCount = 0,
   onToggleLinkSuggestions
 }: PageActionsProps) {
   const router = useRouter();
@@ -324,27 +325,22 @@ export function ContentPageActions({
             </Button>
           )}
 
-          {/* Link Suggestions toggle - shown when editing */}
+          {/* Link Suggestions toggle - shown when editing and suggestions exist (no loading state) */}
           {isEditing && onToggleLinkSuggestions && (
-            <Button
-              variant={showLinkSuggestions ? "default" : "secondary"}
-              size="lg"
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-              onClick={() => onToggleLinkSuggestions(!showLinkSuggestions)}
-              disabled={isSaving || isLoadingSuggestions}
-            >
-              {isLoadingSuggestions ? (
-                <>
-                  <Icon name="Loader" />
-                  <span>Loading Link Suggestions</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="Lightbulb" size={20} />
-                  <span>Link Suggestions</span>
-                </>
-              )}
-            </Button>
+            <Reveal show={linkSuggestionCount > 0}>
+              <Button
+                variant={showLinkSuggestions ? "default" : "secondary"}
+                size="lg"
+                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+                onClick={() => onToggleLinkSuggestions(!showLinkSuggestions)}
+                disabled={isSaving}
+              >
+                <Icon name="Lightbulb" size={20} />
+                <span>
+                  {showLinkSuggestions ? 'Hide' : 'Show'} {linkSuggestionCount} link suggestion{linkSuggestionCount === 1 ? '' : 's'}
+                </span>
+              </Button>
+            </Reveal>
           )}
 
           {/* Reply button - available to all users when not editing (ORDER: 1st) */}

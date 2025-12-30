@@ -200,6 +200,11 @@ const config: Config = {
         'slide-up-fade': 'slide-up-fade 0.3s ease-out forwards',
         'dialog-in': 'dialog-in 0.2s ease-out forwards',
         'dialog-out': 'dialog-out 0.15s ease-in forwards',
+        // Element reveal animations for smooth layout shifts
+        'reveal-in': 'reveal-in 0.25s ease-out forwards',
+        'reveal-out': 'reveal-out 0.2s ease-in forwards',
+        'reveal-scale-in': 'reveal-scale-in 0.25s ease-out forwards',
+        'reveal-scale-out': 'reveal-scale-out 0.2s ease-in forwards',
       },
       keyframes: {
         'gradient-x': {
@@ -258,6 +263,23 @@ const config: Config = {
         'drawer-slide-down': {
           '0%': { transform: 'translateY(0)', opacity: '1' },
           '100%': { transform: 'translateY(100%)', opacity: '0' },
+        },
+        // Element reveal animations - for smooth appearance of new elements
+        'reveal-in': {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'reveal-out': {
+          '0%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '0', transform: 'translateY(4px)' },
+        },
+        'reveal-scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95) translateY(4px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        'reveal-scale-out': {
+          '0%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+          '100%': { opacity: '0', transform: 'scale(0.95) translateY(4px)' },
         },
       },
     },

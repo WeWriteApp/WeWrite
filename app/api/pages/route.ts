@@ -534,7 +534,7 @@ export async function PUT(request: NextRequest) {
     }
 
     body = await request.json();
-    const { id, title, content, location, groupId, customDate, replyType, markAsSaved, replyTo, replyToTitle, replyToUsername } = body;
+    const { id, title, content, location, groupId, customDate, replyType, markAsSaved, replyTo, replyToTitle, replyToUsername, batchWithGroup } = body;
 
 
     logger.info('Page save request', {
@@ -787,12 +787,18 @@ export async function PUT(request: NextRequest) {
         const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
 
         // Prepare data for version saving
-        const versionData = {
+        const versionData: any = {
           content,
           userId: currentUserId,
           username: currentUser?.username || 'Anonymous',
           groupId: groupId
         };
+
+        // VERSION BATCHING: If batchWithGroup is true, pass it through to enable version batching
+        // This allows auto-saves within a session to update the same version instead of creating new ones
+        if (batchWithGroup && groupId) {
+          versionData.batchWithGroup = true;
+        }
 
         // Add title change information if title is also being updated
         if (title !== undefined && title.trim() !== pageData.title) {

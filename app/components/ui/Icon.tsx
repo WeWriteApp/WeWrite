@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ComponentType } from "react";
-import { PulseLoader, GridLoader } from "react-spinners";
+import { PulseLoader } from "react-spinners";
 import {
   Home,
   Menu,
@@ -159,6 +159,13 @@ import {
   LayoutGrid,
   EyeOff,
   Grid2X2,
+  Layers,
+  Hash,
+  PanelLeftClose,
+  PanelLeft,
+  PanelRight,
+  MousePointer,
+  Hand,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -191,7 +198,7 @@ export type IconName =
   // Status & Feedback
   | "Info" | "Warning" | "Error" | "Success"
   | "AlertCircle" | "AlertTriangle" | "HelpCircle"
-  | "XCircle" | "Loader" | "LoaderGrid" | "Loading"
+  | "XCircle" | "Loader" | "Loading"
   // User & Profile
   | "User" | "Users" | "UserCircle" | "UserPlus" | "UserMinus" | "UserCheck" | "UserX"
   | "LogOut"
@@ -230,7 +237,8 @@ export type IconName =
   | "Flag" | "Ban" | "Wrench"
   | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack"
   | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "Github" | "BookText" | "FolderPlus"
-  | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff";
+  | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff"
+  | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand";
 
 // Icon props interface
 export interface IconProps {
@@ -461,6 +469,13 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Coins: Coins,
   LayoutGrid: LayoutGrid,
   Grid2X2: Grid2X2,
+  Layers: Layers,
+  Hash: Hash,
+  PanelLeftClose: PanelLeftClose,
+  PanelLeft: PanelLeft,
+  PanelRight: PanelRight,
+  MousePointer: MousePointer,
+  Hand: Hand,
 };
 
 // Unified Icon Component
@@ -503,33 +518,6 @@ export const Icon = forwardRef<HTMLSpanElement, IconProps>(
             color={loaderColor}
             loading={true}
             speedMultiplier={0.8}
-          />
-        </span>
-      );
-    }
-
-    // GridLoader as alternative variant
-    if (name === "LoaderGrid") {
-      const hasTextColorClass = className?.includes('text-');
-      const loaderColor = color || (hasTextColorClass ? "currentColor" : "var(--neutral-alpha-30)");
-
-      const numericSize = typeof size === "number" ? size : 24;
-      const dotSize = Math.max(2, numericSize / 3);
-
-      return (
-        <span
-          ref={ref}
-          className={`inline-flex items-center justify-center ${className}`}
-          onClick={onClick}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          style={style}
-        >
-          <GridLoader
-            size={dotSize}
-            color={loaderColor}
-            loading={true}
-            speedMultiplier={1}
           />
         </span>
       );

@@ -12,7 +12,7 @@ import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import Link from 'next/link';
 import { SubscriptionCheckoutDrawer } from './SubscriptionCheckoutDrawer';
-import { ConfirmationModal } from '../utils/ConfirmationModal';
+import { ConfirmationModal } from '../utils/UnifiedModal';
 
 interface UsdFundingTierSliderProps {
   selectedAmount: number;

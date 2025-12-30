@@ -4,11 +4,11 @@
 
 import { createMocks } from 'node-mocks-http';
 import { GET, POST } from '../../../app/api/usd/allocate/route';
-import { ServerUsdService } from '../../../app/services/usdService.server';
+import { UsdService } from '../../../app/services/usdService';
 
-// Mock the ServerUsdService
-jest.mock('../../../app/services/usdService.server');
-const mockServerUsdService = ServerUsdService as jest.Mocked<typeof ServerUsdService>;
+// Mock the UsdService
+jest.mock('../../../app/services/usdService');
+const mockUsdService = UsdService as jest.Mocked<typeof UsdService>;
 
 // Mock the auth utility
 jest.mock('../../../app/utils/auth', () => ({
@@ -41,9 +41,9 @@ describe('/api/usd/allocate', () => {
       };
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.allocateUsdToPage.mockResolvedValue(undefined);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue(mockUpdatedBalance);
-      mockServerUsdService.getCurrentPageAllocation.mockResolvedValue(250);
+      mockUsdService.allocateUsdToPage.mockResolvedValue(undefined);
+      mockUsdService.getUserUsdBalance.mockResolvedValue(mockUpdatedBalance);
+      mockUsdService.getCurrentPageAllocation.mockResolvedValue(250);
 
       const { req } = createMocks({
         method: 'POST',
@@ -61,7 +61,7 @@ describe('/api/usd/allocate', () => {
       expect(data.balance).toEqual(mockUpdatedBalance);
       expect(data.currentPageAllocation).toBe(250);
       expect(data.message).toContain('Successfully allocated');
-      expect(mockServerUsdService.allocateUsdToPage).toHaveBeenCalledWith(mockUserId, pageId, usdCentsChange);
+      expect(mockUsdService.allocateUsdToPage).toHaveBeenCalledWith(mockUserId, pageId, usdCentsChange);
     });
 
     test('successfully removes USD allocation (negative change)', async () => {
@@ -81,9 +81,9 @@ describe('/api/usd/allocate', () => {
       };
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.allocateUsdToPage.mockResolvedValue(undefined);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue(mockUpdatedBalance);
-      mockServerUsdService.getCurrentPageAllocation.mockResolvedValue(150);
+      mockUsdService.allocateUsdToPage.mockResolvedValue(undefined);
+      mockUsdService.getUserUsdBalance.mockResolvedValue(mockUpdatedBalance);
+      mockUsdService.getCurrentPageAllocation.mockResolvedValue(150);
 
       const { req } = createMocks({
         method: 'POST',
@@ -162,7 +162,7 @@ describe('/api/usd/allocate', () => {
       const mockUserId = 'test-user-123';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.allocateUsdToPage.mockRejectedValue(new Error('balance not found'));
+      mockUsdService.allocateUsdToPage.mockRejectedValue(new Error('balance not found'));
 
       const { req } = createMocks({
         method: 'POST',
@@ -183,7 +183,7 @@ describe('/api/usd/allocate', () => {
       const mockUserId = 'test-user-123';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.allocateUsdToPage.mockRejectedValue(new Error('subscription error'));
+      mockUsdService.allocateUsdToPage.mockRejectedValue(new Error('subscription error'));
 
       const { req } = createMocks({
         method: 'POST',
@@ -208,7 +208,7 @@ describe('/api/usd/allocate', () => {
       const currentAllocation = 250;
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.getCurrentPageAllocation.mockResolvedValue(currentAllocation);
+      mockUsdService.getCurrentPageAllocation.mockResolvedValue(currentAllocation);
 
       const { req } = createMocks({
         method: 'GET',
@@ -262,7 +262,7 @@ describe('/api/usd/allocate', () => {
       const pageId = 'non-existent-page';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.getCurrentPageAllocation.mockResolvedValue(0);
+      mockUsdService.getCurrentPageAllocation.mockResolvedValue(0);
 
       const { req } = createMocks({
         method: 'GET',
@@ -281,7 +281,7 @@ describe('/api/usd/allocate', () => {
       const mockUserId = 'test-user-123';
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.getCurrentPageAllocation.mockRejectedValue(new Error('Database error'));
+      mockUsdService.getCurrentPageAllocation.mockRejectedValue(new Error('Database error'));
 
       const { req } = createMocks({
         method: 'GET',
@@ -303,8 +303,8 @@ describe('/api/usd/allocate', () => {
       const usdCentsChange = 0;
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.allocateUsdToPage.mockResolvedValue(undefined);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue({
+      mockUsdService.allocateUsdToPage.mockResolvedValue(undefined);
+      mockUsdService.getUserUsdBalance.mockResolvedValue({
         userId: mockUserId,
         totalUsdCents: 1000,
         allocatedUsdCents: 0,
@@ -314,7 +314,7 @@ describe('/api/usd/allocate', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      mockServerUsdService.getCurrentPageAllocation.mockResolvedValue(0);
+      mockUsdService.getCurrentPageAllocation.mockResolvedValue(0);
 
       const { req } = createMocks({
         method: 'POST',
@@ -337,8 +337,8 @@ describe('/api/usd/allocate', () => {
       const usdCentsChange = 100000; // $1000
 
       mockGetUserIdFromRequest.mockResolvedValue(mockUserId);
-      mockServerUsdService.allocateUsdToPage.mockResolvedValue(undefined);
-      mockServerUsdService.getUserUsdBalance.mockResolvedValue({
+      mockUsdService.allocateUsdToPage.mockResolvedValue(undefined);
+      mockUsdService.getUserUsdBalance.mockResolvedValue({
         userId: mockUserId,
         totalUsdCents: 100000,
         allocatedUsdCents: 100000,
@@ -348,7 +348,7 @@ describe('/api/usd/allocate', () => {
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      mockServerUsdService.getCurrentPageAllocation.mockResolvedValue(100000);
+      mockUsdService.getCurrentPageAllocation.mockResolvedValue(100000);
 
       const { req } = createMocks({
         method: 'POST',

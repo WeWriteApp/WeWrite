@@ -35,8 +35,10 @@ interface PageFooterProps {
   saveSuccess?: boolean;
   canEdit: boolean;
   showLinkSuggestions?: boolean;
-  isLoadingSuggestions?: boolean;
+  linkSuggestionCount?: number;
   onToggleLinkSuggestions?: (enabled: boolean) => void;
+  /** IDs of pages linked from this page's content */
+  linkedPageIds?: string[];
 }
 
 /**
@@ -91,8 +93,9 @@ export default function ContentPageFooter({
   saveSuccess = false,
   canEdit,
   showLinkSuggestions = false,
-  isLoadingSuggestions = false,
-  onToggleLinkSuggestions
+  linkSuggestionCount = 0,
+  onToggleLinkSuggestions,
+  linkedPageIds = []
 }: PageFooterProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -122,7 +125,8 @@ export default function ContentPageFooter({
   // Don't return null - we want to show location card and stats even for non-owners
 
   return (
-    <div className="pb-4 px-4 space-y-4">
+    <div className="pt-2 pb-4 px-4 space-y-4">
+      {/* Spacing: pt-2 matches the pt-2 above AutoSaveIndicator in ContentPageView */}
       {/* Show PageActions for editors (when editing) */}
       {page && canEdit && (
         <ContentPageActions
@@ -136,7 +140,7 @@ export default function ContentPageFooter({
           onInsertLink={onInsertLink} // Pass insert link callback
           isSaving={isSaving} // Pass saving state
           showLinkSuggestions={showLinkSuggestions}
-          isLoadingSuggestions={isLoadingSuggestions}
+          linkSuggestionCount={linkSuggestionCount}
           onToggleLinkSuggestions={onToggleLinkSuggestions}
         />
       )}
@@ -195,14 +199,15 @@ export default function ContentPageFooter({
                   }}
                 />
               )}
-              {/* Show location if owner OR if it has a value */}
-              {(isOwner || page.location) && (
+              {/* Show location if owner OR if it has a value OR if there are linked pages */}
+              {(isOwner || page.location || linkedPageIds.length > 0) && (
                 <LocationField
                   location={page.location}
                   canEdit={isOwner}
                   onLocationChange={onLocationChange}
                   pageId={page.id}
                   pageTitle={page.title}
+                  linkedPageIds={linkedPageIds}
                 />
               )}
             </div>

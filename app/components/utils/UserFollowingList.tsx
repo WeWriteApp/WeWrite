@@ -9,7 +9,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { UsernameBadge } from '../ui/UsernameBadge';
 
 import { useAlert } from '../../hooks/useAlert';
-import AlertModal from './AlertModal';
+import { AlertModal } from './UnifiedModal';
 
 interface UserFollowingListProps {
   userId: string;

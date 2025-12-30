@@ -173,7 +173,7 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       try {
         const stripeKey = getStripeSecretKey();
         if (stripeKey) {
-          const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
+          const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
           const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId);
 
           // Check if Stripe says the subscription is NOT active

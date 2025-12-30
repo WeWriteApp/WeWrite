@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter, DialogTitle } from '../ui/dialog';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { Button } from '../ui/button';
 import Link from 'next/link';
@@ -59,7 +59,7 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
           </Button>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4">
+        <DialogBody className="space-y-4">
           {/* Explanation */}
           <div className="p-3 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground">
@@ -96,18 +96,16 @@ export function SubscriptionTiersModal({ isOpen, onClose }: SubscriptionTiersMod
               );
             })}
           </div>
-
-
-        </div>
+        </DialogBody>
 
         {/* Set up mine button at bottom */}
-        <div className="flex-shrink-0 pt-4 border-t border-border">
-          <Link href="/settings/subscription" onClick={onClose}>
+        <DialogFooter>
+          <Link href="/settings/subscription" onClick={onClose} className="w-full">
             <Button variant="default" className="w-full">
               Set up mine
             </Button>
           </Link>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

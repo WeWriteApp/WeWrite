@@ -81,7 +81,7 @@ interface EditorProps {
   onInsertLinkRequest?: (triggerFn: () => void) => void;
   initialSelectionPath?: Path; // Optional initial cursor position
   showLinkSuggestions?: boolean; // Show link suggestion underlines when enabled
-  onLinkSuggestionsLoadingChange?: (isLoading: boolean) => void; // Callback when loading state changes
+  onLinkSuggestionCountChange?: (count: number) => void; // Callback when suggestion count changes
 }
 
 const Editor: React.FC<EditorProps> = ({
@@ -94,7 +94,7 @@ const Editor: React.FC<EditorProps> = ({
   onInsertLinkRequest,
   initialSelectionPath,
   showLinkSuggestions = false,
-  onLinkSuggestionsLoadingChange
+  onLinkSuggestionCountChange
 }) => {
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
   const { user } = useAuth();
@@ -108,9 +108,9 @@ const Editor: React.FC<EditorProps> = ({
   const [activeSuggestionForModal, setActiveSuggestionForModal] = useState<LinkSuggestion | null>(null);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
 
-  // Link suggestions hook - only active when toggled on
+  // Link suggestions hook - always enabled for counting, visibility controlled by showLinkSuggestions prop
   const { state: linkSuggestionState, actions: linkSuggestionActions } = useLinkSuggestions({
-    enabled: showLinkSuggestions,
+    enabled: true, // Always enabled to get counts for the button
     minConfidence: 0.3,
     debounceDelay: 1500,
     onSuggestionSelected: (suggestion) => {
@@ -119,15 +119,11 @@ const Editor: React.FC<EditorProps> = ({
     }
   });
 
-  // Notify parent when suggestions change (debug removed)
+  // Notify parent when suggestion count changes
   useEffect(() => {
-    // Suggestions updated
-  }, [linkSuggestionState.allSuggestions]);
+    onLinkSuggestionCountChange?.(linkSuggestionState.allSuggestions.length);
+  }, [linkSuggestionState.allSuggestions.length, onLinkSuggestionCountChange]);
 
-  // Notify parent of loading state changes
-  useEffect(() => {
-    onLinkSuggestionsLoadingChange?.(linkSuggestionState.isLoading);
-  }, [linkSuggestionState.isLoading, onLinkSuggestionsLoadingChange]);
 
   // Link deletion plugin - allows deleting links with backspace/delete keys
   const withLinkDeletion = useCallback((editor: ReactEditor) => {
@@ -476,9 +472,10 @@ const Editor: React.FC<EditorProps> = ({
     }).join(' ');
   }, []);
 
-  // Analyze text for link suggestions when content changes or toggle is enabled
+  // Analyze text for link suggestions when content changes
+  // Always runs to populate count for the button, regardless of showLinkSuggestions visibility toggle
   useEffect(() => {
-    if (!showLinkSuggestions || !editorValue || readOnly) {
+    if (!editorValue || readOnly) {
       return;
     }
 
@@ -487,7 +484,7 @@ const Editor: React.FC<EditorProps> = ({
     if (plainText.length >= 10) {
       linkSuggestionActions.analyzeText(plainText, user?.uid, pageId);
     }
-  }, [showLinkSuggestions, editorValue, user?.uid, pageId, readOnly, extractPlainText, linkSuggestionActions]);
+  }, [editorValue, user?.uid, pageId, readOnly, extractPlainText, linkSuggestionActions]);
 
   // Helper function to insert a link from a suggestion
   const insertLinkFromSuggestion = useCallback((suggestion: LinkSuggestion) => {

@@ -16,8 +16,7 @@ import { Label } from "../../ui/label";
 import { EmailVerificationStatus } from '../../utils/EmailVerificationStatus';
 import { useAlert } from '../../../hooks/useAlert';
 import { useConfirmation } from '../../../hooks/useConfirmation';
-import AlertModal from '../../utils/AlertModal';
-import ConfirmationModal from '../../utils/ConfirmationModal';
+import { AlertModal, ConfirmationModal } from '../../utils/UnifiedModal';
 
 interface ProfileContentProps {
   onClose: () => void;

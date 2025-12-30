@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { FinancialUtils } from '../../../types/financial';
-import { ServerUsdService } from '../../../services/usdService.server';
+import { UsdService } from '../../../services/usdService';
 import { StripeStorageBalanceService } from '../../../services/stripeStorageBalanceService';
 import { getCurrentMonth } from '../../../utils/usdConstants';
 import { centsToDollars } from '../../../utils/formatCurrency';
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const dryRun: boolean = Boolean(body.dryRun);
 
     // Aggregate allocated vs unallocated funds for the month
-    const summary = await ServerUsdService.getMonthlyAllocationSummary(month);
+    const summary = await UsdService.getMonthlyAllocationSummary(month);
 
     const allocatedDollars = summary.totalAllocatedCents / 100;
     const unallocatedDollars = summary.totalUnallocatedCents / 100;

@@ -21,6 +21,15 @@ interface Location {
   zoom?: number;
 }
 
+// Marker data for displaying multiple locations
+export interface MapMarker {
+  id: string;
+  location: Location;
+  title?: string;
+  color?: string; // hex color for the marker
+  isCurrentPage?: boolean; // if true, uses accent color
+}
+
 interface MapPickerProps {
   location?: Location | null;
   onChange?: (location: Location | null) => void;
@@ -34,25 +43,29 @@ interface MapPickerProps {
   allowPanning?: boolean;
   originalLocation?: Location | null;
   accentColor?: string;
+  /** Additional markers to display (e.g., linked pages) */
+  markers?: MapMarker[];
+  /** Callback when a marker is clicked */
+  onMarkerClick?: (marker: MapMarker) => void;
 }
 
 // Helper function to create a custom colored marker icon
 const createColoredMarkerIcon = (L: any, color: string, isGhost: boolean = false): any => {
   const opacity = isGhost ? 0.5 : 1;
-  const strokeColor = isGhost ? '#666' : '#fff';
   const circleFill = isGhost ? '#888' : '#fff';
 
   // Create SVG as a data URL for better browser compatibility
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="24" height="36"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24c0-6.627-5.373-12-12-12z" fill="${color}" fill-opacity="${opacity}" stroke="${strokeColor}" stroke-width="1.5"/><circle cx="12" cy="12" r="5" fill="${circleFill}" fill-opacity="${opacity}"/></svg>`;
+  // No stroke/border - fill only. viewBox adjusted to prevent clipping
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 26 38" width="26" height="38"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24c0-6.627-5.373-12-12-12z" fill="${color}" fill-opacity="${opacity}"/><circle cx="12" cy="12" r="5" fill="${circleFill}" fill-opacity="${opacity}"/></svg>`;
 
   const encodedSvg = encodeURIComponent(svg);
   const dataUrl = `data:image/svg+xml,${encodedSvg}`;
 
   return L.icon({
     iconUrl: dataUrl,
-    iconSize: [24, 36],
-    iconAnchor: [12, 36],
-    popupAnchor: [0, -36]
+    iconSize: [26, 38],
+    iconAnchor: [13, 38],
+    popupAnchor: [0, -38]
   });
 };
 
@@ -76,12 +89,15 @@ const MapPicker: React.FC<MapPickerProps> = ({
   allowPanning = true,
   originalLocation,
   accentColor,
+  markers = [],
+  onMarkerClick,
 }) => {
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const originalMarkerRef = useRef<any>(null);
+  const additionalMarkersRef = useRef<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
@@ -279,6 +295,53 @@ const MapPicker: React.FC<MapPickerProps> = ({
           }
         }
 
+        // Add additional markers (e.g., linked pages)
+        if (markers && markers.length > 0) {
+          // Clear any existing additional markers
+          additionalMarkersRef.current.forEach(m => map.removeLayer(m));
+          additionalMarkersRef.current = [];
+
+          // Neutral gray color for linked pages
+          const linkedPageColor = '#6B7280'; // text-gray-500
+
+          markers.forEach(markerData => {
+            const markerColor = markerData.color || linkedPageColor;
+            const icon = createColoredMarkerIcon(L, markerColor, false);
+            const additionalMarker = L.marker(
+              [markerData.location.lat, markerData.location.lng],
+              { icon, interactive: !!onMarkerClick }
+            ).addTo(map);
+
+            // Add popup with title if available
+            if (markerData.title) {
+              additionalMarker.bindPopup(markerData.title);
+            }
+
+            // Add click handler
+            if (onMarkerClick) {
+              additionalMarker.on('click', () => {
+                onMarkerClick(markerData);
+              });
+            }
+
+            additionalMarkersRef.current.push(additionalMarker);
+          });
+
+          // Fit bounds to show all markers if we have multiple points
+          const allPoints: [number, number][] = [];
+          if (location) {
+            allPoints.push([location.lat, location.lng]);
+          }
+          markers.forEach(m => {
+            allPoints.push([m.location.lat, m.location.lng]);
+          });
+
+          if (allPoints.length > 1) {
+            const bounds = L.latLngBounds(allPoints);
+            map.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
+          }
+        }
+
         // Add click handler for placing/moving marker
         if (!readOnly && onChange) {
           map.on('click', (e: any) => {
@@ -427,6 +490,57 @@ const MapPicker: React.FC<MapPickerProps> = ({
       }
     }
   }, [location, readOnly, onChange, accentColor]);
+
+  // Handle markers changes - update linked page markers
+  useEffect(() => {
+    if (!mapInstanceRef.current || !L) return;
+
+    const map = mapInstanceRef.current;
+
+    // Clear existing additional markers
+    additionalMarkersRef.current.forEach(m => map.removeLayer(m));
+    additionalMarkersRef.current = [];
+
+    // Add new markers
+    if (markers && markers.length > 0) {
+      const linkedPageColor = '#6B7280'; // text-gray-500
+
+      markers.forEach(markerData => {
+        const markerColor = markerData.color || linkedPageColor;
+        const icon = createColoredMarkerIcon(L, markerColor, false);
+        const additionalMarker = L.marker(
+          [markerData.location.lat, markerData.location.lng],
+          { icon, interactive: !!onMarkerClick }
+        ).addTo(map);
+
+        if (markerData.title) {
+          additionalMarker.bindPopup(markerData.title);
+        }
+
+        if (onMarkerClick) {
+          additionalMarker.on('click', () => {
+            onMarkerClick(markerData);
+          });
+        }
+
+        additionalMarkersRef.current.push(additionalMarker);
+      });
+
+      // Fit bounds to show all markers
+      const allPoints: [number, number][] = [];
+      if (location) {
+        allPoints.push([location.lat, location.lng]);
+      }
+      markers.forEach(m => {
+        allPoints.push([m.location.lat, m.location.lng]);
+      });
+
+      if (allPoints.length > 1) {
+        const bounds = L.latLngBounds(allPoints);
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
+      }
+    }
+  }, [markers, location, onMarkerClick]);
 
   const handleCenterOnLocation = () => {
     if (location && mapInstanceRef.current) {

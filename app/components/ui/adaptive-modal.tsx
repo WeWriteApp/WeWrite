@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from './dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from './drawer';
 
 interface AdaptiveModalProps {
@@ -74,8 +74,10 @@ export function AdaptiveModal({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        
-        {children}
+
+        <DialogBody className="pb-6">
+          {children}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

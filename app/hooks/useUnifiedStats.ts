@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  unifiedStatsService, 
-  UnifiedPageStats, 
-  UnifiedUserStats, 
-  BatchStatsResult 
-} from '../services/UnifiedStatsService';
+import {
+  statsService,
+  PageStats,
+  UserStats,
+  BatchStatsResult
+} from '../services/StatsService';
 
 export interface UsePageStatsOptions {
   pageId: string;
@@ -16,7 +16,7 @@ export interface UsePageStatsOptions {
 }
 
 export interface UsePageStatsResult {
-  stats: UnifiedPageStats | null;
+  stats: PageStats | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -32,7 +32,7 @@ export interface UseUserStatsOptions {
 }
 
 export interface UseUserStatsResult {
-  stats: UnifiedUserStats | null;
+  stats: UserStats | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -66,7 +66,7 @@ export function usePageStats(options: UsePageStatsOptions): UsePageStatsResult {
     refreshInterval = 300000 // 5 minutes (increased for cost optimization)
   } = options;
 
-  const [stats, setStats] = useState<UnifiedPageStats | null>(null);
+  const [stats, setStats] = useState<PageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unsubscriber, setUnsubscriber] = useState<(() => void) | null>(null);
@@ -76,7 +76,7 @@ export function usePageStats(options: UsePageStatsOptions): UsePageStatsResult {
       setLoading(true);
       setError(null);
       
-      const result = await unifiedStatsService.getPageStats(pageId, forceRefresh);
+      const result = await statsService.getPageStats(pageId, forceRefresh);
       setStats(result);
       
       console.log(`📊 [usePageStats] Fetched stats for ${pageId}:`, {
@@ -163,7 +163,7 @@ export function useUserStats(options: UseUserStatsOptions): UseUserStatsResult {
     refreshInterval = 600000 // 10 minutes (increased for cost optimization)
   } = options;
 
-  const [stats, setStats] = useState<UnifiedUserStats | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unsubscriber, setUnsubscriber] = useState<(() => void) | null>(null);
@@ -173,7 +173,7 @@ export function useUserStats(options: UseUserStatsOptions): UseUserStatsResult {
       setLoading(true);
       setError(null);
       
-      const result = await unifiedStatsService.getUserStats(userId, forceRefresh);
+      const result = await statsService.getUserStats(userId, forceRefresh);
       setStats(result);
       
       console.log(`📊 [useUserStats] Fetched stats for ${userId}:`, {
@@ -269,7 +269,7 @@ export function useBatchStats(options: UseBatchStatsOptions): UseBatchStatsResul
       setLoading(true);
       setError(null);
       
-      const batchResult = await unifiedStatsService.getBatchStats(pageIds, userIds);
+      const batchResult = await statsService.getBatchStats(pageIds, userIds);
       setResult(batchResult);
       
       console.log(`📊 [useBatchStats] Fetched batch stats:`, {

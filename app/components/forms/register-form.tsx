@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback } from "react"
 // Firebase imports for registration
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../firebase/config'
-import { createEmailVerificationNotification } from '../../services/notificationsApi'
+import { createEmailVerificationNotification } from '../../services/notificationsService'
 import { InlineError } from "../ui/InlineError"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"

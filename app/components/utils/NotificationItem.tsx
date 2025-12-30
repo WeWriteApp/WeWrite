@@ -11,7 +11,7 @@ import { Button } from '../ui/button';
 import { InlineError } from '../ui/InlineError';
 import { dismissEmailVerificationNotifications } from '../../services/emailVerificationNotifications';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
-import { updateNotificationCriticality, type NotificationCriticality } from '../../services/notificationsApi';
+import { updateNotificationCriticality, type NotificationCriticality } from '../../services/notificationsService';
 import { auth } from '../../firebase/config';
 import { useAuth } from '../../providers/AuthProvider';
 

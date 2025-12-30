@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../../auth-helper';
-import { ServerUsdService } from '../../../../services/usdService.server';
+import { UsdService } from '../../../../services/usdService';
 
 interface BatchAllocationUpdate {
   pageId: string;
@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
     for (const update of updates) {
       try {
         // Get current allocation to calculate change
-        const currentAllocations = await ServerUsdService.getUserUsdAllocations(userId);
+        const currentAllocations = await UsdService.getUserUsdAllocations(userId);
         const currentAllocation = currentAllocations.find(a => a.pageId === update.pageId);
         const currentCents = currentAllocation?.usdCents || 0;
         const changeCents = update.cents - currentCents;
 
         if (changeCents !== 0) {
           // Update the allocation
-          await ServerUsdService.updateUsdAllocation(
+          await UsdService.updateUsdAllocation(
             userId,
             update.pageId,
             changeCents,
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
     console.log(`🎯 Batch Allocations API: Getting allocations for ${pageIds.length} pages for user ${userId}`);
 
     // Get all user allocations (single database read)
-    const allAllocations = await ServerUsdService.getUserUsdAllocations(userId);
+    const allAllocations = await UsdService.getUserUsdAllocations(userId);
     
     // Filter for requested pages
     const requestedAllocations = pageIds.map(pageId => {

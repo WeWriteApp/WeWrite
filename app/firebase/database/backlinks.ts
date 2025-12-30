@@ -180,7 +180,7 @@ async function createLinkNotifications(
 ): Promise<void> {
   try {
     // Import notification service (this is safe for client-side)
-    const { createNotification } = await import('../../services/notificationsApi');
+    const { createNotification } = await import('../../services/notificationsService');
 
     // Get the source page to find its owner and look up the actual username
     let actualSourceUsername = sourceUsername;

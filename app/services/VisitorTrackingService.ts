@@ -166,103 +166,12 @@ class VisitorTrackingService {
   }
 
   /**
-   * Track a visitor with comprehensive bot detection and session management
-   * @param userId - Optional authenticated user ID
-   * @param isAuthenticated - Whether the visitor is authenticated
+   * Track a visitor with bot detection and session management
+   * DISABLED: Visitor tracking disabled to reduce Firebase costs
    */
   async trackVisitor(userId?: string, isAuthenticated: boolean = false): Promise<void> {
-    // 🚨 EMERGENCY: Completely disable visitor tracking to stop 13K reads/min crisis
-    return; // Exit early to prevent any database operations
-
-    /* DISABLED FOR EMERGENCY COST OPTIMIZATION - ALL CODE BELOW COMMENTED OUT
-    try {
-      // Check if already tracking this session
-      if (this.isTracking && this.currentAccount) {
-        // Update authentication status if changed
-        if (this.currentAccount.isAuthenticated !== isAuthenticated || this.currentAccount.userId !== userId) {
-          await this.updateSessionAuth(userId, isAuthenticated);
-        }
-        return;
-      }
-
-      // Generate browser fingerprint
-      const fingerprint = await BotDetectionService.generateFingerprint();
-
-      // Check for existing session to prevent duplicates
-      const existingSession = await this.findExistingSession(fingerprint.id, userId);
-
-      if (existingSession) {
-        this.currentAccount = existingSession;
-        this.isTracking = true;
-        this.sessionStartTime = Date.now();
-        this.setupHeartbeat();
-        return;
-      }
-
-      // Perform bot detection
-      const botDetection = BotDetectionService.detectBot(fingerprint.userAgent, fingerprint);
-
-      // Skip tracking if high-confidence bot (unless it's a legitimate search engine)
-      if (botDetection.isBot && botDetection.confidence > 0.8 && botDetection.category !== 'search_engine') {
-        return;
-      }
-
-
-      // Create new session
-      const sessionId = this.generateSessionId(fingerprint);
-      this.sessionStartTime = Date.now();
-
-      this.currentAccount = {
-        id: sessionId,
-        fingerprint,
-        ...(userId !== undefined && { userId }), // Only include userId if defined
-        isAuthenticated,
-        isBot: botDetection.isBot || false,
-        botConfidence: botDetection.confidence || 0,
-        botCategory: botDetection.category || 'unknown',
-        startTime: Timestamp.now(),
-        lastSeen: Timestamp.now(),
-        pageViews: 1,
-        userAgent: fingerprint.userAgent,
-        sessionDuration: 0,
-        interactions: {
-          mouseMovements: 0,
-          clicks: 0,
-          scrollEvents: 0,
-          keystrokes: 0
-        }
-      };
-
-      // Store session in Firestore (filter out undefined values)
-      const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
-      const sessionData = {
-        ...this.currentAccount,
-        startTime: this.currentAccount.startTime,
-        lastSeen: this.currentAccount.lastSeen
-      };
-
-      // Remove undefined values to prevent Firestore errors
-      Object.keys(sessionData).forEach(key => {
-        if (sessionData[key] === undefined) {
-          delete sessionData[key];
-        }
-      });
-
-      await setDoc(sessionRef, sessionData);
-
-      this.isTracking = true;
-      this.setupHeartbeat();
-
-    } catch (error) {
-      // Handle permission denied errors gracefully - this is expected for private data
-      if (error?.code === 'permission-denied') {
-        // Permission denied - this is expected for private data
-      } else {
-        // Error tracking visitor
-      }
-      this.isTracking = false;
-    }
-    END OF DISABLED CODE */
+    // Visitor tracking disabled for cost optimization
+    return;
   }
 
   /**
@@ -355,111 +264,17 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }
 
   /**
-   * Enhanced heartbeat with interaction validation, bot behavior analysis, and batching
-   * DISABLED FOR COST OPTIMIZATION - Use API polling instead of frequent heartbeat writes
+   * Setup session heartbeat
+   * DISABLED: Heartbeat disabled to reduce Firebase costs
    */
   private setupHeartbeat(): void {
-    // Return early to disable heartbeat completely
+    // Heartbeat disabled for cost optimization
     return;
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
-    // Clear existing heartbeat
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-    }
-
-    this.heartbeatInterval = setInterval(async () => {
-      if (!this.currentAccount) return;
-
-      try {
-        // Update session duration
-        this.currentAccount.sessionDuration = Math.floor((Date.now() - this.sessionStartTime) / 1000);
-        this.currentAccount.lastSeen = Timestamp.now();
-
-        // Ensure interactions object exists
-        if (!this.currentAccount.interactions) {
-          this.currentAccount.interactions = {
-            mouseMovements: 0,
-            clicks: 0,
-            scrollEvents: 0,
-            keystrokes: 0
-          };
-        }
-
-        // Validate visitor behavior for additional bot detection
-        const behaviorValidation = BotDetectionService.validateVisitorBehavior({
-          pageViews: this.currentAccount.pageViews,
-          sessionDuration: this.currentAccount.sessionDuration,
-          mouseMovements: this.currentAccount.interactions?.mouseMovements || 0,
-          clicks: this.currentAccount.interactions?.clicks || 0,
-          scrollEvents: this.currentAccount.interactions?.scrollEvents || 0,
-          keystrokes: this.currentAccount.interactions?.keystrokes || 0
-        });
-
-        // Update bot status if suspicious behavior detected
-        if (behaviorValidation.isSuspicious && !this.currentAccount.isBot) {
-          this.currentAccount.isBot = true;
-          this.currentAccount.botConfidence = Math.max(this.currentAccount.botConfidence, 0.8);
-          this.currentAccount.botCategory = 'suspicious';
-        }
-
-        // OPTIMIZATION: Batch updates to reduce Firestore writes
-        this.addToPendingUpdates({
-          lastSeen: this.currentAccount.lastSeen,
-          sessionDuration: this.currentAccount.sessionDuration,
-          interactions: this.currentAccount.interactions,
-          isBot: this.currentAccount.isBot || false,
-          botConfidence: this.currentAccount.botConfidence || 0,
-          botCategory: this.currentAccount.botCategory || 'unknown'
-        });
-
-        // Process batch if threshold reached or enough time has passed
-        const now = Date.now();
-        const timeSinceLastBatch = now - this.lastBatchUpdate;
-
-        if (this.updateCount >= VisitorTrackingService.BATCH_UPDATE_THRESHOLD ||
-            timeSinceLastBatch > 5 * 60 * 1000) { // Force update every 5 minutes
-          await this.processBatchUpdate();
-        }
-
-      } catch (error) {
-        // Error updating visitor heartbeat
-      }
-    }, VisitorTrackingService.HEARTBEAT_INTERVAL);
-    */
   }
 
   /**
-   * Add updates to pending batch
-   */
-  private addToPendingUpdates(updates: Partial<VisitorSession>): void {
-    Object.assign(this.pendingUpdates, updates);
-    this.updateCount++;
-  }
-
-  /**
-   * Process batched updates to reduce Firestore writes
-   */
-  private async processBatchUpdate(): Promise<void> {
-    if (!this.currentAccount || Object.keys(this.pendingUpdates).length === 0) return;
-
-    try {
-const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
-      await updateDoc(sessionRef, this.pendingUpdates);
-
-      // Clear pending updates
-      this.pendingUpdates = {};
-      this.updateCount = 0;
-      this.lastBatchUpdate = Date.now();
-
-    } catch (error) {
-      // Error processing batch update
-    }
-  }
-
-  /**
-   * Subscribe to live visitor count with bot filtering - DISABLED FOR COST OPTIMIZATION
-   * Use API polling instead of real-time listeners to reduce Firebase costs
+   * Subscribe to live visitor count
+   * DISABLED: Real-time listeners disabled to reduce Firebase costs - use API polling instead
    */
   subscribeToVisitorCount(callback: (counts: {
     total: number;
@@ -468,7 +283,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
     bots: number;
     legitimateVisitors: number;
   }) => void): Unsubscribe | null {
-    // Return mock data and no-op unsubscribe to prevent breaking the UI
+    // Return mock data to prevent breaking UI
     setTimeout(() => {
       callback({
         total: 0,
@@ -478,81 +293,11 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
         legitimateVisitors: 0
       });
     }, 100);
-
-    // Return a no-op unsubscribe function
     return () => {};
-
-    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
-    try {
-      // Query active visitors from the last 10 minutes
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
-      const q = query(
-        visitorsRef,
-        where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))
-      );
-
-      // DISABLED FOR COST OPTIMIZATION - Replace with API polling
-      // Return mock data and no-op unsubscribe
-      setTimeout(() => callback({ total: 0, authenticated: 0, anonymous: 0, bots: 0, legitimateVisitors: 0 }), 100);
-      return () => {};
-
-      /* DISABLED FOR COST OPTIMIZATION
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        let total = 0;
-        let authenticated = 0;
-        let anonymous = 0;
-        let bots = 0;
-        let legitimateVisitors = 0;
-
-        snapshot.forEach(doc => {
-          const data = doc.data() as VisitorSession;
-
-          // Filter out high-confidence bots (except search engines for SEO)
-          const isHighConfidenceBot = data.isBot &&
-                                     data.botConfidence > 0.7 &&
-                                     data.botCategory !== 'search_engine';
-
-          if (isHighConfidenceBot) {
-            bots++;
-            return; // Skip counting bots in main metrics
-          }
-
-          // Count legitimate visitors
-          legitimateVisitors++;
-          total++;
-
-          if (data.isAuthenticated) {
-            authenticated++;
-          } else {
-            anonymous++;
-          }
-        });
-
-        const counts = {
-          total,
-          authenticated,
-          anonymous,
-          bots,
-          legitimateVisitors
-        };
-
-        callback(counts);
-      });
-
-      // Store the subscription for cleanup
-      this.activeSubscriptions.set('visitor-counts', unsubscribe);
-
-      return unsubscribe;
-    } catch (error) {
-      // Error subscribing to visitor count
-      return null;
-    }
-    */
   }
 
   /**
-   * Track a page view for the current account - OPTIMIZED with batching
+   * Track a page view for the current account
    */
   trackPageView(pageUrl: string): void {
     if (!this.currentAccount) return;
@@ -573,7 +318,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }
 
   /**
-   * Add updates to pending batch - INDUSTRY STANDARD batching
+   * Add updates to pending batch
    */
   private addToPendingUpdates(updates: Partial<VisitorSession>): void {
     Object.assign(this.pendingUpdates, updates);
@@ -586,7 +331,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }
 
   /**
-   * Start batch processor - runs every 30 seconds (industry standard)
+   * Start batch processor
    */
   private startBatchProcessor(): void {
     setInterval(() => {
@@ -595,7 +340,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }
 
   /**
-   * Process pending updates in batch - MUCH more efficient
+   * Process pending updates in batch
    */
   private async processBatchUpdate(): Promise<void> {
     if (!this.currentAccount || Object.keys(this.pendingUpdates).length === 0) {

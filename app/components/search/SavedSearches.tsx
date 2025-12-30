@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from "../../utils/savedSearches";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
-import { ConfirmationModal } from '../utils/ConfirmationModal';
+import { ConfirmationModal } from '../utils/UnifiedModal';
 
 /**
  * SavedSearches Component

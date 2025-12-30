@@ -4,7 +4,7 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Icon } from '@/components/ui/Icon';
 import { useCumulativePagesMetrics } from '../../hooks/useDashboardAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../services/adminAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface CumulativePagesWidgetProps {
