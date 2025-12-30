@@ -11,7 +11,7 @@ import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose, DrawerFooter } from '../ui/drawer';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../ui/drawer';
 import logger from '../../utils/logger';
 import { ANIMATION_DURATIONS, MODAL_CONFIG, UI_TEXT, TABS, LINK_TYPES } from './constants';
 import PillLink from '../utils/PillLink';
@@ -76,7 +76,7 @@ export default function LinkEditorModal({
   const modalTitle = isEditing
     ? `Edit ${editingLink?.type === 'external' ? 'External' : 'Internal'} Link`
     : UI_TEXT.MODAL_TITLES.CREATE_LINK;
-  const buttonText = isEditing ? 'Update Link' : 'Create Link';
+  const buttonText = isEditing ? 'Update Link' : 'Insert Link';
 
   // Mobile detection (optimized to prevent unnecessary re-renders)
   useEffect(() => {
@@ -585,11 +585,11 @@ export default function LinkEditorModal({
       <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1">
         <div className="space-y-4 pb-2">
           {/* Link Preview Section */}
-          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-            <Label className="text-sm font-medium text-foreground mb-2 block">
+          <div className="wewrite-card p-4">
+            <Label className="text-sm font-medium text-foreground mb-3 block text-center">
               Link Preview
             </Label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               {(() => {
                 const preview = generatePreviewData();
 
@@ -628,7 +628,7 @@ export default function LinkEditorModal({
                           subscriptionAmount={editingLink?.data?.authorSubscriptionAmount || selectedPage?.subscriptionAmount}
                           size="sm"
                           variant="pill"
-                          pillVariant="secondary"
+                          pillVariant="outline"
                           showBadge={true}
                         />
                       </span>
@@ -765,7 +765,7 @@ export default function LinkEditorModal({
                             username={(editingLink.data?.authorUsername || editingLink.data?.username || 'Loading...').replace(/^@/, '')}
                             size="sm"
                             variant="pill"
-                            pillVariant="secondary"
+                            pillVariant="outline"
                           />
                         </>
                       )}
@@ -919,7 +919,7 @@ export default function LinkEditorModal({
       className="w-full"
     >
       <Icon name="Link" size={16} className="mr-2" />
-      {isEditing ? 'Update Link' : 'Create Link'}
+      {isEditing ? 'Update Link' : 'Insert Link'}
     </Button>
   ) : (
     <Button
@@ -928,7 +928,7 @@ export default function LinkEditorModal({
       className="w-full"
     >
       <Icon name="Link" size={16} className="mr-2" />
-      {isEditing ? 'Update Link' : 'Create Link'}
+      {isEditing ? 'Update Link' : 'Insert Link'}
     </Button>
   );
 
@@ -972,12 +972,8 @@ export default function LinkEditorModal({
           }}
           // REMOVED: onFocus handler that was stealing focus from custom text input
         >
-          <DrawerHeader>
+          <DrawerHeader showCloseButton>
             <DrawerTitle>{modalTitle}</DrawerTitle>
-            <DrawerClose className="absolute right-4 top-1 p-2 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-              <Icon name="X" size={16} />
-              <span className="sr-only">Close</span>
-            </DrawerClose>
           </DrawerHeader>
 
           <div

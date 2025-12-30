@@ -265,7 +265,7 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
                         subscriptionAmount={user.subscriptionAmount}
                         size="sm"
                         variant="pill"
-                        pillVariant="secondary"
+                        pillVariant="outline"
                         className="text-xs"
                       />
                       <span className="text-xs text-muted-foreground truncate max-w-[120px]">

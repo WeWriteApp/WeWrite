@@ -12,7 +12,7 @@ interface SubscriptionTierBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   isLoading?: boolean;
-  pillVariant?: 'primary' | 'secondary' | 'outline';
+  pillVariant?: 'primary' | 'outline';
 }
 
 export function SubscriptionTierBadge({

@@ -22,20 +22,20 @@ import { BREAKOUT_FULL_CLASSES } from '../constants/layout';
 function TimelineContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { accentColor } = useAccentColor();
-  
+
   const type = searchParams.get('type') || 'daily-notes';
   const focusDate = searchParams.get('date');
-  
+
   const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated (only after auth has finished loading)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push('/');
     }
-  }, [isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Get accent color value
   const getAccentColorValue = () => {
@@ -133,7 +133,7 @@ function TimelineContent() {
     return 'Pages organized by custom date';
   };
 
-  if (!isAuthenticated || !user) {
+  if (authLoading || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

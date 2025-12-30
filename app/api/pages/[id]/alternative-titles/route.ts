@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/admin';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { syncPageToTypesenseServer } from '../../../../lib/typesenseSync';
 
 /**
  * GET endpoint - Get alternative titles for a page
@@ -105,12 +106,27 @@ export async function PUT(
     }
 
     // Update the page
+    const newLastModified = new Date().toISOString();
     await pageRef.update({
       alternativeTitles: uniqueTitles,
-      lastModified: new Date().toISOString()
+      lastModified: newLastModified
     });
 
     console.log(`Updated alternative titles for page ${pageId}:`, uniqueTitles);
+
+    // Sync to Typesense for search indexing
+    syncPageToTypesenseServer({
+      pageId,
+      title: primaryTitle,
+      authorId: pageData?.userId || '',
+      authorUsername: pageData?.username || '',
+      isPublic: pageData?.isPublic ?? true,
+      alternativeTitles: uniqueTitles,
+      lastModified: newLastModified,
+      createdAt: pageData?.createdAt,
+    }).catch(err => {
+      console.error(`[Alternative Titles] Failed to sync to Typesense:`, err);
+    });
 
     return createApiResponse({
       success: true,
@@ -225,9 +241,10 @@ export async function PATCH(
     }
 
     // Update the page
+    const newLastModified = new Date().toISOString();
     const updateData: any = {
       alternativeTitles: updatedAlternatives,
-      lastModified: new Date().toISOString()
+      lastModified: newLastModified
     };
 
     if (action === 'promote') {
@@ -237,6 +254,20 @@ export async function PATCH(
     await pageRef.update(updateData);
 
     console.log(`${action} alternative title for page ${pageId}:`, trimmedTitle);
+
+    // Sync to Typesense for search indexing
+    syncPageToTypesenseServer({
+      pageId,
+      title: updatedPrimaryTitle,
+      authorId: pageData?.userId || '',
+      authorUsername: pageData?.username || '',
+      isPublic: pageData?.isPublic ?? true,
+      alternativeTitles: updatedAlternatives,
+      lastModified: newLastModified,
+      createdAt: pageData?.createdAt,
+    }).catch(err => {
+      console.error(`[Alternative Titles] Failed to sync to Typesense:`, err);
+    });
 
     return createApiResponse({
       success: true,

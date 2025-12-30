@@ -12,51 +12,48 @@ interface LinkSuggestion {
   confidence: number;
   startIndex: number;
   endIndex: number;
-  matchType: 'exact' | 'partial' | 'content';
+  matchType: 'exact' | 'exact-alt';
+}
+
+interface PageWithTitles {
+  id: string;
+  title: string;
+  alternativeTitles: string[];
+  username: string;
+  userId: string;
+  lastModified: string;
 }
 
 /**
- * Extract meaningful words from text (remove common words)
+ * Escape special regex characters in a string
  */
-function extractMeaningfulWords(text: string): string[] {
-  const commonWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
-    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall',
-    'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
-    'my', 'your', 'his', 'her', 'its', 'our', 'their', 'me', 'him', 'her', 'us', 'them'
-  ]);
-
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(word => word.length > 2 && !commonWords.has(word));
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Calculate confidence score for a match
+ * Find all exact matches of a title in the text (case-insensitive, word boundary)
+ * Returns array of { startIndex, endIndex } for each match
  */
-function calculateConfidence(phrase: string, title: string, content: string): number {
-  const phraseLower = phrase.toLowerCase();
-  const titleLower = title.toLowerCase();
+function findExactMatches(text: string, title: string): { startIndex: number; endIndex: number }[] {
+  if (!title || title.length < 2) return [];
 
-  // Exact title match (case insensitive)
-  if (titleLower === phraseLower) return 1.0;
+  const matches: { startIndex: number; endIndex: number }[] = [];
+  const escapedTitle = escapeRegex(title);
 
-  // Title contains phrase (but not phrase contains title to avoid "one" matching "Another One")
-  if (titleLower.includes(phraseLower)) return 0.8;
+  // Use word boundary matching to ensure we match complete words/phrases
+  // \b doesn't work well with special chars, so we use a lookahead/lookbehind approach
+  const regex = new RegExp(`(?<![\\w])${escapedTitle}(?![\\w])`, 'gi');
 
-  // Word overlap for more complex matching
-  const phraseWords = extractMeaningfulWords(phrase);
-  const titleWords = extractMeaningfulWords(title);
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    matches.push({
+      startIndex: match.index,
+      endIndex: match.index + match[0].length
+    });
+  }
 
-  if (phraseWords.length === 0 || titleWords.length === 0) return 0.1;
-
-  const overlap = phraseWords.filter(word => titleWords.includes(word)).length;
-  const overlapRatio = overlap / Math.max(phraseWords.length, titleWords.length);
-
-  return Math.max(0.3, overlapRatio * 0.6);
+  return matches;
 }
 
 /**
@@ -79,65 +76,37 @@ async function getUsernameFromUserId(db: FirebaseFirestore.Firestore, userId: st
 }
 
 /**
- * Search for pages that match a specific phrase
+ * Fetch all pages with their titles and alternative titles
  */
-async function searchPagesForPhrase(
-  phrase: string,
-  currentUserId?: string,
+async function fetchAllPagesWithTitles(
   excludePageId?: string
-): Promise<Omit<LinkSuggestion, 'matchedText' | 'startIndex' | 'endIndex'>[]> {
+): Promise<PageWithTitles[]> {
   try {
     const db = getFirebaseAdmin().firestore();
     const pagesCollectionName = getCollectionName('pages');
 
-    console.log(`🔗 LINK_SUGGESTIONS: Searching for phrase "${phrase}" in pages collection: ${pagesCollectionName} (FIXED VERSION)`);
+    console.log(`🔗 LINK_SUGGESTIONS: Fetching all pages from collection: ${pagesCollectionName}`);
 
-    // Search for pages where title contains the phrase (case-insensitive)
-    // Note: We need to search ALL pages since Firestore doesn't support case-insensitive queries
-    const titleQuery = await db.collection(pagesCollectionName)
+    const pagesQuery = await db.collection(pagesCollectionName)
       .where('deleted', '!=', true)
       .get();
 
-    console.log(`🔗 LINK_SUGGESTIONS: Query returned ${titleQuery.docs.length} total documents`);
+    console.log(`🔗 LINK_SUGGESTIONS: Found ${pagesQuery.docs.length} total pages`);
 
-    const pages: any[] = [];
-    const phraseLower = phrase.toLowerCase();
+    const pages: PageWithTitles[] = [];
 
-    // Debug: Log first few titles to see what we're getting
-    const sampleTitles = titleQuery.docs.slice(0, 10).map(doc => doc.data().title).filter(Boolean);
-    console.log(`🔗 LINK_SUGGESTIONS: Sample titles from query: ${JSON.stringify(sampleTitles)}`);
-
-    // Collect matching pages first
-    const matchingDocs: { doc: FirebaseFirestore.QueryDocumentSnapshot, isExact: boolean }[] = [];
-
-    titleQuery.docs.forEach(doc => {
+    for (const doc of pagesQuery.docs) {
       const data = doc.data();
-      const title = data.title?.toLowerCase() || '';
 
-      // Skip deleted pages
-      if (data.deleted === true) return;
+      // Skip deleted pages and the current page being edited
+      if (data.deleted === true) continue;
+      if (excludePageId && doc.id === excludePageId) continue;
 
-      // Check for exact match first (highest priority) - case insensitive
-      const isExactMatch = title === phraseLower;
+      // Skip pages without titles
+      if (!data.title || data.title.trim().length < 2) continue;
 
-      // Only include exact matches or title contains phrase (not phrase contains title)
-      // This prevents "one" from matching "Another One"
-      const titleContainsPhrase = title.includes(phraseLower);
-
-      if (isExactMatch || titleContainsPhrase) {
-        console.log(`🔗 LINK_SUGGESTIONS: Found match for "${phrase}": "${data.title}" (exact: ${isExactMatch}, titleContains: ${titleContainsPhrase})`);
-        matchingDocs.push({ doc, isExact: isExactMatch });
-      }
-    });
-
-    // Look up usernames for matching pages
-    for (const { doc } of matchingDocs) {
-      const data = doc.data();
-      // Try to get username from page document first
+      // Get username
       let username = data.username;
-
-      // If username looks like a userId (long alphanumeric string), look up the real username
-      // This handles cases where the page's username field was incorrectly set to userId
       const looksLikeUserId = username && username.length > 15 && /^[a-zA-Z0-9]+$/.test(username);
       if ((!username || looksLikeUserId) && data.userId) {
         const realUsername = await getUsernameFromUserId(db, data.userId);
@@ -149,61 +118,89 @@ async function searchPagesForPhrase(
       pages.push({
         id: doc.id,
         title: data.title,
-        username: username || null,
+        alternativeTitles: data.alternativeTitles || [],
+        username: username || '',
         userId: data.userId || '',
-        lastModified: data.lastModified?.toDate?.()?.toISOString() || new Date().toISOString(),
-        isPublic: data.isPublic !== false,
-        content: data.content || ''
+        lastModified: data.lastModified?.toDate?.()?.toISOString() || new Date().toISOString()
       });
     }
-    
-    console.log(`🔗 LINK_SUGGESTIONS: Found ${pages.length} potential matches for phrase "${phrase}"`);
-    
-    return pages
-      .filter((page: any) => {
-        // Exclude current page
-        if (excludePageId && page.id === excludePageId) return false;
-        
-        // Include all pages (both own and others')
-        return true;
-      })
-      .map((page: any) => {
-        const phraseWords = extractMeaningfulWords(phrase);
-        const titleWords = extractMeaningfulWords(page.title);
-        
-        // Calculate match type and confidence
-        let matchType: LinkSuggestion['matchType'] = 'content';
-        let confidence = 0.3;
-        
-        // Exact title match (case insensitive)
-        if (page.title.toLowerCase() === phrase.toLowerCase()) {
-          matchType = 'exact';
-          confidence = 1.0;
-        }
-        // Partial title match (only when title contains phrase, not when phrase contains title)
-        else if (page.title.toLowerCase().includes(phrase.toLowerCase())) {
-          matchType = 'partial';
-          confidence = calculateConfidence(phrase, page.title, page.content || '');
-        }
-        
-        return {
+
+    return pages;
+  } catch (error) {
+    console.error('🔴 LINK_SUGGESTIONS: Error fetching pages:', error);
+    return [];
+  }
+}
+
+/**
+ * Find exact matches of page titles/alt-titles in the given text
+ * Returns suggestions sorted by confidence (exact title matches first, then alt-title matches)
+ */
+function findTitleMatchesInText(
+  text: string,
+  pages: PageWithTitles[]
+): LinkSuggestion[] {
+  const suggestions: LinkSuggestion[] = [];
+  const textLower = text.toLowerCase();
+
+  for (const page of pages) {
+    // Check main title first (highest priority)
+    const titleMatches = findExactMatches(text, page.title);
+    for (const match of titleMatches) {
+      suggestions.push({
+        id: page.id,
+        title: page.title,
+        username: page.username,
+        userId: page.userId,
+        lastModified: page.lastModified,
+        matchedText: text.substring(match.startIndex, match.endIndex),
+        confidence: 1.0, // Exact title match = highest confidence
+        startIndex: match.startIndex,
+        endIndex: match.endIndex,
+        matchType: 'exact'
+      });
+    }
+
+    // Check alternative titles (slightly lower priority)
+    for (const altTitle of page.alternativeTitles) {
+      if (!altTitle || altTitle.trim().length < 2) continue;
+
+      const altMatches = findExactMatches(text, altTitle);
+      for (const match of altMatches) {
+        suggestions.push({
           id: page.id,
-          title: page.title,
+          title: page.title, // Show the main title, not the alt
           username: page.username,
           userId: page.userId,
           lastModified: page.lastModified,
-          confidence,
-          matchType
-        };
-      })
-      .filter(suggestion => suggestion.confidence > 0.3)
-      .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 5);
-      
-  } catch (error) {
-    console.error(`🔴 LINK_SUGGESTIONS: Error searching for phrase: ${phrase}`, error);
-    return [];
+          matchedText: text.substring(match.startIndex, match.endIndex),
+          confidence: 0.95, // Alt-title match = slightly lower confidence
+          startIndex: match.startIndex,
+          endIndex: match.endIndex,
+          matchType: 'exact-alt'
+        });
+      }
+    }
   }
+
+  // Sort by confidence (exact > alt) and then by match length (longer matches first)
+  suggestions.sort((a, b) => {
+    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+    return (b.endIndex - b.startIndex) - (a.endIndex - a.startIndex);
+  });
+
+  // Deduplicate by page ID (keep the best match for each page)
+  const seenPageIds = new Set<string>();
+  const uniqueSuggestions: LinkSuggestion[] = [];
+
+  for (const suggestion of suggestions) {
+    if (!seenPageIds.has(suggestion.id)) {
+      seenPageIds.add(suggestion.id);
+      uniqueSuggestions.push(suggestion);
+    }
+  }
+
+  return uniqueSuggestions.slice(0, 10);
 }
 
 export async function GET(request: NextRequest) {
@@ -220,53 +217,42 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log('🔗 LINK_SUGGESTIONS_API: Analyzing text for link opportunities:', {
-      textLength: text.length,
-      userId,
-      excludePageId: excludePageId || 'none'
-    });
-
-    // Extract meaningful phrases from the text
-    const words = extractMeaningfulWords(text);
-    const phrases = [
-      ...words, // Individual words
-      ...words.slice(0, -1).map((word, i) => `${word} ${words[i + 1]}`) // Word pairs
-    ].filter(phrase => phrase.length >= 3);
-
-    console.log('🔗 LINK_SUGGESTIONS_API: Found linkable phrases:', phrases);
-
-    // Search for each phrase
-    const allSuggestions: any[] = [];
-    for (const phrase of phrases.slice(0, 5)) { // Limit to first 5 phrases
-      const suggestions = await searchPagesForPhrase(phrase, userId, excludePageId);
-      
-      // Add phrase context to suggestions
-      suggestions.forEach(suggestion => {
-        allSuggestions.push({
-          ...suggestion,
-          matchedText: phrase,
-          startIndex: text.toLowerCase().indexOf(phrase.toLowerCase()),
-          endIndex: text.toLowerCase().indexOf(phrase.toLowerCase()) + phrase.length
-        });
+    // Skip very short text
+    if (text.trim().length < 3) {
+      return NextResponse.json({
+        success: true,
+        suggestions: []
       });
     }
 
-    // Deduplicate and sort by confidence
-    const uniqueSuggestions = allSuggestions
-      .filter((suggestion, index, array) => 
-        array.findIndex(s => s.id === suggestion.id) === index
-      )
-      .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 5);
+    console.log('🔗 LINK_SUGGESTIONS_API: Analyzing text for EXACT title matches:', {
+      textLength: text.length,
+      userId,
+      excludePageId: excludePageId || 'none',
+      textPreview: text.substring(0, 100) + (text.length > 100 ? '...' : '')
+    });
 
-    console.log('🔗 LINK_SUGGESTIONS_API: Found suggestions:', {
-      totalSuggestions: uniqueSuggestions.length,
-      topSuggestions: uniqueSuggestions.slice(0, 3).map(s => ({ title: s.title, confidence: s.confidence }))
+    // Fetch all pages with their titles and alternative titles
+    const pages = await fetchAllPagesWithTitles(excludePageId);
+
+    console.log(`🔗 LINK_SUGGESTIONS_API: Loaded ${pages.length} pages to check for exact matches`);
+
+    // Find exact title/alt-title matches in the text
+    const suggestions = findTitleMatchesInText(text, pages);
+
+    console.log('🔗 LINK_SUGGESTIONS_API: Found exact matches:', {
+      totalSuggestions: suggestions.length,
+      matches: suggestions.slice(0, 5).map(s => ({
+        title: s.title,
+        matchedText: s.matchedText,
+        matchType: s.matchType,
+        confidence: s.confidence
+      }))
     });
 
     return NextResponse.json({
       success: true,
-      suggestions: uniqueSuggestions
+      suggestions: suggestions.slice(0, 5) // Limit to top 5 suggestions
     });
   } catch (error) {
     console.error('🔴 LINK_SUGGESTIONS_API: Error:', error);

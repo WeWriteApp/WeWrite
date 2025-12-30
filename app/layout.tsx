@@ -32,6 +32,7 @@ import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
+import UILabelTooltipOverlay from "./components/utils/UILabelTooltipOverlay"
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
@@ -241,6 +242,8 @@ export default function RootLayout({
                                     </GlobalNavigation>
                                     {/* Global drawer overlay for settings/admin on mobile */}
                                     <GlobalDrawerRenderer />
+                                    {/* UI label tooltips for admin debugging */}
+                                    <UILabelTooltipOverlay />
                                   </SessionAuthInitializer>
                                 </GlobalDrawerProvider>
                               </PreviousRouteProvider>

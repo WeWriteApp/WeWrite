@@ -464,23 +464,7 @@ export default function LocationField({
             />
           </div>
 
-          {/* Legend - show when we have markers to explain */}
-          {(normalizedLocation || linkedPageMarkers.length > 0) && (
-            <div className="px-4 py-2 border-t border-border flex items-center gap-4 text-xs">
-              {normalizedLocation && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-accent" />
-                  <span className="text-accent font-medium">This page</span>
-                </div>
-              )}
-              {linkedPageMarkers.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground" />
-                  <span className="text-muted-foreground">Linked pages ({linkedPageMarkers.length})</span>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Legend removed from collapsed view - only shown in detail view */}
         </>
       )}
 

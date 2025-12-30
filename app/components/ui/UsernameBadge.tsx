@@ -25,7 +25,7 @@ interface UsernameBadgeProps {
   showBadge?: boolean;
   onClick?: (e: React.MouseEvent) => void;
   variant?: 'link' | 'pill';
-  pillVariant?: 'primary' | 'secondary' | 'outline';
+  pillVariant?: 'primary' | 'outline';
   isLinkEditor?: boolean;
   onLinkEditorSelect?: () => void;
 }

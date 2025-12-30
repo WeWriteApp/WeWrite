@@ -75,6 +75,24 @@ export async function GET(request: NextRequest) {
 
     const pagesCollectionName = await getCollectionNameAsync('pages');
 
+    // Fetch followed users list if followingOnly filter is enabled
+    let followedUserIds: Set<string> | null = null;
+    if (followingOnly && userId) {
+      try {
+        const userFollowingCollectionName = await getCollectionNameAsync('userFollowing');
+        const userFollowingDoc = await db.collection(userFollowingCollectionName).doc(userId).get();
+        if (userFollowingDoc.exists) {
+          const followingData = userFollowingDoc.data();
+          followedUserIds = new Set(followingData?.following || []);
+        } else {
+          followedUserIds = new Set();
+        }
+      } catch (error) {
+        console.error('[Global Recent Edits] Failed to fetch followed users:', error);
+        followedUserIds = new Set();
+      }
+    }
+
     if (userId) {
       // For logged-in users, get recent pages (last 30 days) and filter deleted ones in code
       // Increased from 7 to 30 days to ensure enough content for pagination
@@ -153,6 +171,13 @@ export async function GET(request: NextRequest) {
       // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
       if (!includeOwn && page.userId === userId) {
         return false;
+      }
+
+      // FIXED: Following only filter - only show pages from users we follow
+      if (followingOnly && followedUserIds !== null) {
+        if (!page.userId || !followedUserIds.has(page.userId)) {
+          return false;
+        }
       }
 
       return true;

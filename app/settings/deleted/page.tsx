@@ -6,17 +6,19 @@ import { useEffect } from 'react';
 import RecentlyDeletedPages from '../../components/settings/RecentlyDeletedPages';
 
 export default function RecentlyDeletedPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
+  // Redirect to login if not authenticated (only after auth has finished loading)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/auth/login');
       return;
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
-  if (!isAuthenticated) {
+  // Show nothing while loading or not authenticated
+  if (isLoading || !isAuthenticated) {
     return null;
   }
 

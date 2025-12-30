@@ -15,14 +15,11 @@ import { emailStyles } from '@/lib/emailTemplates';
 function EmailPreviewWrapper({ children, title = "Preview" }: { children: React.ReactNode; title?: string }) {
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-white">
-      <div className="bg-muted px-3 py-2 border-b border-border flex items-center gap-2">
-        <div className="flex gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-red-400" />
-          <div className="w-3 h-3 rounded-full bg-yellow-400" />
-          <div className="w-3 h-3 rounded-full bg-green-400" />
+      {title && (
+        <div className="bg-muted/50 px-3 py-1.5 border-b border-border">
+          <span className="text-xs text-muted-foreground">{title}</span>
         </div>
-        <span className="text-xs text-muted-foreground ml-2">{title}</span>
-      </div>
+      )}
       <div className="p-6" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" }}>
         {children}
       </div>

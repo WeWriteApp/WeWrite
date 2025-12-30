@@ -60,6 +60,12 @@ export default function AdminPage() {
     }
     return false;
   });
+  const [uiLabelTooltipsMode, setUiLabelTooltipsMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('wewrite_admin_ui_label_tooltips') === 'true';
+    }
+    return false;
+  });
 
   // Writing ideas state
   const [writingIdeasCount, setWritingIdeasCount] = useState<number | null>(null);
@@ -146,6 +152,20 @@ export default function AdminPage() {
       window.dispatchEvent(new CustomEvent('adminEarningsTestingChange'));
     }
   }, [earningsTestingMode]);
+
+  // Handle UI label tooltips mode changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (uiLabelTooltipsMode) {
+        localStorage.setItem('wewrite_admin_ui_label_tooltips', 'true');
+      } else {
+        localStorage.removeItem('wewrite_admin_ui_label_tooltips');
+      }
+
+      // Dispatch custom event to notify tooltip overlay
+      window.dispatchEvent(new CustomEvent('adminUiLabelTooltipsChange'));
+    }
+  }, [uiLabelTooltipsMode]);
 
   // Platform fee revenue state
   const [platformFeeData, setPlatformFeeData] = useState<any[]>([]);
@@ -475,6 +495,31 @@ export default function AdminPage() {
                 <Switch
                   checked={earningsTestingMode}
                   onCheckedChange={setEarningsTestingMode}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+
+            {/* UI Label Tooltips */}
+            <div
+              className="wewrite-card flex flex-col hover:bg-muted/50 transition-colors cursor-pointer text-left w-full"
+              onClick={() => setUiLabelTooltipsMode(!uiLabelTooltipsMode)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setUiLabelTooltipsMode(!uiLabelTooltipsMode)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">UI Label Tooltips</h3>
+                <Icon name="MousePointer" size={16} className="text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Show component names on hover. Useful for referencing UI elements when prompting or reporting issues.
+              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Show element labels on hover</span>
+                <Switch
+                  checked={uiLabelTooltipsMode}
+                  onCheckedChange={setUiLabelTooltipsMode}
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>

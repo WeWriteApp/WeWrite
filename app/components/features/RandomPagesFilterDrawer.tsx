@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '../ui/drawer';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Icon } from '@/components/ui/Icon';
 
 interface UserSuggestion {
@@ -50,9 +51,24 @@ export default function RandomPagesFilterDrawer({
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentUsername = filterMode === 'include' ? includeUsername : excludeUsername;
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Initial check
+    checkMobile();
+
+    // Listen for resize events
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Initialize search query from current username when opening
   useEffect(() => {
@@ -280,6 +296,27 @@ export default function RandomPagesFilterDrawer({
     </div>
   );
 
+  // Footer buttons (shared between Dialog and Drawer)
+  const footerButtons = (
+    <>
+      <Button
+        variant="outline"
+        onClick={() => setIsOpen(false)}
+        className="flex-1"
+      >
+        Cancel
+      </Button>
+      <Button
+        variant="default"
+        onClick={handleApply}
+        className="flex-1"
+      >
+        <Icon name="Check" size={16} className="mr-2" />
+        Apply Filters
+      </Button>
+    </>
+  );
+
   return (
     <>
       <Button
@@ -292,38 +329,47 @@ export default function RandomPagesFilterDrawer({
         <Icon name="MoreHorizontal" size={16} />
       </Button>
 
-      <Drawer open={isOpen} onOpenChange={setIsOpen}>
-        <DrawerContent height="auto">
-          <DrawerHeader className="text-center">
-            <DrawerTitle>Filter Random Pages</DrawerTitle>
-            <DrawerDescription>
-              Customize your random page discovery experience
-            </DrawerDescription>
-          </DrawerHeader>
+      {isMobile ? (
+        // Mobile: Bottom Drawer
+        <Drawer open={isOpen} onOpenChange={setIsOpen}>
+          <DrawerContent height="auto">
+            <DrawerHeader className="text-center">
+              <DrawerTitle>Filter Random Pages</DrawerTitle>
+              <DrawerDescription>
+                Customize your random page discovery experience
+              </DrawerDescription>
+            </DrawerHeader>
 
-          <div className="flex-1 px-4 pb-4 overflow-y-auto">
-            {filterContent}
-          </div>
+            <div className="flex-1 px-4 pb-4 overflow-y-auto">
+              {filterContent}
+            </div>
 
-          <DrawerFooter className="flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleApply}
-              className="flex-1"
-            >
-              <Icon name="Check" size={16} className="mr-2" />
-              Apply Filters
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+            <DrawerFooter className="flex-row gap-2">
+              {footerButtons}
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        // Desktop: Dialog
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Filter Random Pages</DialogTitle>
+              <DialogDescription>
+                Customize your random page discovery experience
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="py-4">
+              {filterContent}
+            </div>
+
+            <DialogFooter className="flex-row gap-2 sm:justify-stretch">
+              {footerButtons}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

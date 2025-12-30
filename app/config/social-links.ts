@@ -3,7 +3,7 @@
  * Update URLs here to change them across the entire app.
  */
 
-export type SocialPlatform = 'instagram' | 'threads' | 'x' | 'tiktok' | 'github' | 'youtube';
+export type SocialPlatform = 'instagram' | 'threads' | 'x' | 'tiktok' | 'github' | 'youtube' | 'twitch' | 'telegram';
 
 export interface SocialLink {
   platform: SocialPlatform;
@@ -43,9 +43,21 @@ export const socialLinks: SocialLink[] = [
   },
   {
     platform: 'youtube',
-    url: 'https://youtube.com/@WeWriteApp',
+    url: 'https://www.youtube.com/@WeWriteApp/',
     handle: '@WeWriteApp',
     label: 'Subscribe on YouTube'
+  },
+  {
+    platform: 'twitch',
+    url: 'https://www.twitch.tv/wewriteapp',
+    handle: 'wewriteapp',
+    label: 'Watch on Twitch'
+  },
+  {
+    platform: 'telegram',
+    url: 'https://t.me/wewriteapp',
+    handle: '@wewriteapp',
+    label: 'Join on Telegram'
   },
   {
     platform: 'github',

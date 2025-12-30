@@ -114,7 +114,7 @@ export default function SameTitlePages({
       subscriptionStatus={item.subscriptionStatus}
       subscriptionAmount={item.subscriptionAmount}
       variant="pill"
-      pillVariant="secondary"
+      pillVariant="outline"
       size="sm"
       onClick={(e) => {
         e.preventDefault();

@@ -1,32 +1,51 @@
 # WeWrite
 
+![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)
+![Node](https://img.shields.io/badge/node-20.x-green.svg)
+![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)
+
 **A social wiki where every page you write is a fundraiser.**
 
 WeWrite transforms knowledge sharing into a collaborative economy where writers earn direct USD payments from their contributions and readers support creators with transparent monthly funding.
 
+## Table of Contents
+
+- [Connect With Us](#-connect-with-us)
+- [What Makes WeWrite Special](#-what-makes-wewrite-special)
+- [Quick Start](#-quick-start)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Documentation](#-documentation)
+- [Project Structure](#-project-structure)
+- [Development](#-development)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Support](#-support)
+
 ## 🌐 Connect With Us
 
-- **🔗 [Bento](https://bento.me/wewrite)** - All our links in one place
-- **📸 [Instagram](https://www.instagram.com/getwewrite/)** - Behind the scenes and updates
-- **🎥 [YouTube](https://www.youtube.com/@WeWriteApp)** - Tutorials and feature demos
-- **🐦 [Twitter](https://twitter.com/getwewrite)** - Real-time updates and community
-- **💬 [Discord](https://discord.gg/wewrite)** - Join our community discussions
+- [🌍 Website](https://www.getwewrite.app/) - Try WeWrite now
+- [📸 Instagram](https://www.instagram.com/getwewrite/) - Behind the scenes and updates
+- [🎥 YouTube](https://www.youtube.com/@WeWriteApp/) - Tutorials and feature demos
+- [𝕏 X](https://x.com/WeWriteApp) - Real-time updates and community
+- [📺 Twitch](https://www.twitch.tv/wewriteapp) - Live streams and coding sessions
+- [💬 Telegram](https://t.me/wewriteapp) - Join our community
 
 ## ✨ What Makes WeWrite Special
 
-- **📝 Collaborative Writing** - Create and edit pages together
+- **📝 Collaborative Writing** - Create and edit pages together with smart versioning
 - **💰 Direct USD Payments** - Support creators with transparent monthly funding
-- **🔗 Smart Linking** - Connect ideas across the platform
-- **🌙 Beautiful Interface** - Clean, modern design with dark mode
+- **🔗 Smart Linking** - Connect ideas across the platform with inline pill links
+- **🌙 Beautiful Interface** - Clean, modern design with dark mode and glassmorphism
 - **🔒 Secure & Private** - Your data is protected and encrypted
+- **⚡ High Performance** - 90% cost reduction through optimization strategies
 
 ## 🚀 Quick Start
 
-WeWrite is built with [Next.js](https://nextjs.org/) and uses modern web technologies for optimal performance.
-
 ### Prerequisites
 
-- **Node.js** 20+
+- **Node.js** 20.x or higher
 - **Bun** (preferred package manager - faster than npm/pnpm)
 
 ### Installation
@@ -50,125 +69,129 @@ cp .env.example .env.local
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! 🎉
+Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action!
 
-## 📚 Documentation
+## 🏗️ System Architecture
 
-### 🎯 Essential Documentation (Start Here)
+### High-Level Architecture
 
-#### Core System Understanding
-- **[Current Architecture](docs/CURRENT_ARCHITECTURE.md)** - ⭐ **ESSENTIAL** - Complete system overview and architecture principles
-- **[Payment System Guide](docs/PAYMENT_SYSTEM_GUIDE.md)** - ⭐ **ESSENTIAL** - Complete USD payment system documentation
-- **[Performance Optimization Guide](docs/PERFORMANCE_OPTIMIZATION_GUIDE.md)** - ⭐ **ESSENTIAL** - Optimization strategies (90% cost reduction achieved)
-- **[Design System](docs/design-system.md)** - ⭐ **ESSENTIAL** - FloatingCard component system and glassmorphism guidelines
-- **[OKLCH Color System](docs/color-system-oklch.md)** - ⭐ **ESSENTIAL** - Modern OKLCH color space for better accessibility and perceptual uniformity
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        Web[Next.js Web App]
+        PWA[Progressive Web App]
+    end
 
-#### Quick Start Guides
-- **[Environment Quick Reference](docs/ENVIRONMENT_QUICK_REFERENCE.md)** - Development environment setup
-- **[Subscription Quick Reference](docs/SUBSCRIPTION_QUICK_REFERENCE.md)** - Subscription system overview
-- **[Stripe Dashboard Quick Reference](docs/STRIPE_DASHBOARD_QUICK_REFERENCE.md)** - Stripe dashboard navigation
+    subgraph "API Layer"
+        API[API Routes]
+        Webhooks[Stripe Webhooks]
+        Cron[Cron Jobs]
+    end
 
-### 🔒 Security & Core Systems (Essential Reading)
+    subgraph "Service Layer"
+        Auth[Authentication Service]
+        Payment[Payment Service]
+        Earnings[Earnings Service]
+        Email[Email Service]
+        Search[Search Service]
+    end
 
-- **[USERNAME_SECURITY_GUIDELINES](docs/USERNAME_SECURITY_GUIDELINES.md)** - **🔒 CRITICAL**: Prevent email exposure vulnerabilities
-- **[PAGE_DATA_AND_VERSIONS](docs/PAGE_DATA_AND_VERSIONS.md)** - **🏛️ AUTHORITATIVE**: Page data structure and version system
-- **[AUTHENTICATION_ARCHITECTURE](docs/AUTHENTICATION_ARCHITECTURE.md)** - Environment-specific authentication rules
-- **[USER_DATA_FETCHING_PATTERNS](docs/USER_DATA_FETCHING_PATTERNS.md)** - Standardized patterns for secure user data handling
+    subgraph "Data Layer"
+        Firebase[(Firebase)]
+        Firestore[(Firestore DB)]
+        Storage[(Firebase Storage)]
+    end
 
-### 💰 Financial System
+    subgraph "External Services"
+        Stripe[Stripe Payments]
+        Resend[Resend Email]
+    end
 
-#### Payment & Subscription
-- **[Subscription System](docs/SUBSCRIPTION_SYSTEM.md)** - Subscription management and Stripe integration
-- **[Simplified Payout System](docs/SIMPLIFIED_PAYOUT_SYSTEM.md)** - Current payout architecture
-- **[Platform Fee Management System](docs/PLATFORM_FEE_MANAGEMENT_SYSTEM.md)** - Fee configuration and management
-- **[USD System Overview](docs/USD_SYSTEM_OVERVIEW.md)** - Overview of the USD-based system
+    Web --> API
+    PWA --> API
+    API --> Service Layer
+    Webhooks --> Service Layer
+    Cron --> Service Layer
+    Service Layer --> Data Layer
+    Payment --> Stripe
+    Email --> Resend
+    Auth --> Firebase
+```
 
-#### Allocation & Earnings
-- **[Allocation System](docs/ALLOCATION_SYSTEM.md)** - USD allocation system
-- **[Storage Balance Guide](docs/STORAGE_BALANCE_GUIDE.md)** - Storage balance functionality
-- **[Payout System Index](docs/PAYOUT_SYSTEM_INDEX.md)** - Payout system documentation index
+### Payment Flow Architecture
 
-#### Testing & Troubleshooting
-- **[Payout Testing Infrastructure](docs/PAYOUT_TESTING_INFRASTRUCTURE.md)** - Comprehensive payout testing
-- **[Payment Flow Testing Guide](docs/PAYMENT_FLOW_TESTING_GUIDE.md)** - Payment system testing procedures
-- **[Payout Troubleshooting Guide](docs/PAYOUT_TROUBLESHOOTING_GUIDE.md)** - Payout system troubleshooting
-- **[Subscription Troubleshooting](docs/SUBSCRIPTION_TROUBLESHOOTING.md)** - Common payment issues and solutions
-- **[Payment Failure Tracking](docs/PAYMENT_FAILURE_TRACKING.md)** - Payment error tracking
-- **[Webhook Setup Guide](docs/WEBHOOK_SETUP_GUIDE.md)** - Stripe webhook configuration
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant Stripe
+    participant Database
+    participant Cron
 
-### 🏗️ System Architecture
+    User->>Frontend: Subscribe ($10, $20, $30)
+    Frontend->>API: Create Subscription
+    API->>Stripe: Create Checkout Session
+    Stripe-->>User: Payment Page
+    User->>Stripe: Complete Payment
+    Stripe->>API: Webhook: subscription.created
+    API->>Database: Create USD Balance
 
-#### Core Architecture
-- **[Financial Data Architecture](docs/FINANCIAL_DATA_ARCHITECTURE.md)** - Separated financial contexts architecture
-- **[Content Display Architecture](docs/CONTENT_DISPLAY_ARCHITECTURE.md)** - Content rendering and display
-- **[Environment Architecture](docs/ENVIRONMENT_ARCHITECTURE.md)** - Development vs production environments
-- **[Session Management Architecture](docs/SESSION_MANAGEMENT_ARCHITECTURE.md)** - Session handling and device management
+    User->>Frontend: Allocate to Creators
+    Frontend->>API: Set Allocations
+    API->>Database: Store Allocations
 
-#### Specialized Systems
-- **[Header System](docs/HEADER_SYSTEM.md)** - Navigation header architecture
-- **[Theme System Architecture](docs/THEME_SYSTEM_ARCHITECTURE.md)** - Theme and styling system
-- **[Save System Reliability Architecture](docs/SAVE_SYSTEM_RELIABILITY_ARCHITECTURE.md)** - Save system design
-- **[Simplified Activity System](docs/SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Activity tracking using recent pages
+    Note over Cron,Database: End of Month
+    Cron->>Database: Calculate Earnings
+    Cron->>Database: Lock Allocations
+    Cron->>Stripe: Process Payouts
+    Stripe-->>Database: Update Payout Status
+```
 
-### 🔧 Development & Operations
+### Data Flow
 
-#### Development Workflow
-- **[Branch Aware Development](docs/BRANCH_AWARE_DEVELOPMENT.md)** - Development workflow and environment switching
-- **[Development Auth Guide](docs/DEVELOPMENT_AUTH_GUIDE.md)** - Development authentication setup
-- **[Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)** - Deployment procedures and best practices
+```mermaid
+graph LR
+    A[User Subscription] --> B[USD Balance]
+    B --> C[Monthly Allocations]
+    C --> D[Creator Earnings]
+    D --> E[Payouts]
 
-#### Standards & Guidelines
-- **[Collection Naming Standards](docs/COLLECTION_NAMING_STANDARDS.md)** - Database collection naming
-- **[Dependency Management Standards](docs/DEPENDENCY_MANAGEMENT_STANDARDS.md)** - Package management standards
-- **[Border Styling Guidelines](docs/BORDER_STYLING_GUIDELINES.md)** - UI styling standards
-- **[DOM Element Identifiers](docs/DOM_ELEMENT_IDENTIFIERS.md)** - DOM element naming conventions
-- **[Native App Migration Plan](docs/NATIVE_APP_PLAN.md)** - PWA-to-native migration strategy and notification system architecture
+    F[Unallocated Funds] --> G[Platform Revenue]
 
-### 📱 Features & User Experience
+    style A fill:#e1f5ff
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e8f5e9
+    style E fill:#fff9c4
+    style F fill:#ffebee
+    style G fill:#fce4ec
+```
 
-#### Content Features
-- **[Editor Viewer Separation](docs/EDITOR_VIEWER_SEPARATION.md)** - Editor/viewer architecture
-- **[Line Based Editor](docs/LINE_BASED_EDITOR.md)** - Editor implementation details
-- **[Recent Edits System](docs/RECENT_EDITS_SYSTEM.md)** - Recent edits functionality
-- **[Search System](docs/SEARCH_SYSTEM.md)** - Search implementation and features
-- **[Writing Suggestions System](docs/WRITING_SUGGESTIONS_SYSTEM.md)** - Writing suggestion features
-- **[Link Suggestion System](docs/LINK_SUGGESTION_SYSTEM.md)** - Link suggestion functionality
+### Environment Architecture
 
-> **Note**: As of August 2025, duplicate title prevention has been removed to allow for a more forgiving approach. Future implementations will include merging of detected duplicates or construction of timelines of ordered duplicates.
+```mermaid
+graph TD
+    subgraph "Development"
+        DevBranch[dev branch]
+        DevCollections[DEV_* Collections]
+        DevData[Test Data]
+    end
 
-#### User Interface
-- **[Banner System Guide](docs/BANNER_SYSTEM_GUIDE.md)** - ⭐ **ESSENTIAL** - Priority-based banner system with admin testing (email verification, PWA installation)
-- **[Settings Navigation System](docs/SETTINGS_NAVIGATION_SYSTEM.md)** - Settings page navigation
-- **[Page Data & Versions](docs/PAGE_DATA_AND_VERSIONS.md)** - Authoritative page data structure and version system
+    subgraph "Production"
+        MainBranch[main branch]
+        ProdCollections[Production Collections]
+        RealData[Real User Data]
+    end
 
-### ⚡ Performance & Optimization
+    DevBranch --> DevCollections
+    DevCollections --> DevData
+    MainBranch --> ProdCollections
+    ProdCollections --> RealData
 
-- **[Firebase Cost Optimization Summary](docs/FIREBASE_COST_OPTIMIZATION_SUMMARY.md)** - Cost optimization results and strategies
-- **[Database Schema Optimization Guide](docs/DATABASE_SCHEMA_OPTIMIZATION_GUIDE.md)** - Database optimization techniques
-- **[Search Performance Optimizations](docs/SEARCH_PERFORMANCE_OPTIMIZATIONS.md)** - Search system optimization
-- **[Navigation Caching Optimization](docs/NAVIGATION_CACHING_OPTIMIZATION.md)** - Navigation performance optimization
-
-### 🚨 Troubleshooting & Support
-
-#### Issue Resolution
-- **[Username Issue Analysis and Solution](docs/USERNAME_ISSUE_ANALYSIS_AND_SOLUTION.md)** - Username-related issues
-- **[Production Error Analysis](docs/PRODUCTION_ERROR_ANALYSIS.md)** - Production error patterns
-- **[Critical Production Fixes](docs/CRITICAL_PRODUCTION_FIXES.md)** - Critical issue resolutions
-
-#### Maintenance & Cleanup
-- **[Legacy Code Cleanup Guide](docs/LEGACY_CODE_CLEANUP_GUIDE.md)** - **ESSENTIAL**: Identifying and removing deprecated patterns
-- **[Auth Cleanup Guide](docs/AUTH_CLEANUP_GUIDE.md)** - Authentication cleanup procedures
-
-### 📦 Archive & Historical
-
-#### Completed Work
-- **[Archive](docs/archive/README.md)** - ⭐ **REFERENCE** - Completed migrations, optimization summaries, and historical documentation
-- **[USD Migration Guide](docs/USD_MIGRATION_GUIDE.md)** - ✅ **COMPLETED** - USD system migration documentation
-
-#### Deprecated (Reference Only)
-- **[Deprecated API Endpoints](docs/DEPRECATED_API_ENDPOINTS.md)** - ⚠️ **REFERENCE** - Deprecated API documentation
-- **[Deprecated Components](docs/DEPRECATED_COMPONENTS.md)** - ⚠️ **REFERENCE** - Deprecated component documentation
-- **[Deprecated UI Patterns](docs/DEPRECATED_UI_PATTERNS.md)** - ⚠️ **REFERENCE** - Deprecated UI pattern documentation
+    style DevBranch fill:#e3f2fd
+    style MainBranch fill:#e8f5e9
+```
 
 ## 🛠️ Technology Stack
 
@@ -179,6 +202,7 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 - **🎨 [Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
 - **📝 [Slate.js](https://slatejs.org/)** - Customizable rich text editor framework
 - **💳 [Stripe](https://stripe.com/)** - Payment processing and subscriptions
+- **🔍 [TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript development
 
 ### Firebase Services
 
@@ -189,45 +213,178 @@ Open [http://localhost:3000](http://localhost:3000) to see WeWrite in action! �
 
 ### Development & Deployment
 
-- **📦 [pnpm](https://pnpm.io/)** - Fast, disk space efficient package manager
+- **📦 [Bun](https://bun.sh/)** - Fast, disk space efficient package manager
 - **🚀 [Vercel](https://vercel.com/)** - Deployment platform with automatic CI/CD
 - **📊 [LogRocket](https://logrocket.com/)** - Session replay and error tracking
-- **🔍 [TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript development
 
 ### Key Features
 
-- **🌙 Dark Mode** - System-aware theme switching
+- **🌙 Dark Mode** - System-aware theme switching with OKLCH color system
 - **📱 Responsive Design** - Mobile-first responsive interface
-- **🔗 Smart Linking** - Automatic page linking and backlinks
-- **💰 USD Creator Support** - Direct USD payments to creators with transparent monthly funding
+- **🔗 Smart Linking** - Automatic page linking and backlinks with inline pills
+- **💰 USD Creator Support** - Direct USD payments with transparent monthly funding
 - **🔒 Security** - Comprehensive security measures and data protection
+- **⚡ Performance** - 90% cost reduction through aggressive optimization
+
+## 📚 Documentation
+
+### Essential Documentation (Start Here)
+
+- **[Current Architecture](docs/architecture/CURRENT_ARCHITECTURE.md)** - Complete system overview and architecture principles
+- **[Environment Quick Reference](docs/deployment/ENVIRONMENT_QUICK_REFERENCE.md)** - Development environment setup
+- **[Performance Optimization Guide](docs/performance/PERFORMANCE_OPTIMIZATION_GUIDE.md)** - Optimization strategies (90% cost reduction achieved)
+
+### Core Systems
+
+#### Authentication & Security
+- [Authentication Architecture](docs/architecture/AUTHENTICATION_ARCHITECTURE.md) - Environment-specific authentication rules
+- [Username Security Guidelines](docs/security/USERNAME_SECURITY_GUIDELINES.md) - Prevent email exposure vulnerabilities
+- [User Data Fetching Patterns](docs/architecture/USER_DATA_FETCHING_PATTERNS.md) - Standardized patterns for secure user data handling
+- [Security Audit Report](docs/security/SECURITY_AUDIT_REPORT.md) - Security posture and best practices
+
+#### Payment & Financial System
+- [Payments and Allocations](docs/payments/PAYMENTS_AND_ALLOCATIONS.md) - Main payments documentation
+- [Allocation System](docs/payments/ALLOCATION_SYSTEM.md) - USD allocation architecture
+- [Subscription System](docs/payments/SUBSCRIPTION_SYSTEM.md) - Subscription management and Stripe integration
+- [Payout Troubleshooting Guide](docs/payments/PAYOUT_TROUBLESHOOTING_GUIDE.md) - Common payout issues and solutions
+- [Financial Data Architecture](docs/payments/FINANCIAL_DATA_ARCHITECTURE.md) - Separated financial contexts architecture
+
+#### Content & Editor
+- [Page Data and Versions](docs/architecture/PAGE_DATA_AND_VERSIONS.md) - Authoritative page data structure and version system
+- [Text Selection and Attribution](docs/editor/TEXT_SELECTION_AND_ATTRIBUTION.md) - Selection & attribution system
+- [Writing Suggestions System](docs/editor/WRITING_SUGGESTIONS_SYSTEM.md) - Writing suggestion features
+- [Line Based Editor](docs/editor/LINE_BASED_EDITOR.md) - Editor implementation details
+
+#### Search & Discovery
+- [Search Architecture](docs/SEARCH_ARCHITECTURE.md) - Search system architecture
+- [Search Performance Optimizations](docs/search/SEARCH_PERFORMANCE_OPTIMIZATIONS.md) - Performance tuning
+
+### UI & Design
+
+- [Design System Architecture](docs/ui/DESIGN_SYSTEM_ARCHITECTURE.md) - FloatingCard component system and glassmorphism guidelines
+- [Theme System Architecture](docs/ui/THEME_SYSTEM_ARCHITECTURE.md) - Theme and styling system
+- [Complete Color System](docs/ui/COMPLETE_COLOR_SYSTEM.md) - OKLCH color space for better accessibility
+- [Header System](docs/ui/HEADER_SYSTEM.md) - Navigation header architecture
+
+### Performance & Optimization
+
+- [Performance Optimization Guide](docs/performance/PERFORMANCE_OPTIMIZATION_GUIDE.md) - Performance strategies
+- [Firebase Optimization Guide](docs/firebase/FIREBASE_OPTIMIZATION_GUIDE.md) - Firebase cost and performance optimization
+- [Navigation Caching Optimization](docs/performance/NAVIGATION_CACHING_OPTIMIZATION.md) - Navigation performance optimization
+- [Logging Noise Reduction](docs/performance/LOGGING_NOISE_REDUCTION.md) - Log management strategies
+
+### Deployment & Operations
+
+- [Production Deployment Guide](docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md) - Deployment procedures and best practices
+- [Branch Aware Development](docs/deployment/BRANCH_AWARE_DEVELOPMENT.md) - Development workflow and environment switching
+- [Webhook Setup Guide](docs/deployment/WEBHOOK_SETUP_GUIDE.md) - Stripe webhook configuration
+
+### Development Standards
+
+- [Dependency Management Standards](docs/maintenance/DEPENDENCY_MANAGEMENT_STANDARDS.md) - Package management standards
+- [Legacy Code Cleanup Guide](docs/maintenance/LEGACY_CODE_CLEANUP_GUIDE.md) - Identifying and removing deprecated patterns
+
+### Full Documentation Index
+
+For a complete list of all documentation, see [docs/README.md](docs/README.md).
 
 ## 📁 Project Structure
 
 ```
 WeWrite/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes and endpoints
-│   ├── auth/              # Authentication pages
-│   ├── components/        # Reusable UI components
-│   ├── contexts/          # React contexts for global state
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # Utility libraries and helpers
-│   ├── providers/         # Context providers
-│   ├── settings/          # User settings pages
-│   └── utils/             # Utility functions
-├── docs/                  # Technical documentation
-├── public/                # Static assets
-└── functions/             # Firebase Cloud Functions
+├── app/                      # Next.js App Router
+│   ├── api/                 # API routes and endpoints
+│   │   ├── admin/          # Admin API endpoints
+│   │   ├── cron/           # Scheduled job endpoints
+│   │   └── webhooks/       # Stripe webhook handlers
+│   ├── admin/              # Admin dashboard pages
+│   ├── auth/               # Authentication pages
+│   ├── components/         # Reusable UI components
+│   │   ├── admin/         # Admin-specific components
+│   │   ├── editor/        # Rich text editor components
+│   │   ├── landing/       # Landing page components
+│   │   ├── layout/        # Layout components
+│   │   ├── payments/      # Payment UI components
+│   │   └── ui/            # Shared UI components
+│   ├── contexts/           # React contexts for global state
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utility libraries and helpers
+│   ├── providers/          # Context providers
+│   ├── services/           # Business logic services
+│   ├── settings/           # User settings pages
+│   └── utils/              # Utility functions
+├── docs/                   # Technical documentation
+│   ├── architecture/       # System architecture docs
+│   ├── auth/              # Authentication docs
+│   ├── deployment/        # Deployment guides
+│   ├── editor/            # Editor documentation
+│   ├── features/          # Feature-specific docs
+│   ├── firebase/          # Firebase patterns
+│   ├── payments/          # Payment system docs
+│   ├── performance/       # Performance guides
+│   ├── search/            # Search system docs
+│   ├── security/          # Security documentation
+│   └── ui/                # UI and design docs
+├── functions/              # Firebase Cloud Functions
+├── public/                 # Static assets
+│   ├── icons/             # App icons and favicons
+│   └── images/            # Images and graphics
+└── scripts/                # Build and utility scripts
 ```
 
 ### Key Directories
 
 - **`app/`** - Next.js 14 App Router with file-based routing
 - **`app/components/`** - Reusable UI components organized by feature
+- **`app/services/`** - Business logic services (payment, earnings, email, etc.)
 - **`app/api/`** - API routes for backend functionality
 - **`docs/`** - Comprehensive technical documentation
 - **`functions/`** - Firebase Cloud Functions for webhooks and background tasks
+
+## 🔧 Development
+
+### Development Commands
+
+```bash
+# Start development server
+bun dev
+
+# Start with HTTPS (for PWA testing)
+bun dev:https
+
+# Build for production
+bun build
+
+# Run tests
+bun test
+
+# Run tests in watch mode
+bun test:watch
+
+# Run specific test suites
+bun test:payments
+bun test:payouts
+bun test:allocation
+```
+
+### Branch-Aware Environment
+
+WeWrite uses **branch-aware environment detection** for local development:
+
+- **Main branch** (`main`): Uses **production collections** - connects to real data
+- **Dev branch** (`dev`): Uses **dev collections** (`DEV_*` prefix) - isolated test data
+- **Other branches**: Uses **dev collections** (safe default) - isolated test data
+
+This ensures you can test against production data when needed (main branch) while keeping development work safely isolated (dev branch).
+
+### Code Quality
+
+Before contributing, ensure you follow:
+
+1. **TypeScript strict mode** - All code must be type-safe
+2. **ESLint rules** - Run `bun lint` before committing
+3. **Security guidelines** - Follow [USERNAME_SECURITY_GUIDELINES](docs/security/USERNAME_SECURITY_GUIDELINES.md)
+4. **Performance practices** - Follow [PERFORMANCE_OPTIMIZATION_GUIDE](docs/performance/PERFORMANCE_OPTIMIZATION_GUIDE.md)
 
 ## 🚀 Deployment
 
@@ -239,48 +396,37 @@ WeWrite uses Vercel for automatic deployment:
 - **Preview**: Deploys from `dev` branch for testing
 - **Environment Variables**: Configured in Vercel dashboard
 
-### Local Development Environment
-
-WeWrite uses **branch-aware environment detection** for local development:
-
-- **Main branch** (`main`): Uses **production collections** - connects to real data
-- **Dev branch** (`dev`): Uses **dev collections** (`DEV_*` prefix) - isolated test data
-- **Other branches**: Uses **dev collections** (safe default) - isolated test data
-
-This ensures you can test against production data when needed (main branch) while keeping development work safely isolated (dev branch).
-
-### Manual Deployment
-
-```bash
-# Build for production
-pnpm build
-
-# Deploy to Vercel
-pnpm deploy
-```
-
-For detailed deployment procedures, see [PRODUCTION_DEPLOYMENT_GUIDE](docs/PRODUCTION_DEPLOYMENT_GUIDE.md).
+See [Production Deployment Guide](docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md) for detailed procedures.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines:
+We welcome contributions! Here's how to get started:
 
 1. **Fork the repository**
 2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
 3. **Follow our coding standards** (see documentation)
 4. **Write tests** for new functionality
-5. **Submit a pull request**
+5. **Commit your changes** with clear messages
+6. **Submit a pull request**
 
 ### Development Guidelines
 
-- **Security First**: Follow [USERNAME_SECURITY_GUIDELINES](docs/USERNAME_SECURITY_GUIDELINES.md)
-- **Clean Code**: Use [LEGACY_CODE_CLEANUP_GUIDE](docs/LEGACY_CODE_CLEANUP_GUIDE.md)
+- **Security First**: Follow [USERNAME_SECURITY_GUIDELINES](docs/security/USERNAME_SECURITY_GUIDELINES.md)
+- **Clean Code**: Use [LEGACY_CODE_CLEANUP_GUIDE](docs/maintenance/LEGACY_CODE_CLEANUP_GUIDE.md)
 - **Testing**: Write comprehensive tests for all features
 - **Documentation**: Update docs for any new features or changes
 
+### Code of Conduct
+
+- Be respectful and inclusive
+- Focus on constructive feedback
+- Help create a welcoming environment for all contributors
+
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details.
+
+This is free software: you are free to change and redistribute it under the terms of the GPL-3.0 license.
 
 ## 💬 Support
 
@@ -289,6 +435,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **🐛 Issues**: [GitHub Issues](https://github.com/WeWriteApp/WeWrite/issues)
 - **📖 Documentation**: [docs/](docs/) directory
 
+## 🙏 Acknowledgments
+
+Built with modern web technologies and powered by:
+
+- [Next.js](https://nextjs.org/) - The React Framework
+- [Firebase](https://firebase.google.com/) - Backend-as-a-Service
+- [Stripe](https://stripe.com/) - Payment Infrastructure
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-First CSS
+- [Vercel](https://vercel.com/) - Deployment Platform
+
 ---
 
 **Made with ❤️ by the WeWrite team**
+
+[⬆ Back to top](#wewrite)

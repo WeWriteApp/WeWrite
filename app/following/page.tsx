@@ -21,7 +21,7 @@ import { useRouter } from 'next/navigation';
  * - Better management interface for following relationships
  */
 export default function FollowingPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -29,15 +29,15 @@ export default function FollowingPage() {
     setMounted(true);
   }, []);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only after auth has finished loading)
   React.useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && !isLoading && !isAuthenticated) {
       router.push('/auth/login');
     }
-  }, [mounted, isAuthenticated, router]);
+  }, [mounted, isAuthenticated, isLoading, router]);
 
-  // Show progressive loading state during hydration
-  if (!mounted) {
+  // Show progressive loading state during hydration or auth loading
+  if (!mounted || isLoading) {
     return (
       <NavPageLayout loading={true} loadingFallback={
         <div>

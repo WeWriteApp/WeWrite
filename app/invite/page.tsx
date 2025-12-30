@@ -39,7 +39,7 @@ interface ReferralRevenue {
  * Users earn 30% of the payout fee from users they refer.
  */
 export default function InviteFriendsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [copiedVertical, setCopiedVertical] = useState<string | null>(null);
@@ -52,12 +52,12 @@ export default function InviteFriendsPage() {
     setMounted(true);
   }, []);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only after auth has finished loading)
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && !authLoading && !isAuthenticated) {
       router.push('/auth/login');
     }
-  }, [mounted, isAuthenticated, router]);
+  }, [mounted, authLoading, isAuthenticated, router]);
 
   // Fetch referral data
   useEffect(() => {
@@ -141,8 +141,8 @@ export default function InviteFriendsPage() {
     });
   };
 
-  // Show progressive loading state during hydration
-  if (!mounted) {
+  // Show progressive loading state during hydration or auth loading
+  if (!mounted || authLoading) {
     return (
       <NavPageLayout loading={true} loadingFallback={
         <div>

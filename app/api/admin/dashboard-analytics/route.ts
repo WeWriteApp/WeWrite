@@ -56,7 +56,12 @@ export async function GET(request: NextRequest) {
         data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'edit_event');
         break;
       case 'contentChanges':
-        data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'content_change');
+        // Use version history data which has actual diff information
+        data = await AdminAnalyticsService.getContentChangesFromVersions(dateRange);
+        break;
+      case 'links':
+        // Get internal and external link analytics
+        data = await AdminAnalyticsService.getLinkAnalytics(dateRange);
         break;
       case 'pwaInstalls':
         data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'pwa_install');
@@ -95,7 +100,7 @@ export async function GET(request: NextRequest) {
         data = await AdminAnalyticsService.getAllDashboardAnalytics(dateRange);
         break;
       default:
-        return createErrorResponse('BAD_REQUEST', 'Invalid analytics type. Must be one of: accounts, pages, shares, edits, contentChanges, pwaInstalls, pwaNotifications, notificationsSent, replies, visitors, pageViews, subscriptions, revenue, all');
+        return createErrorResponse('BAD_REQUEST', 'Invalid analytics type. Must be one of: accounts, pages, shares, edits, contentChanges, links, pwaInstalls, pwaNotifications, notificationsSent, replies, visitors, pageViews, subscriptions, revenue, all');
     }
 
     return createApiResponse({

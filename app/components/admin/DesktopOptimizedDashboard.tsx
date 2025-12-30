@@ -1,9 +1,36 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area, BarChart, Bar } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, BarChart, Bar } from 'recharts';
 import { Button } from '../ui/button';
+
+// Hook to measure container dimensions
+function useContainerSize(ref: React.RefObject<HTMLDivElement>) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!ref.current) return;
+
+    const updateSize = () => {
+      if (ref.current) {
+        const rect = ref.current.getBoundingClientRect();
+        setSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+      }
+    };
+
+    // Initial measurement
+    updateSize();
+
+    // Use ResizeObserver for responsive updates
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(ref.current);
+
+    return () => resizeObserver.disconnect();
+  }, [ref]);
+
+  return size;
+}
 
 // Custom tooltip with better formatting
 const ChartTooltip = ({ active, payload, label, valueFormatter }: any) => {
@@ -153,7 +180,8 @@ import {
   usePlatformRevenueMetrics,
   useFollowedUsersMetrics,
   useNotificationsSentMetrics,
-  useRepliesMetrics
+  useRepliesMetrics,
+  useLinkMetrics
 } from '../../hooks/useDashboardAnalytics';
 import { usePayoutAnalytics } from '../../hooks/usePaymentAnalytics';
 
@@ -195,6 +223,7 @@ interface DashboardRow {
 }
 
 // Generic chart component that renders either line or bar chart based on type
+// Uses explicit pixel dimensions instead of ResponsiveContainer
 const GenericChart = ({
   data,
   height,
@@ -214,63 +243,74 @@ const GenericChart = ({
   yAxisWidth?: number;
   yAxisTickFormatter?: (value: any) => string;
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width } = useContainerSize(containerRef);
+
   const xAxisProps = {
     dataKey: labelKey,
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    tick: { fontSize: 9, fill: '#999999' },
     interval: 'preserveStartEnd' as const
   };
 
   const yAxisProps = {
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    tick: { fontSize: 9, fill: '#999999' },
     interval: 'preserveStartEnd' as const,
     width: yAxisWidth,
     tickFormatter: yAxisTickFormatter
   };
 
+  // Don't render chart until we have valid dimensions
+  const canRender = width > 50 && height > 50;
+
   if (chartType === 'bar') {
     return (
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-          <XAxis {...xAxisProps} />
-          <YAxis {...yAxisProps} />
-          <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-          <Bar
-            dataKey={dataKey}
-            fill="oklch(var(--foreground))"
-            radius={[2, 2, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      <div ref={containerRef} style={{ width: '100%', height }}>
+        {canRender && (
+          <BarChart width={width} height={height} data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+            <XAxis {...xAxisProps} />
+            <YAxis {...yAxisProps} />
+            <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+            <Bar
+              dataKey={dataKey}
+              fill="#3b82f6"
+              radius={[2, 2, 0, 0]}
+            />
+          </BarChart>
+        )}
+      </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-        <XAxis {...xAxisProps} />
-        <YAxis {...yAxisProps} />
-        <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
-        <Line
-          type="monotone"
-          dataKey={dataKey}
-          stroke="oklch(var(--foreground))"
-          strokeWidth={1.5}
-          dot={false}
-          activeDot={{ r: 4, fill: 'oklch(var(--foreground))' }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div ref={containerRef} style={{ width: '100%', height }}>
+      {canRender && (
+        <LineChart width={width} height={height} data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+          <XAxis {...xAxisProps} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
+          <Line
+            type="monotone"
+            dataKey={dataKey}
+            stroke="#3b82f6"
+            strokeWidth={1.5}
+            dot={false}
+            activeDot={{ r: 4, fill: '#3b82f6' }}
+          />
+        </LineChart>
+      )}
+    </div>
   );
 };
 
 // Multi-series chart component for notifications (emails + push)
 // Supports both stacked bar chart and multi-line chart modes
+// Uses explicit pixel dimensions instead of ResponsiveContainer
 const NotificationsChart = ({
   data,
   height,
@@ -282,18 +322,21 @@ const NotificationsChart = ({
   labelKey?: string;
   chartType?: 'line' | 'bar';
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width } = useContainerSize(containerRef);
+
   const xAxisProps = {
     dataKey: labelKey,
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    tick: { fontSize: 9, fill: '#999999' },
     interval: 'preserveStartEnd' as const
   };
 
   const yAxisProps = {
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    tick: { fontSize: 9, fill: '#999999' },
     interval: 'preserveStartEnd' as const,
     width: 30
   };
@@ -321,51 +364,59 @@ const NotificationsChart = ({
     );
   };
 
+  // Don't render chart until we have valid dimensions
+  const canRender = width > 50 && height > 50;
+
   // Line chart mode - multi-line chart
   if (chartType === 'line') {
     return (
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-          <XAxis {...xAxisProps} />
-          <YAxis {...yAxisProps} />
-          <Tooltip content={<NotificationsMultiSeriesTooltip />} />
-          <Line type="monotone" dataKey="emails" stroke="oklch(var(--primary))" strokeWidth={1.5} dot={false} name="Emails" />
-          <Line type="monotone" dataKey="pushNotifications" stroke="oklch(var(--foreground) / 0.6)" strokeWidth={1.5} dot={false} name="Push Notifications" />
-        </LineChart>
-      </ResponsiveContainer>
+      <div ref={containerRef} style={{ width: '100%', height }}>
+        {canRender && (
+          <LineChart width={width} height={height} data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+            <XAxis {...xAxisProps} />
+            <YAxis {...yAxisProps} />
+            <Tooltip content={<NotificationsMultiSeriesTooltip />} />
+            <Line type="monotone" dataKey="emails" stroke="#3b82f6" strokeWidth={1.5} dot={false} name="Emails" />
+            <Line type="monotone" dataKey="pushNotifications" stroke="#8b5cf6" strokeWidth={1.5} dot={false} name="Push Notifications" />
+          </LineChart>
+        )}
+      </div>
     );
   }
 
   // Bar chart mode - stacked bar chart
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-        <XAxis {...xAxisProps} />
-        <YAxis {...yAxisProps} />
-        <Tooltip content={<NotificationsMultiSeriesTooltip />} />
-        <Bar
-          dataKey="emails"
-          stackId="notifications"
-          fill="oklch(var(--primary))"
-          name="Emails"
-          radius={[0, 0, 0, 0]}
-        />
-        <Bar
-          dataKey="pushNotifications"
-          stackId="notifications"
-          fill="oklch(var(--foreground) / 0.6)"
-          name="Push Notifications"
-          radius={[2, 2, 0, 0]}
-        />
-      </BarChart>
-    </ResponsiveContainer>
+    <div ref={containerRef} style={{ width: '100%', height }}>
+      {canRender && (
+        <BarChart width={width} height={height} data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+          <XAxis {...xAxisProps} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<NotificationsMultiSeriesTooltip />} />
+          <Bar
+            dataKey="emails"
+            stackId="notifications"
+            fill="#3b82f6"
+            name="Emails"
+            radius={[0, 0, 0, 0]}
+          />
+          <Bar
+            dataKey="pushNotifications"
+            stackId="notifications"
+            fill="#8b5cf6"
+            name="Push Notifications"
+            radius={[2, 2, 0, 0]}
+          />
+        </BarChart>
+      )}
+    </div>
   );
 };
 
 // Multi-series chart component for replies (agree, disagree, neutral)
 // Supports both stacked bar chart and multi-line chart modes
+// Uses explicit pixel dimensions instead of ResponsiveContainer
 const RepliesChart = ({
   data,
   height,
@@ -377,18 +428,21 @@ const RepliesChart = ({
   labelKey?: string;
   chartType?: 'line' | 'bar';
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { width } = useContainerSize(containerRef);
+
   const xAxisProps = {
     dataKey: labelKey,
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    tick: { fontSize: 9, fill: '#999999' },
     interval: 'preserveStartEnd' as const
   };
 
   const yAxisProps = {
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: 'hsl(var(--muted-foreground) / 0.4)' },
+    tick: { fontSize: 9, fill: '#999999' },
     interval: 'preserveStartEnd' as const,
     width: 30
   };
@@ -416,78 +470,84 @@ const RepliesChart = ({
     );
   };
 
+  // Don't render chart until we have valid dimensions
+  const canRender = width > 50 && height > 50;
+
   // Line chart mode - multi-line chart with one line per reply type
   if (chartType === 'line') {
     return (
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-          <XAxis {...xAxisProps} />
-          <YAxis {...yAxisProps} />
-          <Tooltip content={<RepliesMultiSeriesTooltip />} />
-          <Line
-            type="monotone"
-            dataKey="agree"
-            stroke="#22c55e"
-            strokeWidth={1.5}
-            dot={false}
-            activeDot={{ r: 4, fill: '#22c55e' }}
-            name="Agree"
-          />
-          <Line
-            type="monotone"
-            dataKey="neutral"
-            stroke="oklch(var(--muted-foreground))"
-            strokeWidth={1.5}
-            dot={false}
-            activeDot={{ r: 4, fill: 'oklch(var(--muted-foreground))' }}
-            name="Neutral"
-          />
-          <Line
-            type="monotone"
-            dataKey="disagree"
-            stroke="#ef4444"
-            strokeWidth={1.5}
-            dot={false}
-            activeDot={{ r: 4, fill: '#ef4444' }}
-            name="Disagree"
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      <div ref={containerRef} style={{ width: '100%', height }}>
+        {canRender && (
+          <LineChart width={width} height={height} data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+            <XAxis {...xAxisProps} />
+            <YAxis {...yAxisProps} />
+            <Tooltip content={<RepliesMultiSeriesTooltip />} />
+            <Line
+              type="monotone"
+              dataKey="agree"
+              stroke="#22c55e"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: '#22c55e' }}
+              name="Agree"
+            />
+            <Line
+              type="monotone"
+              dataKey="neutral"
+              stroke="#999999"
+              strokeWidth={1.5}
+              dot={false}
+              name="Neutral"
+            />
+            <Line
+              type="monotone"
+              dataKey="disagree"
+              stroke="#ef4444"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 4, fill: '#ef4444' }}
+              name="Disagree"
+            />
+          </LineChart>
+        )}
+      </div>
     );
   }
 
   // Bar chart mode - stacked bar chart
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" className="opacity-10" vertical={false} horizontal={true} />
-        <XAxis {...xAxisProps} />
-        <YAxis {...yAxisProps} />
-        <Tooltip content={<RepliesMultiSeriesTooltip />} />
-        <Bar
-          dataKey="agree"
-          stackId="replies"
-          fill="#22c55e"
-          name="Agree"
-          radius={[0, 0, 0, 0]}
-        />
-        <Bar
-          dataKey="neutral"
-          stackId="replies"
-          fill="oklch(var(--muted-foreground) / 0.5)"
-          name="Neutral"
-          radius={[0, 0, 0, 0]}
-        />
-        <Bar
-          dataKey="disagree"
-          stackId="replies"
-          fill="#ef4444"
-          name="Disagree"
-          radius={[2, 2, 0, 0]}
-        />
-      </BarChart>
-    </ResponsiveContainer>
+    <div ref={containerRef} style={{ width: '100%', height }}>
+      {canRender && (
+        <BarChart width={width} height={height} data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+          <XAxis {...xAxisProps} />
+          <YAxis {...yAxisProps} />
+          <Tooltip content={<RepliesMultiSeriesTooltip />} />
+          <Bar
+            dataKey="agree"
+            stackId="replies"
+            fill="#22c55e"
+            name="Agree"
+            radius={[0, 0, 0, 0]}
+          />
+          <Bar
+            dataKey="neutral"
+            stackId="replies"
+            fill="#999999"
+            name="Neutral"
+            radius={[0, 0, 0, 0]}
+          />
+          <Bar
+            dataKey="disagree"
+            stackId="replies"
+            fill="#ef4444"
+            name="Disagree"
+            radius={[2, 2, 0, 0]}
+          />
+        </BarChart>
+      )}
+    </div>
   );
 };
 
@@ -725,6 +785,79 @@ export function DesktopOptimizedDashboard({
       )
     },
     {
+      id: 'links-added',
+      title: isCumulative ? 'Total Links Added (Cumulative)' : 'Links Added',
+      hook: (dateRange: DateRange, granularity: number) => {
+        const result = useLinkMetrics(dateRange, granularity);
+        return result;
+      },
+      valueKey: 'total',
+      cumulativeKeys: ['internalLinks', 'externalLinks', 'total'],
+      aggregateKeys: ['internalLinks', 'externalLinks', 'total'],
+      valueFormatter: (data) => {
+        if (isCumulative && data.length > 0) {
+          return data[data.length - 1]?.total?.toLocaleString() || '0';
+        }
+        const total = data.reduce((sum, item) => sum + (item.total || 0), 0);
+        return total.toLocaleString();
+      },
+      chartComponent: ({ data, height, chartType }) => {
+        const containerRef = useRef<HTMLDivElement>(null);
+        const { width } = useContainerSize(containerRef);
+        const canRender = width > 50 && height > 50;
+
+        return (
+          <div ref={containerRef} style={{ width: '100%', height }}>
+            {canRender && (
+              chartType === 'bar' ? (
+                <BarChart width={width} height={height} data={data}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={35}
+                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+                  />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar dataKey="internalLinks" stackId="a" fill="#3b82f6" name="Internal Links" />
+                  <Bar dataKey="externalLinks" stackId="a" fill="#10b981" name="External Links" />
+                </BarChart>
+              ) : (
+                <LineChart width={width} height={height} data={data}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={35}
+                    tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+                  />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Line type="monotone" dataKey="internalLinks" stroke="#3b82f6" strokeWidth={2} dot={false} name="Internal Links" />
+                  <Line type="monotone" dataKey="externalLinks" stroke="#10b981" strokeWidth={2} dot={false} name="External Links" />
+                </LineChart>
+              )
+            )}
+          </div>
+        );
+      }
+    },
+    {
       id: 'pwa-installs',
       title: isCumulative ? 'Total PWA Installs (Cumulative)' : 'PWA Installs',
       hook: (dateRange: DateRange, granularity: number) => usePWAInstallsMetrics(dateRange, granularity),
@@ -747,8 +880,8 @@ export function DesktopOptimizedDashboard({
       )
     },
     {
-      id: 'visitors',
-      title: isCumulative ? 'Total Visitors (Cumulative)' : 'Visitors',
+      id: 'page-views',
+      title: isCumulative ? 'Total Page Views (Cumulative)' : 'Page Views',
       hook: (dateRange: DateRange, granularity: number) => useVisitorMetrics(dateRange, granularity),
       valueKey: 'total',
       valueFormatter: (data) => {

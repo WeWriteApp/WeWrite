@@ -467,6 +467,225 @@ export class AdminAnalyticsService {
   }
 
   /**
+   * Get content changes by querying the versions subcollection directly
+   * This reads from pages/{pageId}/versions which has diff.added and diff.removed
+   * SOURCE OF TRUTH: Firebase versions subcollection (not analytics_events)
+   */
+  static async getContentChangesFromVersions(dateRange: DateRange): Promise<ChartDataPoint[]> {
+    try {
+      const db = getAdminFirestore();
+      const pagesCollectionName = await getCollectionNameAsync('pages');
+      const pagesRef = db.collection(pagesCollectionName);
+
+      // Format dates for query
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
+      // Get all non-deleted pages
+      const pagesSnapshot = await pagesRef
+        .where('deleted', '==', false)
+        .select() // Only get doc IDs, no data needed
+        .get();
+
+      // Group content changes by day
+      const dailyData = new Map<string, {
+        count: number;
+        charactersAdded: number;
+        charactersDeleted: number;
+      }>();
+
+      // Initialize all dates in range
+      const currentDate = new Date(dateRange.startDate);
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        dailyData.set(dayKey, { count: 0, charactersAdded: 0, charactersDeleted: 0 });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Query versions from each page (batch processing to avoid hitting limits)
+      const pageIds = pagesSnapshot.docs.map(doc => doc.id);
+
+      // Process pages in batches of 50 to avoid overwhelming the database
+      const batchSize = 50;
+      for (let i = 0; i < pageIds.length; i += batchSize) {
+        const batchIds = pageIds.slice(i, i + batchSize);
+
+        // Use Promise.all for parallel querying within batch
+        const versionQueries = batchIds.map(async (pageId) => {
+          const versionsRef = pagesRef.doc(pageId).collection('versions');
+          return versionsRef
+            .where('createdAt', '>=', startDateStr)
+            .where('createdAt', '<=', endDateStr)
+            .get();
+        });
+
+        const versionSnapshots = await Promise.all(versionQueries);
+
+        for (const versionsSnapshot of versionSnapshots) {
+          versionsSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt;
+
+            if (!createdAt) return;
+
+            // Parse date from ISO string
+            const dateStr = typeof createdAt === 'string'
+              ? createdAt.split('T')[0]
+              : createdAt.toDate?.().toISOString().split('T')[0];
+
+            if (!dateStr || !dailyData.has(dateStr)) return;
+
+            const dayData = dailyData.get(dateStr)!;
+
+            // Only count if there are actual changes
+            if (data.diff?.hasChanges) {
+              dayData.count += 1;
+              dayData.charactersAdded += data.diff?.added || 0;
+              dayData.charactersDeleted += data.diff?.removed || 0;
+            }
+          });
+        }
+      }
+
+      // Convert to chart data format
+      const result: ChartDataPoint[] = [];
+      const resultDate = new Date(dateRange.startDate);
+
+      while (resultDate <= dateRange.endDate) {
+        const dayKey = resultDate.toISOString().split('T')[0];
+        const dayData = dailyData.get(dayKey) || { count: 0, charactersAdded: 0, charactersDeleted: 0 };
+
+        const dataPoint: any = {
+          date: dayKey,
+          count: dayData.count,
+          label: resultDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          charactersAdded: dayData.charactersAdded,
+          charactersDeleted: dayData.charactersDeleted,
+          netChange: dayData.charactersAdded - dayData.charactersDeleted
+        };
+
+        result.push(dataPoint);
+        resultDate.setDate(resultDate.getDate() + 1);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching content changes from versions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get link analytics by querying page content for internal and external links
+   * Returns counts of internal links (WeWrite page links) and external links (URLs)
+   * SOURCE OF TRUTH: Page content in Slate.js format
+   */
+  static async getLinkAnalytics(dateRange: DateRange): Promise<{
+    date: string;
+    label: string;
+    internalLinks: number;
+    externalLinks: number;
+    total: number;
+  }[]> {
+    try {
+      const db = getAdminFirestore();
+      const pagesCollectionName = await getCollectionNameAsync('pages');
+      const pagesRef = db.collection(pagesCollectionName);
+
+      // Format dates for query
+      const startDateStr = dateRange.startDate.toISOString();
+      const endDateStr = dateRange.endDate.toISOString();
+
+      // Get all non-deleted pages in date range
+      const pagesSnapshot = await pagesRef
+        .where('deleted', '==', false)
+        .where('createdAt', '>=', startDateStr)
+        .where('createdAt', '<=', endDateStr)
+        .orderBy('createdAt', 'asc')
+        .get();
+
+      // Group link counts by day
+      const dailyData = new Map<string, { internalLinks: number; externalLinks: number }>();
+
+      // Initialize all dates in range
+      const currentDate = new Date(dateRange.startDate);
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        dailyData.set(dayKey, { internalLinks: 0, externalLinks: 0 });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Count links in each page's content
+      pagesSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+        const content = data.content;
+
+        if (!createdAt || !content) return;
+
+        // Parse date
+        const dateStr = typeof createdAt === 'string'
+          ? createdAt.split('T')[0]
+          : createdAt.toDate?.().toISOString().split('T')[0];
+
+        if (!dateStr || !dailyData.has(dateStr)) return;
+
+        const dayData = dailyData.get(dateStr)!;
+
+        // Count links in Slate.js content array
+        const countLinks = (nodes: any[]) => {
+          for (const node of nodes) {
+            if (node.type === 'link') {
+              // External link - has isExternal: true or URL starts with http
+              if (node.isExternal || (node.url && node.url.startsWith('http'))) {
+                dayData.externalLinks++;
+              }
+              // Internal link - has pageId property
+              else if (node.pageId) {
+                dayData.internalLinks++;
+              }
+            }
+            // Recurse into children
+            if (node.children && Array.isArray(node.children)) {
+              countLinks(node.children);
+            }
+          }
+        };
+
+        if (Array.isArray(content)) {
+          countLinks(content);
+        }
+      });
+
+      // Convert to chart data format
+      const result: { date: string; label: string; internalLinks: number; externalLinks: number; total: number }[] = [];
+      const resultDate = new Date(dateRange.startDate);
+
+      while (resultDate <= dateRange.endDate) {
+        const dayKey = resultDate.toISOString().split('T')[0];
+        const dayData = dailyData.get(dayKey) || { internalLinks: 0, externalLinks: 0 };
+
+        result.push({
+          date: dayKey,
+          label: resultDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          internalLinks: dayData.internalLinks,
+          externalLinks: dayData.externalLinks,
+          total: dayData.internalLinks + dayData.externalLinks
+        });
+
+        resultDate.setDate(resultDate.getDate() + 1);
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching link analytics:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get all dashboard analytics in one call
    */
   static async getAllDashboardAnalytics(dateRange: DateRange) {

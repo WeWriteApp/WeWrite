@@ -19,7 +19,7 @@ type NotificationFilter = 'unread' | 'all';
 
 function NotificationsContent() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const {
     notifications,
     loading,
@@ -40,12 +40,12 @@ function NotificationsContent() {
     return notifications;
   }, [notifications, filter]);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only after auth has finished loading)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push('/auth/login?redirect=/notifications');
     }
-  }, [isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Notifications are automatically loaded by the NotificationProvider when user changes
 
@@ -72,7 +72,7 @@ function NotificationsContent() {
   };
 
   // Show loading state while checking authentication
-  if (!isAuthenticated) {
+  if (authLoading || !isAuthenticated) {
     return null; // Let the useEffect redirect handle this
   }
 

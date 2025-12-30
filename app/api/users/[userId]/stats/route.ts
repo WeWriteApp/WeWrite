@@ -12,10 +12,10 @@ import { recordProductionRead } from '../../../../utils/productionReadMonitor';
  * - Total page count
  * - Total sponsors (people supporting this user)
  * - Total sponsoring (pages/users this user is sponsoring)
- * - 60-day rolling history for sparklines (from real snapshots or generated)
+ * - 30-day rolling history for sparklines (from real snapshots or flat line fallback)
  */
 
-const SPARKLINE_DAYS = 60;
+const SPARKLINE_DAYS = 30;
 
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -28,22 +28,12 @@ function getDateNDaysAgo(n: number): Date {
   return date;
 }
 
-// Generate mock sparkline data as fallback when no historical data exists
+// Generate flat sparkline data as fallback when no historical data exists
+// Shows a flat line at the current value (honest representation of "no historical data")
 function generateSparklineData(currentValue: number, days: number = SPARKLINE_DAYS): number[] {
-  const data: number[] = [];
-  const variance = Math.max(1, Math.floor(currentValue * 0.1));
-  let value = Math.max(0, currentValue - Math.floor(currentValue * 0.3));
-
-  for (let i = 0; i < days; i++) {
-    const progress = i / days;
-    const targetValue = currentValue * progress + value * (1 - progress);
-    const noise = Math.floor((Math.random() - 0.5) * variance);
-    value = Math.max(0, Math.round(targetValue + noise));
-    data.push(value);
-  }
-
-  data[days - 1] = currentValue;
-  return data;
+  // Return a flat line - all values are the current value
+  // This honestly represents "we don't have historical data" rather than faking trends
+  return Array(days).fill(currentValue);
 }
 
 export async function GET(
@@ -90,26 +80,27 @@ export async function GET(
       .get();
     const pageCount = pagesSnapshot.docs.filter(doc => !doc.data().isDeleted).length;
 
-    // Get current sponsors count
+    // Get current sponsors count (unique users who have allocated funds TO this user)
     const allocationsCollection = await getCollectionNameAsync(COLLECTIONS.USD_ALLOCATIONS);
     const userAllocationsSnapshot = await db.collection(allocationsCollection)
       .where('recipientUserId', '==', userId)
-      .where('isActive', '==', true)
+      .where('status', '==', 'active')
       .get();
 
     const sponsorIds = new Set<string>();
     userAllocationsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      if (data.donorUserId && data.donorUserId !== userId) {
-        sponsorIds.add(data.donorUserId);
+      // userId is the donor (the person allocating funds)
+      if (data.userId && data.userId !== userId) {
+        sponsorIds.add(data.userId);
       }
     });
     const sponsorsCount = sponsorIds.size;
 
-    // Get current sponsoring count
+    // Get current sponsoring count (how many allocations this user has made to others)
     const sponsoringSnapshot = await db.collection(allocationsCollection)
-      .where('donorUserId', '==', userId)
-      .where('isActive', '==', true)
+      .where('userId', '==', userId)
+      .where('status', '==', 'active')
       .count()
       .get();
     const sponsoringCount = sponsoringSnapshot.data().count;

@@ -444,10 +444,20 @@ const DrawerContent = React.forwardRef<
 })
 DrawerContent.displayName = DialogPrimitive.Content.displayName
 
+interface DrawerHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Show close button in the header */
+  showCloseButton?: boolean
+  /** Callback when close button is clicked */
+  onClose?: () => void
+}
+
 const DrawerHeader = ({
   className,
+  showCloseButton = false,
+  onClose,
+  children,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
+}: DrawerHeaderProps) => (
   <div
     className={cn(
       // Header with reduced top padding, increased bottom padding for breathing room
@@ -455,7 +465,18 @@ const DrawerHeader = ({
       className
     )}
     {...props}
-  />
+  >
+    {showCloseButton && (
+      <DialogPrimitive.Close
+        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        onClick={onClose}
+      >
+        <Icon name="X" size={16} />
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    )}
+    {children}
+  </div>
 )
 DrawerHeader.displayName = "DrawerHeader"
 

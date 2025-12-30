@@ -114,22 +114,23 @@ export async function GET(request: NextRequest) {
           // Get sponsors count (unique users allocating to this user)
           const userAllocationsSnapshot = await db.collection(allocationsCollection)
             .where('recipientUserId', '==', userId)
-            .where('isActive', '==', true)
+            .where('status', '==', 'active')
             .get();
 
           const sponsorIds = new Set<string>();
           userAllocationsSnapshot.docs.forEach(doc => {
             const data = doc.data();
-            if (data.donorUserId && data.donorUserId !== userId) {
-              sponsorIds.add(data.donorUserId);
+            // userId is the donor (the person allocating funds)
+            if (data.userId && data.userId !== userId) {
+              sponsorIds.add(data.userId);
             }
           });
           const sponsorsCount = sponsorIds.size;
 
-          // Get sponsoring count
+          // Get sponsoring count (how many allocations this user has made)
           const sponsoringSnapshot = await db.collection(allocationsCollection)
-            .where('donorUserId', '==', userId)
-            .where('isActive', '==', true)
+            .where('userId', '==', userId)
+            .where('status', '==', 'active')
             .count()
             .get();
           const sponsoringCount = sponsoringSnapshot.data().count;

@@ -126,23 +126,24 @@ async function getUserStats(
   // Get sponsors count (unique users allocating to this user as of date)
   const userAllocationsSnapshot = await db.collection(COLLECTIONS.USD_ALLOCATIONS)
     .where('recipientUserId', '==', userId)
-    .where('isActive', '==', true)
+    .where('status', '==', 'active')
     .get();
 
   const sponsorIds = new Set<string>();
   userAllocationsSnapshot.docs.forEach(doc => {
     const data = doc.data();
     const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt || 0);
-    if (data.donorUserId && data.donorUserId !== userId && createdAt <= asOfDate) {
-      sponsorIds.add(data.donorUserId);
+    // userId is the donor (the person allocating funds)
+    if (data.userId && data.userId !== userId && createdAt <= asOfDate) {
+      sponsorIds.add(data.userId);
     }
   });
   const sponsorsCount = sponsorIds.size;
 
   // Get sponsoring count (allocations this user has made as of date)
   const sponsoringSnapshot = await db.collection(COLLECTIONS.USD_ALLOCATIONS)
-    .where('donorUserId', '==', userId)
-    .where('isActive', '==', true)
+    .where('userId', '==', userId)
+    .where('status', '==', 'active')
     .get();
 
   const sponsoringCount = sponsoringSnapshot.docs.filter(doc => {

@@ -12,7 +12,7 @@ export interface LinkSuggestion {
   userId: string;
   lastModified: string;
   isPublic: boolean;
-  matchType: 'exact' | 'partial' | 'content' | 'keyword';
+  matchType: 'exact' | 'exact-alt';
   matchedText: string;
   confidence: number;
   startIndex: number;

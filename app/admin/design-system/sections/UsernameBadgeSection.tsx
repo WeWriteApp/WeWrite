@@ -27,7 +27,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             username="sarah"
             tier="tier1"
             subscriptionStatus="active"
-            subscriptionAmount={5}
+            subscriptionAmount={10}
             variant="link"
           />
           <UsernameBadge
@@ -35,7 +35,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             username="jamie"
             tier="tier2"
             subscriptionStatus="active"
-            subscriptionAmount={15}
+            subscriptionAmount={20}
             variant="link"
           />
           <UsernameBadge
@@ -65,7 +65,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             username="sarah"
             tier="tier1"
             subscriptionStatus="active"
-            subscriptionAmount={5}
+            subscriptionAmount={10}
             variant="pill"
             pillVariant="primary"
           />
@@ -74,7 +74,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             username="jamie"
             tier="tier2"
             subscriptionStatus="active"
-            subscriptionAmount={15}
+            subscriptionAmount={20}
             variant="pill"
             pillVariant="primary"
           />
@@ -90,37 +90,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Pill Variant - Secondary">
-        <div className="flex flex-wrap gap-2 items-center">
-          <UsernameBadge
-            userId="user1"
-            username="alex"
-            tier={null}
-            subscriptionStatus={null}
-            subscriptionAmount={null}
-            variant="pill"
-            pillVariant="secondary"
-          />
-          <UsernameBadge
-            userId="user2"
-            username="sarah"
-            tier="tier1"
-            subscriptionStatus="active"
-            subscriptionAmount={5}
-            variant="pill"
-            pillVariant="secondary"
-          />
-          <UsernameBadge
-            userId="user3"
-            username="jamie"
-            tier="tier3"
-            subscriptionStatus="active"
-            subscriptionAmount={35}
-            variant="pill"
-            pillVariant="secondary"
-          />
-        </div>
-      </StateDemo>
 
       <StateDemo label="Pill Variant - Outline">
         <div className="flex flex-wrap gap-2 items-center">
@@ -138,7 +107,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             username="sarah"
             tier="tier2"
             subscriptionStatus="active"
-            subscriptionAmount={15}
+            subscriptionAmount={20}
             variant="pill"
             pillVariant="outline"
           />
@@ -178,7 +147,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
               username="alex"
               tier="tier2"
               subscriptionStatus="active"
-              subscriptionAmount={15}
+              subscriptionAmount={20}
               size="sm"
               variant="link"
             />
@@ -190,7 +159,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
               username="sarah"
               tier="tier2"
               subscriptionStatus="active"
-              subscriptionAmount={15}
+              subscriptionAmount={20}
               size="md"
               variant="link"
             />
@@ -202,7 +171,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
               username="jamie"
               tier="tier2"
               subscriptionStatus="active"
-              subscriptionAmount={15}
+              subscriptionAmount={20}
               size="lg"
               variant="link"
             />
@@ -233,10 +202,10 @@ export function UsernameBadgeSection({ id }: { id: string }) {
                 username="tier1"
                 tier="tier1"
                 subscriptionStatus="active"
-                subscriptionAmount={5}
+                subscriptionAmount={10}
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">$5/mo</span>
+              <span className="text-xs text-muted-foreground">$10/mo (1 star)</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <UsernameBadge
@@ -244,10 +213,10 @@ export function UsernameBadgeSection({ id }: { id: string }) {
                 username="tier2"
                 tier="tier2"
                 subscriptionStatus="active"
-                subscriptionAmount={15}
+                subscriptionAmount={20}
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">$15/mo</span>
+              <span className="text-xs text-muted-foreground">$20/mo (2 stars)</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <UsernameBadge
@@ -255,10 +224,10 @@ export function UsernameBadgeSection({ id }: { id: string }) {
                 username="tier3"
                 tier="tier3"
                 subscriptionStatus="active"
-                subscriptionAmount={35}
+                subscriptionAmount={30}
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">$35/mo</span>
+              <span className="text-xs text-muted-foreground">$30+/mo (3 stars)</span>
             </div>
           </div>
         </div>

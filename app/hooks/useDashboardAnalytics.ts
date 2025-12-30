@@ -1200,6 +1200,71 @@ export function usePageViewsMetrics(dateRange: DateRange, granularity?: number) 
 }
 
 /**
+ * Hook for link analytics (internal and external links)
+ * Returns data suitable for stacked bar charts
+ */
+export function useLinkMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: granularity?.toString() || '50',
+        type: 'links'
+      }), {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch link metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch link metrics');
+      }
+
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch link data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+/**
  * Hook for notifications sent analytics (emails + push notifications)
  * Returns data suitable for stacked bar charts
  */

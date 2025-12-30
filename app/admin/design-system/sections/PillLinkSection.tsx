@@ -80,7 +80,7 @@ export function PillLinkSection({ id }: { id: string }) {
                     subscriptionStatus="active"
                     subscriptionAmount={30}
                     variant="pill"
-                    pillVariant="secondary"
+                    pillVariant="outline"
                   />
                 </div>
               </td>
