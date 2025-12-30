@@ -21,10 +21,6 @@ import { cn } from '../../lib/utils';
  * - Click handler for interactive cards
  */
 
-// Accent color values using CSS variables
-const accentColorValue = 'oklch(var(--primary))';
-const pillTextColor = 'oklch(var(--primary-foreground))';
-
 export interface StatsCardProps {
   /** Icon to display in header */
   icon: IconName;
@@ -75,6 +71,10 @@ export function StatsCard({
   emptyPlaceholder,
   isEditable = false,
 }: StatsCardProps) {
+  // Accent color values using CSS variables
+  const accentColorValue = 'oklch(var(--primary))';
+  const pillTextColor = 'oklch(var(--primary-foreground))';
+
   // Check if value is empty
   const isEmpty = value === null || value === undefined || value === '' || value === 0;
 
@@ -198,6 +198,10 @@ export function StatsCardHeader({
   className,
   children,
 }: StatsCardHeaderProps) {
+  // Accent color values using CSS variables
+  const accentColorValue = 'oklch(var(--primary))';
+  const pillTextColor = 'oklch(var(--primary-foreground))';
+
   const displayValue = (() => {
     if (value === null || value === undefined) return null;
     if (formatValue) return formatValue(value);
