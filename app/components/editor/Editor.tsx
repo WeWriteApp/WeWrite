@@ -829,13 +829,14 @@ const Editor: React.FC<EditorProps> = ({
         if (Range.isCollapsed(selection)) {
           // Insert link at cursor
           Transforms.insertNodes(editor, linkElement);
-          // Move cursor after the inserted link
-          Transforms.move(editor, { distance: 1, unit: 'offset' });
+          // Insert a space after the link so users can continue typing
+          Transforms.insertNodes(editor, { text: ' ' });
         } else {
           // Replace selected text with link
           Transforms.delete(editor);
           Transforms.insertNodes(editor, linkElement);
-          Transforms.move(editor, { distance: 1, unit: 'offset' });
+          // Insert a space after the link so users can continue typing
+          Transforms.insertNodes(editor, { text: ' ' });
         }
       }
     }
@@ -853,6 +854,59 @@ const Editor: React.FC<EditorProps> = ({
       triggerLinkInsertion();
     }
   }, [triggerLinkInsertion, readOnly]);
+
+  // Handle clicks on the editor wrapper area (for clicking below content on mobile)
+  // This ensures users never get "trapped" without being able to continue typing
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const handleEditorWrapperClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+
+    // Only process clicks on the wrapper itself, not on child elements
+    // Check if the click target is the wrapper or an empty area
+    const target = event.target as HTMLElement;
+    const wrapper = editorRef.current;
+
+    if (!wrapper) return;
+
+    // Get the Editable element's bounding rect to check if click is below content
+    const editable = wrapper.querySelector('[data-slate-editor]');
+    if (!editable) return;
+
+    const editableRect = editable.getBoundingClientRect();
+    const clickY = event.clientY;
+
+    // If click is below the last content in the editor
+    if (clickY > editableRect.bottom - 20) {
+      // Check if the click is in an empty/padding area (not on text)
+      // This prevents interfering with normal text selection
+      const selection = window.getSelection();
+      const isOnText = selection && selection.rangeCount > 0 && selection.toString().length > 0;
+
+      if (!isOnText) {
+        // Move cursor to end of document
+        try {
+          const endPoint = SlateEditor.end(editor, []);
+          Transforms.select(editor, { anchor: endPoint, focus: endPoint });
+          ReactEditor.focus(editor);
+
+          // Check if the last paragraph is empty - if not, add a new line
+          const lastNode = editorValue[editorValue.length - 1];
+          if (lastNode && Element.isElement(lastNode)) {
+            const hasContent = lastNode.children.some((child: any) =>
+              Text.isText(child) && child.text.trim().length > 0
+            );
+            if (hasContent) {
+              // Insert a new paragraph if the last one has content
+              Transforms.insertNodes(editor, { type: 'paragraph', children: [{ text: '' }] });
+            }
+          }
+        } catch (error) {
+          // Failed to handle click below content
+        }
+      }
+    }
+  }, [editor, editorValue, readOnly]);
 
   // Set up link insertion trigger for external buttons
   useEffect(() => {
@@ -1179,10 +1233,16 @@ const Editor: React.FC<EditorProps> = ({
           initialValue={normalizedInitialContent}
           onChange={handleChange}
         >
-          <div className={cn(
-            "wewrite-input min-h-[200px] w-full rounded-lg p-4",
-            "transition-all duration-200"
-          )}>
+          <div
+            ref={editorRef}
+            onClick={handleEditorWrapperClick}
+            className={cn(
+              "wewrite-input min-h-[200px] w-full rounded-lg p-4",
+              "transition-all duration-200",
+              // Ensure minimum tap target area for mobile UX
+              !readOnly && "cursor-text"
+            )}
+          >
             <div className="flex">
               {/* Line numbers (hidden when feature flag is disabled) */}
               {lineFeaturesEnabled && (
