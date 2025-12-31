@@ -437,8 +437,8 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
       >
         <DrawerContent height="85vh" showOverlay={true} disableSwipeDismiss={true}>
           <DrawerHeader className="border-b">
-            <div className="flex items-center justify-between w-full">
-              <DrawerTitle className="flex items-center gap-2">
+            <div className="flex items-start justify-between w-full gap-2">
+              <DrawerTitle className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1">
                 {selectedGraphPage && (
                   <>
                     <PillLink
@@ -450,15 +450,17 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                         ? formatDateString(selectedGraphPage.title)
                         : selectedGraphPage.title}
                     </PillLink>
-                    <span className="text-muted-foreground text-sm font-normal">by</span>
-                    <UsernameBadge
-                      userId={selectedGraphPage.userId}
-                      username={selectedGraphPage.username}
-                      tier={selectedGraphPage.tier}
-                      subscriptionStatus={selectedGraphPage.subscriptionStatus}
-                      subscriptionAmount={selectedGraphPage.subscriptionAmount}
-                      size="sm"
-                    />
+                    <span className="text-muted-foreground text-sm font-normal whitespace-nowrap">
+                      by{' '}
+                      <UsernameBadge
+                        userId={selectedGraphPage.userId}
+                        username={selectedGraphPage.username}
+                        tier={selectedGraphPage.tier}
+                        subscriptionStatus={selectedGraphPage.subscriptionStatus}
+                        subscriptionAmount={selectedGraphPage.subscriptionAmount}
+                        size="sm"
+                      />
+                    </span>
                   </>
                 )}
               </DrawerTitle>
