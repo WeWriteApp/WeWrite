@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import EmptyState from '../components/ui/EmptyState';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { Button } from '../components/ui/button';
@@ -300,16 +301,12 @@ export default function InviteFriendsPage() {
 
       {/* Empty State */}
       {!loading && totalReferrals === 0 && (
-        <div className="text-center py-12 bg-muted/30 rounded-2xl border border-border">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Icon name="UserPlus" size={32} className="text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">No Referrals Yet</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Share your invite links with friends to start earning. When they sign up and
-            cash out their earnings, you'll receive 30% of the payout fee.
-          </p>
-        </div>
+        <EmptyState
+          icon="UserPlus"
+          title="No Referrals Yet"
+          description="Share your invite links with friends to start earning. When they sign up and cash out their earnings, you'll receive 30% of the payout fee."
+          size="lg"
+        />
       )}
 
       {/* General Landing Page Section */}

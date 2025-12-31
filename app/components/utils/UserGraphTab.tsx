@@ -106,7 +106,7 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
 
   // Share graph URL handler
   const handleShare = useCallback(async () => {
-    const graphUrl = `${window.location.origin}/${username}#graph`;
+    const graphUrl = `${window.location.origin}/u/${username}?tab=graph#graph`;
 
     if (navigator.share) {
       try {

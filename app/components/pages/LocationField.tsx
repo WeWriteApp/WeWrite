@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import MapPicker, { MapMarker } from '../map/MapPicker';
@@ -73,8 +73,22 @@ export default function LocationField({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
-  // Fetch locations of linked pages
+  // Track previous linkedPageIds to avoid unnecessary refetches
+  const prevLinkedPageIdsRef = useRef<string>('');
+
+  // Fetch locations of linked pages - only when actual IDs change
   useEffect(() => {
+    // Create a stable string representation of the IDs
+    const currentIdsKey = linkedPageIds?.slice().sort().join(',') || '';
+
+    // Skip if the IDs haven't actually changed
+    if (currentIdsKey === prevLinkedPageIdsRef.current) {
+      return;
+    }
+
+    // Update the ref with current IDs
+    prevLinkedPageIdsRef.current = currentIdsKey;
+
     if (!linkedPageIds || linkedPageIds.length === 0) {
       setLinkedPagesWithLocations([]);
       setIsLoadingLinkedPages(false);

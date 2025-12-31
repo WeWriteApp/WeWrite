@@ -69,6 +69,22 @@ function TikTokLogo({ size = 24, className = "" }: { size?: number; className?: 
   );
 }
 
+// Gab logo SVG component
+function GabLogo({ size = 24, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M18.42 6.98c-.06 0-.12-.01-.18-.01h-4.67c-.36 0-.65.28-.66.63v3.15c0 .37.3.67.67.67h2.65c1.26 0 2.27.98 2.35 2.22.02.07.02.14.02.2v2.82c0 1.27-1.04 2.3-2.33 2.33H7.36c-.04 0-.07 0-.11-.01-1.18-.09-2.11-1.06-2.11-2.24V7.16c0-1.23 1.01-2.23 2.25-2.24.04 0 .08 0 .12-.01h6.79c.37-.01.67.28.68.65v1.69c.01.37-.28.67-.65.69-.01 0-.02 0-.03 0h-5.67c-.37 0-.67.3-.67.67v6.56c0 .37.3.66.67.67h6c.37 0 .67-.3.67-.67v-.97c0-.37-.3-.67-.67-.67h-2.6c-.37 0-.66-.3-.67-.66v-3.2c0-.37.3-.67.67-.67h6.31c.36-.01.66.28.67.64v6.53c0 2.6-2.13 4.72-4.76 4.72H7.49c-2.63 0-4.76-2.11-4.76-4.72V7.49c0-2.62 2.13-4.76 4.76-4.76h8.58c2.63 0 4.76 2.13 4.76 4.72v.14c0 .37-.3.67-.67.67h-1.74c-.37 0-.67-.3-.67-.67v-.08c0-.29-.24-.53-.53-.53z"/>
+    </svg>
+  );
+}
+
 // YouTube logo SVG component
 function YouTubeLogo({ size = 24, className = "" }: { size?: number; className?: string }) {
   return (
@@ -103,6 +119,8 @@ function renderPlatformIcon(platform: SocialPlatform, size: number): React.React
       return <YouTubeLogo size={size} />;
     case 'github':
       return <GitHubLogo size={size} />;
+    case 'gab':
+      return <GabLogo size={size} />;
     default:
       return null;
   }
@@ -146,4 +164,4 @@ export default function SocialIconsSection() {
 }
 
 // Export icons for use in other components
-export { XLogo, GitHubLogo, ThreadsLogo, TikTokLogo, YouTubeLogo, renderPlatformIcon };
+export { XLogo, GitHubLogo, ThreadsLogo, TikTokLogo, YouTubeLogo, GabLogo, renderPlatformIcon };
