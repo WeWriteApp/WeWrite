@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
@@ -22,6 +22,16 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '../ui/drawer';
+
+// Lazy load the graph components for performance
+const RotatingGraphPreview = lazy(() => import('../utils/RotatingGraphPreview'));
+const PageGraphView = lazy(() => import('./PageGraphView'));
 
 interface RandomPage {
   id: string;
@@ -36,13 +46,21 @@ interface RandomPage {
   tier?: string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
-  // Note: isPublic removed - all pages are now public
+  // Graph data for graph view mode
+  graphNodeCount?: number;
+  graphData?: {
+    nodes: Array<{ id: string; title: string; isOrphan?: boolean }>;
+    links: Array<{ source: string; target: string; type: string }>;
+  };
 }
+
+type ViewMode = 'cards' | 'list' | 'graph';
 
 interface RandomPagesTableProps {
   pages: RandomPage[];
   loading?: boolean;
   denseMode?: boolean;
+  viewMode?: ViewMode;
   onExcludeUser?: (username: string) => void;
 }
 
@@ -50,9 +68,18 @@ interface RandomPagesTableProps {
  * Responsive table/card component for displaying random pages
  * Desktop: Table layout with columns for Title, Author, Last Edited
  * Mobile: Stacked cards with same information
+ * Graph: Cards with rotating 3D graph preview
  */
-export default function RandomPagesTable({ pages, loading = false, denseMode = false, onExcludeUser }: RandomPagesTableProps) {
+export default function RandomPagesTable({ pages, loading = false, denseMode = false, viewMode = 'cards', onExcludeUser }: RandomPagesTableProps) {
   const { formatDateString } = useDateFormat();
+  const [selectedGraphPage, setSelectedGraphPage] = useState<RandomPage | null>(null);
+  const [isGraphDrawerOpen, setIsGraphDrawerOpen] = useState(false);
+
+  // Handle opening graph drawer
+  const handleOpenGraphDrawer = (page: RandomPage) => {
+    setSelectedGraphPage(page);
+    setIsGraphDrawerOpen(true);
+  };
 
   // Note: Batch page data preloading was removed with user management cleanup
 
@@ -129,8 +156,8 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
 
   return (
     <div>
-      {/* Desktop Table Layout - only show when NOT in dense mode */}
-      {!denseMode && (
+      {/* Desktop Table Layout - only show in cards mode */}
+      {viewMode === 'cards' && (
         <div
           className={cn("hidden md:block relative", wewriteCard('default', 'p-0'))}
           style={{ minHeight }}
@@ -237,8 +264,8 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
       </div>
       )}
 
-      {/* Mobile Card Layout - only show when NOT in dense mode */}
-      {!denseMode && (
+      {/* Mobile Card Layout - only show in cards mode */}
+      {viewMode === 'cards' && (
         <div
           className="md:hidden space-y-3 relative"
           style={{ minHeight }}
@@ -327,6 +354,169 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         ))}
       </div>
       )}
+
+      {/* Graph View Mode */}
+      {viewMode === 'graph' && (
+        <div className="relative" style={{ minHeight }}>
+          {/* Loading overlay */}
+          {loading && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
+              <div className="text-center">
+                <div className="animate-pulse text-muted-foreground">Shuffling pages...</div>
+              </div>
+            </div>
+          )}
+
+          {/* Graph cards grid - only show pages with graph data */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pages.filter(page => page.graphData && page.graphData.nodes.length > 0).map((page) => (
+              <div
+                key={page.id}
+                className={cn(
+                  wewriteCard('interactive'),
+                  "overflow-hidden cursor-pointer transition-all hover:scale-[1.02]"
+                )}
+                onClick={() => handleOpenGraphDrawer(page)}
+              >
+                {/* Header: PillLink by UsernameBadge */}
+                <div className="p-3 border-b border-theme-medium">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <PillLink
+                      href={`/${page.id}`}
+                      groupId={page.groupId}
+                      className="text-sm font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {page.title && isExactDateFormat(page.title)
+                        ? formatDateString(page.title)
+                        : page.title}
+                    </PillLink>
+                    <span className="text-muted-foreground text-xs">by</span>
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <UsernameBadge
+                        userId={page.userId}
+                        username={page.username}
+                        tier={page.tier}
+                        subscriptionStatus={page.subscriptionStatus}
+                        subscriptionAmount={page.subscriptionAmount}
+                        size="sm"
+                        className="inline-flex"
+                      />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Rotating Graph Preview */}
+                <div className="h-[180px] relative bg-muted/20">
+                  <Suspense fallback={
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Icon name="Loader" size={24} className="text-muted-foreground" />
+                    </div>
+                  }>
+                    <RotatingGraphPreview
+                      nodes={page.graphData!.nodes}
+                      links={page.graphData!.links as any}
+                      height={180}
+                      rotationSpeed={0.002}
+                      showLabels={true}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Graph Drawer */}
+      <Drawer
+        open={isGraphDrawerOpen}
+        onOpenChange={setIsGraphDrawerOpen}
+        hashId={selectedGraphPage ? `graph-${selectedGraphPage.id}` : undefined}
+        analyticsId="random_pages_graph"
+      >
+        <DrawerContent height="85vh" showOverlay={true} disableSwipeDismiss={true}>
+          <DrawerHeader className="border-b">
+            <div className="flex items-center justify-between w-full">
+              <DrawerTitle className="flex items-center gap-2">
+                {selectedGraphPage && (
+                  <>
+                    <PillLink
+                      href={`/${selectedGraphPage.id}`}
+                      groupId={selectedGraphPage.groupId}
+                      className="text-base"
+                    >
+                      {selectedGraphPage.title && isExactDateFormat(selectedGraphPage.title)
+                        ? formatDateString(selectedGraphPage.title)
+                        : selectedGraphPage.title}
+                    </PillLink>
+                    <span className="text-muted-foreground text-sm font-normal">by</span>
+                    <UsernameBadge
+                      userId={selectedGraphPage.userId}
+                      username={selectedGraphPage.username}
+                      tier={selectedGraphPage.tier}
+                      subscriptionStatus={selectedGraphPage.subscriptionStatus}
+                      subscriptionAmount={selectedGraphPage.subscriptionAmount}
+                      size="sm"
+                    />
+                  </>
+                )}
+              </DrawerTitle>
+              <div className="flex items-center gap-2">
+                {selectedGraphPage && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={async () => {
+                      const graphUrl = `${window.location.origin}/${selectedGraphPage.id}#graph`;
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: `Graph: ${selectedGraphPage.title}`,
+                            url: graphUrl,
+                          });
+                        } catch {
+                          await navigator.clipboard.writeText(graphUrl);
+                        }
+                      } else {
+                        await navigator.clipboard.writeText(graphUrl);
+                      }
+                    }}
+                    title="Share graph view"
+                  >
+                    <Icon name="Share2" size={16} />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsGraphDrawerOpen(false)}
+                >
+                  <Icon name="X" size={16} />
+                </Button>
+              </div>
+            </div>
+          </DrawerHeader>
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+            {selectedGraphPage && (
+              <Suspense fallback={
+                <div className="w-full h-full flex items-center justify-center">
+                  <Icon name="Loader" size={32} className="text-muted-foreground" />
+                </div>
+              }>
+                <PageGraphView
+                  pageId={selectedGraphPage.id}
+                  pageTitle={selectedGraphPage.title}
+                  embedded={true}
+                  initialGraphData={selectedGraphPage.graphData}
+                />
+              </Suspense>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

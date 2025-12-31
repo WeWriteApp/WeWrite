@@ -50,6 +50,12 @@ interface PageGraphViewProps {
   replyToId?: string | null;
   replyType?: 'agree' | 'disagree' | 'standard' | 'neutral' | null;
   pageOwnerId?: string; // The user ID of the page owner, to determine if viewing own content
+  embedded?: boolean; // If true, renders just the graph without card wrapper (for drawer/modal use)
+  // Pre-loaded graph data (optional) - when provided, skips fetching
+  initialGraphData?: {
+    nodes: Array<{ id: string; title: string; isOrphan?: boolean }>;
+    links: Array<{ source: string; target: string; type: string }>;
+  };
 }
 
 /**
@@ -72,10 +78,33 @@ export default function PageGraphView({
   onRefreshReady,
   replyToId,
   replyType,
-  pageOwnerId
+  pageOwnerId,
+  embedded = false,
+  initialGraphData
 }: PageGraphViewProps) {
-  const [nodes, setNodes] = useState<GraphNode[]>([]);
-  const [links, setLinks] = useState<GraphLink[]>([]);
+  // Initialize nodes/links from pre-loaded data if available
+  const [nodes, setNodes] = useState<GraphNode[]>(() => {
+    if (initialGraphData?.nodes) {
+      return initialGraphData.nodes.map(node => ({
+        id: node.id,
+        title: node.title,
+        isCenter: node.id === pageId,
+        level: node.id === pageId ? 0 : 1,
+        nodeType: node.id === pageId ? 'center' : 'connected' as const,
+      }));
+    }
+    return [];
+  });
+  const [links, setLinks] = useState<GraphLink[]>(() => {
+    if (initialGraphData?.links) {
+      return initialGraphData.links.map(link => ({
+        source: link.source,
+        target: link.target,
+        type: link.type as 'outgoing' | 'incoming' | 'bidirectional',
+      }));
+    }
+    return [];
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasActivatedGraph, setHasActivatedGraph] = useState(false);
   const { user } = useAuth();
@@ -103,7 +132,10 @@ export default function PageGraphView({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
-  // Use consolidated page connections hook
+  // Skip fetching if we have pre-loaded graph data
+  const hasInitialData = Boolean(initialGraphData?.nodes && initialGraphData.nodes.length > 0);
+
+  // Use consolidated page connections hook - only fetch if no initial data
   const {
     incoming,
     outgoing,
@@ -111,17 +143,22 @@ export default function PageGraphView({
     allConnections,
     secondHopConnections,
     thirdHopConnections,
-    graphLoading: loading,
+    graphLoading: hookLoading,
     refresh
-  } = usePageConnectionsGraph(pageId, pageTitle);
+  } = usePageConnectionsGraph(hasInitialData ? '' : pageId, hasInitialData ? '' : pageTitle);
 
   // Use related pages hook - returns relatedByOthers (pages by other authors)
-  const { relatedByOthers: relatedPages, loading: relatedLoading } = useRelatedPages({
-    pageId,
-    pageTitle,
+  // Only fetch if no initial data
+  const { relatedByOthers: relatedPages, loading: relatedHookLoading } = useRelatedPages({
+    pageId: hasInitialData ? '' : pageId,
+    pageTitle: hasInitialData ? '' : pageTitle,
     limitByOthers: 10,
     limitByAuthor: 0 // We only need related pages by others for the graph
   });
+
+  // If we have initial data, skip loading states
+  const loading = hasInitialData ? false : hookLoading;
+  const relatedLoading = hasInitialData ? false : relatedHookLoading;
 
   // Expose refresh function to parent component
   useEffect(() => {
@@ -131,7 +168,9 @@ export default function PageGraphView({
   }, [onRefreshReady, refresh]);
 
   // Build graph when connections data changes
+  // Skip if we already have initial data loaded
   useEffect(() => {
+    if (hasInitialData) return; // Already have pre-loaded data
     if (loading || relatedLoading) return;
     const sentiment = replyType === 'agree' || replyType === 'disagree' ? replyType : null;
 
@@ -280,7 +319,7 @@ export default function PageGraphView({
 
     setNodes(allNodes);
     setLinks(allLinks);
-  }, [pageId, pageTitle, loading, relatedLoading, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length, thirdHopConnections.length, relatedPages.length]);
+  }, [pageId, pageTitle, loading, relatedLoading, hasInitialData, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length, thirdHopConnections.length, relatedPages.length]);
 
   // Share the graph view URL - must be defined before any early returns
   const handleShare = useCallback(async () => {
@@ -301,7 +340,19 @@ export default function PageGraphView({
     }
   }, [pageId, pageTitle]);
 
+  // Loading state - handle embedded mode differently
   if (loading || relatedLoading) {
+    if (embedded) {
+      return (
+        <div className={`${className} h-full w-full flex items-center justify-center`}>
+          <LoadingState
+            variant="spinner"
+            message="Loading page connections..."
+            minHeight="h-full"
+          />
+        </div>
+      );
+    }
     return (
       <div className={className}>
         <div className="wewrite-card">
@@ -319,7 +370,15 @@ export default function PageGraphView({
     );
   }
 
+  // Empty state - handle embedded mode differently
   if (nodes.length <= 1) {
+    if (embedded) {
+      return (
+        <div className={`${className} h-full w-full flex items-center justify-center text-muted-foreground`}>
+          <p>No page connections found</p>
+        </div>
+      );
+    }
     return (
       <div className={className}>
         <div className="wewrite-card">
@@ -333,7 +392,37 @@ export default function PageGraphView({
   }
 
 
-  // Fullscreen mode rendered as a drawer
+  // Embedded mode: render just the graph content without card wrapper
+  // Return early before creating the fullscreen drawer
+  if (embedded) {
+    return (
+      <div className={`${className} h-full w-full overflow-hidden`}>
+        <SubscriptionGate
+          featureName="graph"
+          contentId={pageId}
+          className="relative h-full overflow-hidden"
+          allowInteraction={true}
+          isOwnContent={isOwnContent}
+          requireActivation={false}
+          isActivated={true}
+          onActivate={() => {}}
+        >
+          <div className="h-full w-full overflow-hidden">
+            <PageGraph3D
+              nodes={nodes}
+              links={links}
+              pageId={pageId}
+              isFullscreen={false}
+              height={500}
+              isPreview={false}
+            />
+          </div>
+        </SubscriptionGate>
+      </div>
+    );
+  }
+
+  // Fullscreen drawer for non-embedded mode
   const fullscreenDrawer = (
     <Drawer
       open={isFullscreen}

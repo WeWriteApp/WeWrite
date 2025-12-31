@@ -7,6 +7,11 @@ import { Switch } from '../ui/switch';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '../ui/drawer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Icon } from '@/components/ui/Icon';
+import {
+  SegmentedControl,
+  SegmentedControlList,
+  SegmentedControlTrigger,
+} from '../ui/segmented-control';
 
 interface UserSuggestion {
   id: string;
@@ -153,24 +158,19 @@ export default function RandomPagesFilterDrawer({
 
   const filterContent = (
     <div className="space-y-6">
-      {/* Not Mine Toggle */}
+      {/* Hide My Pages Toggle */}
       <div
         className="flex items-center justify-between cursor-pointer py-3 px-1 rounded-lg hover:bg-muted/50"
         onClick={onExcludeOwnToggle}
       >
         <div className="flex items-center gap-3">
           <Icon name="UserX" size={20} className="text-muted-foreground" />
-          <div className="flex flex-col">
-            <span className="font-medium text-sm">Not mine</span>
-            <span className="text-xs text-muted-foreground">
-              Exclude pages you authored
-            </span>
-          </div>
+          <span className="font-medium text-sm">Hide my pages</span>
         </div>
         <Switch
           checked={excludeOwnPages}
           onCheckedChange={onExcludeOwnToggle}
-          aria-label="Toggle exclude own pages"
+          aria-label="Toggle hide my pages"
         />
       </div>
 
@@ -203,24 +203,16 @@ export default function RandomPagesFilterDrawer({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="font-medium text-sm">Filter by username</span>
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-            <Button
-              variant={filterMode === 'exclude' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-7 px-3 text-xs"
-              onClick={() => onFilterModeChange('exclude')}
-            >
-              Exclude
-            </Button>
-            <Button
-              variant={filterMode === 'include' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-7 px-3 text-xs"
-              onClick={() => onFilterModeChange('include')}
-            >
-              Include
-            </Button>
-          </div>
+          <SegmentedControl value={filterMode} onValueChange={(val) => onFilterModeChange(val as 'exclude' | 'include')}>
+            <SegmentedControlList className="h-8">
+              <SegmentedControlTrigger value="exclude" className="text-xs px-3">
+                Exclude
+              </SegmentedControlTrigger>
+              <SegmentedControlTrigger value="include" className="text-xs px-3">
+                Include
+              </SegmentedControlTrigger>
+            </SegmentedControlList>
+          </SegmentedControl>
         </div>
 
         {/* Username Search with Typeahead */}

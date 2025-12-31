@@ -327,8 +327,11 @@ export default function PageGraph3D({
   return (
     <div
       ref={containerRef}
-      className="w-full relative [&>div]:!bg-transparent [&>canvas]:!bg-transparent"
-      style={{ height: isFullscreen ? 'calc(100vh - 100px)' : height }}
+      className="w-full relative overflow-hidden [&>div]:!bg-transparent [&>canvas]:!bg-transparent"
+      style={{
+        height: isFullscreen ? 'calc(100vh - 100px)' : (typeof height === 'number' ? height : 400),
+        maxHeight: '100%',
+      }}
     />
   );
 }

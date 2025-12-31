@@ -30,11 +30,12 @@ export default function RandomPagesPage() {
   const { isEnabled } = useFeatureFlags();
   const lineFeaturesEnabled = isEnabled('line_numbers');
   const [mounted, setMounted] = useState(false);
-  // View mode: 'cards' (default) or 'list' (dense wrapped pills)
-  const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
+  // View mode: 'cards' (detailed), 'list' (dense wrapped pills), or 'graph' (3D graph cards)
+  const [viewMode, setViewMode] = useState<'cards' | 'list' | 'graph'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('randomPages_viewMode');
-      return saved === 'list' ? 'list' : 'cards';
+      if (saved === 'list' || saved === 'graph') return saved;
+      return 'cards';
     }
     return 'cards';
   });
@@ -96,7 +97,7 @@ export default function RandomPagesPage() {
 
   // Handle view mode change from segmented controller
   const handleViewModeChange = (mode: string) => {
-    const newMode = mode as 'cards' | 'list';
+    const newMode = mode as 'cards' | 'list' | 'graph';
     setViewMode(newMode);
     const newDenseMode = newMode === 'list';
     setDenseMode(newDenseMode);
@@ -108,6 +109,12 @@ export default function RandomPagesPage() {
     }
 
     // Trigger display mode change event for RandomPages component
+    const viewModeEvent = new CustomEvent('randomPagesViewModeChange', {
+      detail: { viewMode: newMode, denseMode: newDenseMode }
+    });
+    window.dispatchEvent(viewModeEvent);
+
+    // Also dispatch legacy event for backwards compatibility
     const denseModeEvent = new CustomEvent('randomPagesDenseModeChange', {
       detail: { denseMode: newDenseMode }
     });
@@ -283,18 +290,22 @@ export default function RandomPagesPage() {
             <h1 className="text-3xl font-bold">Random Pages</h1>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Desktop Controls */}
+          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
             {/* View Mode Segmented Control */}
             <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
               <SegmentedControlList className="h-9">
                 <SegmentedControlTrigger value="cards" className="text-xs px-3 gap-1.5">
                   <Icon name="Square" size={14} />
-                  <span className="hidden sm:inline">Detailed</span>
+                  <span>Detailed</span>
                 </SegmentedControlTrigger>
                 <SegmentedControlTrigger value="list" className="text-xs px-3 gap-1.5">
                   <Icon name="LayoutGrid" size={14} />
-                  <span className="hidden sm:inline">Dense</span>
+                  <span>Dense</span>
+                </SegmentedControlTrigger>
+                <SegmentedControlTrigger value="graph" className="text-xs px-3 gap-1.5">
+                  <Icon name="Network" size={14} />
+                  <span>Graph</span>
                 </SegmentedControlTrigger>
               </SegmentedControlList>
             </SegmentedControl>
@@ -306,7 +317,7 @@ export default function RandomPagesPage() {
               className="flex items-center gap-2 rounded-2xl h-8 px-3"
             >
               <Icon name="Shuffle" size={16} />
-              <span className="hidden sm:inline">Shuffle</span>
+              <span>Shuffle</span>
             </Button>
 
             {/* Filter Drawer/Modal */}
@@ -324,35 +335,60 @@ export default function RandomPagesPage() {
               onApplyFilter={applyUsernameFilter}
             />
           </div>
+
+          {/* Mobile: Only filter and shuffle buttons in header */}
+          <div className="flex sm:hidden items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleShuffle}
+              className="flex items-center gap-2 rounded-2xl h-8 px-3"
+            >
+              <Icon name="Shuffle" size={16} />
+            </Button>
+            <RandomPagesFilterDrawer
+              excludeOwnPages={excludeOwnPages}
+              onExcludeOwnToggle={handleExcludeOwnToggle}
+              denseMode={denseMode}
+              onDenseModeToggle={handleDenseModeToggle}
+              lineFeaturesEnabled={lineFeaturesEnabled}
+              filterMode={filterMode}
+              onFilterModeChange={handleFilterModeChange}
+              excludeUsername={excludeUsername}
+              includeUsername={includeUsername}
+              onUsernameChange={handleUsernameChange}
+              onApplyFilter={applyUsernameFilter}
+            />
+          </div>
         </div>
 
-        <p className="text-muted-foreground text-lg">
-          Discover interesting content from across WeWrite. Find new pages, authors, and ideas.
-        </p>
+        {/* Mobile: Full-width View Mode Switcher */}
+        <div className="sm:hidden">
+          <SegmentedControl value={viewMode} onValueChange={handleViewModeChange} className="w-full">
+            <SegmentedControlList className="h-10 w-full grid grid-cols-3">
+              <SegmentedControlTrigger value="cards" className="text-sm gap-1.5">
+                <Icon name="Square" size={16} />
+                Detailed
+              </SegmentedControlTrigger>
+              <SegmentedControlTrigger value="list" className="text-sm gap-1.5">
+                <Icon name="LayoutGrid" size={16} />
+                Dense
+              </SegmentedControlTrigger>
+              <SegmentedControlTrigger value="graph" className="text-sm gap-1.5">
+                <Icon name="Network" size={16} />
+                Graph
+              </SegmentedControlTrigger>
+            </SegmentedControlList>
+          </SegmentedControl>
+        </div>
       </div>
 
       {/* Random Pages Content */}
       <div className="min-h-[600px]">
-        <RandomPages 
-          limit={20} 
-          priority="high" 
+        <RandomPages
+          limit={20}
+          priority="high"
           onExcludeUser={handleExcludeUser}
         />
-      </div>
-
-      {/* Additional Info */}
-      <div className="mt-12 p-6 bg-muted/30 rounded-lg">
-        <h2 className="text-xl font-semibold mb-3">About Random Pages</h2>
-        <div className="space-y-2 text-muted-foreground">
-          <p>
-            Random pages help you discover content you might not have found otherwise. 
-            Each shuffle brings you a fresh selection of pages from across the platform.
-          </p>
-          <p>
-            Use the filters to customize your discovery experience - exclude your own pages 
-            to find content from other creators, or adjust the view mode for different layouts.
-          </p>
-        </div>
       </div>
     </NavPageLayout>
   );

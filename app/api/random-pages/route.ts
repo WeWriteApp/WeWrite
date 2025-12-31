@@ -14,6 +14,12 @@ type PageData = Pick<Page, 'id' | 'title' | 'userId' | 'username' | 'deleted'> &
   subscriptionStatus?: string;
   subscriptionAmount?: number;
   groupIsPublic?: boolean;
+  // Graph data for graph view mode
+  graphNodeCount?: number;
+  graphData?: {
+    nodes: Array<{ id: string; title: string; isOrphan?: boolean }>;
+    links: Array<{ source: string; target: string; type: string }>;
+  };
 };
 
 interface UserData {
@@ -46,6 +52,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const excludeOwnPages = searchParams.get('excludeOwnPages') === 'true';
     const excludeUsername = (searchParams.get('excludeUsername') || '').trim().toLowerCase();
     const includeUsername = (searchParams.get('includeUsername') || '').trim().toLowerCase();
+    // Graph mode: filter by minimum graph nodes and include graph data
+    const graphMode = searchParams.get('graphMode') === 'true';
+    const minGraphNodes = graphMode ? parseInt(searchParams.get('minGraphNodes') || '4', 10) : 0;
 
     const { getFirebaseAdmin } = await import('../../firebase/firebaseAdmin');
     const { getEffectiveTier } = await import('../../utils/subscriptionTiers');
@@ -212,7 +221,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Add subscription data to pages
-    const randomPagesWithUserData = randomPages.map(page => {
+    let randomPagesWithUserData = randomPages.map(page => {
       if (!page.userId) return page;
 
       const userData = batchUserData[page.userId];
@@ -224,6 +233,109 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         username: userData?.username || page.username
       };
     });
+
+    // If graph mode, fetch graph data for each page and filter by minimum nodes
+    if (graphMode) {
+      const { extractPageReferences } = await import('../../firebase/database/links');
+
+      // Fetch graph data for all pages in parallel
+      const graphDataPromises = randomPagesWithUserData.map(async (page) => {
+        try {
+          // Get page content for outgoing links
+          const pageDoc = await db.collection(getCollectionName('pages')).doc(page.id).get();
+          if (!pageDoc.exists) return { ...page, graphNodeCount: 0 };
+
+          const pageData = pageDoc.data();
+          const outgoingIds = pageData?.content ? extractPageReferences(pageData.content) : [];
+
+          // Get backlinks for incoming links
+          const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
+            .where('targetPageId', '==', page.id)
+            .limit(50)
+            .get();
+
+          const incomingPages = backlinksSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: data.sourcePageId,
+              title: data.sourcePageTitle || 'Untitled',
+            };
+          });
+
+          // Fetch outgoing page titles
+          const outgoingPages: Array<{ id: string; title: string }> = [];
+          if (outgoingIds.length > 0) {
+            const outgoingDocs = await Promise.all(
+              outgoingIds.slice(0, 20).map(id =>
+                db.collection(getCollectionName('pages')).doc(id).get()
+              )
+            );
+            outgoingDocs.forEach((doc, i) => {
+              if (doc.exists && !doc.data()?.deleted) {
+                outgoingPages.push({
+                  id: outgoingIds[i],
+                  title: doc.data()?.title || 'Untitled',
+                });
+              }
+            });
+          }
+
+          // Build nodes (center page + incoming + outgoing, deduplicated)
+          const nodeMap = new Map<string, { id: string; title: string; isOrphan?: boolean }>();
+          nodeMap.set(page.id, { id: page.id, title: page.title });
+
+          incomingPages.forEach(p => {
+            if (!nodeMap.has(p.id)) nodeMap.set(p.id, { id: p.id, title: p.title });
+          });
+          outgoingPages.forEach(p => {
+            if (!nodeMap.has(p.id)) nodeMap.set(p.id, { id: p.id, title: p.title });
+          });
+
+          const nodes = Array.from(nodeMap.values());
+
+          // Build links
+          const links: Array<{ source: string; target: string; type: string }> = [];
+          const incomingSet = new Set(incomingPages.map(p => p.id));
+          const outgoingSet = new Set(outgoingPages.map(p => p.id));
+
+          incomingPages.forEach(p => {
+            const isBidirectional = outgoingSet.has(p.id);
+            links.push({
+              source: p.id,
+              target: page.id,
+              type: isBidirectional ? 'bidirectional' : 'incoming',
+            });
+          });
+
+          outgoingPages.forEach(p => {
+            // Skip if already added as bidirectional
+            if (!incomingSet.has(p.id)) {
+              links.push({
+                source: page.id,
+                target: p.id,
+                type: 'outgoing',
+              });
+            }
+          });
+
+          return {
+            ...page,
+            graphNodeCount: nodes.length,
+            graphData: { nodes, links },
+          };
+        } catch (error) {
+          console.warn(`Error fetching graph data for page ${page.id}:`, error);
+          return { ...page, graphNodeCount: 0 };
+        }
+      });
+
+      const pagesWithGraphData = await Promise.all(graphDataPromises);
+
+      // Filter by minimum nodes
+      randomPagesWithUserData = pagesWithGraphData.filter(
+        page => (page.graphNodeCount || 0) >= minGraphNodes
+      );
+    }
 
     return NextResponse.json({
       randomPages: randomPagesWithUserData,

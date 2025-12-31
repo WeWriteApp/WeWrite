@@ -19,9 +19,15 @@ interface RandomPage {
   tier?: string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
-  // Groups functionality removed
-  // Note: isPublic removed - all pages are now public
+  // Graph data for graph view mode
+  graphNodeCount?: number;
+  graphData?: {
+    nodes: Array<{ id: string; title: string; isOrphan?: boolean }>;
+    links: Array<{ source: string; target: string; type: string }>;
+  };
 }
+
+type ViewMode = 'cards' | 'list' | 'graph';
 
 interface RandomPagesProps {
   limit?: number;
@@ -44,6 +50,14 @@ const RandomPages = React.memo(function RandomPages({
   const [shuffling, setShuffling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('randomPages_viewMode');
+      if (saved === 'list' || saved === 'graph') return saved;
+      return 'cards';
+    }
+    return 'cards';
+  });
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(() => {
     // Initialize from localStorage if available
@@ -59,7 +73,7 @@ const RandomPages = React.memo(function RandomPages({
     return '';
   });
 
-  console.log('RandomPages: Rendering with props:', { limit, priority });
+  console.log('RandomPages: Rendering with props:', { limit, priority, viewMode });
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -149,6 +163,12 @@ const RandomPages = React.memo(function RandomPages({
         params.append('shuffle', 'true');
       }
 
+      // Add graph mode params to fetch graph data and filter by node count
+      if (viewMode === 'graph') {
+        params.append('graphMode', 'true');
+        params.append('minGraphNodes', '4');
+      }
+
       const response = await fetch(`/api/random-pages?${params}`);
 
       if (!response.ok) {
@@ -190,7 +210,7 @@ const RandomPages = React.memo(function RandomPages({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, user?.uid, denseMode, excludeOwnPages, excludeUsername]);
+  }, [limit, user?.uid, denseMode, viewMode, excludeOwnPages, excludeUsername]);
 
   // Handle shuffle button click
   const handleShuffle = useCallback((excludeOwn = excludeOwnPages, excludedUser = excludeUsername) => {
@@ -236,7 +256,7 @@ const RandomPages = React.memo(function RandomPages({
     };
   }, [handleShuffle, excludeOwnPages]);
 
-  // Listen for dense mode changes from header
+  // Listen for dense mode changes from header (legacy)
   useEffect(() => {
     const handleDenseModeEvent = (event: CustomEvent) => {
       const newDenseMode = event.detail?.denseMode ?? false;
@@ -250,9 +270,30 @@ const RandomPages = React.memo(function RandomPages({
     };
   }, []);
 
-  // Re-fetch when dense mode changes to get appropriate number of results
-  // Removed automatic re-fetch to prevent excessive API calls
-  // Users can manually shuffle to get more results in dense mode
+  // Listen for view mode changes from header
+  useEffect(() => {
+    const handleViewModeEvent = (event: CustomEvent) => {
+      const newViewMode = event.detail?.viewMode ?? 'cards';
+      const newDenseMode = event.detail?.denseMode ?? false;
+      console.log('RandomPages: View mode event received', { viewMode: newViewMode, denseMode: newDenseMode });
+      setViewMode(newViewMode);
+      setDenseMode(newDenseMode);
+    };
+
+    window.addEventListener('randomPagesViewModeChange', handleViewModeEvent as EventListener);
+    return () => {
+      window.removeEventListener('randomPagesViewModeChange', handleViewModeEvent as EventListener);
+    };
+  }, []);
+
+  // Re-fetch when view mode changes to graph to get graph data
+  useEffect(() => {
+    // Only re-fetch if switching to graph mode (need graph data) or from graph mode (don't need it)
+    if (viewMode === 'graph' && randomPages.length > 0 && !randomPages[0]?.graphData) {
+      console.log('RandomPages: Switching to graph mode, re-fetching with graph data');
+      fetchRandomPages(true);
+    }
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show proper loading skeleton on initial load OR while loading with no data
   if (loading) {
@@ -303,6 +344,7 @@ const RandomPages = React.memo(function RandomPages({
           pages={randomPages}
           loading={shuffling}
           denseMode={denseMode}
+          viewMode={viewMode}
           onExcludeUser={onExcludeUser}
         />
       </Suspense>
