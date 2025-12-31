@@ -56,20 +56,6 @@ export default function OpenSourceSection() {
               </p>
             </div>
 
-            {/* GitHub Stats (Placeholder) */}
-            <div className="flex items-center justify-center gap-6 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">⭐</span>
-                <LandingCardText as="span" className="text-sm font-medium">
-                  100+ stars
-                </LandingCardText>
-              </div>
-              <div className="w-px h-4" style={{ backgroundColor: colors.cardBorder }} />
-              <LandingCardText as="span" muted className="text-sm">
-                MIT License
-              </LandingCardText>
-            </div>
-
             {/* CTA Button */}
             <div className="pt-2">
               <Button
@@ -87,13 +73,6 @@ export default function OpenSourceSection() {
                   Star on GitHub
                 </a>
               </Button>
-            </div>
-
-            {/* Additional Context */}
-            <div className="pt-4 max-w-xl mx-auto">
-              <LandingCardText as="p" muted className="text-sm">
-                Built with Next.js, Firebase, and modern web technologies. All code is available under the MIT license.
-              </LandingCardText>
             </div>
           </div>
         </LandingCard>

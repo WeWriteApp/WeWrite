@@ -9,6 +9,22 @@ import { usePathname } from "next/navigation";
 import FeedbackModal from "./FeedbackModal";
 import { getSocialUrl } from "@/config/social-links";
 
+// X (Twitter) logo SVG component
+function XLogo({ size = 14, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 interface SiteFooterProps {
   className?: string;
 }
@@ -44,9 +60,17 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
     { href: "/privacy", label: "Privacy", icon: 'Shield', section: 'content' },
     { href: "/terms", label: "Terms", icon: 'FileText', section: 'content' },
     { href: "mailto:support@getwewrite.app", label: "Email support", icon: 'Mail', external: true, section: 'external' },
-    { href: getSocialUrl('x') || 'https://x.com/WeWriteApp', label: "Follow on X", icon: 'X', external: true, section: 'external' },
+    { href: getSocialUrl('x') || 'https://x.com/WeWriteApp', label: "Follow on X", icon: 'XLogo', external: true, section: 'external' },
     { href: getSocialUrl('github') || 'https://github.com/WeWriteApp/WeWrite', label: "Source code", icon: 'Code', external: true, section: 'external' },
   ];
+
+  // Helper to render icons, handling special cases like XLogo
+  const renderIcon = (iconName: string) => {
+    if (iconName === 'XLogo') {
+      return <XLogo size={14} />;
+    }
+    return <Icon name={iconName} size={14} />;
+  };
 
   return (
     <>
@@ -79,7 +103,7 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Icon name={link.icon} size={14} />
+                    {renderIcon(link.icon)}
                     {link.label}
                   </a>
                 </Button>

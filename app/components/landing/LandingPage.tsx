@@ -19,7 +19,7 @@ import HowItWorksSection from './HowItWorksSection';
 import FeaturesCarousel from './FeaturesCarousel';
 import PlatformStatsCarousel from './PlatformStatsCarousel';
 import ComparisonSection from './ComparisonSection';
-import SocialFeedsSection from './SocialFeedsSection';
+import SocialIconsGrid from './SocialIconsGrid';
 import OpenSourceSection from './OpenSourceSection';
 
 import { LandingColorProvider } from './LandingColorContext';
@@ -814,8 +814,8 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
           </div>
         </section>
 
-        {/* Social Feeds Section - Instagram and X embeds */}
-        <SocialFeedsSection />
+        {/* Social Icons Grid */}
+        <SocialIconsGrid />
 
         {/* Open Source Section */}
         <OpenSourceSection />

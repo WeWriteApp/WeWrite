@@ -85,6 +85,54 @@ function YouTubeLogo({ size = 24, className = "" }: { size?: number; className?:
   );
 }
 
+// Gab logo SVG component
+function GabLogo({ size = 24, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M18.42 6.98c-.06 0-.12-.01-.18-.01h-4.67c-.36 0-.65.28-.66.63v3.15c0 .37.3.67.67.67h2.65c1.26 0 2.27.98 2.35 2.22.02.07.02.14.02.2v2.82c0 1.27-1.04 2.3-2.33 2.33H7.36c-.04 0-.07 0-.11-.01-1.18-.09-2.11-1.06-2.11-2.24V7.16c0-1.23 1.01-2.23 2.25-2.24.04 0 .08 0 .12-.01h6.79c.37-.01.67.28.68.65v1.69c.01.37-.28.67-.65.69-.01 0-.02 0-.03 0h-5.67c-.37 0-.67.3-.67.67v6.56c0 .37.3.66.67.67h6c.37 0 .67-.3.67-.67v-.97c0-.37-.3-.67-.67-.67h-2.6c-.37 0-.66-.3-.67-.66v-3.2c0-.37.3-.67.67-.67h6.31c.36-.01.66.28.67.64v6.53c0 2.6-2.13 4.72-4.76 4.72H7.49c-2.63 0-4.76-2.11-4.76-4.72V7.49c0-2.62 2.13-4.76 4.76-4.76h8.58c2.63 0 4.76 2.13 4.76 4.72v.14c0 .37-.3.67-.67.67h-1.74c-.37 0-.67-.3-.67-.67v-.08c0-.29-.24-.53-.53-.53z"/>
+    </svg>
+  );
+}
+
+// Twitch logo SVG component
+function TwitchLogo({ size = 24, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+    </svg>
+  );
+}
+
+// Telegram logo SVG component
+function TelegramLogo({ size = 24, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+    </svg>
+  );
+}
+
 /**
  * Map of platform to icon render function.
  */
@@ -102,47 +150,93 @@ function renderPlatformIcon(platform: SocialPlatform, size: number): React.React
       return <YouTubeLogo size={size} />;
     case 'github':
       return <GitHubLogo size={size} />;
+    case 'gab':
+      return <GabLogo size={size} />;
+    case 'twitch':
+      return <TwitchLogo size={size} />;
+    case 'telegram':
+      return <TelegramLogo size={size} />;
     default:
       return null;
   }
 }
 
 /**
- * SocialFeedsSection Component
- *
- * Simple "Follow us for updates!" section with outline-style circular icon buttons.
- * Uses centralized social links configuration.
+ * Get display name for each platform
  */
-export default function SocialFeedsSection() {
+function getPlatformDisplayName(platform: SocialPlatform): string {
+  switch (platform) {
+    case 'instagram':
+      return 'Instagram';
+    case 'threads':
+      return 'Threads';
+    case 'x':
+      return 'X';
+    case 'tiktok':
+      return 'TikTok';
+    case 'youtube':
+      return 'YouTube';
+    case 'github':
+      return 'GitHub';
+    case 'gab':
+      return 'Gab';
+    case 'twitch':
+      return 'Twitch';
+    case 'telegram':
+      return 'Telegram';
+    default:
+      return platform;
+  }
+}
+
+/**
+ * SocialIconsGrid Component
+ *
+ * "Follow us for updates!" section with grid layout and text labels.
+ * Uses centralized social links configuration, excludes GitHub (shown in Open Source section).
+ */
+export default function SocialIconsGrid() {
   const colors = useLandingColors();
 
+  // Filter out GitHub since we have a dedicated Open Source section for it
+  const filteredLinks = socialLinks.filter(link => link.platform !== 'github');
+
   return (
-    <section className="py-10">
+    <section className="py-12">
       <div className="container mx-auto px-6 max-w-4xl">
-        <div className="flex flex-col items-center gap-5">
-          <p
-            className="text-sm font-medium"
-            style={{ color: colors.cardTextMuted }}
+        <div className="flex flex-col items-center gap-8">
+          <h2
+            className="text-3xl md:text-4xl font-bold text-center"
+            style={{ color: colors.cardText }}
           >
             Follow us for updates!
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            {socialLinks.map((link) => (
+          </h2>
+          <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-4 md:gap-8 max-w-4xl">
+            {filteredLinks.map((link) => (
               <a
                 key={link.platform}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-11 h-11 rounded-full flex items-center justify-center transition-colors duration-200 hover:bg-foreground/5"
+                className="flex flex-col items-center gap-3 p-4 rounded-xl transition-all duration-200 hover:bg-foreground/5 hover:scale-105"
                 style={{
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: colors.cardBorder,
                   color: colors.cardTextMuted,
                 }}
                 aria-label={link.label}
               >
-                {renderPlatformIcon(link.platform, 20)}
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: colors.cardBorder,
+                  }}
+                >
+                  {renderPlatformIcon(link.platform, 28)}
+                </div>
+                <span className="text-sm font-medium text-center">
+                  {getPlatformDisplayName(link.platform)}
+                </span>
               </a>
             ))}
           </div>
