@@ -866,41 +866,39 @@ export default function LinkEditorModal({
               {/* Custom Text Input - Show when enabled */}
               {customText && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                  <div className="relative">
-                    <Icon name="Type" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <Input
-                      ref={externalCustomTextInputRef}
-                      id="display-text-external"
-                      value={externalCustomText}
-                      onChange={handleExternalCustomTextChange}
-                      placeholder="Enter custom link text"
-                      className="w-full min-w-0 pl-9"
-                      autoComplete="off"
-                      onFocus={(e) => {
-                        e.stopPropagation();
-                        console.log('🔒 FOCUS on external custom text input');
-                      }}
-                      onBlur={(e) => {
-                        e.stopPropagation();
-                        console.log('🔓 BLUR from external custom text input');
-                      }}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onKeyUp={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onInput={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    />
-                  </div>
+                  <Input
+                    ref={externalCustomTextInputRef}
+                    id="display-text-external"
+                    value={externalCustomText}
+                    onChange={handleExternalCustomTextChange}
+                    placeholder="Enter custom link text"
+                    leftIcon={<Icon name="Type" size={16} />}
+                    className="w-full min-w-0"
+                    autoComplete="off"
+                    onFocus={(e) => {
+                      e.stopPropagation();
+                      console.log('🔒 FOCUS on external custom text input');
+                    }}
+                    onBlur={(e) => {
+                      e.stopPropagation();
+                      console.log('🔓 BLUR from external custom text input');
+                    }}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onKeyUp={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onInput={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  />
                 </div>
               )}
             </div>
