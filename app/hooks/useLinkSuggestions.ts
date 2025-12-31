@@ -202,8 +202,9 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
   const dismissSuggestion = useCallback((matchedText: string) => {
     setState(prev => {
       const newDismissed = new Set(prev.dismissedSuggestions);
-      
+
       // Add all suggestions for this matched text to dismissed list
+      // Check both activeSuggestion and allSuggestions for the matched text
       if (prev.activeSuggestion?.matchedText === matchedText) {
         prev.activeSuggestion.suggestions.forEach(suggestion => {
           const key = `${suggestion.matchedText}-${suggestion.id}`;
@@ -211,9 +212,23 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
         });
       }
 
+      // Also mark any matching suggestions from allSuggestions as dismissed
+      prev.allSuggestions.forEach(suggestion => {
+        if (suggestion.matchedText === matchedText) {
+          const key = `${suggestion.matchedText}-${suggestion.id}`;
+          newDismissed.add(key);
+        }
+      });
+
+      // Remove the dismissed suggestion from allSuggestions
+      const newAllSuggestions = prev.allSuggestions.filter(
+        suggestion => suggestion.matchedText !== matchedText
+      );
+
       return {
         ...prev,
         dismissedSuggestions: newDismissed,
+        allSuggestions: newAllSuggestions,
         activeSuggestion: prev.activeSuggestion?.matchedText === matchedText ? null : prev.activeSuggestion,
         showModal: false
       };

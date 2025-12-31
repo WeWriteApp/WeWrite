@@ -60,7 +60,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           // State-based colors
           checked
             ? "bg-primary shadow-inner"
-            : "bg-alpha-10",
+            : "bg-input",
           className
         )}
         {...props}

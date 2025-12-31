@@ -169,7 +169,7 @@ export default function FeatureFlagsPage() {
               <p className="font-medium text-sm">Enable for me</p>
               <p className="text-xs text-muted-foreground">Personal override</p>
             </div>
-            <Switch checked={lineNumbersEnabled} onCheckedChange={handleLineNumbersPersonalToggle} disabled={saving} />
+            <Switch checked={lineNumbersEnabled} onCheckedChange={handleLineNumbersPersonalToggle} disabled={saving} className="shrink-0" />
           </div>
 
           <div className="flex items-center justify-between gap-3">
@@ -177,7 +177,7 @@ export default function FeatureFlagsPage() {
               <p className="font-medium text-sm">Enable for all users</p>
               <p className="text-xs text-muted-foreground">Sets global default</p>
             </div>
-            <Switch checked={lineNumbersGlobal} onCheckedChange={handleLineNumbersGlobalToggle} disabled={saving} />
+            <Switch checked={lineNumbersGlobal} onCheckedChange={handleLineNumbersGlobalToggle} disabled={saving} className="shrink-0" />
           </div>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function FeatureFlagsPage() {
               <p className="font-medium text-sm">Enable for me</p>
               <p className="text-xs text-muted-foreground">Personal override</p>
             </div>
-            <Switch checked={onboardingEnabled} onCheckedChange={handleOnboardingPersonalToggle} disabled={saving} />
+            <Switch checked={onboardingEnabled} onCheckedChange={handleOnboardingPersonalToggle} disabled={saving} className="shrink-0" />
           </div>
 
           <div className="flex items-center justify-between gap-3">
@@ -210,7 +210,7 @@ export default function FeatureFlagsPage() {
               <p className="font-medium text-sm">Enable for all users</p>
               <p className="text-xs text-muted-foreground">New users see tutorial</p>
             </div>
-            <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} />
+            <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} className="shrink-0" />
           </div>
         </div>
       </div>
@@ -235,7 +235,7 @@ export default function FeatureFlagsPage() {
               <p className="font-medium text-sm">Enable for me</p>
               <p className="text-xs text-muted-foreground">Personal override</p>
             </div>
-            <Switch checked={autoSaveEnabled} onCheckedChange={handleAutoSavePersonalToggle} disabled={saving} />
+            <Switch checked={autoSaveEnabled} onCheckedChange={handleAutoSavePersonalToggle} disabled={saving} className="shrink-0" />
           </div>
 
           <div className="flex items-center justify-between gap-3">
@@ -243,7 +243,7 @@ export default function FeatureFlagsPage() {
               <p className="font-medium text-sm">Enable for all users</p>
               <p className="text-xs text-muted-foreground">Auto-save instead of manual</p>
             </div>
-            <Switch checked={autoSaveGlobal} onCheckedChange={handleAutoSaveGlobalToggle} disabled={saving} />
+            <Switch checked={autoSaveGlobal} onCheckedChange={handleAutoSaveGlobalToggle} disabled={saving} className="shrink-0" />
           </div>
         </div>
       </div>

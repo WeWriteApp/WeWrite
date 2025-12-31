@@ -19,6 +19,7 @@ import { ReactQueryProvider } from "./providers/ReactQueryProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
+import { GAUserIdentityProvider } from "./providers/GAUserIdentityProvider"
 import { PWAProvider } from "./providers/PWAProvider"
 import { BannerProvider } from "./providers/BannerProvider"
 import { PreviousRouteProvider } from "./providers/PreviousRouteProvider"
@@ -223,6 +224,7 @@ export default function RootLayout({
           <ThemeProvider>
             <ReactQueryProvider>
               <AuthProvider>
+                <GAUserIdentityProvider />
                 <LogRocketProvider>
                   <PWAProvider>
                     <BannerProvider>

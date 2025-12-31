@@ -60,6 +60,7 @@ async function getUserOverrides(
 
 export async function GET(request: NextRequest) {
   const summaryRequested = request.nextUrl.searchParams.get('summary') === '1';
+  const flagParam = request.nextUrl.searchParams.get('flag') || 'line_numbers';
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
@@ -80,22 +81,23 @@ export async function GET(request: NextRequest) {
       });
       const totalUsers = totalSnap.data().count || 0;
 
-      // Count overrides that explicitly enable the flag
+      // Count overrides that explicitly enable the requested flag
       const overridesSnap = await db
         .collection(getCollectionName(COLLECTION_OVERRIDES))
-        .where('flags.line_numbers', '==', true)
+        .where(`flags.${flagParam}`, '==', true)
         .get()
         .catch(() => ({ size: 0 }));
       const overridesEnabled = (overridesSnap as any).size || 0;
 
-      const enabledCount = defaults.line_numbers ? totalUsers : overridesEnabled;
+      const defaultEnabled = Boolean(defaults[flagParam]);
+      const enabledCount = defaultEnabled ? totalUsers : overridesEnabled;
 
       return NextResponse.json({
         success: true,
         summary: {
           totalUsers,
           enabledCount,
-          defaultEnabled: defaults.line_numbers,
+          defaultEnabled,
         },
       });
     }
