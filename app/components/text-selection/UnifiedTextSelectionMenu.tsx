@@ -686,7 +686,8 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   // Calculate and clamp menu position within viewport
   const viewportPadding = 12;
   const [menuStyle, setMenuStyle] = useState(() => {
-    const safeX = position ? position.x : window.innerWidth / 2;
+    // Use safe defaults for SSR - useLayoutEffect will update with actual values on client
+    const safeX = position ? position.x : (typeof window !== 'undefined' ? window.innerWidth / 2 : 0);
     const safeY = position ? position.y : 100;
     return {
       left: `${safeX}px`,
