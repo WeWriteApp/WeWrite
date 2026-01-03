@@ -27,10 +27,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const { adminDb } = await getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.error('📅 [timeline API] Firebase Admin not initialized');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    const db = admin.firestore();
 
     // Build query to get ALL pages for the user first, then filter for custom dates
-    let pagesQuery = adminDb.collection(getCollectionName('pages'))
+    let pagesQuery = db.collection(getCollectionName('pages'))
       .where('userId', '==', userId);
 
     console.log(`📅 [timeline API] Querying pages for user ${userId} with custom dates`, {
