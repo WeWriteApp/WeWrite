@@ -16,8 +16,11 @@ import { AllocationRequest, AllocationResponse } from '../types/allocation';
 interface BatchedRequest {
   id: string;
   request: AllocationRequest;
-  resolve: (response: AllocationResponse) => void;
-  reject: (error: Error) => void;
+  // Store multiple resolve/reject handlers to support coalescing without losing callbacks
+  resolvers: Array<{
+    resolve: (response: AllocationResponse) => void;
+    reject: (error: Error) => void;
+  }>;
   timestamp: number;
   priority: 'high' | 'normal' | 'low';
   retryCount: number;
@@ -61,7 +64,7 @@ class AllocationBatcher {
   ): Promise<AllocationResponse> {
     return new Promise((resolve, reject) => {
       const requestId = this.generateRequestId(request);
-      
+
       // Handle request coalescing for the same page
       if (this.config.enableCoalescing) {
         const existingRequest = this.findCoalescableRequest(request);
@@ -69,10 +72,10 @@ class AllocationBatcher {
           // Coalesce requests by combining the change amounts
           existingRequest.request.changeCents += request.changeCents;
           existingRequest.priority = this.getHigherPriority(existingRequest.priority, priority);
-          
-          // Return the existing promise (will resolve when batch processes)
-          existingRequest.resolve = resolve;
-          existingRequest.reject = reject;
+
+          // CRITICAL FIX: Add to resolvers array instead of overwriting
+          // This ensures all coalesced requests get their promises resolved
+          existingRequest.resolvers.push({ resolve, reject });
           return;
         }
       }
@@ -81,8 +84,7 @@ class AllocationBatcher {
       const batchedRequest: BatchedRequest = {
         id: requestId,
         request,
-        resolve,
-        reject,
+        resolvers: [{ resolve, reject }],
         timestamp: Date.now(),
         priority,
         retryCount: 0
@@ -292,21 +294,28 @@ class AllocationBatcher {
       }
 
       const data: AllocationResponse = await response.json();
-      batchedRequest.resolve(data);
+
+      // CRITICAL FIX: Resolve ALL coalesced promises, not just one
+      for (const resolver of batchedRequest.resolvers) {
+        resolver.resolve(data);
+      }
     } catch (error) {
       // Retry logic
       if (batchedRequest.retryCount < this.config.maxRetries) {
         batchedRequest.retryCount++;
-        
+
         // Exponential backoff
         const delay = Math.pow(2, batchedRequest.retryCount) * 1000;
-        
+
         setTimeout(() => {
           this.pendingRequests.set(batchedRequest.id, batchedRequest);
           this.scheduleBatch();
         }, delay);
       } else {
-        batchedRequest.reject(error as Error);
+        // CRITICAL FIX: Reject ALL coalesced promises
+        for (const resolver of batchedRequest.resolvers) {
+          resolver.reject(error as Error);
+        }
       }
     }
   }
@@ -320,9 +329,11 @@ class AllocationBatcher {
       this.batchTimer = null;
     }
 
-    // Reject all pending requests
+    // Reject all pending requests (including all coalesced promises)
     for (const [, request] of this.pendingRequests) {
-      request.reject(new Error('Request cancelled'));
+      for (const resolver of request.resolvers) {
+        resolver.reject(new Error('Request cancelled'));
+      }
     }
 
     this.pendingRequests.clear();

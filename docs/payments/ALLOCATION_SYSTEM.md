@@ -274,6 +274,63 @@ const newAvailableCents = Math.max(0, totalCents - otherPagesCents - newPageFund
 ### Usage
 The modal is triggered from allocation bars and provides detailed allocation management for individual pages. It integrates with the existing allocation system hooks and maintains consistency with the overall allocation architecture.
 
+## Duplicate Prevention Architecture
+
+### Deterministic Document IDs
+
+To prevent duplicate allocations from race conditions (concurrent requests), the system uses **deterministic document IDs** for all allocation records:
+
+```typescript
+// Generate a deterministic allocation document ID
+function generateAllocationDocId(
+  userId: string,
+  resourceType: 'page' | 'user',
+  resourceId: string,
+  month: string
+): string {
+  return `${userId}_${resourceType}_${resourceId}_${month}`;
+}
+```
+
+**Benefits:**
+- Concurrent requests for the same allocation target the same document
+- No need for query-then-write patterns that are vulnerable to race conditions
+- Uses `set(..., { merge: true })` for atomic create-or-update operations
+- Month rollover scripts are idempotent (safe to re-run)
+
+### Client-Side Batching
+
+The `AllocationBatcher` system coalesces multiple rapid allocation changes:
+
+```typescript
+// All coalesced requests get their promises resolved
+interface BatchedRequest {
+  resolvers: Array<{
+    resolve: (response: AllocationResponse) => void;
+    reject: (error: Error) => void;
+  }>;
+  // ... other fields
+}
+```
+
+**Key fix:** When requests are coalesced, ALL promise handlers are stored and resolved, preventing orphaned promises that could trigger retries.
+
+### Deduplication Script
+
+For cleaning up historical duplicates, use the deduplication script:
+
+```bash
+# Dry run (see what would be cleaned)
+npx tsx scripts/deduplicate-allocations.ts
+
+# Dry run on production
+npx tsx scripts/deduplicate-allocations.ts --prod
+
+# Execute cleanup
+npx tsx scripts/deduplicate-allocations.ts --execute
+npx tsx scripts/deduplicate-allocations.ts --prod --execute
+```
+
 ## Anti-Patterns to Avoid
 
 ### ❌ Double-Counting

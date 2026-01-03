@@ -15,6 +15,29 @@ import { getCollectionNameAsync, USD_COLLECTIONS } from '../utils/environmentCon
 import { AllocationError, ALLOCATION_ERROR_CODES } from '../types/allocation';
 import { internalApiFetch } from '../utils/internalApi';
 
+/**
+ * Generate a deterministic allocation document ID to prevent duplicates.
+ *
+ * This ensures that concurrent requests for the same allocation will target
+ * the same document, preventing race condition duplicates.
+ *
+ * Format: {userId}_{resourceType}_{resourceId}_{month}
+ *
+ * IMPORTANT: Once allocations are created with this ID format, they should
+ * maintain this ID for consistency. Existing allocations with random IDs
+ * will continue to work but may need migration.
+ */
+function generateAllocationDocId(
+  userId: string,
+  resourceType: 'page' | 'user',
+  resourceId: string,
+  month: string
+): string {
+  // Create a deterministic, URL-safe document ID
+  // Using underscore separator as it's safe in Firestore doc IDs
+  return `${userId}_${resourceType}_${resourceId}_${month}`;
+}
+
 
 // Robust Firebase Admin initialization function - uses the same pattern as working endpoints
 function getFirebaseAdminAndDb() {
@@ -162,7 +185,10 @@ export class UsdService {
         const usdCents = allocation.usdCents || 0;
         totalUsdCents += usdCents;
         const { createdAt, updatedAt, id: _id, month: _month, ...rest } = allocation;
-        const newRef = allocationsRef.doc();
+        // Use deterministic doc ID to prevent duplicates if rollover runs multiple times
+        const resourceType = (allocation.resourceType || 'page') as 'page' | 'user';
+        const newDocId = generateAllocationDocId(allocation.userId, resourceType, allocation.resourceId, currentMonth);
+        const newRef = allocationsRef.doc(newDocId);
         batch.set(newRef, {
           ...rest,
           usdCents,
@@ -674,61 +700,44 @@ export class UsdService {
         updatedAt: FieldValue.serverTimestamp()
       });
 
-      // Handle allocation record
+      // Handle allocation record using deterministic document IDs to prevent duplicates
+      // This eliminates race conditions where concurrent requests could both create new docs
+      const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
+      const allocationDocId = generateAllocationDocId(userId, 'page', pageId, currentMonth);
+      const allocationDocRef = allocationsRef.doc(allocationDocId);
+
       if (newPageAllocationCents > 0) {
-        // Create or update allocation
-        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
-        const existingAllocationQuery = allocationsRef
-          .where('userId', '==', userId)
-          .where('resourceId', '==', pageId)
-          .where('resourceType', '==', 'page')
-          .where('month', '==', currentMonth)
-          .where('status', '==', 'active')
-          .limit(1);
+        // Create or update allocation using set with merge
+        // This atomically creates the doc if it doesn't exist, or updates if it does
+        // The deterministic ID ensures concurrent requests target the same document
+        batch.set(allocationDocRef, {
+          userId,
+          recipientUserId,
+          resourceType: 'page',
+          resourceId: pageId,
+          usdCents: newPageAllocationCents,
+          month: currentMonth,
+          status: 'active',
+          // Store page details at allocation time for historical record
+          pageTitle,
+          authorUsername,
+          updatedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
 
-        const existingSnapshot = await existingAllocationQuery.get();
-
-        if (!existingSnapshot.empty) {
-          // Update existing allocation
-          const existingDoc = existingSnapshot.docs[0];
-          batch.update(existingDoc.ref, {
-            usdCents: newPageAllocationCents,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-        } else {
-          // Create new allocation - store page title and author username at allocation time
-          // This prevents "Page not found" if the page is later deleted
-          const newAllocationRef = allocationsRef.doc();
-          batch.set(newAllocationRef, {
-            userId,
-            recipientUserId,
-            resourceType: 'page',
-            resourceId: pageId,
-            usdCents: newPageAllocationCents,
-            month: currentMonth,
-            status: 'active',
-            // Store page details at allocation time for historical record
-            pageTitle,
-            authorUsername,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp()
-          });
+        // Set createdAt only if this is a new document (won't overwrite existing)
+        // We do this in a separate operation using merge with a sentinel
+        const existingDoc = await allocationDocRef.get();
+        if (!existingDoc.exists) {
+          batch.set(allocationDocRef, {
+            createdAt: FieldValue.serverTimestamp()
+          }, { merge: true });
         }
       } else {
-        // Remove allocation if USD amount is 0
-        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
-        const existingAllocationQuery = allocationsRef
-          .where('userId', '==', userId)
-          .where('resourceId', '==', pageId)
-          .where('resourceType', '==', 'page')
-          .where('month', '==', currentMonth)
-          .where('status', '==', 'active')
-          .limit(1);
-
-        const existingSnapshot = await existingAllocationQuery.get();
-        if (!existingSnapshot.empty) {
-          const existingDoc = existingSnapshot.docs[0];
-          batch.update(existingDoc.ref, {
+        // Cancel allocation if USD amount is 0
+        // Check if doc exists first (it might not if user never allocated to this page)
+        const existingDoc = await allocationDocRef.get();
+        if (existingDoc.exists && existingDoc.data()?.status === 'active') {
+          batch.update(allocationDocRef, {
             status: 'cancelled',
             updatedAt: FieldValue.serverTimestamp()
           });
@@ -818,57 +827,37 @@ export class UsdService {
         updatedAt: FieldValue.serverTimestamp()
       });
 
-      // Handle allocation record
+      // Handle allocation record using deterministic document IDs to prevent duplicates
+      const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
+      const allocationDocId = generateAllocationDocId(userId, 'user', recipientUserId, currentMonth);
+      const allocationDocRef = allocationsRef.doc(allocationDocId);
+
       if (newUserAllocationCents > 0) {
-        // Create or update allocation
-        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
-        const existingAllocationQuery = allocationsRef
-          .where('userId', '==', userId)
-          .where('resourceId', '==', recipientUserId)
-          .where('resourceType', '==', 'user')
-          .where('month', '==', currentMonth)
-          .where('status', '==', 'active')
-          .limit(1);
+        // Create or update allocation using set with merge
+        // The deterministic ID ensures concurrent requests target the same document
+        batch.set(allocationDocRef, {
+          userId,
+          recipientUserId,
+          resourceType: 'user',
+          resourceId: recipientUserId,
+          usdCents: newUserAllocationCents,
+          month: currentMonth,
+          status: 'active',
+          updatedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
 
-        const existingSnapshot = await existingAllocationQuery.get();
-
-        if (!existingSnapshot.empty) {
-          // Update existing allocation
-          const existingDoc = existingSnapshot.docs[0];
-          batch.update(existingDoc.ref, {
-            usdCents: newUserAllocationCents,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-        } else {
-          // Create new allocation
-          const newAllocationRef = allocationsRef.doc();
-          batch.set(newAllocationRef, {
-            userId,
-            recipientUserId,
-            resourceType: 'user',
-            resourceId: recipientUserId,
-            usdCents: newUserAllocationCents,
-            month: currentMonth,
-            status: 'active',
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp()
-          });
+        // Set createdAt only if this is a new document
+        const existingDoc = await allocationDocRef.get();
+        if (!existingDoc.exists) {
+          batch.set(allocationDocRef, {
+            createdAt: FieldValue.serverTimestamp()
+          }, { merge: true });
         }
       } else {
-        // Remove allocation if USD amount is 0
-        const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));
-        const existingAllocationQuery = allocationsRef
-          .where('userId', '==', userId)
-          .where('resourceId', '==', recipientUserId)
-          .where('resourceType', '==', 'user')
-          .where('month', '==', currentMonth)
-          .where('status', '==', 'active')
-          .limit(1);
-
-        const existingSnapshot = await existingAllocationQuery.get();
-        if (!existingSnapshot.empty) {
-          const existingDoc = existingSnapshot.docs[0];
-          batch.update(existingDoc.ref, {
+        // Cancel allocation if USD amount is 0
+        const existingDoc = await allocationDocRef.get();
+        if (existingDoc.exists && existingDoc.data()?.status === 'active') {
+          batch.update(allocationDocRef, {
             status: 'cancelled',
             updatedAt: FieldValue.serverTimestamp()
           });
