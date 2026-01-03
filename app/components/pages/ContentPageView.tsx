@@ -1301,7 +1301,12 @@ export default function ContentPageView({
 
     try {
       // Use API route instead of direct Firebase calls
+      // IMPORTANT: Capture the current state at save time - these are what we're actually saving
+      // If user continues typing during the async save, editorState will change but these won't
       const contentToSave = editorState;
+      const titleToSave = title.trim();
+      const locationToSave = location;
+      const customDateToSave = customDate;
 
       // Extract and create new pages referenced in links before saving the main page
       const newPageRefs = extractNewPageReferences(contentToSave);
@@ -1311,10 +1316,10 @@ export default function ContentPageView({
 
       const updateData: any = {
         id: pageId,
-        title: title.trim(),
+        title: titleToSave,
         content: contentToSave, // Pass as object, not stringified - API will handle stringification
-        location: location,
-        customDate: customDate
+        location: locationToSave,
+        customDate: customDateToSave
       };
 
       // VERSION BATCHING: For auto-saves, include session ID and batch flag
@@ -1483,20 +1488,23 @@ export default function ContentPageView({
 
       pageLogger.info('Page saved successfully via API', { pageId });
 
-      // CRITICAL FIX: Properly update both page state and editor state after save
+      // CRITICAL FIX: Properly update page state after save
+      // NOTE: We intentionally do NOT call setEditorState(contentToSave) here!
+      // The editorState may have changed during the async save operation (user continued typing).
+      // Overwriting with contentToSave would cause a race condition that loses those changes.
+      // The editor already has the current state - we only need to update the page object
+      // to reflect what was actually saved to the server.
       if (page) {
         const updatedPage = {
           ...page,
-          content: contentToSave, // Store as array/object like editor expects
-          title: title.trim(),
-          location: location,
-          customDate: customDate,
+          content: contentToSave, // Store what was actually saved
+          title: titleToSave,
+          location: locationToSave,
+          customDate: customDateToSave,
           lastModified: new Date().toISOString()
         };
         setPage(updatedPage);
-
-        // Update editor state directly without reset to prevent stale content
-        setEditorState(contentToSave);
+        // Editor state is NOT updated here - it retains the user's current work
       }
 
       // Client-side cache invalidation
@@ -1518,7 +1526,7 @@ export default function ContentPageView({
       // Emit page save event for real-time updates
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('pageSaved', {
-          detail: { pageId, title: title.trim(), content: contentToSave }
+          detail: { pageId, title: titleToSave, content: contentToSave }
         }));
       }
 
@@ -1566,12 +1574,14 @@ export default function ContentPageView({
         console.error('Error showing success toast (non-fatal):', toastError);
       }
 
-      // Update saved refs to current values after successful save
-      // This ensures hasChanges will return false until user makes new edits
-      lastSavedContentRef.current = editorState;
-      lastSavedTitleRef.current = title;
-      lastSavedLocationRef.current = location;
-      lastSavedCustomDateRef.current = customDate;
+      // Update saved refs to the VALUES THAT WERE ACTUALLY SAVED
+      // IMPORTANT: Use contentToSave/titleToSave (captured at save start), NOT current state
+      // If user typed during save, current editorState differs from what was saved
+      // This ensures hasChanges correctly detects unsaved changes after save completes
+      lastSavedContentRef.current = contentToSave;
+      lastSavedTitleRef.current = titleToSave;
+      lastSavedLocationRef.current = locationToSave;
+      lastSavedCustomDateRef.current = customDateToSave;
 
       // Clear error state
       pageLogger.info('Page saved successfully', { pageId, title });
@@ -1786,10 +1796,43 @@ export default function ContentPageView({
       try {
         // Pass isAutoSave: true to enable version batching
         await handleSave(undefined, { isAutoSave: true });
-        setAutoSaveStatus('saved');
-        setLastSavedAt(new Date());
-        // Transition to idle after showing saved state
-        setTimeout(() => setAutoSaveStatus('idle'), 3000);
+
+        // After save completes, check if user typed more during save
+        // The refs were updated in handleSave to what was actually saved
+        // Compare current state to saved state to detect new changes
+        const postSaveContent = currentEditorStateRef.current;
+        const postSaveTitle = currentTitleRef.current;
+        const postSaveLocation = currentLocationRef.current;
+        const postSavedContent = lastSavedContentRef.current;
+        const postSavedTitle = lastSavedTitleRef.current;
+        const postSavedLocation = lastSavedLocationRef.current;
+
+        let stillHasChanges = false;
+        if (postSavedTitle !== '' && postSaveTitle !== postSavedTitle) {
+          stillHasChanges = true;
+        }
+        if (!stillHasChanges && JSON.stringify(postSaveLocation) !== JSON.stringify(postSavedLocation)) {
+          stillHasChanges = true;
+        }
+        if (!stillHasChanges && postSavedContent && postSaveContent) {
+          try {
+            stillHasChanges = JSON.stringify(postSavedContent) !== JSON.stringify(postSaveContent);
+          } catch {
+            // Ignore serialization errors
+          }
+        }
+
+        if (stillHasChanges) {
+          // User typed during save - go back to 'pending' immediately
+          // The auto-save effect will trigger another save after 1s
+          setAutoSaveStatus('pending');
+        } else {
+          // All changes were saved - show 'saved' status
+          setAutoSaveStatus('saved');
+          setLastSavedAt(new Date());
+          // Transition to idle after showing saved state
+          setTimeout(() => setAutoSaveStatus('idle'), 3000);
+        }
       } catch (err) {
         setAutoSaveStatus('error');
         setAutoSaveError(err instanceof Error ? err.message : 'Auto-save failed');

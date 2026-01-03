@@ -4,7 +4,6 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { useSidebarContext } from './DesktopSidebar';
-import SiteFooter from './SiteFooter';
 import { SITE_CONTENT_CONTAINER_CLASSES } from '../../constants/layout';
 
 /**
@@ -33,9 +32,6 @@ export default function SidebarLayout({ children, className }: SidebarLayoutProp
   // Check if we're on admin pages (should be full-width content, no max-width constraint)
   const isAdminPage = pathname === '/admin/product-kpis' || pathname?.startsWith('/admin');
 
-  // Check if we're on settings pages (has its own layout with fixed height/scroll)
-  const isSettingsPage = pathname?.startsWith('/settings');
-
   // Calculate the actual width that should push content
   // Content should only respond to persistent expanded state, not hover state
   // When expanded: always use full width (256px) regardless of hover
@@ -60,12 +56,6 @@ export default function SidebarLayout({ children, className }: SidebarLayoutProp
         )}>
           {children}
         </div>
-        {/* Global site footer - hide on settings pages which have their own layout */}
-        {!isSettingsPage && (
-          <div className={cn(!isAdminPage && SITE_CONTENT_CONTAINER_CLASSES)}>
-            <SiteFooter />
-          </div>
-        )}
       </div>
     </div>
   );

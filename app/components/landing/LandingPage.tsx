@@ -27,7 +27,6 @@ import { LandingColorProvider } from './LandingColorContext';
 // This ensures blobs persist across page transitions between landing and auth pages
 import { WeWriteLogo } from '../ui/WeWriteLogo';
 import { ModeToggle } from '../ui/mode-toggle';
-import SiteFooter from '../layout/SiteFooter';
 import LoggedOutNoteDrawer from './LoggedOutNoteDrawer';
 import { Icon } from '@/components/ui/Icon';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
@@ -855,13 +854,10 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
           </section>
         )}
 
-        {/* Bottom spacing for footer visibility */}
+        {/* Bottom spacing */}
         <div className="pb-8 md:pb-6"></div>
 
       </main>
-
-      {/* Global Footer */}
-      <SiteFooter />
 
       {/* Floating Action Button for logged out users */}
       {!isAuthenticated && (

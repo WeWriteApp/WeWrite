@@ -43,6 +43,7 @@ const Mail = createIconComponent('Mail');
 const Shield = createIconComponent('Shield');
 const Trash2 = createIconComponent('Trash2');
 const SettingsIcon = createIconComponent('Settings');
+const Info = createIconComponent('Info');
 
 // Payout threshold in cents ($25)
 const PAYOUT_THRESHOLD_CENTS = 2500;
@@ -178,6 +179,12 @@ const BASE_SECTIONS: SettingsSection[] = [
     title: 'Advanced',
     icon: SettingsIcon,
     href: '/settings/advanced'
+  },
+  {
+    id: 'about',
+    title: 'About WeWrite',
+    icon: Info,
+    href: '/settings/about'
   }
 ];
 

@@ -857,7 +857,10 @@ const Editor: React.FC<EditorProps> = ({
 
   // Handle clicks on the editor wrapper area (for clicking below content on mobile)
   // This ensures users never get "trapped" without being able to continue typing
+  // Requires double-click to insert a new line (to avoid accidental triggers)
   const editorRef = useRef<HTMLDivElement>(null);
+  const lastBottomClickTimeRef = useRef<number>(0);
+  const DOUBLE_CLICK_THRESHOLD_MS = 400; // Time window for double-click detection
 
   const handleEditorWrapperClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly) return;
@@ -884,21 +887,31 @@ const Editor: React.FC<EditorProps> = ({
       const isOnText = selection && selection.rangeCount > 0 && selection.toString().length > 0;
 
       if (!isOnText) {
-        // Move cursor to end of document
+        const now = Date.now();
+        const timeSinceLastClick = now - lastBottomClickTimeRef.current;
+
+        // On first click: just move cursor to end and record the time
+        // On second click (within threshold): also insert new paragraph if needed
+        const isDoubleClick = timeSinceLastClick < DOUBLE_CLICK_THRESHOLD_MS;
+        lastBottomClickTimeRef.current = now;
+
         try {
           const endPoint = SlateEditor.end(editor, []);
           Transforms.select(editor, { anchor: endPoint, focus: endPoint });
           ReactEditor.focus(editor);
 
-          // Check if the last paragraph is empty - if not, add a new line
-          const lastNode = editorValue[editorValue.length - 1];
-          if (lastNode && Element.isElement(lastNode)) {
-            const hasContent = lastNode.children.some((child: any) =>
-              Text.isText(child) && child.text.trim().length > 0
-            );
-            if (hasContent) {
-              // Insert a new paragraph if the last one has content
-              Transforms.insertNodes(editor, { type: 'paragraph', children: [{ text: '' }] });
+          // Only insert new paragraph on double-click (user is frustrated/intentional)
+          if (isDoubleClick) {
+            // Check if the last paragraph is empty - if not, add a new line
+            const lastNode = editorValue[editorValue.length - 1];
+            if (lastNode && Element.isElement(lastNode)) {
+              const hasContent = lastNode.children.some((child: any) =>
+                Text.isText(child) && child.text.trim().length > 0
+              );
+              if (hasContent) {
+                // Insert a new paragraph if the last one has content
+                Transforms.insertNodes(editor, { type: 'paragraph', children: [{ text: '' }] });
+              }
             }
           }
         } catch (error) {

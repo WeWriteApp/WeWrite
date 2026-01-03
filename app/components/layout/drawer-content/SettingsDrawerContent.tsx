@@ -24,6 +24,8 @@ const FundAccountContent = lazy(() => import('../../settings/drawer-content/Fund
 const EmailPreferencesContent = lazy(() => import('../../settings/drawer-content/EmailPreferencesContent'));
 const AdvancedContent = lazy(() => import('../../settings/drawer-content/AdvancedContent'));
 const DeletedContent = lazy(() => import('../../settings/drawer-content/DeletedContent'));
+const AboutContent = lazy(() => import('../../settings/drawer-content/AboutContent'));
+const FollowUsContent = lazy(() => import('../../settings/drawer-content/FollowUsContent'));
 
 interface SettingsDrawerContentProps {
   isMenuView: boolean;
@@ -96,6 +98,8 @@ function SettingsSubContent({ subPath }: { subPath: string }) {
     'email-preferences': EmailPreferencesContent,
     'advanced': AdvancedContent,
     'deleted': DeletedContent,
+    'about': AboutContent,
+    'about/follow-us': FollowUsContent,
   };
 
   const ContentComponent = contentMap[basePath];
