@@ -320,7 +320,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         hashId="add-to-page"
       >
         <DrawerContent
-          height="70vh"
+          height="95vh"
           accessibleTitle="Add to another page"
         >
           <DrawerHeader>
@@ -330,7 +330,17 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
             </p>
           </DrawerHeader>
 
-          <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 flex flex-col">
+          {/* Tappable area to dismiss keyboard - clicking here blurs any focused input */}
+          <div
+            className="flex-1 min-h-0 overflow-hidden px-4 pb-4 flex flex-col"
+            onMouseDown={(e) => {
+              // If user taps on the container (not on an interactive element), blur active element to dismiss keyboard
+              const target = e.target as HTMLElement;
+              if (!target.closest('input') && !target.closest('button') && !target.closest('[role="option"]')) {
+                (document.activeElement as HTMLElement)?.blur?.();
+              }
+            }}
+          >
             {isAdding || isCreatingNewPage ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Icon name="Loader" size={32} className="text-primary mb-3" />
@@ -347,7 +357,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
                     placeholder="Search your pages..."
                     editableOnly={true}
                     preventRedirect={true}
-                    autoFocus={true}
+                    autoFocus={false}
                     hideCreateButton={true}
                     currentPageId={page?.id}
                     maxResults={50}

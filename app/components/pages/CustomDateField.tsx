@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, MouseEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { createPortal } from 'react-dom';
+import { AdaptiveModal } from '@/components/ui/adaptive-modal';
+import { Button } from '@/components/ui/button';
 import { useAccentColor, ACCENT_COLOR_VALUES } from '../../contexts/AccentColorContext';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import {
@@ -244,92 +245,70 @@ export default function CustomDateField({
         )}
       </div>
 
-      {/* Enhanced Date picker overlay */}
-        {showDatePicker && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4" onClick={() => setShowDatePicker(false)}>
-            <div
-              className="bg-white dark:bg-zinc-900 border border-border shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col relative z-[10000] rounded-2xl p-6"
-              onClick={(e: MouseEvent) => e.stopPropagation()}
+      {/* Date picker using AdaptiveModal (responsive: Dialog on desktop, Drawer on mobile) */}
+      <AdaptiveModal
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        title="Select custom date"
+        hashId="custom-date"
+        analyticsId="custom-date-picker"
+        mobileHeight="auto"
+        className="sm:max-w-md"
+      >
+        <div className="space-y-6">
+          {/* Calendar Interface */}
+          <CalendarGrid
+            selectedDate={localDate}
+            onDateSelect={handleCalendarDateSelect}
+            accentColorValue={accentColorValue}
+          />
+
+          {/* Quick Today Button */}
+          <Button
+            onClick={() => {
+              const today = new Date().toISOString().split('T')[0];
+              if (onCustomDateChange) {
+                onCustomDateChange(today);
+              }
+              setShowDatePicker(false);
+            }}
+            className="w-full"
+            style={{
+              backgroundColor: accentColorValue,
+              color: 'white'
+            }}
+          >
+            Select Today
+          </Button>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-end pt-4 border-t border-border">
+            {customDate && (
+              <Button
+                variant="outline"
+                onClick={handleClearDate}
+              >
+                Clear
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => setShowDatePicker(false)}
             >
-              {/* Header - Fixed */}
-              <div className="flex items-start justify-between gap-2 flex-shrink-0 mb-6">
-                <h3 className="text-lg font-semibold">Select custom date</h3>
-                <button
-                  onClick={() => setShowDatePicker(false)}
-                  className="p-2 rounded-md hover:bg-muted text-muted-foreground"
-                  aria-label="Close"
-                >
-                  <Icon name="X" size={16} />
-                </button>
-              </div>
-
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto space-y-6">
-                {/* Calendar Interface */}
-                <div>
-                  <CalendarGrid
-                    selectedDate={localDate}
-                    onDateSelect={handleCalendarDateSelect}
-                    accentColorValue={accentColorValue}
-                  />
-                </div>
-
-                {/* Quick Today Button */}
-                <div>
-                  <button
-                    onClick={() => {
-                      const today = new Date().toISOString().split('T')[0];
-                      if (onCustomDateChange) {
-                        onCustomDateChange(today);
-                      }
-                      setShowDatePicker(false);
-                    }}
-                    className="w-full px-4 py-2 text-sm font-medium rounded-md transition-colors"
-                    style={{
-                      backgroundColor: accentColorValue,
-                      color: 'white'
-                    }}
-                  >
-                    Select Today
-                  </button>
-                </div>
-
-              </div>
-
-              {/* Sticky Action Buttons */}
-              <div className="flex-shrink-0 border-t border-border pt-4 mt-4">
-                <div className="flex gap-2 justify-end">
-                  {customDate && (
-                    <button
-                      onClick={handleClearDate}
-                      className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowDatePicker(false)}
-                    className="px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
-                    style={{
-                      backgroundColor: accentColorValue,
-                      color: 'white'
-                    }}
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+              Cancel
+            </Button>
+            <Button
+              onClick={() => setShowDatePicker(false)}
+              style={{
+                backgroundColor: accentColorValue,
+                color: 'white'
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      </AdaptiveModal>
     </div>
   );
 }

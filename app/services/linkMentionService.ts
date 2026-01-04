@@ -126,6 +126,7 @@ export async function createLinkMentionNotification(data: LinkMentionData): Prom
           linkedPageTitle: data.targetPageTitle || 'your profile',
           linkerUsername: data.sourceUsername,
           linkerPageTitle: data.sourcePageTitle,
+          linkerPageId: data.sourcePageId,
           userId: data.targetUserId
         });
         console.log(`[LinkMention] Sent email notification to ${targetUserData.email}`);

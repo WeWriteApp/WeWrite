@@ -609,6 +609,7 @@ export const sendPageLinkedEmail = async (options: {
   linkedPageTitle: string;
   linkerUsername: string;
   linkerPageTitle: string;
+  linkerPageId: string;
   userId?: string;
   emailSettingsToken?: string;
 }): Promise<boolean> => {
@@ -637,7 +638,7 @@ export const sendPageLinkedEmail = async (options: {
         subject,
         status: 'failed',
         errorMessage: error.message,
-        metadata: { linkedPageTitle: options.linkedPageTitle, linkerUsername: options.linkerUsername },
+        metadata: { linkedPageTitle: options.linkedPageTitle, linkerUsername: options.linkerUsername, linkerPageId: options.linkerPageId },
         sentAt,
       });
       return false;
@@ -652,7 +653,7 @@ export const sendPageLinkedEmail = async (options: {
       subject,
       status: 'sent',
       resendId: data?.id,
-      metadata: { linkedPageTitle: options.linkedPageTitle, linkerUsername: options.linkerUsername },
+      metadata: { linkedPageTitle: options.linkedPageTitle, linkerUsername: options.linkerUsername, linkerPageId: options.linkerPageId },
       sentAt,
     });
     return true;
