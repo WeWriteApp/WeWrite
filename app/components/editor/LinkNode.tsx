@@ -462,8 +462,8 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     // Truncate the display text for better UI
     const truncatedDisplayText = truncateExternalLinkText(finalDisplayText, href, 50);
 
-    // TextView is now for viewing only - editing is handled by Editor component
-    // Always render in view mode - normal external link behavior with modal
+    // In view mode, clicking opens the external link modal directly
+    // In edit mode, PillLink shows a context menu with view/edit options
     const handleExternalLinkClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation(); // Prevent event bubbling to prevent edit mode activation
@@ -482,7 +482,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
             className="external-link"
             isEditing={isEditing}
             onEditLink={isEditing ? onEditLink : undefined}
-            onClick={handleExternalLinkClick}
+            onClick={isEditing ? undefined : handleExternalLinkClick}
           >
             {truncatedDisplayText}
             {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
