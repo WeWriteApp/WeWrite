@@ -1,12 +1,12 @@
-import { firestore, rtdb } from '../firebase/config'
+import { firestore } from '../firebase/config'
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
-import { ref, get } from 'firebase/database'
 import { getCollectionName } from "../utils/environmentConfig";
 
 interface SitemapOptions {
   limit?: number
   includePrivate?: boolean
   includeInactive?: boolean
+  daysBack?: number // For news sitemap - how many days back to include
 }
 
 interface SitemapEntry {
@@ -196,38 +196,7 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
   }
 }
 
-export async function generateGroupsSitemap(options: SitemapOptions = {}): Promise<string> {
-  const { limit: maxGroups = 5000 } = options
-  // Use www.getwewrite.app as the canonical domain
-  const baseUrl = 'https://www.getwewrite.app'
-  
-  try {
-    // Query public groups from RTDB (not Firestore)
-    const groupsRef = ref(rtdb, 'groups')
-    const groupsSnapshot = await get(groupsRef)
-    const entries: SitemapEntry[] = []
-
-    // Groups functionality removed
-
-    // Generate XML sitemap
-    const xmlEntries = entries.map(entry => `
-  <url>
-    <loc>${entry.url}</loc>
-    <lastmod>${entry.lastModified.toISOString()}</lastmod>
-    <changefreq>${entry.changeFrequency}</changefreq>
-    <priority>${entry.priority}</priority>
-  </url>`).join('')
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${xmlEntries}
-</urlset>`
-
-  } catch (error) {
-    console.error('Error generating groups sitemap:', error)
-    throw error
-  }
-}
+// Note: generateGroupsSitemap was removed - groups functionality has been deprecated
 
 export async function generateSitemapIndex(): Promise<string> {
   // Use www.getwewrite.app as the canonical domain
@@ -253,14 +222,14 @@ export async function generateSitemapIndex(): Promise<string> {
 }
 
 export async function generateNewsSitemap(options: SitemapOptions = {}): Promise<string> {
-  const { limit: maxPages = 1000 } = options
+  const { limit: maxPages = 1000, daysBack = 2 } = options
   // Use www.getwewrite.app as the canonical domain
   const baseUrl = 'https://www.getwewrite.app'
 
   try {
     const pagesRef = collection(firestore, getCollectionName('pages'))
     const recentDate = new Date()
-    recentDate.setDate(recentDate.getDate() - 2) // Last 2 days for news
+    recentDate.setDate(recentDate.getDate() - daysBack) // Use daysBack parameter
 
     const pagesQuery = query(
       pagesRef,

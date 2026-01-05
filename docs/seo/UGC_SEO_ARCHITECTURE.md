@@ -23,11 +23,13 @@ This document describes WeWrite's SEO strategy for user-generated content (UGC) 
   - Home > Group > Page Title (for group pages)
 
 #### 3. Sitemaps (`app/utils/sitemapGenerator.ts`)
-- **Main sitemap** (`/sitemap.xml`): Static pages and navigation
+- **Main sitemap** (`/sitemap.xml`): Static pages and navigation (app/sitemap.ts)
 - **Pages sitemap** (`/api/sitemap-pages`): All public user pages (up to 5,000)
 - **Users sitemap** (`/api/sitemap-users`): Active user profiles
-- **News sitemap** (`/api/sitemap-news`): Recent content (last 2 days)
+- **News sitemap** (`/api/sitemap-news`): Recent content (configurable via `?days=N`, default: last 2 days)
 - **Sitemap index** (`/api/sitemap-index`): Aggregates all sitemaps
+
+**Important**: The `/sitemap.xml` file only contains static pages. Dynamic content pages are served via `/api/sitemap-pages`. Pages disallowed in robots.txt (e.g., `/search`, `/activity`) are excluded from the sitemap.
 
 Priority is dynamic based on view count:
 - >1000 views: 0.8
@@ -206,6 +208,37 @@ Monitor performance for:
 - Content queries: page titles, topics
 - Author queries: username searches
 
+## AI Search Optimization
+
+WeWrite's SEO implementation is designed to work well with AI-powered search engines:
+
+### Server-Side Rendering
+- Content is rendered server-side via `ServerContentForSEO.tsx`
+- Full text content is available in initial HTML response
+- No JavaScript required to read page content
+
+### Structured Data
+- Rich Schema.org markup helps AI understand content structure
+- Article schema with author, dates, engagement metrics
+- BreadcrumbList for navigation context
+
+### Content Accessibility
+- Clean, semantic HTML structure
+- Proper heading hierarchy
+- Internal links preserved for context
+
 ---
 
-Last updated: December 22, 2024
+## URL Configuration
+
+All SEO-related URLs use the canonical domain `https://www.getwewrite.app`. Configuration is centralized in `app/utils/urlConfig.ts`:
+
+- `PRODUCTION_URL`: `'https://www.getwewrite.app'`
+- `getBaseUrl()`: Returns the appropriate base URL for the current environment
+- `getFullUrl(path)`: Combines base URL with a path
+
+Fallback URLs in SEO files should always use `https://www.getwewrite.app` (with www) for consistency.
+
+---
+
+Last updated: January 5, 2026

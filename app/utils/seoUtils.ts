@@ -197,7 +197,7 @@ export function generateBreadcrumbs({
   groupName,
   groupUrl
 }: BreadcrumbOptions): BreadcrumbItem[] {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app';
   const breadcrumbs = [
     {
       name: 'WeWrite',

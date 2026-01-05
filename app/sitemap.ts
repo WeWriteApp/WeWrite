@@ -68,17 +68,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.7},
 
-    // Search and discovery pages
-    {
-      url: `${baseUrl}/search`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/activity`,
-      lastModified: new Date(),
-      changeFrequency: 'hourly',
-      priority: 0.7},
+    // Note: /search and /activity are excluded from sitemap because
+    // they are disallowed in robots.txt (dynamic content, requires auth)
 
     // Authentication pages
     {
@@ -119,58 +110,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.3},
 
-    // Content creation pages
-    {
-      url: `${baseUrl}/new`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/group/new`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.5},
-
-    // Popular feature pages (from landing page)
-    {
-      url: `${baseUrl}/page/RFsPq1tbcOMtljwHyIMT`, // Every Page is a Fundraiser
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7},
-    {
-      url: `${baseUrl}/page/aJFMqTEKuNEHvOrYE9c2`, // No ads
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/page/ou1LPmpynpoirLrv99fq`, // Multiple view modes
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/page/o71h6Lg1wjGSC1pYaKXz`, // Recurring donations
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/page/4jw8FdMJHGofMc4G2QTw`, // Collaborative pages
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/page/N7Pg3iJ0OQhkpw16MTZW`, // Map view
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/page/0krXqAU748w43YnWJwE2`, // Calendar view
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6},
-    {
-      url: `${baseUrl}/zRNwhNgIEfLFo050nyAT`, // Feature roadmap page
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7}
+    // Note: Content creation pages (/new, /group/new) are excluded from sitemap
+    // as they require authentication and shouldn't be indexed.
+    // User-created content pages are indexed via /api/sitemap-pages which
+    // dynamically queries all public pages from the database.
   ]
 }

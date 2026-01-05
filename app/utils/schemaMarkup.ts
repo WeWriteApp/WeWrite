@@ -106,9 +106,9 @@ function generateArticleSchema(data) {
       name: publisherName || 'WeWrite',
       logo: {
         '@type': 'ImageObject',
-        url: publisherLogo || `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/logo.png`
+        url: publisherLogo || `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app'}/images/og-image.png`
       },
-      url: publisherUrl || (process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app')
+      url: publisherUrl || (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app')
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
@@ -182,7 +182,7 @@ function generateWebPageSchema(data) {
     isPartOf: {
       '@type': 'WebSite',
       name: 'WeWrite',
-      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app'
     }
   };
 }
@@ -213,7 +213,7 @@ function generateCollectionPageSchema(data) {
     isPartOf: {
       '@type': 'WebSite',
       name: 'WeWrite',
-      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app'
     }
   };
 }

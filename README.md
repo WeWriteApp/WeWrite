@@ -259,6 +259,13 @@ graph TD
 - [Search Architecture](docs/SEARCH_ARCHITECTURE.md) - Search system architecture
 - [Search Performance Optimizations](docs/search/SEARCH_PERFORMANCE_OPTIMIZATIONS.md) - Performance tuning
 
+### SEO & Content Discovery
+- [UGC SEO Architecture](docs/seo/UGC_SEO_ARCHITECTURE.md) - Complete SEO implementation for user-generated content
+  - Server-side rendering for search engines and AI crawlers
+  - Schema.org structured data (Article, Person, BreadcrumbList)
+  - Dynamic sitemaps for pages, users, and news content
+  - AI search optimization through semantic HTML and rich metadata
+
 ### UI & Design
 
 - [Design System Architecture](docs/ui/DESIGN_SYSTEM_ARCHITECTURE.md) - FloatingCard component system and glassmorphism guidelines
@@ -324,6 +331,7 @@ WeWrite/
 │   ├── performance/       # Performance guides
 │   ├── search/            # Search system docs
 │   ├── security/          # Security documentation
+│   ├── seo/               # SEO and content discovery docs
 │   └── ui/                # UI and design docs
 ├── functions/              # Firebase Cloud Functions
 ├── public/                 # Static assets
