@@ -5,9 +5,8 @@ import { useBanner } from '../../providers/BannerProvider';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Icon } from '@/components/ui/Icon';
-import GlobalRecentEdits from "./GlobalRecentEdits";
+import ActivityFeed from "./ActivityFeed";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
@@ -133,9 +132,9 @@ const Home: React.FC = () => {
             {/* Daily Notes Section */}
             <DailyNotesSection />
 
-            {/* Recent Edits Section - with horizontal padding */}
+            {/* Activity Feed Section - with horizontal padding */}
             <div className="px-4">
-              <GlobalRecentEdits />
+              <ActivityFeed mode="global" />
             </div>
 
 

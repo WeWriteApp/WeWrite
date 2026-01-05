@@ -63,7 +63,7 @@ This document provides a quick overview of major changes made to WeWrite in 2025
 - **Build Stability**: Resolved Firebase initialization issues during build process
 
 #### Documentation
-- **[SIMPLIFIED_ACTIVITY_SYSTEM.md](./SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Updated with recent edits improvements
+- **[ACTIVITY_SYSTEM_ARCHITECTURE.md](../features/ACTIVITY_SYSTEM_ARCHITECTURE.md)** - Activity system architecture
 - **[PAGE_DATA_AND_VERSIONS.md](./PAGE_DATA_AND_VERSIONS.md)** - Authoritative page data and version system documentation
 
 ### 🚨 Emergency Firebase Cost Optimization (Jan 25, 2025)

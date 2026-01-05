@@ -35,12 +35,12 @@ try {
 const adminDb = getFirestore(globalRecentEditsApp);
 
 /**
- * GLOBAL RECENT EDITS API
+ * GLOBAL ACTIVITY FEED API
  *
- * This API provides global recent edits for the homepage.
- * It queries pages collection directly by lastModified using the simplified activity system.
- * 
- * This is the CLEAR, RENAMED version of the old /api/recent-edits endpoint.
+ * This API provides global activity feed for the homepage.
+ * It queries pages collection directly by lastModified.
+ *
+ * @deprecated Use /api/activity-feed/global instead. This route is kept for backward compatibility.
  */
 
 export async function GET(request: NextRequest) {

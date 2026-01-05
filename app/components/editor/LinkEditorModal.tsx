@@ -16,6 +16,7 @@ import logger from '../../utils/logger';
 import { ANIMATION_DURATIONS, MODAL_CONFIG, UI_TEXT, TABS, LINK_TYPES } from './constants';
 import PillLink from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
+import { getPageById } from '../../firebase/database/pages';
 
 // Helper function to detect if a string is a URL
 const isUrl = (str: string): boolean => {
@@ -64,6 +65,8 @@ export default function LinkEditorModal({
   const [customText, setCustomText] = useState(false);
   const [selectedPage, setSelectedPage] = useState<any>(null);
   const [isMobile, setIsMobile] = useState(false);
+  // State to store fetched page author data when editing an existing link
+  const [fetchedPageAuthor, setFetchedPageAuthor] = useState<{ username: string; userId: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const externalUrlInputRef = useRef<HTMLInputElement>(null);
   const customTextInputRef = useRef<HTMLInputElement>(null);
@@ -192,8 +195,50 @@ export default function LinkEditorModal({
   useEffect(() => {
     if (!isOpen && hasInitialized) {
       setHasInitialized(false);
+      setFetchedPageAuthor(null); // Clear fetched author when closing
     }
   }, [isOpen, hasInitialized]);
+
+  // Fetch page author data when editing a page link that doesn't have author info
+  // This ensures "Show author" toggle works correctly for existing non-compound links
+  useEffect(() => {
+    const fetchPageAuthor = async () => {
+      // Only fetch if we're editing a page/compound link and don't have author data
+      if (!isOpen || !isEditing || !editingLink?.data?.pageId) return;
+
+      // Skip if it's an external link or user link
+      if (editingLink.type === 'external' || editingLink.type === 'user') return;
+
+      // Skip if we already have author data from the link or selected page
+      const existingAuthor = editingLink.data.authorUsername ||
+                            editingLink.data.username ||
+                            editingLink.data.ownerUsername ||
+                            selectedPage?.username;
+      if (existingAuthor) {
+        setFetchedPageAuthor({ username: existingAuthor, userId: editingLink.data.authorUserId || editingLink.data.userId || selectedPage?.userId || '' });
+        return;
+      }
+
+      try {
+        const pageId = editingLink.data.pageId;
+        console.log('🔍 [LINK EDITOR] Fetching page author for pageId:', pageId);
+        const result = await getPageById(pageId, null);
+
+        // getPageById returns PageWithLinks with pageData containing the actual page data
+        if (result && result.pageData && result.pageData.username) {
+          console.log('✅ [LINK EDITOR] Fetched page author:', result.pageData.username);
+          setFetchedPageAuthor({
+            username: result.pageData.username,
+            userId: result.pageData.userId || ''
+          });
+        }
+      } catch (error) {
+        console.error('❌ [LINK EDITOR] Error fetching page author:', error);
+      }
+    };
+
+    fetchPageAuthor();
+  }, [isOpen, isEditing, editingLink, selectedPage]);
 
   // Auto-focus the primary input when opening
   useEffect(() => {
@@ -360,7 +405,9 @@ export default function LinkEditorModal({
 
     const linkType = isUserLink ? 'user' : (showAuthor ? 'compound' : 'page');
 
-    // Resolve author data - check page first, then editingLink data, then current user
+    // Resolve author data - check page first, then editingLink data, then fetchedPageAuthor
+    // Priority order: page (selected) > editingLink data > fetchedPageAuthor
+    // NEVER fall back to current user - only use actual page author
     let resolvedAuthorUsername = page.username;
     let resolvedAuthorUserId = page.userId;
 
@@ -370,10 +417,10 @@ export default function LinkEditorModal({
       resolvedAuthorUserId = editingLink.data.authorUserId || editingLink.data.userId || editingLink.data.ownerId;
     }
 
-    // Final fallback to current user if showAuthor is enabled but no author found
-    if (showAuthor && !resolvedAuthorUsername && user) {
-      resolvedAuthorUsername = user.username;
-      resolvedAuthorUserId = user.uid;
+    // If still no author, use fetched page author (from getPageById)
+    if (showAuthor && !resolvedAuthorUsername && fetchedPageAuthor) {
+      resolvedAuthorUsername = fetchedPageAuthor.username;
+      resolvedAuthorUserId = fetchedPageAuthor.userId;
     }
 
     const linkData = {
@@ -414,7 +461,7 @@ export default function LinkEditorModal({
     });
 
     return linkData;
-  }, [showAuthor, customText, isEditing, editingLink, user]);
+  }, [showAuthor, customText, isEditing, editingLink, fetchedPageAuthor]);
 
   // CRITICAL FIX: Memoize page selection to prevent React state errors
   const handlePageSelect = useCallback((page: any) => {
@@ -549,23 +596,24 @@ export default function LinkEditorModal({
       }
 
       // CRITICAL FIX: Improve author data resolution for editing mode
+      // Priority order: selectedPage > editingLink data > fetchedPageAuthor
+      // NEVER fall back to current user - only use actual page author
       let authorUsername, authorUserId;
 
       if (selectedPage) {
-        // Use selected page data
+        // Use selected page data (user selected a new page)
         authorUsername = selectedPage.username;
         authorUserId = selectedPage.userId;
       } else if (isEditing && editingLink?.data) {
         // Use editing link data - check multiple possible fields
-        // Also fetch from page owner data if available
         authorUsername = editingLink.data.authorUsername || editingLink.data.username || editingLink.data.ownerUsername;
         authorUserId = editingLink.data.authorUserId || editingLink.data.userId || editingLink.data.ownerId;
       }
 
-      // Final fallback: if showAuthor is toggled but no author data found, use current user
-      if (showAuthor && !authorUsername) {
-        authorUsername = user?.username;
-        authorUserId = user?.uid;
+      // If still no author, use fetched page author (from getPageById)
+      if (showAuthor && !authorUsername && fetchedPageAuthor) {
+        authorUsername = fetchedPageAuthor.username;
+        authorUserId = fetchedPageAuthor.userId;
       }
 
       return {
@@ -578,7 +626,7 @@ export default function LinkEditorModal({
         authorUserId
       };
     }
-  }, [activeTab, customText, externalCustomText, externalUrl, displayText, selectedPage, showAuthor, isEditing, editingLink, user, hasInitialized]);
+  }, [activeTab, customText, externalCustomText, externalUrl, displayText, selectedPage, showAuthor, isEditing, editingLink, fetchedPageAuthor, hasInitialized]);
 
   const modalContent = (
     <>

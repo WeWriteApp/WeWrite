@@ -14,6 +14,7 @@ import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
+import { AnimatedStack, AnimatedStackItem } from '../components/ui/AnimatedStack';
 
 type NotificationFilter = 'unread' | 'all';
 
@@ -111,14 +112,15 @@ function NotificationsContent() {
           <NotificationListSkeleton count={5} />
         ) : filteredNotifications.length > 0 ? (
           <>
-            <div className="space-y-4">
+            <AnimatedStack gap={16}>
               {filteredNotifications.map(notification => (
-                <NotificationItem
-                  key={notification.id}
-                  notification={notification}
-                />
+                <AnimatedStackItem key={notification.id}>
+                  <NotificationItem
+                    notification={notification}
+                  />
+                </AnimatedStackItem>
               ))}
-            </div>
+            </AnimatedStack>
 
             {hasMore && filter === 'all' && (
               <div className="mt-6 flex justify-center">

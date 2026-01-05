@@ -1,54 +1,60 @@
-# WeWrite Recent Edits System
+# WeWrite Activity Feed System
 
 ## 🎯 **System Overview**
 
-WeWrite uses a **clear, simplified recent edits system** with consistent naming and architecture. This document is the **single source of truth** for understanding how recent edits work.
+WeWrite uses a **unified activity feed system** with a single `ActivityFeed` component that handles all activity display via filtered states. This document is the **single source of truth** for understanding how the activity feed works.
 
 ## 🏗️ **Architecture**
 
 ### **API Endpoints**
 
-| Endpoint | Purpose | Used By |
-|----------|---------|---------|
-| `/api/recent-edits/global` | Global recent edits for homepage | `GlobalRecentEdits` component |
-| `/api/recent-edits/user` | User-specific recent edits | `UserRecentEdits` component |
+| Endpoint | Purpose | Used By | Display Name |
+|----------|---------|---------|--------------|
+| `/api/activity-feed/global` | Global activity feed for homepage | `ActivityFeed` component (mode="global") | "Activity Feed" |
+| `/api/activity-feed/user` | User-specific activity feed | `ActivityFeed` component (mode="user") | "{username}'s Recent Activity" |
+
+> **Note**: Legacy endpoints `/api/recent-edits/global` and `/api/recent-edits/user` are kept for backward compatibility and re-export from the activity-feed routes.
 
 ### **Components**
 
-| Component | Purpose | Location |
-|-----------|---------|----------|
-| `GlobalRecentEdits` | Homepage recent edits from all users | `app/components/features/GlobalRecentEdits.tsx` |
-| `UserRecentEdits` | User profile recent edits | `app/components/features/UserRecentEdits.tsx` |
+| Component | Purpose | Location | Usage |
+|-----------|---------|----------|-------|
+| `ActivityFeed` | Unified activity feed | `app/components/features/ActivityFeed.tsx` | `<ActivityFeed mode="global" />` or `<ActivityFeed mode="user" filterByUserId={userId} />` |
+| `ActivitySection` | Wrapper for layouts | `app/components/activity/ActivitySection.tsx` | `<ActivitySection />` |
 
 ### **Data Flow**
 
 ```mermaid
 graph TD
-    A[Homepage] --> B[GlobalRecentEdits]
-    B --> C[/api/recent-edits/global]
+    A[Homepage] --> B[ActivityFeed mode=global]
+    B --> C[/api/activity-feed/global]
     C --> D[Pages Collection]
-    
-    E[User Profile] --> F[UserRecentEdits]
-    F --> G[/api/recent-edits/user]
+
+    E[User Profile] --> F[ActivityFeed mode=user]
+    F --> G[/api/activity-feed/user]
     G --> D[Pages Collection]
-    
+
     D --> H[Environment-Aware Collections]
     H --> I[DEV_pages in development]
     H --> J[pages in production]
 ```
 
+### **Activity Types**
+
+See `ACTIVITY_TYPES.md` for detailed documentation on current and planned activity types.
+
 ## 📋 **Implementation Details**
 
-### **Simplified Activity System**
+### **Simplified Activity Feed System**
 
-Both APIs use the **simplified activity system** approach:
+Both APIs use the **simplified activity feed** approach:
 
 1. **Query pages collection directly** by `lastModified`
 2. **Filter deleted pages in code** (avoids composite index issues)
 3. **No complex version system queries**
 4. **Environment-aware collection naming**
 
-### **Global Recent Edits API**
+### **Global Activity Feed API**
 
 ```typescript
 // /api/recent-edits/global
@@ -63,7 +69,7 @@ db.collection(getCollectionName('pages'))
   .limit(limit * 3)
 ```
 
-### **User Recent Edits API**
+### **User Recent Activity API**
 
 ```typescript
 // /api/recent-edits/user
@@ -103,16 +109,26 @@ const collectionName = getCollectionName('pages');
 
 ### **Working Components**
 
-- ✅ **Homepage Recent Edits**: `GlobalRecentEdits` → `/api/recent-edits/global`
-- ✅ **User Profile Recent Edits**: `UserRecentEdits` → `/api/recent-edits/user`
+- ✅ **Homepage Activity Feed**: `<ActivityFeed mode="global" />` → `/api/activity-feed/global` (displays as "Activity Feed")
+- ✅ **User Profile Recent Activity**: `<ActivityFeed mode="user" filterByUserId={userId} />` → `/api/activity-feed/user` (displays as "Recent Activity" tab)
 - ✅ **Environment Separation**: DEV_ collections in development
-- ✅ **Consistent Naming**: Clear, obvious component and API names
+- ✅ **Unified Component**: Single `ActivityFeed` component with mode prop
 
 ### **Removed Legacy Components**
 
-- ❌ `SimpleRecentEdits` → **RENAMED** to `GlobalRecentEdits`
-- ❌ `/api/recent-edits` (old) → **MOVED** to `/api/recent-edits/global`
-- ❌ `/api/recent-pages` → **MOVED** to `/api/recent-edits/user`
+- ❌ `SimpleRecentEdits` → **DELETED**
+- ❌ `GlobalRecentEdits` → **DELETED** (consolidated into `ActivityFeed`)
+- ❌ `UserRecentEdits` → **DELETED** (consolidated into `ActivityFeed`)
+- ❌ `/api/recent-edits` (old) → **DEPRECATED** (use `/api/activity-feed/global`)
+- ❌ `/api/recent-pages` → **DEPRECATED** (use `/api/activity-feed/user`)
+
+### **UI Naming Convention**
+
+| Location | Old Name | New Name |
+|----------|----------|----------|
+| Homepage section | "Recent Edits" | "Activity Feed" |
+| User profile tab | "Recent Edits" | "Recent Activity" |
+| User profile section title | "{username}'s Recent Edits" | "{username}'s Recent Activity" |
 
 ## 🚨 **Critical: Old Patterns to Delete**
 
@@ -120,12 +136,12 @@ const collectionName = getCollectionName('pages');
 
 ```typescript
 // ❌ DELETE THESE - Old API patterns
-fetch('/api/recent-edits?filterToUser=userId')  // Use /api/recent-edits/user
-fetch('/api/recent-pages?userId=userId')        // Use /api/recent-edits/user
+fetch('/api/recent-edits?filterToUser=userId')  // Use /api/activity-feed/user
+fetch('/api/recent-pages?userId=userId')        // Use /api/activity-feed/user
 
-// ✅ CORRECT - New clear API patterns
-fetch('/api/recent-edits/global?includeOwn=false')
-fetch('/api/recent-edits/user?userId=userId')
+// ✅ CORRECT - New API patterns
+fetch('/api/activity-feed/global?includeOwn=false')
+fetch('/api/activity-feed/user?userId=userId')
 ```
 
 ### **Deprecated Component Imports**
@@ -133,10 +149,15 @@ fetch('/api/recent-edits/user?userId=userId')
 ```typescript
 // ❌ DELETE THESE - Old component imports
 import SimpleRecentEdits from './SimpleRecentEdits';
-
-// ✅ CORRECT - New clear component imports
 import GlobalRecentEdits from './GlobalRecentEdits';
 import UserRecentEdits from './UserRecentEdits';
+
+// ✅ CORRECT - Unified component import
+import ActivityFeed from './ActivityFeed';
+
+// Usage:
+<ActivityFeed mode="global" />
+<ActivityFeed mode="user" filterByUserId={userId} filterByUsername={username} />
 ```
 
 ### **Deprecated Activities System**
@@ -171,18 +192,19 @@ grep -r "collection.*activities" app/ --include="*.ts" --include="*.tsx"
 
 ```bash
 # Verify new API calls
-grep -r "api/recent-edits/global" app/ --include="*.ts" --include="*.tsx"
-grep -r "api/recent-edits/user" app/ --include="*.ts" --include="*.tsx"
+grep -r "api/activity-feed/global" app/ --include="*.ts" --include="*.tsx"
+grep -r "api/activity-feed/user" app/ --include="*.ts" --include="*.tsx"
 
-# Verify new component imports
-grep -r "GlobalRecentEdits" app/ --include="*.ts" --include="*.tsx"
+# Verify unified component usage
+grep -r "ActivityFeed" app/ --include="*.ts" --include="*.tsx"
 ```
 
 ## 🎯 **Benefits of This System**
 
-### **1. Clear Naming**
-- `GlobalRecentEdits` vs `UserRecentEdits` - Purpose is obvious
-- `/api/recent-edits/global` vs `/api/recent-edits/user` - Clear distinction
+### **1. Unified Component**
+- Single `ActivityFeed` component handles all modes via props
+- `mode="global"` for homepage, `mode="user"` for profile pages
+- "Activity Feed" and "Recent Activity" - User-friendly, expandable naming
 
 ### **2. Consistent Architecture**
 - Both APIs use same simplified approach
@@ -198,6 +220,11 @@ grep -r "GlobalRecentEdits" app/ --include="*.ts" --include="*.tsx"
 - Bulletproof separation between dev/preview/production
 - Automatic collection prefixing
 - No risk of cross-environment data contamination
+
+### **5. Expandable Activity Types**
+- Current: Page edits with diffs
+- Future: New page creation, bio updates, follows, comments
+- See `ACTIVITY_TYPES.md` for full activity type documentation
 
 ## 🚀 **Future Improvements**
 
@@ -216,10 +243,11 @@ If we need to move to separate Firebase projects:
 
 ## 📚 **Related Documentation**
 
+- `ACTIVITY_TYPES.md` - Detailed documentation of activity types and their data structures
+- `ACTIVITY_SYSTEM_ARCHITECTURE.md` - Technical architecture of the activity system
 - `ENVIRONMENT_ARCHITECTURE.md` - Environment configuration details
 - `PAGE_DATA_AND_VERSIONS.md` - Authoritative page data and version system
-- `SIMPLIFIED_ACTIVITY_SYSTEM.md` - Background on simplified approach
 
 ---
 
-**This document is the single source of truth for WeWrite's recent edits system. All other documentation about recent edits should reference this document.**
+**This document is the single source of truth for WeWrite's activity feed system. All other documentation about the activity feed should reference this document.**

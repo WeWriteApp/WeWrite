@@ -356,6 +356,6 @@ The WeWrite application now uses a single, unified version system for all page e
 ## 📚 **Related Documentation**
 
 - **[CONTENT_DISPLAY_ARCHITECTURE.md](CONTENT_DISPLAY_ARCHITECTURE.md)** - UI components for displaying content
-- **[SIMPLIFIED_ACTIVITY_SYSTEM.md](SIMPLIFIED_ACTIVITY_SYSTEM.md)** - Activity system built on versions
+- **[ACTIVITY_SYSTEM_ARCHITECTURE.md](../features/ACTIVITY_SYSTEM_ARCHITECTURE.md)** - Activity system built on versions
 - **[RECENT_EDITS_SYSTEM.md](RECENT_EDITS_SYSTEM.md)** - Recent edits system using versions
 

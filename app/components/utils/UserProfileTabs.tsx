@@ -8,7 +8,7 @@ import { InlineError } from '../ui/InlineError';
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useAuth } from '../../providers/AuthProvider';
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
-import UserRecentEdits from "../features/UserRecentEdits";
+import ActivityFeed from "../features/ActivityFeed";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useUserPages from "../../hooks/useUserPages";
 import { Input } from "../ui/input";
@@ -143,7 +143,7 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
 };
 
 // Valid tabs for user profile
-const VALID_PROFILE_TABS = ["bio", "pages", "recent-edits", "timeline", "graph", "map", "external-links"];
+const VALID_PROFILE_TABS = ["bio", "pages", "recent-activity", "timeline", "graph", "map", "external-links"];
 
 interface UserProfileTabsProps {
   profile: {
@@ -293,7 +293,7 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
 
   // Determine which tabs to show in the requested order
   const visibleTabs = React.useMemo(() => {
-    const tabs = ["bio", "pages", "recent-edits"];
+    const tabs = ["bio", "pages", "recent-activity"];
 
     // Add timeline tab for all users
     tabs.push("timeline");
@@ -444,14 +444,14 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
                 <span>Pages</span>
               </TabsTrigger>
 
-              {/* Recent Edits tab */}
+              {/* Recent Activity tab */}
               <TabsTrigger
-                value="recent-edits"
-                data-value="recent-edits"
+                value="recent-activity"
+                data-value="recent-activity"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <Icon name="Clock" size={16} />
-                <span>Recent Edits</span>
+                <Icon name="Activity" size={16} />
+                <span>Recent Activity</span>
               </TabsTrigger>
 
               {/* Timeline tab */}
@@ -504,16 +504,17 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
         {/* Tab content container */}
         <div id="tabs-content-container" className="pt-4">
           <TabsContent
-            value="recent-edits"
+            value="recent-activity"
             className={`mt-0 transition-all duration-300 ${
-              activeTab === "recent-edits"
+              activeTab === "recent-activity"
                 ? "block"
                 : "hidden"
             }`}
           >
-            <UserRecentEdits
-              userId={profile?.uid}
-              username={profile?.username}
+            <ActivityFeed
+              mode="user"
+              filterByUserId={profile?.uid}
+              filterByUsername={profile?.username}
               limit={20}
             />
           </TabsContent>

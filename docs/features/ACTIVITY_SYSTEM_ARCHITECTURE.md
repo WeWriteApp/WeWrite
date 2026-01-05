@@ -1,8 +1,10 @@
-# WeWrite Simplified Activity System
+# WeWrite Activity System Architecture
 
 ## Overview
 
-WeWrite's activity system has been completely refactored from a complex multi-collection approach to a simple, reliable system based on the unified version system with embedded token allocation controls.
+WeWrite's activity system is based on a streamlined, reliable approach using the unified version system with embedded token allocation controls.
+
+> **UI Naming (January 2026)**: The system displays as "Activity Feed" on the homepage and "Recent Activity" on user profiles. See `ACTIVITY_TYPES.md` for the full activity type documentation.
 
 ## 🚀 Latest Updates (July 2025)
 

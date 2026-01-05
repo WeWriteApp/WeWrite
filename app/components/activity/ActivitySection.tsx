@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import GlobalRecentEdits from '../features/GlobalRecentEdits';
+import ActivityFeed from '../features/ActivityFeed';
 
 interface ActivitySectionProps {
   limit?: number;
@@ -9,8 +9,8 @@ interface ActivitySectionProps {
 }
 
 /**
- * ActivitySection component - simplified without unnecessary dynamic loading
- * This is the main ActivitySection implementation that should be used throughout the app.
+ * ActivitySection component - wrapper for ActivityFeed
+ * This component provides a minimal wrapper around ActivityFeed for use in layouts.
  */
 const ActivitySection = React.memo(function ActivitySection({
   limit = 4,
@@ -18,7 +18,7 @@ const ActivitySection = React.memo(function ActivitySection({
 }: ActivitySectionProps) {
   return (
     <div style={{ minHeight: '200px' }}>
-      <GlobalRecentEdits />
+      <ActivityFeed mode="global" />
     </div>
   );
 });

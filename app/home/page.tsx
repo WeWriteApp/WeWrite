@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
-import { ActivityFilterProvider } from '../contexts/ActivityFilterContext';
 import Home from '../components/features/Home';
 
 export default function HomePage() {
@@ -104,9 +103,5 @@ export default function HomePage() {
     return null;
   }
 
-  return (
-    <ActivityFilterProvider>
-      <Home />
-    </ActivityFilterProvider>
-  );
+  return <Home />;
 }
