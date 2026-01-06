@@ -119,6 +119,28 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
     generateIdeas();
   }, [generateIdeas]);
 
+  // Track usage when an idea is selected
+  const trackUsage = useCallback(async (title: string) => {
+    try {
+      // Fire and forget - don't block the user experience
+      fetch('/api/writing-ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      }).catch(() => {
+        // Silently fail - usage tracking is not critical
+      });
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  // Wrapper for onIdeaSelect that also tracks usage
+  const handleIdeaSelect = useCallback((title: string, placeholder: string) => {
+    trackUsage(title);
+    onIdeaSelect(title, placeholder);
+  }, [trackUsage, onIdeaSelect]);
+
   const handleExpand = () => setIsExpanded(true);
   const handleCollapse = () => setIsExpanded(false);
 
@@ -227,7 +249,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
                           <IdeaButton
                             idea={idea}
                             isSelected={selectedTitle === idea.title}
-                            onClick={() => onIdeaSelect(idea.title, idea.placeholder)}
+                            onClick={() => handleIdeaSelect(idea.title, idea.placeholder)}
                           />
                         )}
                       </div>

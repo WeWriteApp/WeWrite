@@ -406,12 +406,35 @@ export interface RelatedPageResult {
 /**
  * Find pages that link to a specific external URL
  * Returns both exact matches and partial matches (same domain, different path)
+ *
+ * OPTIMIZED: Uses the external links index for O(1) lookups instead of scanning all pages.
+ * Falls back to the legacy scan method if the index is empty (not yet backfilled).
  */
 export const findPagesLinkingToExternalUrl = async (
   externalUrl: string,
-  limitCount: number = 5
+  limitCount: number = 10
 ): Promise<RelatedPageResult[]> => {
   try {
+    // Try the indexed version first (fast O(1) lookup)
+    // Only runs on server-side since externalLinksIndexService uses firebase-admin
+    if (typeof window === 'undefined') {
+      try {
+        const { findPagesLinkingToExternalUrlIndexed } = await import('../../services/externalLinksIndexService');
+        const indexedResults = await findPagesLinkingToExternalUrlIndexed(externalUrl, limitCount);
+
+        // If we got results from the index, use them
+        if (indexedResults.length > 0) {
+          return indexedResults;
+        }
+        // If no results, fall through to legacy method
+        // (could be a new deployment before backfill, or genuinely no matches)
+      } catch (indexError) {
+        // Index query failed, fall back to legacy method
+        console.warn('[findPagesLinkingToExternalUrl] Index query failed, using legacy scan:', indexError);
+      }
+    }
+
+    // Legacy fallback: Scan pages (O(n) - expensive but reliable)
     const { db } = await import('../config');
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
 
@@ -420,12 +443,13 @@ export const findPagesLinkingToExternalUrl = async (
     // Query for pages that might contain the external URL
     // Note: This is a simplified approach. For better performance, you might want to
     // index external links separately or use full-text search
+    // Increased limit to 500 to search more pages for domain matches
     const pagesQuery = query(
       collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
-      limit(100) // Get more pages to search through for partial matches
+      limit(500) // Search through more pages to find domain matches
     );
 
     const snapshot = await getDocs(pagesQuery);
@@ -521,6 +545,9 @@ export const extractUserMentions = (content: string | EditorContent): string[] =
 /**
  * Find pages by a specific user that link to a specific external URL
  * Returns both exact matches and partial matches (same domain, different path)
+ *
+ * OPTIMIZED: Uses the external links index for O(1) lookups instead of scanning all user pages.
+ * Falls back to the legacy scan method if the index query fails.
  */
 export const findUserPagesLinkingToExternalUrl = async (
   externalUrl: string,
@@ -528,6 +555,25 @@ export const findUserPagesLinkingToExternalUrl = async (
   currentUserId: string | null = null
 ): Promise<RelatedPageResult[]> => {
   try {
+    // Try the indexed version first (fast O(1) lookup)
+    // Only runs on server-side since externalLinksIndexService uses firebase-admin
+    if (typeof window === 'undefined') {
+      try {
+        const { findUserPagesLinkingToExternalUrlIndexed } = await import('../../services/externalLinksIndexService');
+        const indexedResults = await findUserPagesLinkingToExternalUrlIndexed(externalUrl, userId);
+
+        // If we got results from the index, use them
+        if (indexedResults.length > 0) {
+          return indexedResults;
+        }
+        // If no results, fall through to legacy method
+      } catch (indexError) {
+        // Index query failed, fall back to legacy method
+        console.warn('[findUserPagesLinkingToExternalUrl] Index query failed, using legacy scan:', indexError);
+      }
+    }
+
+    // Legacy fallback: Scan user pages
     // Import required functions
     const { getUserPages } = await import('./users');
 

@@ -69,7 +69,7 @@ export function ExternalLinkPreviewModal({
       } else {
         // Import the general function for all pages
         const { findPagesLinkingToExternalUrl } = await import('../../firebase/database/links');
-        const pages = await findPagesLinkingToExternalUrl(url, 5);
+        const pages = await findPagesLinkingToExternalUrl(url, 10);
         setRelatedPages(pages);
       }
     } catch (error) {

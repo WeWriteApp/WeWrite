@@ -11,6 +11,8 @@ interface StoredWritingIdea extends WritingIdea {
   id: string;
   createdAt?: string;
   updatedAt?: string;
+  usageCount?: number;
+  lastUsedAt?: string;
 }
 
 interface WritingIdeasDocument {

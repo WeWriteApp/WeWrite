@@ -462,6 +462,9 @@ export const COLLECTIONS = {
   PAYOUT_APPROVAL_QUEUE: 'payoutApprovalQueue',
   PAYOUT_BLOCKED_ATTEMPTS: 'payoutBlockedAttempts',
 
+  // Link index collections (for efficient link queries)
+  EXTERNAL_LINKS: 'externalLinks',
+
   // User stats snapshots for historical sparklines (60-day rolling)
   USER_STATS_SNAPSHOTS: 'userStatsSnapshots',
 

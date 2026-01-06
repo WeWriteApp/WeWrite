@@ -1027,6 +1027,24 @@ export async function PUT(request: NextRequest) {
             }
           })(),
 
+          // Update external links index (for fast external link queries)
+          (async () => {
+            try {
+              const { updateExternalLinksIndex } = await import('../../services/externalLinksIndexService');
+              await updateExternalLinksIndex(
+                id,
+                pageTitle,
+                currentUserId,
+                pageUsername,
+                contentNodes,
+                pageData?.isPublic || false,
+                new Date().toISOString()
+              );
+            } catch (err) {
+              // External links index update failed - non-fatal
+            }
+          })(),
+
           // Process link mentions for notifications (only for NEW links)
           (async () => {
             try {
@@ -1278,6 +1296,14 @@ export async function DELETE(request: NextRequest) {
         await batch.commit();
       } catch (backlinkError) {
         // Don't fail the deletion if backlink cleanup fails
+      }
+
+      // Clean up external links index when page is deleted
+      try {
+        const { removeExternalLinksForPage } = await import('../../services/externalLinksIndexService');
+        await removeExternalLinksForPage(pageId);
+      } catch (externalLinksError) {
+        // Don't fail the deletion if external links cleanup fails
       }
 
       // Clean up USD allocations when page is deleted - cancel active allocations

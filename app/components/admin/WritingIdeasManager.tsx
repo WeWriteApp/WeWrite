@@ -24,7 +24,12 @@ interface StoredWritingIdea extends WritingIdea {
   createdAt?: string;
   updatedAt?: string;
   isNew?: boolean;
+  usageCount?: number;
+  lastUsedAt?: string;
 }
+
+type SortField = 'title' | 'usageCount' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
 
 export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
   const [ideas, setIdeas] = useState<StoredWritingIdea[]>([]);
@@ -37,6 +42,8 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
   const [newIdea, setNewIdea] = useState<WritingIdea>({ title: '', placeholder: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('usageCount');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const { toast } = useToast();
 
   // Load ideas from API
@@ -71,11 +78,48 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
     loadIdeas();
   }, []);
 
-  // Filter ideas based on search term
-  const filteredIdeas = ideas.filter(idea =>
-    idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    idea.placeholder.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter and sort ideas
+  const filteredIdeas = ideas
+    .filter(idea =>
+      idea.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      idea.placeholder.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'usageCount':
+          comparison = (a.usageCount || 0) - (b.usageCount || 0);
+          break;
+        case 'createdAt':
+          comparison = (a.createdAt || '').localeCompare(b.createdAt || '');
+          break;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+  // Calculate total usage for stats
+  const totalUsage = ideas.reduce((sum, idea) => sum + (idea.usageCount || 0), 0);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'title' ? 'asc' : 'desc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <Icon name="ArrowUpDown" size={12} className="text-muted-foreground/50" />;
+    }
+    return sortDirection === 'asc'
+      ? <Icon name="ArrowUp" size={12} className="text-primary" />
+      : <Icon name="ArrowDown" size={12} className="text-primary" />;
+  };
 
   const handleSave = async (id: string, field: 'title' | 'placeholder', value: string) => {
     const idea = ideas.find(i => i.id === id);
@@ -320,7 +364,14 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {isLoading ? 'Loading...' : `${filteredIdeas.length} of ${ideas.length} ideas`}
+          {isLoading ? 'Loading...' : (
+            <>
+              {filteredIdeas.length} of {ideas.length} ideas
+              {totalUsage > 0 && (
+                <span className="ml-2 text-primary">• {totalUsage} total uses</span>
+              )}
+            </>
+          )}
         </p>
       </div>
 
@@ -373,8 +424,25 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                     className="rounded border-border"
                   />
                 </th>
-                <th className="p-2 text-left font-medium text-muted-foreground w-1/3">Title</th>
+                <th className="p-2 text-left font-medium text-muted-foreground w-1/4">
+                  <button
+                    onClick={() => handleSort('title')}
+                    className="flex items-center gap-1 hover:text-foreground transition-colors"
+                  >
+                    Title
+                    <SortIcon field="title" />
+                  </button>
+                </th>
                 <th className="p-2 text-left font-medium text-muted-foreground">Placeholder</th>
+                <th className="p-2 text-center font-medium text-muted-foreground w-20">
+                  <button
+                    onClick={() => handleSort('usageCount')}
+                    className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
+                  >
+                    Uses
+                    <SortIcon field="usageCount" />
+                  </button>
+                </th>
                 <th className="w-10 p-2"></th>
               </tr>
             </thead>
@@ -388,6 +456,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                   onSelect={() => handleSelectIdea(idea.id)}
                   onSave={handleSave}
                   onDelete={() => setDeleteConfirm({ id: idea.id, title: idea.title })}
+                  usageCount={idea.usageCount || 0}
                 />
               ))}
             </tbody>
@@ -445,9 +514,10 @@ interface EditableRowProps {
   onSelect: () => void;
   onSave: (id: string, field: 'title' | 'placeholder', value: string) => void;
   onDelete: () => void;
+  usageCount: number;
 }
 
-function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete }: EditableRowProps) {
+function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, usageCount }: EditableRowProps) {
   const [editingField, setEditingField] = useState<'title' | 'placeholder' | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -579,6 +649,15 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete }:
             {idea.placeholder}
           </div>
         )}
+      </td>
+      <td className="p-2 text-center">
+        <span className={`inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 text-xs font-medium rounded-full ${
+          usageCount > 0
+            ? 'bg-primary/10 text-primary'
+            : 'bg-muted text-muted-foreground'
+        }`}>
+          {usageCount}
+        </span>
       </td>
       <td className="p-2">
         <Button

@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from 'next/navigation';
 import MapPicker, { MapMarker } from '../map/MapPicker';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '../ui/drawer';
-import Modal from '../ui/modal';
 import { Button } from '../ui/button';
 import { ConfirmationModal } from '../utils/UnifiedModal';
+import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 
 // Local hook for mobile detection
 function useIsMobile() {
@@ -25,6 +26,109 @@ interface Location {
   lat: number;
   lng: number;
   zoom?: number;
+}
+
+/**
+ * Large modal specifically for location picker - fills most of the viewport
+ */
+interface LocationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  children: React.ReactNode;
+}
+
+function LocationModal({ isOpen, onClose, title, children }: LocationModalProps) {
+  const [mounted, setMounted] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+      document.addEventListener("keydown", handleEscKey);
+
+      return () => {
+        document.body.style.overflow = originalStyle;
+        document.removeEventListener("keydown", handleEscKey);
+      };
+    }
+  }, [isOpen, onClose]);
+
+  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-modal flex items-center justify-center p-4 md:p-8"
+          onClick={handleBackdropClick}
+          aria-modal="true"
+          role="dialog"
+          aria-labelledby={title ? "location-modal-title" : undefined}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.div
+            className="absolute inset-0 bg-black/60"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+
+          <motion.div
+            ref={modalRef}
+            className="relative z-10 bg-[var(--card-bg)] border border-[var(--card-border)] backdrop-blur-md rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300, duration: 0.3 }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+              <h2 id="location-modal-title" className="text-lg font-semibold">
+                {title || 'Location'}
+              </h2>
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={onClose}
+                aria-label="Close modal"
+              >
+                <Icon name="X" size={16} />
+              </Button>
+            </div>
+
+            {/* Body - scrollable */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  return createPortal(modalContent, document.body);
 }
 
 interface LinkedPageLocation {
@@ -321,13 +425,13 @@ export default function LocationField({
   // Detail view content - shared between drawer and modal
   const detailViewContent = (
     <div className="flex flex-col h-full">
-      {/* Map */}
-      <div className={isMobile ? "h-64 w-full" : "h-80 w-full rounded-lg overflow-hidden"}>
+      {/* Map - much larger for better interaction */}
+      <div className={isMobile ? "h-[50vh] w-full" : "h-[60vh] min-h-[400px] w-full rounded-lg overflow-hidden"}>
         <MapPicker
           location={editedLocation}
           onChange={canEdit ? handleEditLocationChange : undefined}
           readOnly={!canEdit || isSaving}
-          showControls={false}
+          showControls={true}
           height="100%"
           disableZoom={false}
           allowPanning={true}
@@ -485,7 +589,7 @@ export default function LocationField({
       {/* Detail View - Drawer on mobile, Modal on desktop */}
       {isMobile ? (
         <Drawer open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-          <DrawerContent className="max-h-[85vh]">
+          <DrawerContent className="max-h-[90vh]">
             <DrawerHeader>
               <DrawerTitle>{pageTitle || 'Location'}</DrawerTitle>
             </DrawerHeader>
@@ -493,13 +597,13 @@ export default function LocationField({
           </DrawerContent>
         </Drawer>
       ) : (
-        <Modal
+        <LocationModal
           isOpen={isDetailViewOpen}
           onClose={handleClose}
           title={pageTitle || 'Location'}
         >
           {detailViewContent}
-        </Modal>
+        </LocationModal>
       )}
 
       {/* Delete Confirmation Modal */}
