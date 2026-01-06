@@ -133,6 +133,22 @@ function TelegramLogo({ size = 24, className = "" }: { size?: number; className?
   );
 }
 
+// Substack logo SVG component
+function SubstackLogo({ size = 24, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/>
+    </svg>
+  );
+}
+
 /**
  * Map of platform to icon render function.
  */
@@ -156,6 +172,8 @@ function renderPlatformIcon(platform: SocialPlatform, size: number): React.React
       return <TwitchLogo size={size} />;
     case 'telegram':
       return <TelegramLogo size={size} />;
+    case 'substack':
+      return <SubstackLogo size={size} />;
     default:
       return null;
   }
@@ -184,6 +202,8 @@ function getPlatformDisplayName(platform: SocialPlatform): string {
       return 'Twitch';
     case 'telegram':
       return 'Telegram';
+    case 'substack':
+      return 'Substack';
     default:
       return platform;
   }

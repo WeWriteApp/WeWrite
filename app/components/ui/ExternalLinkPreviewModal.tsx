@@ -27,6 +27,8 @@ interface RelatedPage {
   title: string;
   username?: string;
   lastModified: any;
+  matchType: 'exact' | 'partial';
+  matchedUrl?: string;
 }
 
 export function ExternalLinkPreviewModal({
@@ -195,46 +197,108 @@ export function ExternalLinkPreviewModal({
 
               {/* Related Pages Section */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon name="Users" size={16} className="text-muted-foreground" />
-                  <h4 className="text-sm font-medium">
-                    {filterByUserId && filterByUsername
-                      ? `${filterByUsername}'s pages linking here`
-                      : "Other WeWrite pages linking here"
-                    }
-                  </h4>
-                </div>
-                
                 {loadingRelated ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Icon name="Loader" />
-                    Loading...
-                  </div>
-                ) : relatedPages.length > 0 ? (
-                  <div className="space-y-2">
-                    {relatedPages.map((page) => (
-                      <div key={page.id} className="flex items-center gap-2">
-                        <a
-                          href={`/${page.id}`}
-                          className="text-xs text-primary hover:text-foreground underline"
-                        >
-                          {page.title}
-                        </a>
-                        {page.username && (
-                          <span className="text-xs text-muted-foreground">
-                            by {page.username}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                    Loading related pages...
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {filterByUserId && filterByUsername
-                      ? `${filterByUsername} hasn't linked to this URL in any other pages.`
-                      : "No other WeWrite pages link to this URL yet."
-                    }
-                  </p>
+                  <>
+                    {/* Exact Matches */}
+                    {(() => {
+                      const exactMatches = relatedPages.filter(p => p.matchType === 'exact');
+                      const partialMatches = relatedPages.filter(p => p.matchType === 'partial');
+
+                      return (
+                        <>
+                          {/* Exact matches section */}
+                          <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Icon name="Link" size={16} className="text-muted-foreground" />
+                              <h4 className="text-sm font-medium">
+                                {filterByUserId && filterByUsername
+                                  ? `${filterByUsername}'s pages linking to this exact URL`
+                                  : "Pages linking to this exact URL"
+                                }
+                              </h4>
+                            </div>
+                            {exactMatches.length > 0 ? (
+                              <div className="space-y-2 pl-6">
+                                {exactMatches.map((page) => (
+                                  <div key={page.id} className="flex items-center gap-2">
+                                    <a
+                                      href={`/${page.id}`}
+                                      className="text-xs text-primary hover:text-foreground underline"
+                                    >
+                                      {page.title}
+                                    </a>
+                                    {page.username && (
+                                      <span className="text-xs text-muted-foreground">
+                                        by {page.username}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground pl-6">
+                                {filterByUserId && filterByUsername
+                                  ? `${filterByUsername} hasn't linked to this exact URL.`
+                                  : "No pages link to this exact URL yet."
+                                }
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Partial matches section (same domain) */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Icon name="Globe" size={16} className="text-muted-foreground" />
+                              <h4 className="text-sm font-medium">
+                                {filterByUserId && filterByUsername
+                                  ? `${filterByUsername}'s pages linking to this domain`
+                                  : "Pages linking to this domain"
+                                }
+                              </h4>
+                            </div>
+                            {partialMatches.length > 0 ? (
+                              <div className="space-y-2 pl-6">
+                                {partialMatches.map((page) => (
+                                  <div key={page.id} className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-2">
+                                      <a
+                                        href={`/${page.id}`}
+                                        className="text-xs text-primary hover:text-foreground underline"
+                                      >
+                                        {page.title}
+                                      </a>
+                                      {page.username && (
+                                        <span className="text-xs text-muted-foreground">
+                                          by {page.username}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {page.matchedUrl && (
+                                      <span className="text-[10px] text-muted-foreground/70 truncate max-w-full">
+                                        → {page.matchedUrl}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground pl-6">
+                                {filterByUserId && filterByUsername
+                                  ? `${filterByUsername} hasn't linked to this domain.`
+                                  : "No pages link to this domain yet."
+                                }
+                              </p>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </>
                 )}
               </div>
             </div>

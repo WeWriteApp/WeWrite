@@ -3,7 +3,7 @@
  * Update URLs here to change them across the entire app.
  */
 
-export type SocialPlatform = 'instagram' | 'threads' | 'x' | 'tiktok' | 'github' | 'youtube' | 'twitch' | 'telegram' | 'gab';
+export type SocialPlatform = 'instagram' | 'threads' | 'x' | 'tiktok' | 'github' | 'youtube' | 'twitch' | 'telegram' | 'gab' | 'substack';
 
 export interface SocialLink {
   platform: SocialPlatform;
@@ -70,6 +70,12 @@ export const socialLinks: SocialLink[] = [
     url: 'https://gab.com/wewrite',
     handle: '@wewrite',
     label: 'Follow on Gab'
+  },
+  {
+    platform: 'substack',
+    url: 'https://substack.com/@wewriteapp',
+    handle: '@wewriteapp',
+    label: 'Subscribe on Substack'
   }
 ];
 

@@ -45,6 +45,12 @@ function PlatformIcon({ platform, size = 16 }: { platform: SocialPlatform; size?
           <path d="M21.208 3.073l-6.632 5.103-3.381-1.902-7.327 3.98v9.477l7.327 4.11 7.194-3.91-.198-4.513-3.644 1.605-3.347-1.872v-3.593l6.603-3.53L24 11.61V4.968zm-6.726 13.851l-3.294 1.844v-3.593l3.347 1.872-.053-.123zM7.195 11.866l3.328-1.817v3.594L7.195 15.46z" />
         </svg>
       );
+    case 'substack':
+      return (
+        <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">
+          <path d="M22.539 8.242H1.46V5.406h21.08v2.836zM1.46 10.812V24L12 18.11 22.54 24V10.812H1.46zM22.54 0H1.46v2.836h21.08V0z"/>
+        </svg>
+      );
     default:
       return <Icon name="Link" size={size} />;
   }

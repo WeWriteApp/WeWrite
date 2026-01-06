@@ -1494,6 +1494,10 @@ export default function ContentPageView({
       // Overwriting with contentToSave would cause a race condition that loses those changes.
       // The editor already has the current state - we only need to update the page object
       // to reflect what was actually saved to the server.
+
+      // Check if this is the first save of a new page BEFORE updating state
+      const isFirstSaveOfNewPageLocal = isNewPageMode && page?.isNewPage;
+
       if (page) {
         const updatedPage = {
           ...page,
@@ -1501,7 +1505,10 @@ export default function ContentPageView({
           title: titleToSave,
           location: locationToSave,
           customDate: customDateToSave,
-          lastModified: new Date().toISOString()
+          lastModified: new Date().toISOString(),
+          // CRITICAL: For new pages, clear isNewPage flag in the SAME setPage call
+          // to avoid double state updates which can cause stale closure issues
+          ...(isFirstSaveOfNewPageLocal ? { isNewPage: false } : {})
         };
         setPage(updatedPage);
         // Editor state is NOT updated here - it retains the user's current work
@@ -1543,15 +1550,9 @@ export default function ContentPageView({
       }, 2000); // Prevent reloading for 2 seconds after save
 
       // NEW PAGE MODE: After first save, update URL to remove draft param
-      if (isNewPageMode && page?.isNewPage) {
-        // Update local page state to reflect saved status (no longer new)
-        // Also update the content in the page object to ensure it persists
-        setPage({
-          ...page,
-          isNewPage: false,
-          content: editorState // Preserve the current editor content
-        });
+      if (isFirstSaveOfNewPageLocal) {
         // Update URL using history.replaceState to avoid triggering React re-renders
+        // NOTE: Page state (isNewPage: false) is now set in the single setPage call above
         const newUrl = `/${pageId}`;
         window.history.replaceState(null, '', newUrl);
       }
@@ -1968,9 +1969,17 @@ export default function ContentPageView({
       return;
     }
 
+    // CRITICAL: Skip this sync right after save to prevent editor state reset
+    // The justSaved flag is set after save and cleared after 2 seconds
+    // This prevents the save completion from triggering unnecessary state updates
+    // that could close dialogs or lose cursor position
+    if (justSaved || justSavedRef.current) {
+      return;
+    }
+
     // Pass raw content directly - no preprocessing
     setEditorState(page.content);
-  }, [page?.content, hasChanges]); // Update whenever page content changes, but respect unsaved changes
+  }, [page?.content, hasChanges, justSaved]); // Update whenever page content changes, but respect unsaved changes and recent saves
 
   // NEW PAGE MODE: Show skeleton with slide-up animation while setting up
   if (isNewPageMode && !newPageCreated) {

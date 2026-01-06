@@ -19,7 +19,7 @@ interface PlatformStat {
  * Displays accurate, truthful stats from the production database:
  * - Total Users (from users collection)
  * - Total Payouts (from writerUsdEarnings collection)
- * - Pages This Month (from pages collection)
+ * - Pages in Last 30 Days (from pages collection)
  */
 export default function PlatformStatsCarousel() {
   const [stats, setStats] = useState<PlatformStat[]>([]);
@@ -58,10 +58,10 @@ export default function PlatformStatsCarousel() {
             value: `$${(apiStats.totalPayouts || 0).toLocaleString()}`,
           },
           {
-            id: 'pages-month',
-            label: 'Pages This Month',
+            id: 'pages-30days',
+            label: 'Pages (Last 30 Days)',
             icon: 'FileText',
-            value: (apiStats.pagesThisMonth || 0).toLocaleString(),
+            value: (apiStats.pagesLast30Days || 0).toLocaleString(),
           },
         ];
 

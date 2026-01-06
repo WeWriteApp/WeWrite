@@ -380,20 +380,42 @@ export const extractPageReferences = (content: string | EditorContent): string[]
 };
 
 /**
- * Find pages that link to a specific external URL
+ * Extract domain from a URL
  */
-export const findPagesLinkingToExternalUrl = async (
-  externalUrl: string,
-  limitCount: number = 5
-): Promise<Array<{
+export const extractDomainFromUrl = (url: string): string | null => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Related page result with match type information
+ */
+export interface RelatedPageResult {
   id: string;
   title: string;
   username?: string;
   lastModified: any;
-}>> => {
+  matchType: 'exact' | 'partial';
+  matchedUrl?: string; // The URL that was matched (for partial matches)
+}
+
+/**
+ * Find pages that link to a specific external URL
+ * Returns both exact matches and partial matches (same domain, different path)
+ */
+export const findPagesLinkingToExternalUrl = async (
+  externalUrl: string,
+  limitCount: number = 5
+): Promise<RelatedPageResult[]> => {
   try {
     const { db } = await import('../config');
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+
+    const targetDomain = extractDomainFromUrl(externalUrl);
 
     // Query for pages that might contain the external URL
     // Note: This is a simplified approach. For better performance, you might want to
@@ -403,16 +425,12 @@ export const findPagesLinkingToExternalUrl = async (
       where('isPublic', '==', true),
       where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
-      limit(50) // Get more pages to search through
+      limit(100) // Get more pages to search through for partial matches
     );
 
     const snapshot = await getDocs(pagesQuery);
-    const matchingPages: Array<{
-      id: string;
-      title: string;
-      username?: string;
-      lastModified: any;
-    }> = [];
+    const exactMatches: RelatedPageResult[] = [];
+    const partialMatches: RelatedPageResult[] = [];
 
     // Search through page content for the external URL
     for (const doc of snapshot.docs) {
@@ -425,22 +443,36 @@ export const findPagesLinkingToExternalUrl = async (
         // Extract links from the page content
         const links = extractLinksFromNodes(data.content);
 
-        // Check if any link matches our external URL
-        const hasMatchingLink = links.some(link =>
+        // Check for exact match first
+        const hasExactMatch = links.some(link =>
           link.type === 'external' && link.url === externalUrl
         );
 
-        if (hasMatchingLink) {
-          matchingPages.push({
+        if (hasExactMatch) {
+          exactMatches.push({
             id: doc.id,
             title: data.title || 'Untitled',
             username: data.username,
-            lastModified: data.lastModified
+            lastModified: data.lastModified,
+            matchType: 'exact'
+          });
+        } else if (targetDomain) {
+          // Check for partial match (same domain, different URL)
+          const partialMatchLink = links.find(link => {
+            if (link.type !== 'external' || !link.url) return false;
+            const linkDomain = extractDomainFromUrl(link.url);
+            return linkDomain === targetDomain && link.url !== externalUrl;
           });
 
-          // Stop when we have enough results
-          if (matchingPages.length >= limitCount) {
-            break;
+          if (partialMatchLink) {
+            partialMatches.push({
+              id: doc.id,
+              title: data.title || 'Untitled',
+              username: data.username,
+              lastModified: data.lastModified,
+              matchType: 'partial',
+              matchedUrl: partialMatchLink.url
+            });
           }
         }
       } catch (error) {
@@ -448,7 +480,9 @@ export const findPagesLinkingToExternalUrl = async (
       }
     }
 
-    return matchingPages;
+    // Return exact matches first, then partial matches, up to the limit
+    const result = [...exactMatches, ...partialMatches].slice(0, limitCount);
+    return result;
   } catch (error) {
     return [];
   }
@@ -486,17 +520,13 @@ export const extractUserMentions = (content: string | EditorContent): string[] =
 
 /**
  * Find pages by a specific user that link to a specific external URL
+ * Returns both exact matches and partial matches (same domain, different path)
  */
 export const findUserPagesLinkingToExternalUrl = async (
   externalUrl: string,
   userId: string,
   currentUserId: string | null = null
-): Promise<Array<{
-  id: string;
-  title: string;
-  username?: string;
-  lastModified: any;
-}>> => {
+): Promise<RelatedPageResult[]> => {
   try {
     // Import required functions
     const { getUserPages } = await import('./users');
@@ -507,12 +537,9 @@ export const findUserPagesLinkingToExternalUrl = async (
     // Get all user's pages
     const { pages } = await getUserPages(userId, includePrivate, currentUserId);
 
-    const matchingPages: Array<{
-      id: string;
-      title: string;
-      username?: string;
-      lastModified: any;
-    }> = [];
+    const targetDomain = extractDomainFromUrl(externalUrl);
+    const exactMatches: RelatedPageResult[] = [];
+    const partialMatches: RelatedPageResult[] = [];
 
     // Process each page to find ones that contain the external URL
     for (const page of pages) {
@@ -532,25 +559,45 @@ export const findUserPagesLinkingToExternalUrl = async (
         // Extract links from the page content
         const links = extractLinksFromNodes(content);
 
-        // Check if any link matches our external URL
-        const hasMatchingLink = links.some(link =>
+        // Check for exact match first
+        const hasExactMatch = links.some(link =>
           link.type === 'external' && link.url === externalUrl
         );
 
-        if (hasMatchingLink) {
-          matchingPages.push({
+        if (hasExactMatch) {
+          exactMatches.push({
             id: page.id,
             title: page.title || 'Untitled',
             username: page.username,
-            lastModified: page.lastModified
+            lastModified: page.lastModified,
+            matchType: 'exact'
           });
+        } else if (targetDomain) {
+          // Check for partial match (same domain, different URL)
+          const partialMatchLink = links.find(link => {
+            if (link.type !== 'external' || !link.url) return false;
+            const linkDomain = extractDomainFromUrl(link.url);
+            return linkDomain === targetDomain && link.url !== externalUrl;
+          });
+
+          if (partialMatchLink) {
+            partialMatches.push({
+              id: page.id,
+              title: page.title || 'Untitled',
+              username: page.username,
+              lastModified: page.lastModified,
+              matchType: 'partial',
+              matchedUrl: partialMatchLink.url
+            });
+          }
         }
       } catch (error) {
         continue;
       }
     }
 
-    return matchingPages;
+    // Return exact matches first, then partial matches
+    return [...exactMatches, ...partialMatches];
   } catch (error) {
     return [];
   }

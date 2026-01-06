@@ -11,7 +11,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 interface PlatformStats {
   totalUsers: number;
   totalPayouts: number;
-  pagesThisMonth: number;
+  pagesLast30Days: number;
   lastUpdated: string;
 }
 
@@ -43,30 +43,33 @@ export async function GET(request: NextRequest) {
     const PRODUCTION_WRITER_USD_EARNINGS_COLLECTION = 'writerUsdEarnings';
     const PRODUCTION_PAGES_COLLECTION = 'pages';
 
-    // Calculate first day of current month for pages query
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // Calculate 30 days ago for rolling page count
+    // Use ISO string format since pages store createdAt as ISO strings
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
     // Parallel execution for faster response
-    const [usersSnapshot, earningsSnapshot, pagesThisMonthSnapshot] = await Promise.all([
+    const [usersSnapshot, earningsSnapshot, pagesLast30DaysSnapshot] = await Promise.all([
       // Get total user count (fast count operation)
       db.collection(PRODUCTION_USERS_COLLECTION).count().get(),
       // Get writer earnings (Phase 2 - single source of truth)
       db.collection(PRODUCTION_WRITER_USD_EARNINGS_COLLECTION)
         .select('totalUsdCentsReceived', 'totalCentsReceived', 'status')
         .get(),
-      // Get pages created this month (count operation)
+      // Get pages created in the last 30 days (count operation)
+      // Using ISO string comparison since createdAt is stored as ISO strings
       db.collection(PRODUCTION_PAGES_COLLECTION)
-        .where('createdAt', '>=', startOfMonth)
+        .where('createdAt', '>=', thirtyDaysAgoISO)
         .count()
         .get()
     ]);
 
     const totalUsers = usersSnapshot.data().count;
-    const pagesThisMonth = pagesThisMonthSnapshot.data().count;
+    const pagesLast30Days = pagesLast30DaysSnapshot.data().count;
     console.log(`Total users in production: ${totalUsers}`);
-    console.log(`Pages created this month: ${pagesThisMonth}`);
+    console.log(`Pages created in last 30 days: ${pagesLast30Days} (since ${thirtyDaysAgoISO})`);
 
     // Calculate total earnings from earnings records (Phase 2 - single source of truth)
     let totalFromEarnings = 0;
@@ -91,7 +94,7 @@ export async function GET(request: NextRequest) {
     const stats: PlatformStats = {
       totalUsers,
       totalPayouts,
-      pagesThisMonth,
+      pagesLast30Days,
       lastUpdated: new Date().toISOString()
     };
 

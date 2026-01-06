@@ -468,6 +468,14 @@ const Editor: React.FC<EditorProps> = ({
         return;
       }
 
+      // Check if this is a structural change that requires selection reset
+      // Simple heuristic: if the number of blocks changed, we need to reset selection
+      // to avoid stale path errors. Otherwise, preserve selection for better UX.
+      const prevContent = prevContentRef.current ? JSON.parse(prevContentRef.current) : [];
+      const structureChanged =
+        !Array.isArray(prevContent) ||
+        prevContent.length !== normalizedInitialContent.length;
+
       prevContentRef.current = currentContentStr;
 
       // Update state
@@ -475,9 +483,14 @@ const Editor: React.FC<EditorProps> = ({
 
       // CRITICAL: Slate.js only reads initialValue on mount.
       // To update content externally, we must directly modify editor.children
-      // and reset selection to prevent stale path errors.
       editor.children = normalizedInitialContent;
-      editor.selection = null;
+
+      // Only reset selection if structure changed to prevent stale path errors
+      // This preserves cursor position and open dialogs when content updates
+      // are minor (e.g., normalization or sync after save)
+      if (structureChanged) {
+        editor.selection = null;
+      }
 
       // Trigger a re-render by changing the editor
       editor.onChange();

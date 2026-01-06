@@ -12,7 +12,7 @@ import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
 
 // Client-side cache for platform statistics (5 minute cache)
 interface PlatformStatsCache {
-  data: { totalUsers: number; totalPayouts: number; pagesThisMonth: number };
+  data: { totalUsers: number; totalPayouts: number; pagesLast30Days: number };
   timestamp: number;
 }
 
@@ -34,14 +34,14 @@ const preloadPlatformStats = async () => {
 
       const userCount = Number(statsData.totalUsers);
       const payoutTotal = Number(statsData.totalPayouts);
-      const pagesCount = Number(statsData.pagesThisMonth);
+      const pagesCount = Number(statsData.pagesLast30Days);
 
       if (!isNaN(userCount) && !isNaN(payoutTotal) && !isNaN(pagesCount) && userCount >= 0 && payoutTotal >= 0 && pagesCount >= 0) {
         platformStatsCache = {
           data: {
             totalUsers: userCount,
             totalPayouts: payoutTotal,
-            pagesThisMonth: pagesCount
+            pagesLast30Days: pagesCount
           },
           timestamp: now
         };
@@ -80,7 +80,7 @@ export default function HeroCard({
   const analytics = useWeWriteAnalytics();
   const isAuthenticated = !!user;
   const [writerCount, setWriterCount] = useState<number | null>(null);
-  const [pagesThisMonth, setPagesThisMonth] = useState<number | null>(null);
+  const [pagesLast30Days, setPagesLast30Days] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,7 +100,7 @@ export default function HeroCard({
         if (platformStatsCache && (now - platformStatsCache.timestamp) < CACHE_DURATION) {
           console.log('📦 HeroCard: Using cached platform stats');
           setWriterCount(platformStatsCache.data.totalUsers);
-          setPagesThisMonth(platformStatsCache.data.pagesThisMonth);
+          setPagesLast30Days(platformStatsCache.data.pagesLast30Days);
           setIsLoading(false);
           return;
         }
@@ -130,14 +130,14 @@ export default function HeroCard({
             return;
           }
 
-          // Validate and set pages this month
-          const pagesCount = Number(statsData.pagesThisMonth);
+          // Validate and set pages in last 30 days
+          const pagesCount = Number(statsData.pagesLast30Days);
           if (!isNaN(pagesCount) && pagesCount >= 0) {
-            console.log('✅ HeroCard: Setting pages this month to:', pagesCount);
-            setPagesThisMonth(pagesCount);
+            console.log('✅ HeroCard: Setting pages last 30 days to:', pagesCount);
+            setPagesLast30Days(pagesCount);
           } else {
-            console.error('❌ HeroCard: Invalid pages count:', statsData.pagesThisMonth);
-            setError(`Invalid pages count received: ${statsData.pagesThisMonth}`);
+            console.error('❌ HeroCard: Invalid pages count:', statsData.pagesLast30Days);
+            setError(`Invalid pages count received: ${statsData.pagesLast30Days}`);
             return;
           }
 
@@ -146,7 +146,7 @@ export default function HeroCard({
             data: {
               totalUsers: userCount,
               totalPayouts: Number(statsData.totalPayouts),
-              pagesThisMonth: pagesCount
+              pagesLast30Days: pagesCount
             },
             timestamp: now
           };
@@ -200,15 +200,15 @@ export default function HeroCard({
                   </span>
                   {' '}writers who've written{' '}
                   <span className="font-semibold text-foreground">
-                    {isLoading || pagesThisMonth === null ? (
+                    {isLoading || pagesLast30Days === null ? (
                       <span className="inline-flex items-center gap-1">
                         <Icon name="Loader" />
                       </span>
                     ) : (
-                      pagesThisMonth.toLocaleString()
+                      pagesLast30Days.toLocaleString()
                     )}
                   </span>
-                  {' '}pages this month.
+                  {' '}pages in the last 30 days.
                 </p>
               )}
             </div>
