@@ -713,18 +713,102 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
         {/* Comparison Section - How WeWrite is Different */}
         <ComparisonSection />
 
-        {/* FAQ Section */}
+        {/* FAQ Section with Schema.org structured data */}
         <section className="py-12 md:py-16">
           <div className="container mx-auto px-6 max-w-4xl">
             <div className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">FAQ</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Frequently asked questions
+                Everything you need to know about WeWrite
               </p>
             </div>
 
             <div className="max-w-2xl mx-auto">
               <Accordion type="single" collapsible className="space-y-4">
+                {/* FAQ Item: How WeWrite Works */}
+                <AccordionItem value="how-it-works" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="HelpCircle" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">How does WeWrite work?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      WeWrite is a writing platform where every page is a fundraiser. You write and publish content instantly—no approval needed.
+                      Readers can support your work directly with tips and contributions. You keep the majority of what you earn,
+                      and your content is always freely accessible to everyone.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: Getting Paid */}
+                <AccordionItem value="getting-paid" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="DollarSign" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">How do I get paid on WeWrite?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      Readers can support your writing directly through our platform. When readers contribute to your pages,
+                      those funds go to your account. You can request payouts once you reach the minimum threshold.
+                      We handle all the payment processing so you can focus on writing.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: Is WeWrite Free */}
+                <AccordionItem value="is-free" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Sparkles" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">Is WeWrite free to use?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      Yes! WeWrite is completely free to use. You can create an account, write unlimited content, and publish instantly
+                      at no cost. We only take a small percentage when readers support your work—so we only succeed when you succeed.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: What Can I Write About */}
+                <AccordionItem value="what-to-write" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="PenLine" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">What can I write about on WeWrite?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      Almost anything! WeWrite supports fiction, essays, journalism, tutorials, reviews, opinion pieces, poetry,
+                      and more. We're a free speech platform, so you can write about topics that matter to you without algorithmic
+                      suppression. The only limits are legal requirements—no illegal content.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: How Different from Medium */}
+                <AccordionItem value="vs-medium" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="GitCompare" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">How is WeWrite different from Medium?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      Unlike Medium, WeWrite has no paywall limiting your readers. Your content is freely accessible to everyone,
+                      and readers support you directly instead of through a subscription pool. You're not dependent on an algorithm
+                      for visibility, and you keep a larger share of your earnings.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
                 {/* FAQ Item: App Installation */}
                 <AccordionItem value="app-install" className="wewrite-card border-none">
                   <AccordionTrigger className="px-6 py-4 hover:no-underline">
@@ -738,6 +822,40 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                       WeWrite isn't on the App Store yet, but you can still use it like a native app! On your phone or tablet,
                       open WeWrite in your browser and tap <strong>"Add to Home Screen"</strong> (iOS) or <strong>"Install App"</strong> (Android).
                       This creates an icon on your home screen that opens WeWrite in full-screen mode—just like a regular app.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: Import Content */}
+                <AccordionItem value="import-content" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Upload" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">Can I import my existing content?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      Yes! You can copy and paste your existing content into our editor. The rich text editor supports formatting,
+                      links, and media. If you're migrating from another platform, you can bring your best work with you and
+                      start building your audience on WeWrite.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* FAQ Item: Collaboration */}
+                <AccordionItem value="collaboration" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Users" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">Can I collaborate with other writers?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      Yes! WeWrite supports collaborative writing with real-time editing. You can link to other writers' content,
+                      creating an interconnected web of ideas. Our wiki-style approach means your content can reference and build
+                      upon others' work, fostering a true community of writers.
                     </p>
                   </AccordionContent>
                 </AccordionItem>
@@ -760,9 +878,119 @@ const LandingPage = ({ showReferralSection = false, isPreviewMode = false, heroT
                     </p>
                   </AccordionContent>
                 </AccordionItem>
+
+                {/* FAQ Item: Platform Fee */}
+                <AccordionItem value="platform-fee" className="wewrite-card border-none">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                    <div className="flex items-center gap-3">
+                      <Icon name="Percent" size={20} className="text-primary flex-shrink-0" />
+                      <span className="font-medium text-left">What percentage does WeWrite take?</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-4">
+                    <p className="text-muted-foreground leading-relaxed">
+                      WeWrite takes a small platform fee from reader contributions to cover operating costs and payment processing.
+                      The majority of every contribution goes directly to you as the writer. We believe in transparent, fair pricing
+                      that aligns our success with yours.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
               </Accordion>
             </div>
           </div>
+
+          {/* FAQ Schema.org structured data for rich snippets */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: 'How does WeWrite work?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'WeWrite is a writing platform where every page is a fundraiser. You write and publish content instantly—no approval needed. Readers can support your work directly with tips and contributions. You keep the majority of what you earn, and your content is always freely accessible to everyone.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How do I get paid on WeWrite?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Readers can support your writing directly through our platform. When readers contribute to your pages, those funds go to your account. You can request payouts once you reach the minimum threshold. We handle all the payment processing so you can focus on writing.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Is WeWrite free to use?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes! WeWrite is completely free to use. You can create an account, write unlimited content, and publish instantly at no cost. We only take a small percentage when readers support your work—so we only succeed when you succeed.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What can I write about on WeWrite?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Almost anything! WeWrite supports fiction, essays, journalism, tutorials, reviews, opinion pieces, poetry, and more. We\'re a free speech platform, so you can write about topics that matter to you without algorithmic suppression.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How is WeWrite different from Medium?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Unlike Medium, WeWrite has no paywall limiting your readers. Your content is freely accessible to everyone, and readers support you directly instead of through a subscription pool. You\'re not dependent on an algorithm for visibility, and you keep a larger share of your earnings.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How do I install WeWrite as an app?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'WeWrite isn\'t on the App Store yet, but you can still use it like a native app! On your phone or tablet, open WeWrite in your browser and tap "Add to Home Screen" (iOS) or "Install App" (Android). This creates an icon on your home screen that opens WeWrite in full-screen mode.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can I import my existing content?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes! You can copy and paste your existing content into our editor. The rich text editor supports formatting, links, and media. If you\'re migrating from another platform, you can bring your best work with you.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can I collaborate with other writers?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes! WeWrite supports collaborative writing with real-time editing. You can link to other writers\' content, creating an interconnected web of ideas. Our wiki-style approach means your content can reference and build upon others\' work.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Is WeWrite backed by investors?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'No—and that\'s intentional. WeWrite is 100% founder-bootstrapped with zero outside investors. This means we\'re focused on building a sustainable platform that prioritizes our community of writers and readers, not quarterly earnings reports.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What percentage does WeWrite take?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'WeWrite takes a small platform fee from reader contributions to cover operating costs and payment processing. The majority of every contribution goes directly to you as the writer.',
+                    },
+                  },
+                ],
+              }),
+            }}
+          />
         </section>
 
         {/* Platform Stats Carousel - Social Proof */}

@@ -43,6 +43,7 @@ export const metadata: Metadata = {
   },
   description: 'Write and share your ideas on WeWrite. Earn money when readers support your work. Join our community of writers today.',
   keywords: [
+    // Core platform
     'writing platform',
     'collaborative writing',
     'content creation',
@@ -52,7 +53,36 @@ export const metadata: Metadata = {
     'creative writing',
     'blog platform',
     'writer earnings',
-    'content sharing'
+    'content sharing',
+    // Monetization
+    'earn money writing',
+    'get paid to write',
+    'reader-funded publishing',
+    'tip jar for writers',
+    'direct creator support',
+    'crowdfunding for writers',
+    // Alternatives
+    'Medium alternative',
+    'Substack alternative',
+    'free blogging platform',
+    'Ghost alternative',
+    // Features
+    'real-time collaboration',
+    'wiki-style writing',
+    'linked writing',
+    'version history',
+    'collaborative editing',
+    // Values
+    'free speech platform',
+    'no algorithm',
+    'own your content',
+    'independent publishing',
+    // Use cases
+    'citizen journalism',
+    'independent journalism',
+    'newsletter platform',
+    'essay publishing',
+    'fiction publishing',
   ],
   authors: [{ name: 'WeWrite', url: 'https://www.getwewrite.app' }],
   creator: 'WeWrite',

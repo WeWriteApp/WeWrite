@@ -230,6 +230,37 @@ WeWrite uses **four dedicated financial contexts** instead of a monolithic syste
 - **Maintainability**: Simplified codebase with clear patterns
 - **User Experience**: Fast, reliable, and intuitive
 
+## 🔍 SEO & Discovery Architecture
+
+### Keyword Strategy
+WeWrite implements a comprehensive SEO strategy with programmatic pages:
+
+#### Configuration Files
+- `app/constants/seo-keywords.ts` - Centralized keyword database (500+ keywords)
+- `app/constants/seo-usecases.ts` - Use case landing page configuration
+- `app/constants/seo-comparisons.ts` - Competitor comparison page configuration
+- `app/constants/landing-verticals.ts` - Vertical landing page configuration (23 verticals)
+
+#### Programmatic SEO Pages
+- `/for/[usecase]` - 16 use case landing pages (citizen journalism, local news, etc.)
+- `/compare/[competitor]` - 5 competitor comparison pages (Medium, Substack, etc.)
+- `/welcome/[vertical]` - 23 vertical-specific landing pages
+- `/topics/[topic]` - 75 topic pages
+
+#### Schema.org Structured Data
+- `FAQPage` schema on landing page (10 FAQs)
+- `SoftwareApplication` schema on use case and comparison pages
+- `Organization` and `WebSite` schema in root layout
+
+#### Sitemap Generation
+- `app/sitemap.ts` - Static sitemap generation
+- `app/api/sitemap-pages/route.ts` - Dynamic pages sitemap
+- `app/api/sitemap-users/route.ts` - User profiles sitemap
+- `app/api/sitemap-news/route.ts` - Recent content sitemap
+
+### Related Documentation
+- [docs/seo/KEYWORD_EXPANSION_PLAN.md](../seo/KEYWORD_EXPANSION_PLAN.md) - Complete SEO implementation details
+
 ## 📚 Related Documentation
 
 - [PAYMENT_SYSTEM_GUIDE.md](./PAYMENT_SYSTEM_GUIDE.md) - Complete payment system overview
@@ -239,5 +270,5 @@ WeWrite uses **four dedicated financial contexts** instead of a monolithic syste
 
 ---
 
-**Last Updated**: August 16, 2025  
+**Last Updated**: January 7, 2026
 **Status**: Current Production Architecture
