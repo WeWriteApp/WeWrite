@@ -558,11 +558,15 @@ export const sendNewFollowerEmail = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
+    // Interpolate subject with actual values
+    const subject = newFollowerTemplate.subject
+      .replace('{{followerUsername}}', options.followerUsername);
+
     const { data, error } = await getResend().emails.send({
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
-      subject: newFollowerTemplate.subject,
+      subject,
       html: newFollowerTemplate.generateHtml(options),
     });
 
@@ -573,7 +577,7 @@ export const sendNewFollowerEmail = async (options: {
         recipientEmail: options.to,
         recipientUserId: options.userId,
         recipientUsername: options.username,
-        subject: newFollowerTemplate.subject,
+        subject,
         status: 'failed',
         errorMessage: error.message,
         metadata: { followerUsername: options.followerUsername },
@@ -588,7 +592,7 @@ export const sendNewFollowerEmail = async (options: {
       recipientEmail: options.to,
       recipientUserId: options.userId,
       recipientUsername: options.username,
-      subject: newFollowerTemplate.subject,
+      subject,
       status: 'sent',
       resendId: data?.id,
       metadata: { followerUsername: options.followerUsername },

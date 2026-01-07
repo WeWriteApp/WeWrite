@@ -10,6 +10,9 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { extractPageReferences } from '../../../firebase/database/links';
 
+// Set max duration to prevent Vercel function timeouts
+export const maxDuration = 30;
+
 interface PageConnection {
   id: string;
   title: string;
@@ -68,41 +71,55 @@ async function computePageGraph(
   const incoming: PageConnection[] = [];
   const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
     .where('targetPageId', '==', pageId)
-    .limit(100)
+    .limit(50) // Reduced from 100 to prevent timeouts
     .get();
 
-  for (const doc of backlinksSnapshot.docs) {
-    const data = doc.data();
-    // Verify source page exists and isn't deleted
-    const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
-    if (sourcePageDoc.exists && !sourcePageDoc.data()?.deleted) {
-      incoming.push({
-        id: data.sourcePageId,
-        title: data.sourcePageTitle,
-        username: data.sourceUsername,
-        lastModified: data.lastModified,
-        linkText: data.linkText
-      });
-    }
+  // OPTIMIZED: Batch fetch source pages instead of sequential individual gets
+  if (backlinksSnapshot.docs.length > 0) {
+    const sourcePageRefs = backlinksSnapshot.docs.map(doc =>
+      db.collection(getCollectionName('pages')).doc(doc.data().sourcePageId)
+    );
+    const sourcePageDocs = await db.getAll(...sourcePageRefs);
+
+    backlinksSnapshot.docs.forEach((doc, index) => {
+      const data = doc.data();
+      const sourcePageDoc = sourcePageDocs[index];
+      if (sourcePageDoc.exists && !sourcePageDoc.data()?.deleted) {
+        incoming.push({
+          id: data.sourcePageId,
+          title: data.sourcePageTitle,
+          username: data.sourceUsername,
+          lastModified: data.lastModified,
+          linkText: data.linkText
+        });
+      }
+    });
   }
 
   // Get outgoing connections (forward links from content)
   const outgoing: PageConnection[] = [];
   if (pageData.content) {
     const linkedPageIds = extractPageReferences(pageData.content);
-    const uniqueIds = [...new Set(linkedPageIds)].filter(id => id !== pageId);
+    const uniqueIds = [...new Set(linkedPageIds)].filter(id => id !== pageId).slice(0, 30); // Reduced from 50
 
-    for (const linkedPageId of uniqueIds.slice(0, 50)) {
-      const linkedPageDoc = await db.collection(getCollectionName('pages')).doc(linkedPageId).get();
-      if (linkedPageDoc.exists && !linkedPageDoc.data()?.deleted) {
-        const linkedData = linkedPageDoc.data()!;
-        outgoing.push({
-          id: linkedPageId,
-          title: linkedData.title || 'Untitled',
-          username: linkedData.username || 'Unknown',
-          lastModified: linkedData.lastModified
-        });
-      }
+    // OPTIMIZED: Batch fetch linked pages instead of sequential individual gets
+    if (uniqueIds.length > 0) {
+      const linkedPageRefs = uniqueIds.map(id =>
+        db.collection(getCollectionName('pages')).doc(id)
+      );
+      const linkedPageDocs = await db.getAll(...linkedPageRefs);
+
+      linkedPageDocs.forEach((linkedPageDoc, index) => {
+        if (linkedPageDoc.exists && !linkedPageDoc.data()?.deleted) {
+          const linkedData = linkedPageDoc.data()!;
+          outgoing.push({
+            id: uniqueIds[index],
+            title: linkedData.title || 'Untitled',
+            username: linkedData.username || 'Unknown',
+            lastModified: linkedData.lastModified
+          });
+        }
+      });
     }
   }
 
@@ -115,68 +132,59 @@ async function computePageGraph(
   let secondHopConnections: PageConnection[] = [];
   let thirdHopConnections: PageConnection[] = [];
 
+  // OPTIMIZED: Simplified multi-hop with parallel queries and reduced limits
   if (includeMultiHop) {
     const firstLevelIds = new Set([pageId, ...incoming.map(p => p.id), ...outgoing.map(p => p.id)]);
 
-    // Second hop: Get connections of first-level pages
-    const firstLevelSample = [...incoming.slice(0, 5), ...outgoing.slice(0, 5)];
+    // Second hop: Get connections of first-level pages (reduced sample size)
+    const firstLevelSample = [...incoming.slice(0, 3), ...outgoing.slice(0, 3)];
     const secondHopIds = new Set<string>();
 
-    for (const firstLevelPage of firstLevelSample) {
-      const secondHopSnapshot = await db.collection(getCollectionName('backlinks'))
-        .where('targetPageId', '==', firstLevelPage.id)
-        .limit(3)
-        .get();
+    // OPTIMIZED: Parallel fetch all second hop backlinks
+    const secondHopSnapshots = await Promise.all(
+      firstLevelSample.map(page =>
+        db.collection(getCollectionName('backlinks'))
+          .where('targetPageId', '==', page.id)
+          .limit(3)
+          .get()
+      )
+    );
 
-      for (const doc of secondHopSnapshot.docs) {
+    // Collect all potential second hop source IDs
+    const potentialSecondHopData: Array<{ sourcePageId: string; data: any }> = [];
+    secondHopSnapshots.forEach(snapshot => {
+      snapshot.docs.forEach(doc => {
         const data = doc.data();
         if (!firstLevelIds.has(data.sourcePageId) && !secondHopIds.has(data.sourcePageId)) {
-          const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
-          if (sourcePageDoc.exists && !sourcePageDoc.data()?.deleted) {
-            secondHopIds.add(data.sourcePageId);
-            secondHopConnections.push({
-              id: data.sourcePageId,
-              title: data.sourcePageTitle,
-              username: data.sourceUsername,
-              lastModified: data.lastModified,
-              linkText: data.linkText
-            });
-          }
+          secondHopIds.add(data.sourcePageId);
+          potentialSecondHopData.push({ sourcePageId: data.sourcePageId, data });
         }
-      }
+      });
+    });
+
+    // Batch verify source pages exist
+    if (potentialSecondHopData.length > 0) {
+      const secondHopRefs = potentialSecondHopData.map(item =>
+        db.collection(getCollectionName('pages')).doc(item.sourcePageId)
+      );
+      const secondHopPageDocs = await db.getAll(...secondHopRefs);
+
+      potentialSecondHopData.forEach((item, index) => {
+        const sourcePageDoc = secondHopPageDocs[index];
+        if (sourcePageDoc.exists && !sourcePageDoc.data()?.deleted) {
+          secondHopConnections.push({
+            id: item.sourcePageId,
+            title: item.data.sourcePageTitle,
+            username: item.data.sourceUsername,
+            lastModified: item.data.lastModified,
+            linkText: item.data.linkText
+          });
+        }
+      });
     }
 
-    // Third hop: Get connections of second-level pages
-    if (secondHopConnections.length > 0) {
-      const secondLevelSample = secondHopConnections.slice(0, 3);
-      const thirdHopIds = new Set<string>();
-
-      for (const secondLevelPage of secondLevelSample) {
-        const thirdHopSnapshot = await db.collection(getCollectionName('backlinks'))
-          .where('targetPageId', '==', secondLevelPage.id)
-          .limit(2)
-          .get();
-
-        for (const doc of thirdHopSnapshot.docs) {
-          const data = doc.data();
-          if (!firstLevelIds.has(data.sourcePageId) &&
-              !secondHopIds.has(data.sourcePageId) &&
-              !thirdHopIds.has(data.sourcePageId)) {
-            const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(data.sourcePageId).get();
-            if (sourcePageDoc.exists && !sourcePageDoc.data()?.deleted) {
-              thirdHopIds.add(data.sourcePageId);
-              thirdHopConnections.push({
-                id: data.sourcePageId,
-                title: data.sourcePageTitle,
-                username: data.sourceUsername,
-                lastModified: data.lastModified,
-                linkText: data.linkText
-              });
-            }
-          }
-        }
-      }
-    }
+    // Third hop: Skip for performance - 2 hops is usually sufficient
+    // This significantly reduces timeout risk while keeping most graph value
   }
 
   const admin = getFirebaseAdmin()!;

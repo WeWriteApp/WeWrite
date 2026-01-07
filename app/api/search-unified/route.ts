@@ -14,6 +14,9 @@ import {
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
 
+// Set max duration for Vercel serverless functions (60 seconds max on Pro plan)
+export const maxDuration = 30;
+
 // Feature flags for search engines
 // Order of fallback: Algolia -> Typesense -> Firestore
 const USE_ALGOLIA = true;
@@ -420,23 +423,29 @@ async function searchPagesComprehensive(
     }
 
     // Comprehensive client-side search for substring matches
-    if (!isEmptySearch) {
+    // OPTIMIZED: Reduced from 1500 to 300 docs to prevent timeouts
+    // This is a Firestore fallback - primary search should use Algolia/Typesense
+    if (!isEmptySearch && allResults.length < finalMaxResults) {
       try {
+        // Reduced limit from 1500 to 300 to prevent Vercel function timeouts
+        const broadQueryLimit = Math.min(300, finalMaxResults * 3);
         const broadQuery = query(
           collection(db, getCollectionName('pages')),
           orderBy('lastModified', 'desc'),
-          limit(1500)
+          limit(broadQueryLimit)
         );
 
         const broadSnapshot = await getDocs(broadQuery);
         let broadSearchMatches = 0;
+        const maxBroadMatches = finalMaxResults - allResults.length; // Only find what we need
 
-        broadSnapshot.forEach(docSnap => {
-          if (processedIds.has(docSnap.id) || docSnap.id === currentPageId) return;
-          if (allResults.length >= finalMaxResults * 2) return;
+        for (const docSnap of broadSnapshot.docs) {
+          // Early termination when we have enough results
+          if (broadSearchMatches >= maxBroadMatches) break;
+          if (processedIds.has(docSnap.id) || docSnap.id === currentPageId) continue;
 
           const data = docSnap.data();
-          if (data.deleted === true) return;
+          if (data.deleted === true) continue;
 
           const pageTitle = data.title || '';
           const titleLower = pageTitle.toLowerCase();
@@ -484,7 +493,7 @@ async function searchPagesComprehensive(
               });
             }
           }
-        });
+        }
 
       } catch (error) {
         // Error in comprehensive client-side search

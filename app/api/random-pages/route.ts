@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Page } from '../../types/database';
 
 export const dynamic = 'force-dynamic';
+// Set max duration to prevent Vercel function timeouts
+export const maxDuration = 30;
 
 /**
  * Page data type for random pages - uses centralized Page type with additional fields
@@ -235,24 +237,72 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     // If graph mode, fetch graph data for each page and filter by minimum nodes
+    // OPTIMIZED: Limit parallel operations and use batch fetches to prevent timeouts
     if (graphMode) {
       const { extractPageReferences } = await import('../../firebase/database/links');
 
-      // Fetch graph data for all pages in parallel
-      const graphDataPromises = randomPagesWithUserData.map(async (page) => {
-        try {
-          // Get page content for outgoing links
-          const pageDoc = await db.collection(getCollectionName('pages')).doc(page.id).get();
-          if (!pageDoc.exists) return { ...page, graphNodeCount: 0 };
+      // Only process first 5 pages in graph mode to prevent timeouts
+      const pagesToProcess = randomPagesWithUserData.slice(0, 5);
 
-          const pageData = pageDoc.data();
-          const outgoingIds = pageData?.content ? extractPageReferences(pageData.content) : [];
+      // OPTIMIZED: Batch fetch all page contents at once
+      const pageRefs = pagesToProcess.map(page =>
+        db.collection(getCollectionName('pages')).doc(page.id)
+      );
+      const pageDocs = await db.getAll(...pageRefs);
 
-          // Get backlinks for incoming links
-          const backlinksSnapshot = await db.collection(getCollectionName('backlinks'))
+      // OPTIMIZED: Parallel fetch backlinks for all pages at once
+      const backlinkSnapshots = await Promise.all(
+        pagesToProcess.map(page =>
+          db.collection(getCollectionName('backlinks'))
             .where('targetPageId', '==', page.id)
-            .limit(50)
-            .get();
+            .limit(20) // Reduced from 50
+            .get()
+        )
+      );
+
+      // Collect all outgoing page IDs we need to fetch
+      const allOutgoingIds = new Set<string>();
+      const pageOutgoingMap = new Map<string, string[]>();
+
+      pageDocs.forEach((pageDoc, index) => {
+        const page = pagesToProcess[index];
+        if (pageDoc.exists) {
+          const pageData = pageDoc.data();
+          const outgoingIds = pageData?.content
+            ? extractPageReferences(pageData.content).slice(0, 10) // Limit to 10
+            : [];
+          pageOutgoingMap.set(page.id, outgoingIds);
+          outgoingIds.forEach(id => allOutgoingIds.add(id));
+        } else {
+          pageOutgoingMap.set(page.id, []);
+        }
+      });
+
+      // OPTIMIZED: Batch fetch all outgoing pages at once
+      const outgoingRefs = Array.from(allOutgoingIds).map(id =>
+        db.collection(getCollectionName('pages')).doc(id)
+      );
+      const outgoingDocs = outgoingRefs.length > 0
+        ? await db.getAll(...outgoingRefs)
+        : [];
+
+      // Build a map of outgoing page data
+      const outgoingDataMap = new Map<string, { title: string; deleted: boolean }>();
+      Array.from(allOutgoingIds).forEach((id, index) => {
+        const doc = outgoingDocs[index];
+        if (doc?.exists) {
+          outgoingDataMap.set(id, {
+            title: doc.data()?.title || 'Untitled',
+            deleted: doc.data()?.deleted || false
+          });
+        }
+      });
+
+      // Build graph data for each page
+      const pagesWithGraphData = pagesToProcess.map((page, index) => {
+        try {
+          const backlinksSnapshot = backlinkSnapshots[index];
+          const outgoingIds = pageOutgoingMap.get(page.id) || [];
 
           const incomingPages = backlinksSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -262,23 +312,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             };
           });
 
-          // Fetch outgoing page titles
           const outgoingPages: Array<{ id: string; title: string }> = [];
-          if (outgoingIds.length > 0) {
-            const outgoingDocs = await Promise.all(
-              outgoingIds.slice(0, 20).map(id =>
-                db.collection(getCollectionName('pages')).doc(id).get()
-              )
-            );
-            outgoingDocs.forEach((doc, i) => {
-              if (doc.exists && !doc.data()?.deleted) {
-                outgoingPages.push({
-                  id: outgoingIds[i],
-                  title: doc.data()?.title || 'Untitled',
-                });
-              }
-            });
-          }
+          outgoingIds.forEach(id => {
+            const data = outgoingDataMap.get(id);
+            if (data && !data.deleted) {
+              outgoingPages.push({ id, title: data.title });
+            }
+          });
 
           // Build nodes (center page + incoming + outgoing, deduplicated)
           const nodeMap = new Map<string, { id: string; title: string; isOrphan?: boolean }>();
@@ -308,7 +348,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           });
 
           outgoingPages.forEach(p => {
-            // Skip if already added as bidirectional
             if (!incomingSet.has(p.id)) {
               links.push({
                 source: page.id,
@@ -324,12 +363,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             graphData: { nodes, links },
           };
         } catch (error) {
-          console.warn(`Error fetching graph data for page ${page.id}:`, error);
+          console.warn(`Error building graph data for page ${page.id}:`, error);
           return { ...page, graphNodeCount: 0 };
         }
       });
-
-      const pagesWithGraphData = await Promise.all(graphDataPromises);
 
       // Filter by minimum nodes
       randomPagesWithUserData = pagesWithGraphData.filter(
@@ -427,14 +464,21 @@ async function getBatchUserDataOptimized(
       });
 
       // Fallback to RTDB for users not found
+      // OPTIMIZED: Parallel fetch instead of sequential loop
       const rtdbUserIds = batch.filter(id => !firestoreUserIds.has(id));
 
       if (rtdbUserIds.length > 0 && rtdb) {
-        for (const uid of rtdbUserIds) {
-          try {
-            const userSnapshot = await rtdb.ref(`users/${uid}`).once('value');
-            if (userSnapshot.exists()) {
-              const userData = userSnapshot.val();
+        try {
+          // Parallel fetch all RTDB users at once
+          const rtdbPromises = rtdbUserIds.map(uid =>
+            rtdb!.ref(`users/${uid}`).once('value').then(snapshot => ({ uid, snapshot }))
+              .catch(() => ({ uid, snapshot: null }))
+          );
+          const rtdbResults = await Promise.all(rtdbPromises);
+
+          rtdbResults.forEach(({ uid, snapshot }) => {
+            if (snapshot?.exists()) {
+              const userData = snapshot.val();
               results[uid] = {
                 uid,
                 username: userData.username || 'Anonymous',
@@ -442,10 +486,27 @@ async function getBatchUserDataOptimized(
                 subscriptionStatus: null,
                 subscriptionAmount: null
               };
+            } else {
+              results[uid] = {
+                uid,
+                username: 'Unknown User',
+                tier: '0',
+                subscriptionStatus: null,
+                subscriptionAmount: null
+              };
             }
-          } catch (error) {
-            console.warn(`Error fetching user ${uid} from RTDB:`, error);
-          }
+          });
+        } catch (error) {
+          console.warn('Error fetching users from RTDB:', error);
+          rtdbUserIds.forEach(uid => {
+            results[uid] = {
+              uid,
+              username: 'Unknown User',
+              tier: '0',
+              subscriptionStatus: null,
+              subscriptionAmount: null
+            };
+          });
         }
       } else if (rtdbUserIds.length > 0) {
         rtdbUserIds.forEach(uid => {

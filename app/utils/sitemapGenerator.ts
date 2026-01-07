@@ -1,5 +1,5 @@
 import { firestore } from '../firebase/config'
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
+import { collection, query, where, orderBy, limit, getDocs, startAfter, doc, getDoc } from 'firebase/firestore'
 import { getCollectionName } from "../utils/environmentConfig";
 
 interface SitemapOptions {
@@ -7,6 +7,7 @@ interface SitemapOptions {
   includePrivate?: boolean
   includeInactive?: boolean
   daysBack?: number // For news sitemap - how many days back to include
+  cursor?: string // For pagination - last page ID from previous batch
 }
 
 interface SitemapEntry {
@@ -17,28 +18,33 @@ interface SitemapEntry {
 }
 
 export async function generatePagesSitemap(options: SitemapOptions = {}): Promise<string> {
-  const { limit: maxPages = 5000, includePrivate = false } = options
+  // OPTIMIZED: Reduced default from 5000 to 1000 to prevent timeouts
+  const { limit: maxPages = 1000, includePrivate = false, cursor } = options
   // Use www.getwewrite.app as the canonical domain
   const baseUrl = 'https://www.getwewrite.app'
-  
+
   try {
     const pagesRef = collection(firestore, getCollectionName('pages'))
-    let pagesQuery = query(
-      pagesRef,
-      where('isPublic', '==', true),
-      orderBy('lastModified', 'desc'),
-      limit(maxPages)
-    )
 
-    if (includePrivate) {
-      // If including private pages, remove the isPublic filter
-      pagesQuery = query(
-        pagesRef,
-        orderBy('lastModified', 'desc'),
-        limit(maxPages)
-      )
+    // Build base query constraints
+    const queryConstraints: any[] = []
+
+    if (!includePrivate) {
+      queryConstraints.push(where('isPublic', '==', true))
+    }
+    queryConstraints.push(orderBy('lastModified', 'desc'))
+
+    // If cursor provided, start after that document
+    if (cursor) {
+      const cursorDoc = await getDoc(doc(pagesRef, cursor))
+      if (cursorDoc.exists()) {
+        queryConstraints.push(startAfter(cursorDoc))
+      }
     }
 
+    queryConstraints.push(limit(maxPages))
+
+    const pagesQuery = query(pagesRef, ...queryConstraints)
     const pagesSnapshot = await getDocs(pagesQuery)
     const entries: SitemapEntry[] = []
 
@@ -106,7 +112,8 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
 }
 
 export async function generateUsersSitemap(options: SitemapOptions = {}): Promise<string> {
-  const { limit: maxUsers = 5000 } = options
+  // OPTIMIZED: Reduced default from 5000 to 1000 to prevent timeouts
+  const { limit: maxUsers = 1000 } = options
   // Use www.getwewrite.app as the canonical domain
   const baseUrl = 'https://www.getwewrite.app'
 
