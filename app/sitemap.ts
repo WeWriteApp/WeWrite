@@ -83,6 +83,69 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5},
 
+    // Featured and topic pages - SEO landing pages
+    {
+      url: `${baseUrl}/featured`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8},
+    {
+      url: `${baseUrl}/topics`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8},
+    // Individual topic pages
+    {
+      url: `${baseUrl}/topics/technology`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/writing`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/creativity`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/business`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/personal`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/tutorial`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/programming`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/design`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/science`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+    {
+      url: `${baseUrl}/topics/philosophy`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.7},
+
     // Feature and help pages
     {
       url: `${baseUrl}/features`,

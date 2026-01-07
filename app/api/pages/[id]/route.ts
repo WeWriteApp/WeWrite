@@ -299,6 +299,16 @@ export async function GET(
     response.headers.set('X-Response-Time', `${responseTime}ms`);
     response.headers.set('X-Database-Reads', '1');
 
+    // Add Last-Modified header for SEO - helps search engines understand content freshness
+    if (result.pageData?.lastModified) {
+      const lastModDate = result.pageData.lastModified.toDate?.()
+        ? result.pageData.lastModified.toDate()
+        : new Date(result.pageData.lastModified);
+      if (lastModDate instanceof Date && !isNaN(lastModDate.getTime())) {
+        response.headers.set('Last-Modified', lastModDate.toUTCString());
+      }
+    }
+
     return response;
 
   } catch (error) {

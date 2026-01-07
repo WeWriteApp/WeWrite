@@ -4,6 +4,7 @@ import { Metadata } from 'next';
 import ContentPageClient from './ContentPageClient';
 import { ContentPageSkeleton } from '../components/pages/ContentPageSkeleton';
 import ServerContentForSEO from '../components/seo/ServerContentForSEO';
+import { extractTextContent } from '../utils/text-extraction';
 
 // ISR: Revalidate pages every 60 seconds for better cache hit rate
 // Pages are served from cache and revalidated in background
@@ -115,15 +116,31 @@ export async function generateMetadata({
 
     if (result.status === 'success' && result.pageData) {
       const title = result.pageData.title || 'Untitled';
-      const description = result.pageData.content?.[0]?.children?.[0]?.text?.slice(0, 160) || '';
+      // Use proper text extraction for better meta descriptions
+      const fullText = extractTextContent(result.pageData.content);
+      // Get a compelling description: prefer first sentence, fallback to truncated text
+      const firstSentence = fullText.match(/^[^.!?]+[.!?]/)?.[0] || '';
+      const description = firstSentence.length >= 50 && firstSentence.length <= 160
+        ? firstSentence
+        : fullText.slice(0, 157) + (fullText.length > 157 ? '...' : '');
+      const canonicalUrl = `https://www.getwewrite.app/${id}`;
 
       return {
         title: title,
         description: description || `Read "${title}" on WeWrite`,
+        alternates: {
+          canonical: canonicalUrl,
+        },
         openGraph: {
           title: title,
           description: description || `Read "${title}" on WeWrite`,
           type: 'article',
+          url: canonicalUrl,
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: title,
+          description: description || `Read "${title}" on WeWrite`,
         },
       };
     }
