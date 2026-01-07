@@ -3,6 +3,9 @@ import { generateNewsSitemap } from '../../utils/sitemapGenerator'
 
 export const dynamic = 'force-dynamic'
 
+// Set max duration to prevent Vercel function timeouts
+export const maxDuration = 30;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)

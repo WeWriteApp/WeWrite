@@ -238,10 +238,11 @@ export async function generateNewsSitemap(options: SitemapOptions = {}): Promise
     const recentDate = new Date()
     recentDate.setDate(recentDate.getDate() - daysBack) // Use daysBack parameter
 
+    // Query public pages sorted by lastModified, then filter by date in memory
+    // This avoids the compound range query index requirement
     const pagesQuery = query(
       pagesRef,
       where('isPublic', '==', true),
-      where('lastModified', '>=', recentDate),
       orderBy('lastModified', 'desc'),
       limit(maxPages)
     )
@@ -257,9 +258,26 @@ export async function generateNewsSitemap(options: SitemapOptions = {}): Promise
       const data = doc.data()
       const pageId = doc.id
 
+      // Handle both Firestore Timestamp and plain Date/number
+      let lastModified: Date
+      if (data.lastModified?.toDate) {
+        lastModified = data.lastModified.toDate()
+      } else if (data.lastModified instanceof Date) {
+        lastModified = data.lastModified
+      } else if (typeof data.lastModified === 'number') {
+        lastModified = new Date(data.lastModified)
+      } else {
+        lastModified = new Date()
+      }
+
+      // Filter to only include pages modified within the daysBack window
+      if (lastModified < recentDate) {
+        return
+      }
+
       entries.push({
         url: `${baseUrl}/${pageId}`,
-        lastModified: data.lastModified?.toDate() || new Date(),
+        lastModified,
         title: data.title || 'Untitled'
       })
     })
