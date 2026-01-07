@@ -131,6 +131,11 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  // Theme color for PWA status bar - dynamically updated by MobileBottomNav
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+  ],
 }
 
 export default function RootLayout({

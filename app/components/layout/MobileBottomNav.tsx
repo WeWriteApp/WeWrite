@@ -146,6 +146,41 @@ export default function MobileBottomNav() {
     }
   }, [isExpanded]);
 
+  // Update theme-color meta tag for PWA status bar when overlay is shown
+  // This ensures the iOS status bar matches the overlay color
+  useEffect(() => {
+    if (!isPWAMode) return;
+
+    // Get or create the theme-color meta tag
+    let metaTag = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement;
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      metaTag.name = 'theme-color';
+      document.head.appendChild(metaTag);
+    }
+
+    if (isExpanded && !isClosing) {
+      // When overlay is open, darken the status bar to match the backdrop
+      // The backdrop is bg-black/30 which is rgba(0,0,0,0.3)
+      // Blend this with the background color
+      const isDark = document.documentElement.classList.contains('dark');
+      // Dark overlay color - approximates what the 30% black overlay looks like
+      metaTag.content = isDark ? '#000000' : '#b3b3b3';
+    } else {
+      // Restore original color when closed
+      const isDark = document.documentElement.classList.contains('dark');
+      metaTag.content = isDark ? '#000000' : '#ffffff';
+    }
+
+    return () => {
+      // Restore on unmount
+      if (metaTag) {
+        const isDark = document.documentElement.classList.contains('dark');
+        metaTag.content = isDark ? '#000000' : '#ffffff';
+      }
+    };
+  }, [isExpanded, isClosing, isPWAMode]);
+
   // Settings warning status
   const getMostCriticalSettingsStatus = () => {
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
