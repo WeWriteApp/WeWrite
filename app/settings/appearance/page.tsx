@@ -99,9 +99,11 @@ export default function AppearancePage() {
                     >
                       {option.icon}
                       <div className="font-medium text-sm">{option.label}</div>
-                      <Check
+                      <Icon
+                        name="Check"
+                        size={16}
                         className={cn(
-                          "h-4 w-4 text-primary transition-all duration-200",
+                          "text-primary transition-all duration-200",
                           theme === option.value
                             ? "opacity-100 scale-100"
                             : "opacity-0 scale-75"
