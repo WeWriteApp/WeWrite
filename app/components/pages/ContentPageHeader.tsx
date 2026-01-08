@@ -294,17 +294,28 @@ export default function ContentPageHeader({
     }
   }, [isNewPage, isEditing, canEdit, titlePreFilled]);
 
+  // Title character limits
+  const TITLE_WARNING_LENGTH = 50;
+  const TITLE_MAX_LENGTH = 80;
+
   // Helper to resize title field textarea
   const resizeTitleField = React.useCallback((textarea: HTMLTextAreaElement | null) => {
     if (!textarea) return;
     const minHeight = 64; // match design height
-    // Reset height to 0 first to get accurate scrollHeight
-    textarea.style.height = '0px';
-    textarea.style.lineHeight = '1.3';
-    // Force reflow and get scrollHeight
-    const scrollHeight = textarea.scrollHeight;
-    const newHeight = Math.max(scrollHeight, minHeight);
-    textarea.style.height = `${newHeight}px`;
+
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      // Temporarily set height to auto to get accurate scrollHeight
+      textarea.style.height = 'auto';
+      textarea.style.minHeight = `${minHeight}px`;
+
+      // Get the scroll height (actual content height)
+      const scrollHeight = textarea.scrollHeight;
+      const newHeight = Math.max(scrollHeight, minHeight);
+
+      // Set the new height
+      textarea.style.height = `${newHeight}px`;
+    });
   }, []);
 
   // Auto-resize textarea when editing title starts or content changes
@@ -460,7 +471,13 @@ export default function ContentPageHeader({
 
   // Auto-resize textarea when content changes
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newTitle = e.target.value;
+    let newTitle = e.target.value;
+
+    // Enforce hard limit at 80 characters
+    if (newTitle.length > TITLE_MAX_LENGTH) {
+      newTitle = newTitle.slice(0, TITLE_MAX_LENGTH);
+    }
+
     setEditingTitle(newTitle);
     resizeTitleField(e.target);
 
@@ -849,10 +866,11 @@ export default function ContentPageHeader({
                             onBlur={handleTitleBlur}
                             onFocus={handleTitleFocus}
                             tabIndex={isNewPage ? 1 : undefined}
+                            maxLength={TITLE_MAX_LENGTH}
                             className={`wewrite-title-input ${isTitleFocused ? "wewrite-active-input" : ""} w-full min-h-[64px] text-2xl font-semibold text-center resize-none overflow-hidden`}
                             placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                             rows={1}
-                            warning={!!titleError}
+                            warning={!!titleError || editingTitle.length >= TITLE_MAX_LENGTH}
                           />
                         ) : (
                           <div
@@ -907,6 +925,33 @@ export default function ContentPageHeader({
                     <p className="text-sm text-warning font-medium">
                       Pages must have a title
                     </p>
+                  </div>
+                )}
+
+                {/* Title Length Warning and Counter - show when editing title */}
+                {isEditingTitle && canEdit && (
+                  <div className={`flex justify-center items-center gap-2 mt-2 transition-all duration-200 ${
+                    editingTitle.length >= TITLE_WARNING_LENGTH ? 'opacity-100' : 'opacity-0'
+                  }`}>
+                    {editingTitle.length >= TITLE_WARNING_LENGTH && editingTitle.length < TITLE_MAX_LENGTH && (
+                      <p className="text-xs text-muted-foreground">
+                        Long titles may be truncated in some views
+                      </p>
+                    )}
+                    {editingTitle.length >= TITLE_MAX_LENGTH && (
+                      <p className="text-xs text-warning">
+                        Maximum title length reached
+                      </p>
+                    )}
+                    <span className={`text-xs font-mono ${
+                      editingTitle.length >= TITLE_MAX_LENGTH
+                        ? 'text-warning'
+                        : editingTitle.length >= TITLE_WARNING_LENGTH
+                          ? 'text-muted-foreground'
+                          : 'text-muted-foreground/50'
+                    }`}>
+                      {editingTitle.length}/{TITLE_MAX_LENGTH}
+                    </span>
                   </div>
                 )}
 

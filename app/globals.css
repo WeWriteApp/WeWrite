@@ -2200,9 +2200,9 @@ iframe[src*="js.stripe.com"] {
   font-weight: 600 !important;
   text-align: center !important;
 
-  /* Override default textarea min-height for title inputs - ensure consistent height */
+  /* Minimum height but allow growth for multi-line titles */
   min-height: 64px !important;
-  height: 64px !important;
+  /* height is set dynamically via JS - do not set fixed height here */
 
   /* Ensure consistent box-sizing */
   box-sizing: border-box !important;
@@ -2216,22 +2216,27 @@ div.wewrite-title-input {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  line-height: 1.2 !important;
+  line-height: 1.3 !important;
+  /* Allow height to grow with content */
+  height: auto !important;
 }
 
-/* Make textarea title inputs use line-height for vertical centering to match div */
+/* Make textarea title inputs auto-resize for multi-line text */
 textarea.wewrite-title-input {
   /* Remove default textarea styling that interferes with centering */
   resize: none !important;
 
-  /* Use line-height to center single-line text vertically */
-  line-height: calc(64px - 1.5rem) !important; /* 64px total height minus top/bottom padding */
+  /* Use normal line-height for proper multi-line text wrapping */
+  line-height: 1.3 !important;
 
-  /* Remove default padding-top/bottom since line-height handles vertical centering */
+  /* Consistent padding */
   padding-top: 0.75rem !important;
   padding-bottom: 0.75rem !important;
   padding-left: 1rem !important;
   padding-right: 1rem !important;
+
+  /* Allow height to be set dynamically via JS */
+  overflow: hidden !important;
 }
 
 textarea.wewrite-title-input.wewrite-input-error {
