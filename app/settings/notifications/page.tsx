@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Icon } from '@/components/ui/Icon';
+import { Icon, IconName } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import NavPageLayout from '../../components/layout/NavPageLayout';
 import { Button } from '../../components/ui/button';
@@ -17,28 +17,28 @@ const NOTIFICATION_TYPES = [
     id: 'follow',
     title: 'New Followers',
     description: 'When someone follows you',
-    icon: UserPlus,
+    icon: 'UserPlus' as IconName,
     category: 'social'
   },
   {
     id: 'pageLinks',
     title: 'Page Links',
     description: 'When someone links to your page',
-    icon: Link2,
+    icon: 'Link2' as IconName,
     category: 'social'
   },
   {
     id: 'userMentions',
     title: 'User Mentions',
     description: 'When someone mentions you by linking to your user page',
-    icon: AtSign,
+    icon: 'AtSign' as IconName,
     category: 'social'
   },
   {
     id: 'append',
     title: 'Page Additions',
     description: 'When someone adds your page to their page',
-    icon: FilePlus,
+    icon: 'FilePlus' as IconName,
     category: 'social'
   },
   // Payout notifications
@@ -46,21 +46,21 @@ const NOTIFICATION_TYPES = [
     id: 'payout_completed',
     title: 'Payouts Completed',
     description: 'When your payout is successfully processed',
-    icon: DollarSign,
+    icon: 'DollarSign' as IconName,
     category: 'payments'
   },
   {
     id: 'payout_failed',
     title: 'Payout Issues',
     description: 'When there are issues with your payouts',
-    icon: AlertTriangle,
+    icon: 'AlertTriangle' as IconName,
     category: 'payments'
   },
   {
     id: 'payout_setup_reminder',
     title: 'Payout Setup Reminder',
     description: 'Reminders to connect your payout method when funds are available',
-    icon: Clock,
+    icon: 'Clock' as IconName,
     category: 'payments'
   },
   // System notifications
@@ -68,21 +68,21 @@ const NOTIFICATION_TYPES = [
     id: 'email_verification',
     title: 'Account Verification',
     description: 'Important account security notifications',
-    icon: ShieldCheck,
+    icon: 'ShieldCheck' as IconName,
     category: 'system'
   },
   {
     id: 'system_updates',
     title: 'System Updates',
     description: 'Platform updates and maintenance notifications',
-    icon: Settings,
+    icon: 'Settings' as IconName,
     category: 'system'
   },
   {
     id: 'product_updates',
     title: 'Product Updates',
     description: 'New features and improvements to WeWrite',
-    icon: Megaphone,
+    icon: 'Megaphone' as IconName,
     category: 'system'
   }
 ];
@@ -107,20 +107,26 @@ function ChannelStatusIcons({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <Smartphone
-        className={`h-4 w-4 transition-colors ${
+      <Icon
+        name="Smartphone"
+        size={16}
+        className={`transition-colors ${
           push ? 'text-purple-500' : 'text-muted-foreground/30'
         }`}
         aria-label={push ? 'Push enabled' : 'Push disabled'}
       />
-      <Monitor
-        className={`h-4 w-4 transition-colors ${
+      <Icon
+        name="Monitor"
+        size={16}
+        className={`transition-colors ${
           inApp ? 'text-orange-500' : 'text-muted-foreground/30'
         }`}
         aria-label={inApp ? 'In-app enabled' : 'In-app disabled'}
       />
-      <Mail
-        className={`h-4 w-4 transition-colors ${
+      <Icon
+        name="Mail"
+        size={16}
+        className={`transition-colors ${
           email ? 'text-blue-500' : 'text-muted-foreground/30'
         }`}
         aria-label={email ? 'Email enabled' : 'Email disabled'}
@@ -144,7 +150,6 @@ function NotificationTypeCard({
   setOpenId: (id: string | null) => void;
 }) {
   const isOpen = openId === type.id;
-  const Icon = type.icon;
   const allEnabled = preferences.push && preferences.inApp && preferences.email;
   const allDisabled = !preferences.push && !preferences.inApp && !preferences.email;
 
@@ -163,7 +168,7 @@ function NotificationTypeCard({
                     ? 'bg-muted text-muted-foreground'
                     : 'bg-primary/10 text-primary'
                 }`}>
-                  <Icon className="h-4 w-4" />
+                  <Icon name={type.icon} size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className={`font-medium truncate ${allDisabled ? 'text-muted-foreground' : ''}`}>

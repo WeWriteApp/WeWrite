@@ -143,31 +143,31 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
     // Exact Stripe payout statuses with descriptions
     const statusConfig = {
       pending: {
-        icon: Clock,
+        icon: 'Clock' as const,
         color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
         label: 'Pending',
         description: 'Payout is pending until submitted to bank'
       },
       in_transit: {
-        icon: Loader2,
+        icon: 'Loader' as const,
         color: 'bg-muted/50 text-muted-foreground',
         label: 'In Transit',
         description: 'Payout has been submitted to bank and is in transit'
       },
       paid: {
-        icon: CheckCircle,
+        icon: 'CheckCircle' as const,
         color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
         label: 'Paid',
         description: 'Payout completed successfully'
       },
       failed: {
-        icon: XCircle,
+        icon: 'XCircle' as const,
         color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
         label: 'Failed',
         description: 'Payout failed to complete'
       },
       canceled: {
-        icon: AlertTriangle,
+        icon: 'AlertTriangle' as const,
         color: 'bg-muted text-muted-foreground',
         label: 'Canceled',
         description: 'Payout was canceled'
@@ -175,11 +175,10 @@ export function PayoutsHistoryTable({ showTitle = true, onRefresh }: PayoutsHist
     };
 
     const config = statusConfig[status] || statusConfig.pending;
-    const Icon = config.icon;
 
     return (
       <Badge variant="secondary" className={`${config.color} flex items-center gap-1`} title={config.description}>
-        <Icon className="h-3 w-3" />
+        <Icon name={config.icon} size={12} />
         {config.label}
       </Badge>
     );

@@ -156,19 +156,19 @@ export default function PayoutAdminDashboard() {
       cancelled: 'outline'
     };
 
-    const icons = {
-      pending: Clock,
-      processing: RefreshCw,
-      completed: CheckCircle,
-      failed: XCircle,
-      cancelled: AlertTriangle
+    const icons: Record<string, 'Clock' | 'RefreshCw' | 'CheckCircle' | 'XCircle' | 'AlertTriangle'> = {
+      pending: 'Clock',
+      processing: 'RefreshCw',
+      completed: 'CheckCircle',
+      failed: 'XCircle',
+      cancelled: 'AlertTriangle'
     };
 
-    const Icon = icons[status] || Clock;
-    
+    const iconName = icons[status] || 'Clock';
+
     return (
       <Badge variant={variants[status] || 'secondary'} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
+        <Icon name={iconName} size={12} />
         {status}
       </Badge>
     );

@@ -6,6 +6,7 @@ import {
   Home,
   Menu,
   X,
+  XCircle,
   ArrowLeft,
   ArrowRight,
   ArrowUp,
@@ -39,6 +40,7 @@ import {
   Image,
   File,
   FileText,
+  FilePlus,
   Folder,
   FolderOpen,
   Calendar,
@@ -64,6 +66,7 @@ import {
   Key,
   Fingerprint,
   Shield,
+  ShieldCheck,
   Lightbulb,
   Target,
   Monitor,
@@ -207,7 +210,7 @@ export type IconName =
   | "Phone" | "AtSign"
   // Media & Files
   | "Eye" | "EyeOff" | "Search" | "Filter"
-  | "Image" | "File" | "FileText" | "Folder" | "FolderOpen" | "Inbox"
+  | "Image" | "File" | "FileText" | "FilePlus" | "Folder" | "FolderOpen" | "Inbox"
   | "Grid" | "Grid3X3" | "List"
   // Time & Calendar
   | "Calendar" | "Clock" | "History"
@@ -220,7 +223,7 @@ export type IconName =
   | "Trophy" | "Award" | "Crown" | "Medal"
   // Settings & Tools
   | "Settings" | "Settings2" | "Link" | "Link2" | "Lock" | "Unlock" | "Key" | "Fingerprint"
-  | "Shield" | "Zap" | "Lightbulb" | "Sparkles" | "Target"
+  | "Shield" | "ShieldCheck" | "Zap" | "Lightbulb" | "Sparkles" | "Target"
   // Layout & Display
   | "Monitor" | "Smartphone" | "Tablet" | "Laptop"
   | "Sun" | "Moon" | "Palette" | "Type"
@@ -324,7 +327,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   AlertCircle: AlertTriangle,
   AlertTriangle: AlertTriangle,
   HelpCircle: HelpCircle,
-  XCircle: X,
+  XCircle: XCircle,
   Loading: RefreshCw,
 
   // User & Profile
@@ -355,6 +358,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Image: Image,
   File: File,
   FileText: FileText,
+  FilePlus: FilePlus,
   Folder: Folder,
   FolderOpen: FolderOpen,
   Inbox: Inbox,
@@ -402,6 +406,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Key: Key,
   Fingerprint: Fingerprint,
   Shield: Shield,
+  ShieldCheck: ShieldCheck,
   Zap: Zap,
   Lightbulb: Lightbulb,
   Sparkles: Sparkles,
