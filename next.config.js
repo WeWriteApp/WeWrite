@@ -8,6 +8,10 @@ console.log('  Full errors enabled: ALWAYS (development, preview, and production
 const nextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'development', // Disable in production to prevent hydration issues
 
+  // Turbopack configuration (default bundler in Next.js 16)
+  // Empty config acknowledges migration from webpack - webpack is still used for build via --webpack flag
+  turbopack: {},
+
   // Force full error messages in ALL environments (dev, preview, production)
   env: {
     // Force React to always use development error messages

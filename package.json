@@ -7,7 +7,7 @@
     "node": "20.x"
   },
   "scripts": {
-    "dev": "next dev -p 3000 --webpack",
+    "dev": "next dev -p 3000",
     "dev:https": "bun run scripts/start-https-dev.js",
     "dev:https:setup": "bun run scripts/setup-https-dev.js",
     "dev:console": "concurrently \"bun run console:listen\" \"bun run dev\" --names \"CONSOLE,DEV\" --prefix-colors \"cyan,green\"",
@@ -15,7 +15,9 @@
     "dev:turbo": "./scripts/start-turbo.sh",
     "dev:safe": "./scripts/start-dev.sh",
     "dev:port": "./scripts/ensure-port-3000.sh",
-    "build": "rm -rf .next && BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096 --require ./global-polyfill.js' next build --webpack",
+    "build": "rm -rf .next && BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096 --require ./global-polyfill.js' next build",
+    "build:webpack": "rm -rf .next && BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096 --require ./global-polyfill.js' next build --webpack",
+    "dev:webpack": "next dev -p 3000 --webpack",
     "seo:audit": "bun run scripts/seo-audit.js",
     "subscription:cleanup": "bun run scripts/subscription-cleanup.js",
     "subscription:cleanup:dry": "bun run scripts/subscription-cleanup.js --dry-run",
