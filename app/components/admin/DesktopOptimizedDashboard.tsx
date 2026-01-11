@@ -79,8 +79,9 @@ function aggregateToGranularity<T extends Record<string, any>>(
   labelKey: string = 'label',
   dateKey: string = 'date'
 ): T[] {
+  // Always return empty array for invalid input (never return undefined)
   if (!Array.isArray(data) || data.length === 0 || targetBuckets <= 0) {
-    return data;
+    return [];
   }
 
   // If data already has fewer or equal points than target, return as-is
@@ -143,7 +144,8 @@ function aggregateToGranularity<T extends Record<string, any>>(
  * properly cumulated, not just the main valueKey.
  */
 function transformToCumulative<T extends Record<string, any>>(data: T[], valueKeys: string | string[]): T[] {
-  if (!Array.isArray(data) || data.length === 0) return data;
+  // Always return empty array for invalid input (never return undefined)
+  if (!Array.isArray(data) || data.length === 0) return [];
 
   // Normalize to array
   const keys = Array.isArray(valueKeys) ? valueKeys : [valueKeys];
@@ -1209,21 +1211,23 @@ function DashboardRow({
   let metadata: any;
 
   if (hasBatchDataForRow) {
-    // Use batch data
-    data = batchData[batchDataKey] as any[];
+    // Use batch data - ensure we always get an array even if the key exists but value is undefined
+    const batchValue = batchData[batchDataKey];
+    data = Array.isArray(batchValue) ? batchValue : [];
     loading = batchLoading;
     error = batchError;
     stats = null;
     metadata = null;
   } else {
-    // Use individual hook result
-    data = hookResult.data;
+    // Use individual hook result - ensure data is always an array
+    data = Array.isArray(hookResult.data) ? hookResult.data : [];
     loading = hookResult.loading;
     error = hookResult.error;
     stats = hookResult.stats;
     metadata = hookResult.metadata;
   }
 
+  // Ensure rawData is always a valid array (defensive double-check)
   const rawData = Array.isArray(data) ? data : [];
 
   // Check if cumulative mode is enabled
