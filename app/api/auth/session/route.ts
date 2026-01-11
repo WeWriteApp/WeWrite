@@ -22,6 +22,14 @@ import { verifyIdToken } from '../../../lib/firebase-rest';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { DEV_TEST_USERS } from '../../../utils/testUsers';
 import { getAdminClaim } from '../../../services/adminClaimsService';
+import {
+  createSignedCookieValue,
+  parseSignedCookieValue,
+  SESSION_COOKIE_OPTIONS,
+  DEVICE_SESSION_COOKIE_OPTIONS,
+  getClientIP as getClientIPFromHeaders,
+  type SessionCookieData
+} from '../../../utils/cookieUtils';
 
 // =============================================================================
 // Response Helpers
@@ -131,13 +139,11 @@ export async function GET(request: NextRequest) {
       return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'No active session');
     }
 
-    // Try to parse session cookie
-    let sessionData: { uid: string; email: string; username?: string; photoURL?: string; emailVerified?: boolean; createdAt?: string; lastLoginAt?: string; isAdmin?: boolean };
+    // Parse and verify signed session cookie (also supports legacy unsigned cookies during migration)
+    const sessionData = await parseSignedCookieValue<SessionCookieData & { lastLoginAt?: string; createdAt?: string }>(sessionCookie.value);
 
-    try {
-      sessionData = JSON.parse(sessionCookie.value);
-    } catch {
-      // Handle legacy format (dev users only)
+    if (!sessionData) {
+      // Check for legacy dev user format (plain UID string)
       const devUser = Object.values(DEV_TEST_USERS).find(u => u.uid === sessionCookie.value);
       if (devUser) {
         const user: User = {
@@ -152,7 +158,8 @@ export async function GET(request: NextRequest) {
         };
         return createSuccessResponse(user);
       }
-      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
+      console.warn('[Session] Failed to parse/verify session cookie - possible tampering');
+      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session');
     }
 
     // Validate required session data
@@ -300,11 +307,11 @@ async function updateLastLoginTime(uid: string): Promise<void> {
 }
 
 /**
- * Create session cookie
+ * Create session cookie with HMAC signing for tamper protection
  */
 async function createSessionCookie(user: User) {
   const cookieStore = await cookies();
-  const sessionData = {
+  const sessionData: SessionCookieData = {
     uid: user.uid,
     email: user.email,
     username: user.username,
@@ -313,13 +320,10 @@ async function createSessionCookie(user: User) {
     isAdmin: user.isAdmin
   };
 
-  cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
-    httpOnly: true,
-    secure: true, // Always use secure cookies (requires HTTPS, localhost is exempted by browsers)
-    sameSite: 'lax', // 'lax' allows top-level navigation while preventing CSRF on POST
-    maxAge: 60 * 60 * 24 * 7, // 7 days - reasonable for session persistence
-    path: '/',
-  });
+  // Create signed cookie value (base64url(data).signature)
+  const signedValue = await createSignedCookieValue(sessionData);
+
+  cookieStore.set('simpleUserSession', signedValue, SESSION_COOKIE_OPTIONS);
 }
 
 /**
@@ -328,7 +332,7 @@ async function createSessionCookie(user: User) {
 async function createUserSession(request: NextRequest, userId: string) {
   try {
     const userAgent = request.headers.get('user-agent') || '';
-    const ipAddress = getClientIP(request);
+    const ipAddress = getClientIPFromHeaders(request.headers);
     const deviceInfo = parseUserAgent(userAgent);
 
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -382,15 +386,9 @@ async function createUserSession(request: NextRequest, userId: string) {
       // They were spammy and not working properly - can be re-enabled later if needed
     }
 
-    // Set sessionId cookie
+    // Set sessionId cookie with consistent security settings
     const cookieStore = await cookies();
-    cookieStore.set('sessionId', sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
+    cookieStore.set('sessionId', sessionId, DEVICE_SESSION_COOKIE_OPTIONS);
 
     console.log(`[Session] Created device session ${sessionId} for user ${userId}`);
     return sessionId;
@@ -434,17 +432,4 @@ function parseUserAgent(userAgent: string) {
   return { browser, os, deviceType, platform };
 }
 
-/**
- * Get client IP address from request
- */
-function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  const cfConnectingIP = request.headers.get('cf-connecting-ip');
-
-  if (cfConnectingIP) return cfConnectingIP;
-  if (realIP) return realIP;
-  if (forwarded) return forwarded.split(',')[0].trim();
-
-  return 'unknown';
-}
+// getClientIP moved to shared utility: app/utils/cookieUtils.ts

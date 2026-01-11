@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { getCollectionName } from '../../../utils/environmentConfig';
-import { getAdminEmails, getAdminUserIds } from '../../../utils/adminConfig';
+import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
+import { isUserAdmin } from '../../../utils/adminSecurity';
+import { DEV_TEST_USER_UIDS } from '../../../utils/testUsers';
 import { requireDevelopmentEnvironment } from '../debugHelper';
 
 /**
  * DEBUG ENDPOINT: Check admin status and user info
  *
  * SECURITY: This endpoint is restricted to development environment only.
- * It does NOT expose the actual admin email/UID lists.
+ * Admin status is now determined by Firebase Custom Claims and dev whitelist.
  */
 export async function GET(request: NextRequest) {
   // SECURITY: Only allow in local development
@@ -44,14 +45,10 @@ export async function GET(request: NextRequest) {
     const userData = userDoc.exists ? userDoc.data() : null;
     const userEmail = userData?.email || null;
 
-    // Get admin lists from centralized config
-    const adminUserIds = getAdminUserIds();
-    const adminEmails = getAdminEmails();
-
-    // Check admin status
-    const isAdminByUserId = adminUserIds.includes(userId);
-    const isAdminByEmail = userEmail ? adminEmails.includes(userEmail) : false;
-    const isAdmin = isAdminByUserId || isAdminByEmail;
+    // Check admin status using the consolidated adminSecurity module
+    const isAdmin = await isUserAdmin(userId);
+    const isDevWhitelisted = DEV_TEST_USER_UIDS.includes(userId);
+    const env = getEnvironmentType();
 
     return NextResponse.json({
       userId,
@@ -63,12 +60,10 @@ export async function GET(request: NextRequest) {
         createdAt: userData.createdAt
       } : null,
       adminCheck: {
-        isAdminByUserId,
-        isAdminByEmail,
         isAdmin,
-        // SECURITY: Don't expose actual admin lists, only counts
-        adminUserIdCount: adminUserIds.length,
-        adminEmailCount: adminEmails.length
+        isDevWhitelisted,
+        // Admin status is now determined by Firebase Custom Claims + dev whitelist
+        method: 'Firebase Custom Claims + Dev Whitelist'
       },
       environment: {
         nodeEnv: process.env.NODE_ENV,

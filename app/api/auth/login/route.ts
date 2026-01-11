@@ -17,6 +17,16 @@ import { secureLogger, maskEmail } from '../../../utils/secureLogging';
 import { DEV_TEST_USERS, validateDevTestPassword, verifyDevPassword } from '../../../utils/testUsers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { authRateLimiter } from '../../../utils/rateLimiter';
+import { createSignedCookieValue, type SessionCookieData } from '../../../utils/cookieUtils';
+
+// Dev mode cookie options (only used when USE_DEV_AUTH=true in development)
+const DEV_SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: false, // Dev mode only - HTTP is fine for localhost
+  sameSite: 'lax' as const,
+  maxAge: 60 * 60 * 24 * 7, // 7 days
+  path: '/',
+};
 
 interface LoginRequest {
   emailOrUsername: string;
@@ -115,9 +125,9 @@ export async function POST(request: NextRequest) {
       const passwordValid = account && validateDevTestPassword(password);
 
       if (account && passwordValid) {
-        // Create session cookie for predefined test account
+        // Create signed session cookie for predefined test account
         const cookieStore = await cookies();
-        const sessionData = {
+        const sessionData: SessionCookieData = {
           uid: account.uid,
           email: account.email,
           username: account.username,
@@ -125,13 +135,8 @@ export async function POST(request: NextRequest) {
           isAdmin: account.isAdmin || false
         };
 
-        cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
-          httpOnly: true,
-          secure: false, // Dev mode
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 30, // 30 days
-          path: '/'
-        });
+        const signedValue = await createSignedCookieValue(sessionData);
+        cookieStore.set('simpleUserSession', signedValue, DEV_SESSION_COOKIE_OPTIONS);
 
         secureLogger.info('[Auth] Dev auth login successful (predefined user)', {
           email: maskEmail(account.email),
@@ -212,23 +217,18 @@ export async function POST(request: NextRequest) {
           const docPath = userDoc.name || '';
           const uid = docPath.split('/').pop() || '';
           
-          const userData = {
+          const userData: SessionCookieData = {
             uid,
             email: fields.email?.stringValue || '',
             username: fields.username?.stringValue || '',
             emailVerified: fields.emailVerified?.booleanValue || false,
             isAdmin: fields.isAdmin?.booleanValue || false
           };
-          
-          // Create session cookie
+
+          // Create signed session cookie
           const cookieStore = await cookies();
-          cookieStore.set('simpleUserSession', JSON.stringify(userData), {
-            httpOnly: true,
-            secure: false, // Dev mode
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 30, // 30 days
-            path: '/'
-          });
+          const signedValue = await createSignedCookieValue(userData);
+          cookieStore.set('simpleUserSession', signedValue, DEV_SESSION_COOKIE_OPTIONS);
           
           secureLogger.info('[Auth] Dev auth login successful (registered user)', {
             email: maskEmail(userData.email),

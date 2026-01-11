@@ -6,11 +6,13 @@
  * which is set by /api/auth/session using:
  * 1. Firebase Custom Claims (most secure, cryptographically signed)
  * 2. Firestore isAdmin/role fields
+ * 3. Dev user whitelist (development only)
  */
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from './auth-helper';
 import { getEnvironmentType } from '../utils/environmentConfig';
+import { DEV_TEST_USER_UIDS } from '../utils/testUsers';
 
 interface SessionData {
   uid?: string;
@@ -35,7 +37,7 @@ function getSessionData(request: NextRequest): SessionData | null {
 /**
  * Check if a user is an admin (server-side version)
  * Uses the session cookie's isAdmin flag which is set by /api/auth/session
- * In development, grants access to all authenticated users for testing
+ * In development, grants access to whitelisted test users only (H1 security fix)
  */
 export const isAdminServer = (request: NextRequest): boolean => {
   const sessionData = getSessionData(request);
@@ -46,10 +48,10 @@ export const isAdminServer = (request: NextRequest): boolean => {
     return true;
   }
 
-  // In development, all authenticated users are admins (for access control)
+  // H1 Security Fix: Only whitelisted dev users get admin in development
   const env = getEnvironmentType();
-  if (env === 'development') {
-    return true;
+  if (env === 'development' && sessionData.uid) {
+    return DEV_TEST_USER_UIDS.includes(sessionData.uid);
   }
 
   return false;
@@ -89,10 +91,10 @@ export async function checkAdminPermissions(request: NextRequest): Promise<{succ
       return { success: true, userEmail: sessionData.email || undefined };
     }
 
-    // In development, allow access for all authenticated users
+    // H1 Security Fix: Only whitelisted dev users get admin in development
     const env = getEnvironmentType();
-    if (env === 'development') {
-      console.log('🔧 [DEV MODE] Allowing admin access in development');
+    if (env === 'development' && sessionData?.uid && DEV_TEST_USER_UIDS.includes(sessionData.uid)) {
+      console.log('🔧 [DEV MODE] Admin access granted via dev whitelist');
       return { success: true, userEmail: sessionData?.email || undefined };
     }
 

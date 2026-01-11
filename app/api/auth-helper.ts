@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { getFirebaseAdmin } from '../firebase/admin';
 import { DEV_TEST_USERS } from '../utils/testUsers';
 import { getCollectionName } from '../utils/environmentConfig';
+import { parseSignedCookieValue, type SessionCookieData } from '../utils/cookieUtils';
 
 // Type definitions
 interface ApiResponse<T = any> {
@@ -142,6 +143,7 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
 
 /**
  * Try to authenticate using simpleUserSession cookie (auth system)
+ * Now uses HMAC signature verification for tamper protection
  */
 async function trySimpleUserSessionCookie(request: NextRequest): Promise<string | null> {
   const simpleSessionCookie = request.cookies.get('simpleUserSession')?.value;
@@ -149,30 +151,26 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
     return null;
   }
 
-  try {
-    // Try parsing as JSON first (new format)
-    const sessionData = JSON.parse(simpleSessionCookie);
-    if (sessionData && sessionData.uid) {
-      return sessionData.uid;
-    } else {
-      console.log('[AUTH DEBUG] simpleUserSession cookie missing uid:', sessionData);
-      return null;
-    }
-  } catch (error: any) {
-    // If JSON parsing fails, treat as plain string (legacy format for dev)
-    if (simpleSessionCookie === 'dev_admin_user') {
-      console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
-      // Return the proper user ID for dev_admin_user to match session API
-      return 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N';
-    } else if (simpleSessionCookie === 'dev_test_user_1') {
-      console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
-      // Return the proper user ID for dev_test_user_1 to match session API
-      return 'dev_test_user_1';
-    }
+  // Use the signed cookie parser which:
+  // 1. Verifies HMAC signature (new format)
+  // 2. Falls back to parsing legacy unsigned JSON (for migration)
+  const sessionData = await parseSignedCookieValue<SessionCookieData>(simpleSessionCookie);
 
-    console.error('[AUTH DEBUG] Error parsing simpleUserSession cookie:', error);
-    return null;
+  if (sessionData && sessionData.uid) {
+    return sessionData.uid;
   }
+
+  // Handle legacy dev user format (plain UID string)
+  if (simpleSessionCookie === 'dev_admin_user') {
+    console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
+    return 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N';
+  } else if (simpleSessionCookie === 'dev_test_user_1') {
+    console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
+    return 'dev_test_user_1';
+  }
+
+  console.warn('[AUTH DEBUG] Failed to parse/verify session cookie');
+  return null;
 }
 
 // Simplified authentication - only using simple session cookie

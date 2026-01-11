@@ -3,7 +3,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { isAdminUserId, hasAdminAccess } from '../../../utils/adminConfig';
+import { isUserAdmin } from '../../../utils/adminSecurity';
 
 /**
  * Clean link elements by removing the 'text' property
@@ -103,8 +103,8 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
 
-    // Check if user is admin using centralized config (no hardcoded IDs)
-    const isAdmin = userId ? isAdminUserId(userId) : false;
+    // Check if user is admin using centralized adminSecurity module
+    const isAdmin = userId ? await isUserAdmin(userId) : false;
 
     // Content validation and conversion (read-only, no database writes)
     let processedPageData = { ...pageData };

@@ -5,19 +5,22 @@
  * All admin checks should go through this module to ensure consistency
  * and proper security logging.
  *
- * Admin lists are loaded from environment variables via adminConfig.ts
+ * Admin verification priority:
+ * 1. Firebase Custom Claims (most secure, cryptographically signed)
+ * 2. Firestore isAdmin/role fields
+ * 3. Dev user whitelist (development only)
  */
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from '../api/auth-helper';
 import { getFirebaseAdmin } from '../firebase/admin';
 import { getCollectionName, getEnvironmentType } from './environmentConfig';
-import { getAdminEmails, getAdminUserIds } from './adminConfig';
+import { DEV_TEST_USER_UIDS, DEV_TEST_USER_EMAILS } from './testUsers';
+import { getClientIP as getClientIPFromHeaders } from './cookieUtils';
 
 /**
- * Check if we're in development environment
- * DEV USERS ARE AUTOMATICALLY ADMINS IN DEVELOPMENT MODE
- * This allows testing admin features without modifying production admin lists
+ * Check if user is in the dev admin whitelist
+ * H1 Security Fix: Only whitelisted users get admin in dev mode, not "any authenticated user"
  */
 function isDevUserAdmin(userId: string | null, userEmail: string | null): boolean {
   const env = getEnvironmentType();
@@ -25,8 +28,15 @@ function isDevUserAdmin(userId: string | null, userEmail: string | null): boolea
     return false; // Dev user admin access is ONLY for development environment
   }
 
-  // In development, any authenticated user is an admin
-  return !!(userId || userEmail);
+  // H1 Security Fix: Check against whitelist instead of allowing any authenticated user
+  if (userId && DEV_TEST_USER_UIDS.includes(userId)) {
+    return true;
+  }
+  if (userEmail && DEV_TEST_USER_EMAILS.includes(userEmail)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -80,24 +90,11 @@ export interface SecurityAuditLog {
 
 /**
  * Get client IP address from request headers
+ * Uses shared utility for consistency
  */
 function getClientIP(request: NextRequest): string | null {
-  // Check various headers for client IP
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  const cfConnectingIP = request.headers.get('cf-connecting-ip');
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  if (realIP) {
-    return realIP;
-  }
-  if (cfConnectingIP) {
-    return cfConnectingIP;
-  }
-  
-  return null;
+  const ip = getClientIPFromHeaders(request.headers);
+  return ip === 'unknown' ? null : ip;
 }
 
 /**
@@ -215,52 +212,31 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
 
     console.log('🔐 [ADMIN AUTH] User email (resolved):', userEmail);
 
-    // Check admin status using multiple methods in priority order:
+    // Check admin status using methods in priority order:
     // 1. Firebase Custom Claims (MOST SECURE - cryptographically signed)
-    // 2. Environment variable lists (email/userId)
-    // 3. Dev user status (development only)
-
-    const adminUserIds = getAdminUserIds();
-    const adminEmails = getAdminEmails();
+    // 2. Dev user whitelist (development only - uses testUsers.ts whitelist)
 
     // Priority 1: Check Firebase Custom Claims (most secure)
     const isAdminByCustomClaim = await hasAdminCustomClaim(userId);
 
-    // Priority 2: Check environment variable lists
-    const isAdminByUserId = adminUserIds.includes(userId);
-    const isAdminByEmail = userEmail ? adminEmails.includes(userEmail) : false;
-
-    // Priority 3: Dev user status (development only)
+    // Priority 2: Dev user whitelist (development only - H1 security fix)
     const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
     console.log('🔐 [ADMIN AUTH] Admin checks:', {
       userId,
       userEmail,
       isAdminByCustomClaim,
-      isAdminByUserId,
-      isAdminByEmail,
       isDevAdmin,
-      environment: getEnvironmentType(),
-      adminUserIdCount: adminUserIds.length,
-      adminEmailCount: adminEmails.length
+      environment: getEnvironmentType()
     });
 
-    // SECURITY: Allow admin access by custom claim, email, user ID, or dev user status (in development)
-    isAdmin = isAdminByCustomClaim || isAdminByEmail || isAdminByUserId || isDevAdmin;
+    // SECURITY: Allow admin access by custom claim or dev whitelist (in development)
+    isAdmin = isAdminByCustomClaim || isDevAdmin;
 
     // Log which method granted admin access (useful for auditing)
     if (isAdmin) {
-      const grantMethod = isAdminByCustomClaim ? 'custom_claim' :
-                          isAdminByEmail ? 'email_list' :
-                          isAdminByUserId ? 'userid_list' :
-                          'dev_mode';
+      const grantMethod = isAdminByCustomClaim ? 'custom_claim' : 'dev_whitelist';
       console.log('🔐 [ADMIN AUTH] Admin access granted via:', grantMethod);
-    }
-
-    // Log if user ID doesn't match but email does (for debugging)
-    if (isAdminByEmail && !isAdminByUserId) {
-      console.warn('🔐 [ADMIN AUTH] Admin email matched but user ID not in list. User ID:', userId);
-      console.warn('🔐 [ADMIN AUTH] Consider adding this user ID to ADMIN_USER_IDS:', userId);
     }
     
     // Log the admin access attempt
@@ -328,18 +304,11 @@ export async function isUserAdmin(userId: string): Promise<boolean> {
       return true;
     }
 
-    // Priority 2: Check environment variable lists
+    // Priority 2: Dev user whitelist (development only - H1 security fix)
     const userEmail = await getUserEmail(userId);
-    const adminUserIds = getAdminUserIds();
-    const adminEmails = getAdminEmails();
-    const isAdminByUserId = adminUserIds.includes(userId);
-    const isAdminByEmail = userEmail ? adminEmails.includes(userEmail) : false;
-
-    // Priority 3: Dev user status (development only)
     const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
-    // Allow admin by custom claim, verified email, userId, or dev user status (in development)
-    return isAdminByUserId || isAdminByEmail || isDevAdmin;
+    return isDevAdmin;
   } catch (error) {
     console.error('[SECURITY] Error in simple admin check:', error);
     return false;

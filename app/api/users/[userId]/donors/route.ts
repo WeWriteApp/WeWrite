@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UserDonorAnalyticsService } from '../../../../services/userDonorAnalytics';
 import { getUserIdFromRequest } from '../../../auth-helper';
-import { isAdminUserId } from '../../../../utils/adminConfig';
+import { isUserAdmin } from '../../../../utils/adminSecurity';
 
 export async function GET(
   request: NextRequest,
@@ -28,7 +28,7 @@ export async function GET(
 
     // SECURITY: Only allow users to view their own donor analytics, or admins to view any
     const isOwner = currentUserId === userId;
-    const isAdmin = isAdminUserId(currentUserId);
+    const isAdmin = await isUserAdmin(currentUserId);
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json(

@@ -20,6 +20,16 @@ import { syncUserToResend } from '../../../services/resendContactsService';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { hashDevPassword } from '../../../utils/testUsers';
 import { authRateLimiter } from '../../../utils/rateLimiter';
+import { createSignedCookieValue, type SessionCookieData } from '../../../utils/cookieUtils';
+
+// Dev mode cookie options (only used when USE_DEV_AUTH=true in development)
+const DEV_SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: false, // Dev mode only - HTTP is fine for localhost
+  sameSite: 'lax' as const,
+  maxAge: 60 * 60 * 24 * 7, // 7 days
+  path: '/',
+};
 
 interface RegisterRequest {
   email: string;
@@ -171,23 +181,18 @@ export async function POST(request: NextRequest) {
         }),
       });
       
-      // Set session cookie for immediate login
+      // Set signed session cookie for immediate login
       const cookieStore = await cookies();
-      const sessionData = {
+      const sessionData: SessionCookieData = {
         uid,
         email,
         username,
         emailVerified: true,
         isAdmin: false,
       };
-      
-      cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
-        httpOnly: true,
-        secure: false, // Dev mode
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: '/',
-      });
+
+      const signedValue = await createSignedCookieValue(sessionData);
+      cookieStore.set('simpleUserSession', signedValue, DEV_SESSION_COOKIE_OPTIONS);
       
       console.log('[Register-DEV] Dev user created successfully:', { uid, email, username });
       
