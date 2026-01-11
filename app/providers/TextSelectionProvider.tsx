@@ -39,6 +39,8 @@ interface TextSelectionProviderProps {
   pageId?: string;
   pageTitle?: string;
   canEdit?: boolean;
+  /** Callback to trigger link insertion in the editor (edit mode only) */
+  onInsertLink?: () => void;
 }
 
 export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
@@ -51,7 +53,8 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
   userId,
   pageId,
   pageTitle,
-  canEdit = true
+  canEdit = true,
+  onInsertLink
 }) => {
   const [forceMenu, setForceMenu] = React.useState(false);
   const {
@@ -109,8 +112,6 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
           onClose={clearSelection}
           onCopy={copyToClipboard}
           onCreateLink={createShareableLink}
-          selectedHtml={selectedHtml}
-          selectedHtml={(selectionRange as any)?.selectedHtml || ''}
           enableCopy={enableCopy}
           enableShare={enableShare}
           enableAddToPage={enableAddToPage}
@@ -119,6 +120,7 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
           pageId={pageId}
           pageTitle={pageTitle}
           canEdit={canEdit}
+          onInsertLink={onInsertLink}
           setSelectionModalOpen={(open) => {
             setForceMenu(open);
             setIsModalOpen(open);

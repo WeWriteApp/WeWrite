@@ -114,6 +114,8 @@ const Editor: React.FC<EditorProps> = ({
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [editingLink, setEditingLink] = useState<any>(null);
   const [selectedText, setSelectedText] = useState('');
+  // Save selection when opening link modal (selection is lost when modal takes focus)
+  const savedSelectionRef = useRef<Range | null>(null);
 
   // Link suggestions state
   const [activeSuggestionForModal, setActiveSuggestionForModal] = useState<LinkSuggestion | null>(null);
@@ -517,10 +519,15 @@ const Editor: React.FC<EditorProps> = ({
   }, [onChange]);
 
   // Extract plain text from editor content for link suggestion analysis
+  // Excludes text inside links since those are already linked
   const extractPlainText = useCallback((nodes: Descendant[]): string => {
     return nodes.map(node => {
       if (Text.isText(node)) {
         return node.text;
+      }
+      // Skip link nodes - their text shouldn't be analyzed for link suggestions
+      if ('type' in node && node.type === 'link') {
+        return '';
       }
       if ('children' in node && Array.isArray(node.children)) {
         return extractPlainText(node.children as Descendant[]);
@@ -717,6 +724,11 @@ const Editor: React.FC<EditorProps> = ({
       delete (linkElement as any).text;
       delete (linkElement as any).displayText;
 
+      // Restore saved selection if available (selection may have been lost when modal opened)
+      if (savedSelectionRef.current && !editingLink) {
+        Transforms.select(editor, savedSelectionRef.current);
+      }
+
       const { selection } = editor;
 
       if (editingLink) {
@@ -779,6 +791,7 @@ const Editor: React.FC<EditorProps> = ({
       setShowLinkModal(false);
       setEditingLink(null);
       setSelectedText('');
+      savedSelectionRef.current = null;
 
     } catch (error) {
       // Simple error handling - show user-friendly message
@@ -793,10 +806,16 @@ const Editor: React.FC<EditorProps> = ({
     // Get selected text if any
     const { selection } = editor;
     if (selection && !Range.isCollapsed(selection)) {
-      const selectedText = SlateEditor.string(editor, selection);
-      setSelectedText(selectedText);
+      const rawSelectedText = SlateEditor.string(editor, selection);
+      // Trim leading/trailing whitespace from selection for cleaner links
+      const trimmedText = rawSelectedText.trim();
+      setSelectedText(trimmedText);
+      // Save the selection so we can restore it after modal closes
+      // This is needed because focus moves to the modal and selection is lost
+      savedSelectionRef.current = selection;
     } else {
       setSelectedText('');
+      savedSelectionRef.current = null;
     }
 
     setShowLinkModal(true);

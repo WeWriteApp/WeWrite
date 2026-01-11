@@ -205,6 +205,42 @@ export class UsdService {
       // Note: We no longer store allocatedUsdCents in usdBalances (Phase 1 simplification).
       // The allocated amount is always calculated from SUM(active allocations) to prevent drift.
 
+      // CRITICAL: Create earnings records for rolled-over allocations
+      // This ensures writers see expected income for the new month in admin panels
+      // and prevents the $0 earnings bug at month boundaries.
+      const earningsByRecipient = new Map<string, number>();
+
+      for (const allocation of validAllocations) {
+        if (allocation.recipientUserId && allocation.usdCents > 0) {
+          const current = earningsByRecipient.get(allocation.recipientUserId) || 0;
+          earningsByRecipient.set(allocation.recipientUserId, current + allocation.usdCents);
+        }
+      }
+
+      // Create/update earnings for each recipient
+      let earningsCreated = 0;
+      let earningsUpdated = 0;
+      for (const [recipientUserId, totalCents] of earningsByRecipient.entries()) {
+        try {
+          // Use dynamic import to avoid circular dependencies
+          const { UsdEarningsService } = await import('./usdEarningsService');
+          const result = await UsdEarningsService.createOrUpdateMonthlyEarnings(
+            recipientUserId,
+            currentMonth,
+            totalCents,
+            'rollover'
+          );
+          if (result.created) earningsCreated++;
+          if (result.updated) earningsUpdated++;
+        } catch (err) {
+          console.warn(`[USD ALLOCATION] Failed to create earnings for rollover to ${recipientUserId}:`, err);
+        }
+      }
+
+      if (earningsByRecipient.size > 0) {
+        console.log(`[USD ALLOCATION] Created/updated earnings for ${earningsByRecipient.size} recipients (created: ${earningsCreated}, updated: ${earningsUpdated})`);
+      }
+
       return {
         copied: true,
         sourceMonth,

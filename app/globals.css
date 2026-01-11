@@ -1,13 +1,12 @@
-/* All @import statements must come first for Turbopack/Lightning CSS compatibility */
-@import './styles/card-theme.css';
-@import './styles/allocation-bar-animations.css';
-@import './styles/fixed-layer.css';
-@import './styles/content-display.css';
-@import './components/editor-styles.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import our centralized card theme system */
+@import './styles/card-theme.css';
+
+/* Import allocation bar animations */
+@import './styles/allocation-bar-animations.css';
 
 /* Hide 3D force graph library navigation info overlay */
 .scene-nav-info {
@@ -30,6 +29,15 @@
   background: transparent !important;
   background-color: transparent !important;
 }
+
+/* Fixed layer tokens and utilities */
+@import './styles/fixed-layer.css';
+
+/* Import unified content display styles */
+@import './styles/content-display.css';
+
+/* Import editor styles for paragraph spacing and text view styling */
+@import './components/editor-styles.css';
 
 /* Global background & typography baseline */
 html, body {

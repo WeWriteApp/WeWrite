@@ -2,12 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
-import { BacklinkSummary, BacklinkEntry } from '../../firebase/database/backlinks';
+import { BacklinkSummary } from '../../firebase/database/backlinks';
 import { PillLink } from '../utils/PillLink';
 import Link from 'next/link';
-import { collection, query, where, orderBy, limit as firestoreLimit, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { getCollectionName } from '../../utils/environmentConfig';
 
 interface WhatLinksHereProps {
   pageId: string;
@@ -36,56 +33,33 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
       return;
     }
 
-    // Set up real-time subscription to backlinks
-    // Note: Query order must match Firestore composite index: isPublic, targetPageId, lastModified
-    const backlinksQuery = query(
-      collection(db, getCollectionName('backlinks')),
-      where('isPublic', '==', true),
-      where('targetPageId', '==', pageId),
-      orderBy('lastModified', 'desc'),
-      firestoreLimit(50)
-    );
+    // Fetch backlinks via API endpoint (avoids client-side Firestore permission issues)
+    const fetchBacklinks = async () => {
+      try {
+        const response = await fetch(`/api/links/backlinks?pageId=${encodeURIComponent(pageId)}&limit=50`);
 
-    const unsubscribe = onSnapshot(
-      backlinksQuery,
-      (snapshot) => {
-        const links: BacklinkSummary[] = snapshot.docs.map(doc => {
-          const data = doc.data() as BacklinkEntry;
-          return {
-            id: data.sourcePageId,
-            title: data.sourcePageTitle,
-            username: data.sourceUsername,
-            lastModified: data.lastModified,
-            isPublic: data.isPublic,
-            linkText: data.linkText
-          };
-        });
-        setBacklinks(links);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error('Error in backlinks subscription:', err);
-        // Check if error is due to missing index or permissions (common in development)
-        // If so, just show empty state instead of error
-        const errorMessage = err?.message || '';
-        if (errorMessage.includes('index') ||
-            errorMessage.includes('requires an index') ||
-            errorMessage.includes('permission') ||
-            errorMessage.includes('Missing or insufficient permissions')) {
-          console.warn('Backlinks query failed (likely index or permissions). Showing empty state.');
-          setBacklinks([]);
-          setError(null);
-        } else {
-          // For other errors, still show error state
-          setError('Failed to load backlinks');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
+
+        const data = await response.json();
+
+        if (data.success && data.data?.backlinks) {
+          setBacklinks(data.data.backlinks);
+        } else {
+          setBacklinks([]);
+        }
+        setError(null);
+      } catch (err) {
+        console.warn('Failed to fetch backlinks:', err);
+        setBacklinks([]);
+        setError(null); // Don't show error UI, just empty state
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    fetchBacklinks();
   }, [pageId]);
 
   // Convert backlinks to PageLinkItem format

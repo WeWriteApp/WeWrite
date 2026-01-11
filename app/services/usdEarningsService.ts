@@ -117,6 +117,76 @@ export class UsdEarningsService {
   }
 
   /**
+   * Create or update monthly earnings record for a recipient.
+   * Used by allocation rollover to ensure earnings exist for new month.
+   *
+   * This method is idempotent - it will only create/update if needed,
+   * and will never decrease an existing earnings amount.
+   */
+  static async createOrUpdateMonthlyEarnings(
+    recipientUserId: string,
+    month: string,
+    usdCents: number,
+    source: 'rollover' | 'allocation'
+  ): Promise<{ created: boolean; updated: boolean; finalAmount: number }> {
+    try {
+      const { db } = getFirebaseAdminAndDb();
+      const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
+
+      const earningsId = `${recipientUserId}_${month}`;
+      const earningsRef = db.collection(earningsCollectionName).doc(earningsId);
+
+      let created = false;
+      let updated = false;
+      let finalAmount = usdCents;
+
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(earningsRef);
+
+        if (doc.exists) {
+          // Only update if this would increase the amount (rollover shouldn't decrease)
+          const current = doc.data()?.totalUsdCentsReceived || 0;
+          if (usdCents > current) {
+            const updateData: Record<string, any> = {
+              totalUsdCentsReceived: usdCents,
+              updatedAt: FieldValue.serverTimestamp()
+            };
+            if (source === 'rollover') {
+              updateData.lastRolloverAt = FieldValue.serverTimestamp();
+            }
+            transaction.update(earningsRef, updateData);
+            updated = true;
+            finalAmount = usdCents;
+            console.log(`[UsdEarningsService] Updated earnings for ${recipientUserId} month ${month}: ${current} -> ${usdCents} cents (source: ${source})`);
+          } else {
+            finalAmount = current;
+            console.log(`[UsdEarningsService] Skipped update for ${recipientUserId} month ${month}: existing ${current} >= requested ${usdCents}`);
+          }
+        } else {
+          // Create new earnings record
+          transaction.set(earningsRef, {
+            userId: recipientUserId,
+            month,
+            totalUsdCentsReceived: usdCents,
+            status: 'pending',
+            allocations: [],
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+            createdVia: source
+          });
+          created = true;
+          console.log(`[UsdEarningsService] Created earnings for ${recipientUserId} month ${month}: ${usdCents} cents (source: ${source})`);
+        }
+      });
+
+      return { created, updated, finalAmount };
+    } catch (error) {
+      console.error(`[UsdEarningsService] Error in createOrUpdateMonthlyEarnings for ${recipientUserId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Process USD allocation for a writer (server-side)
    * Called when USD is allocated to their content
    *

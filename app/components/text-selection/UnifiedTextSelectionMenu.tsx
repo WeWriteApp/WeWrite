@@ -36,6 +36,8 @@ interface UnifiedTextSelectionMenuProps {
   pageId?: string;
   pageTitle?: string;
   canEdit?: boolean;
+  /** Callback to trigger link insertion in the editor (edit mode only) */
+  onInsertLink?: () => void;
   setSelectionModalOpen?: (open: boolean) => void;
 }
 
@@ -480,6 +482,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   pageId,
   pageTitle,
   canEdit = true,
+  onInsertLink,
   setSelectionModalOpen
 }) => {
   const params = useParams();
@@ -637,6 +640,16 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     e.preventDefault();
     e.stopPropagation();
     e.nativeEvent.stopImmediatePropagation();
+
+    // If we have an onInsertLink callback (from the editor), use it instead of showing our own modal
+    // This allows the editor's native link insertion to work with the current selection
+    if (onInsertLink) {
+      console.log('🔗 TEXT_SELECTION: Using editor onInsertLink callback');
+      onInsertLink();
+      onClose();
+      return;
+    }
+
     console.log('🔗 TEXT_SELECTION: Event prevented, current showLinkModal:', showLinkModal);
     console.log('🔗 TEXT_SELECTION: Setting showLinkModal to true...');
     setShowLinkModal(true);
@@ -757,7 +770,8 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
             }}
             onScroll={handleScroll}
           >
-            {enableCopy && (
+            {/* Copy - only show in view mode (not edit mode) */}
+            {enableCopy && !canEdit && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -769,6 +783,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
               </Button>
             )}
 
+            {/* Link - only show in edit mode */}
             {canEdit && (
               <Button
                 variant="ghost"
@@ -781,14 +796,15 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
               </Button>
             )}
 
-            {enableShare && (
+            {/* Share - only show in view mode (not edit mode) */}
+            {enableShare && !canEdit && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleCreateLink}
                 className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
               >
-                <Icon name="Link" size={12} />
+                <Icon name="Share2" size={12} />
                 Share
               </Button>
             )}

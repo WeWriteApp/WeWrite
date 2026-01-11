@@ -381,7 +381,8 @@ export default function ContentPageView({
     try {
       pageLogger.debug('Trying API fallback for page load', { pageId, userId: user?.uid });
 
-      const result = await getPageById(pageId, user?.uid);
+      // Skip client-side cache when user is logged in to ensure fresh content for editors
+      const result = await getPageById(pageId, user?.uid, { skipCache: !!user?.uid });
 
       pageLogger.debug('API fallback result', {
         hasPageData: !!result.pageData,
@@ -1514,11 +1515,10 @@ export default function ContentPageView({
         // Editor state is NOT updated here - it retains the user's current work
       }
 
-      // Client-side cache invalidation
+      // Comprehensive cache invalidation - clears ALL caching layers
       try {
-        const { invalidateCache } = await import('../../utils/serverCache');
-        invalidateCache.page(pageId);
-        if (user?.uid) invalidateCache.user(user.uid);
+        const { invalidatePageCacheAfterSave } = await import('../../utils/apiClient');
+        invalidatePageCacheAfterSave(pageId, user?.uid);
 
         // Dispatch refresh event for components
         if (typeof window !== 'undefined') {
@@ -2105,6 +2105,7 @@ export default function ContentPageView({
                 pageId={page?.id}
                 pageTitle={page?.title}
                 canEdit={canEdit}
+                onInsertLink={linkInsertionTrigger || undefined}
               >
                 <div ref={contentRef} data-page-content>
                     <UnifiedErrorBoundary fallback={({ error, resetError }) => (

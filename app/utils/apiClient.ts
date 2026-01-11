@@ -221,6 +221,40 @@ export const invalidatePageDeletedStatus = (pageId: string) => {
 };
 
 /**
+ * Comprehensive page cache invalidation after saves/edits
+ * Clears all caching layers to ensure fresh data on next load
+ */
+export const invalidatePageCacheAfterSave = (pageId: string, userId?: string) => {
+  // 1. Clear ConsolidatedApiClient cache for this page
+  consolidatedClient.invalidateCache(new RegExp(`.*${pageId}.*`));
+
+  // 2. Clear server-side page cache
+  import('./serverCache').then(({ pageCache, invalidateCache }) => {
+    pageCache.invalidate(pageId);
+    invalidateCache.page(pageId);
+    if (userId) {
+      invalidateCache.user(userId);
+    }
+  }).catch(() => {});
+
+  // 3. Clear InternalLinkWithTitle caches
+  import('../components/editor/InternalLinkWithTitle').then(({ clearPageCaches }) => {
+    clearPageCaches(pageId);
+  }).catch(() => {});
+
+  // 4. Clear sessionStorage optimistic page data
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem(`wewrite:optimisticPage:${pageId}`);
+    } catch (e) {
+      // sessionStorage might not be available
+    }
+  }
+
+  console.log(`🧹 Cache invalidated for page ${pageId}`);
+};
+
+/**
  * Base API client function - now uses consolidated client
  */
 async function apiCall<T = any>(
@@ -299,10 +333,13 @@ export const usernameApi = {
 export const pageApi = {
   /**
    * Get page by ID
+   * @param skipCache - If true, bypasses client-side cache to get fresh data (useful for edit mode)
    */
-  async getPage(pageId: string, userId?: string): Promise<ApiResponse> {
+  async getPage(pageId: string, userId?: string, options?: { skipCache?: boolean }): Promise<ApiResponse> {
     const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
-    return apiCall(`/api/pages/${pageId}${params}`);
+    return consolidatedClient.call(`/api/pages/${pageId}${params}`, {
+      skipCache: options?.skipCache
+    });
   },
 
   /**
@@ -595,9 +632,10 @@ export async function appendPageReference(targetPageId: string, sourcePageData: 
 
 /**
  * Replace getPageById from firebase/database.ts
+ * @param skipCache - If true, bypasses client-side cache to get fresh data (useful for edit mode)
  */
-export async function getPageById(pageId: string, userId?: string) {
-  const response = await pageApi.getPage(pageId, userId);
+export async function getPageById(pageId: string, userId?: string, options?: { skipCache?: boolean }) {
+  const response = await pageApi.getPage(pageId, userId, { skipCache: options?.skipCache });
   if (response.success) {
     return { pageData: response.data };
   }

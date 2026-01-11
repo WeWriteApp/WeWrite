@@ -13,6 +13,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/create-monthly-earnings",
+      "schedule": "0 7 1 * *"
+    },
+    {
       "path": "/api/usd/process-writer-earnings",
       "schedule": "0 8 1 * *"
     },

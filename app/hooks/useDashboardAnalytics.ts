@@ -1328,3 +1328,102 @@ export function useNotificationsSentMetrics(dateRange: DateRange, granularity?: 
 
   return { data, loading, error, refetch: fetchData };
 }
+
+// ============ Batch Dashboard Analytics Hook ============
+
+/**
+ * Batch response interface matching the API response
+ */
+export interface DashboardBatchData {
+  accounts: ChartDataPoint[];
+  pages: ChartDataPoint[];
+  shares: ChartDataPoint[];
+  contentChanges: ChartDataPoint[];
+  pwaInstalls: ChartDataPoint[];
+  visitors: ChartDataPoint[];
+  replies: ChartDataPoint[];
+  links: ChartDataPoint[];
+  notifications: ChartDataPoint[];
+  followedUsers: ChartDataPoint[];
+  platformRevenue: any[];
+  payouts: any[];
+  pendingEarnings: any[];
+  finalEarnings: any[];
+}
+
+/**
+ * Consolidated hook for ALL dashboard analytics - fetches everything in one API call
+ *
+ * Performance optimization: Replaces 14+ individual API calls with a single batch request.
+ * The batch endpoint queries each Firestore collection only once and splits results in memory.
+ *
+ * Benefits:
+ * - 93% reduction in network round trips (14 → 1)
+ * - 57% reduction in Firestore queries (14 → 6)
+ * - Server-side caching with 5-minute TTL
+ * - HTTP cache headers for browser caching
+ *
+ * @param dateRange - The date range to fetch analytics for
+ * @returns All dashboard metrics in a single response
+ */
+export function useDashboardAnalyticsBatch(dateRange: DateRange) {
+  const [data, setData] = useState<DashboardBatchData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cacheHit, setCacheHit] = useState(false);
+
+  // Debounce date range changes to avoid excessive API calls
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString()
+      });
+
+      const response = await adminFetch(`/api/admin/dashboard-analytics-batch?${params}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch batch analytics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch batch analytics');
+      }
+
+      setData(result.data);
+      setCacheHit(result.metadata?.cacheHit || false);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch batch analytics');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, cacheHit, refetch: fetchData };
+}

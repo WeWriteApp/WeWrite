@@ -36,6 +36,7 @@ import { ShinyButtonSection } from './ShinyButtonSection';
 import { TableSection } from './TableSection';
 import { TabsSection } from './TabsSection';
 import { TextareaSection } from './TextareaSection';
+import { TextSelectionMenuSection } from './TextSelectionMenuSection';
 import { TooltipSection } from './TooltipSection';
 import { TypographySection } from './TypographySection';
 import { UsernameBadgeSection } from './UsernameBadgeSection';
@@ -81,6 +82,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'table', label: 'Table', component: TableSection },
   { id: 'tabs', label: 'Tabs', component: TabsSection },
   { id: 'textarea', label: 'Textarea', component: TextareaSection },
+  { id: 'text-selection-menu', label: 'Text Selection Menu', component: TextSelectionMenuSection },
   { id: 'tooltip', label: 'Tooltip', component: TooltipSection },
   { id: 'typography', label: 'Typography', component: TypographySection },
   { id: 'username-badge', label: 'UsernameBadge', component: UsernameBadgeSection },

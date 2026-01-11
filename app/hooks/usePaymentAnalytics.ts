@@ -597,3 +597,115 @@ export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = f
 
   return { data, metadata, loading, error, refetch: fetchData };
 }
+
+/**
+ * Hook for writer pending earnings (status = 'pending')
+ * Shows current month allocations that haven't been finalized yet
+ */
+export function useWriterPendingEarnings(dateRange: DateRange, cumulative: boolean = false) {
+  const [data, setData] = useState<any[]>([]);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        cumulative: cumulative.toString(),
+        status: 'pending'
+      });
+
+      const response = await fetch(`/api/admin/earnings-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pending earnings: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result.data || []);
+      setMetadata(result.metadata || null);
+    } catch (err) {
+      console.error('Error fetching pending earnings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch pending earnings data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, metadata, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for writer final earnings (status = 'available' or 'paid_out')
+ * Shows earnings that have been finalized after allocation freeze
+ */
+export function useWriterFinalEarnings(dateRange: DateRange, cumulative: boolean = false) {
+  const [data, setData] = useState<any[]>([]);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
+        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
+        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        cumulative: cumulative.toString(),
+        status: 'final'
+      });
+
+      const response = await fetch(`/api/admin/earnings-analytics?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch final earnings: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result.data || []);
+      setMetadata(result.metadata || null);
+    } catch (err) {
+      console.error('Error fetching final earnings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch final earnings data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, cumulative]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, metadata, loading, error, refetch: fetchData };
+}

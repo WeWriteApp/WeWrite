@@ -93,10 +93,15 @@ export default function PageGraph3D({
       // Clear previous graph
       if (graphRef.current) {
         graphRef.current._destructor?.();
-        containerRef.current!.innerHTML = '';
+        if (containerRef.current) {
+          containerRef.current.innerHTML = '';
+        }
       }
 
-      const container = containerRef.current!;
+      // Re-check container after async imports - it may have unmounted
+      if (!containerRef.current) return;
+
+      const container = containerRef.current;
       const width = container.clientWidth;
       const graphHeight = isFullscreen ? window.innerHeight - 100 : height;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { LinkSuggestion, LinkSuggestionResult, debouncedFindLinkSuggestions } from '../services/linkSuggestionService';
 
 export interface ActiveSuggestion {
@@ -78,6 +78,10 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
   const lastAnalyzedText = useRef<string>('');
   const analysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs for stable access in callbacks (prevents infinite re-renders)
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   // Clear timeout on unmount
   useEffect(() => {
     return () => {
@@ -121,11 +125,14 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
         debounceDelay
       );
 
+      // Use ref to access current state values without adding them to dependencies
+      const currentState = stateRef.current;
+
       // Filter suggestions by confidence and dismissed status
       const filteredSuggestions = result.suggestions.filter(suggestion => {
         const key = `${suggestion.matchedText}-${suggestion.id}`;
-        return suggestion.confidence >= state.minConfidence &&
-               !state.dismissedSuggestions.has(key);
+        return suggestion.confidence >= currentState.minConfidence &&
+               !currentState.dismissedSuggestions.has(key);
       });
 
       if (filteredSuggestions.length > 0) {
@@ -182,7 +189,7 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
         allSuggestions: []
       }));
     }
-  }, [state.isEnabled, state.minConfidence, state.dismissedSuggestions, debounceDelay]);
+  }, [debounceDelay]); // Use stateRef.current instead of state to avoid re-creating this callback
 
   // Show suggestion modal
   const showSuggestionModal = useCallback((suggestion: ActiveSuggestion) => {
@@ -268,8 +275,8 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     setState(prev => ({ ...prev, showModal: false }));
   }, [onSuggestionSelected]);
 
-  // Actions object
-  const actions: LinkSuggestionActions = {
+  // Memoize actions object to prevent infinite re-renders when used in dependency arrays
+  const actions: LinkSuggestionActions = useMemo(() => ({
     analyzeText,
     showSuggestionModal,
     hideSuggestionModal,
@@ -278,7 +285,16 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     setEnabled,
     setMinConfidence,
     selectSuggestion
-  };
+  }), [
+    analyzeText,
+    showSuggestionModal,
+    hideSuggestionModal,
+    dismissSuggestion,
+    clearSuggestions,
+    setEnabled,
+    setMinConfidence,
+    selectSuggestion
+  ]);
 
   return {
     state,

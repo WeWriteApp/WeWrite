@@ -517,14 +517,8 @@ export default function ActivityFeed({
             );
           })}
 
-          {/* Loading indicator */}
-          {(loadingMoreState || loadingMore) && (
-            <div className="flex justify-center py-4">
-              <Icon name="Loader" size={24} className="text-muted-foreground" />
-            </div>
-          )}
-
-          {/* Infinite scroll target */}
+          {/* Infinite scroll target - no separate loading indicator needed since
+              the fetch completes quickly and we deduplicate items anyway */}
           <div ref={targetRef} className="h-4" />
 
           {/* Manual load more button (global mode after 3 auto-loads) */}

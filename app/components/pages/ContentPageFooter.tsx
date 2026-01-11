@@ -29,6 +29,8 @@ interface PageFooterProps {
   onCancel: () => void;
   onDelete: () => void;
   onInsertLink: () => void;
+  /** Current location state (may differ from page.location when edited) */
+  location?: { lat: number; lng: number; zoom?: number } | null;
   onLocationChange?: (location: any) => void;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
@@ -87,6 +89,7 @@ export default function ContentPageFooter({
   onCancel,
   onDelete,
   onInsertLink,
+  location,
   onLocationChange,
   isSaving,
   hasUnsavedChanges,
@@ -200,9 +203,9 @@ export default function ContentPageFooter({
                 />
               )}
               {/* Show location if owner OR if it has a value OR if there are linked pages */}
-              {(isOwner || page.location || linkedPageIds.length > 0) && (
+              {(isOwner || location || linkedPageIds.length > 0) && (
                 <LocationField
-                  location={page.location}
+                  location={location}
                   canEdit={isOwner}
                   onLocationChange={onLocationChange}
                   pageId={page.id}

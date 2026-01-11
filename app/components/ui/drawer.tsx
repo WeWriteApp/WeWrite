@@ -244,13 +244,14 @@ const DrawerContent = React.forwardRef<
   const [dragY, setDragY] = React.useState(0)
   const [startY, setStartY] = React.useState(0)
   const contentRef = React.useRef<HTMLDivElement>(null)
-  const scrollContainerRef = React.useRef<HTMLElement | null>(null)
   // Track if swipe should be allowed (only when at top of scroll)
   const canSwipeRef = React.useRef(false)
 
-  // Find the scrollable container within the drawer content
-  const findScrollContainer = React.useCallback((element: HTMLElement | null): HTMLElement | null => {
-    if (!element) return null
+  // Find all scrollable containers within the drawer content
+  const findScrollContainers = React.useCallback((element: HTMLElement | null): HTMLElement[] => {
+    if (!element) return []
+
+    const scrollables: HTMLElement[] = []
 
     // Check if this element is scrollable
     const isScrollable = (el: HTMLElement) => {
@@ -261,18 +262,24 @@ const DrawerContent = React.forwardRef<
       return isScrollableOverflow && hasScrollableContent
     }
 
-    // Search for scrollable child (depth-first)
-    const findScrollableChild = (el: HTMLElement): HTMLElement | null => {
-      if (isScrollable(el)) return el
+    // Search for all scrollable children (depth-first)
+    const findScrollableChildren = (el: HTMLElement) => {
+      if (isScrollable(el)) scrollables.push(el)
       for (const child of Array.from(el.children) as HTMLElement[]) {
-        const scrollable = findScrollableChild(child)
-        if (scrollable) return scrollable
+        findScrollableChildren(child)
       }
-      return null
     }
 
-    return findScrollableChild(element)
+    findScrollableChildren(element)
+    return scrollables
   }, [])
+
+  // Check if any scrollable container is not at the top
+  const isAnyScrollContainerScrolled = React.useCallback(() => {
+    if (!contentRef.current) return false
+    const scrollContainers = findScrollContainers(contentRef.current)
+    return scrollContainers.some(container => container.scrollTop > 0)
+  }, [findScrollContainers])
 
   const handleTouchStart = (e: React.TouchEvent) => {
     // Skip if swipe-to-dismiss is disabled (e.g., for graph views that need drag interactions)
@@ -280,19 +287,13 @@ const DrawerContent = React.forwardRef<
 
     // Don't handle touch events on input fields or interactive elements
     const target = e.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"]')) {
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"], [data-radix-scroll-area-viewport]')) {
       return
     }
 
-    // Find scroll container on first touch
-    if (!scrollContainerRef.current && contentRef.current) {
-      scrollContainerRef.current = findScrollContainer(contentRef.current)
-    }
-
-    // Check if we're at the top of any scrollable content
-    // Swipe-to-dismiss should only work when scrolled to top
-    const scrollContainer = scrollContainerRef.current
-    const isAtTop = !scrollContainer || scrollContainer.scrollTop <= 0
+    // Check if we're at the top of ALL scrollable content
+    // Swipe-to-dismiss should only work when all scroll containers are at top
+    const isAtTop = !isAnyScrollContainerScrolled()
 
     canSwipeRef.current = isAtTop
 
@@ -310,17 +311,28 @@ const DrawerContent = React.forwardRef<
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    // If swipe wasn't allowed at touch start, don't process
-    if (!canSwipeRef.current || !isDragging) return
-
     // Don't handle touch events on input fields or interactive elements
     const target = e.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"]')) {
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"], [data-radix-scroll-area-viewport]')) {
       return
     }
 
     const currentY = e.touches[0].clientY
     const deltaY = currentY - startY
+
+    // Re-check scroll position on every move - if user has scrolled content, cancel swipe
+    if (isDragging && isAnyScrollContainerScrolled()) {
+      setIsDragging(false)
+      canSwipeRef.current = false
+      if (contentRef.current) {
+        contentRef.current.style.transform = ''
+        contentRef.current.style.transition = ''
+      }
+      return
+    }
+
+    // If swipe wasn't allowed at touch start, don't process
+    if (!canSwipeRef.current || !isDragging) return
 
     // If user is trying to scroll up (negative deltaY), cancel the drag and let scroll happen
     if (deltaY < 0) {
@@ -338,6 +350,9 @@ const DrawerContent = React.forwardRef<
     setDragY(clampedDeltaY)
 
     if (contentRef.current && clampedDeltaY > 0) {
+      // Prevent default to stop scroll from happening while we're dragging
+      e.preventDefault()
+
       // Add resistance when dragging beyond threshold
       const resistance = clampedDeltaY > 100 ? 0.5 : 1
       const adjustedDelta = clampedDeltaY > 100 ? 100 + (clampedDeltaY - 100) * resistance : clampedDeltaY
@@ -386,7 +401,11 @@ const DrawerContent = React.forwardRef<
   return (
     <DrawerPortal>
       {(shouldShowOverlay || blurOverlay) && (
-        <DialogPrimitive.Overlay className={overlayClasses} />
+        <DialogPrimitive.Overlay
+          className={overlayClasses}
+          // Prevent touch events from reaching content behind overlay
+          style={{ touchAction: 'none' }}
+        />
       )}
       <DialogPrimitive.Content
         ref={ref}
@@ -406,7 +425,9 @@ const DrawerContent = React.forwardRef<
           height,
           borderRadius: '1.5rem 1.5rem 0 0',
           borderBottom: 'none',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          // Prevent scroll events from bleeding through to content behind
+          overscrollBehavior: 'contain',
         }}
         tabIndex={-1}
         {...props}
@@ -419,6 +440,10 @@ const DrawerContent = React.forwardRef<
         <div
           ref={contentRef}
           className="flex flex-col h-full"
+          style={{
+            // Contain scroll within this container - prevents scroll chaining to body
+            overscrollBehavior: 'contain',
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -429,7 +454,13 @@ const DrawerContent = React.forwardRef<
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-h-0 flex flex-col">
+          <div
+            className="flex-1 min-h-0 flex flex-col overflow-y-auto"
+            style={{
+              // Critical: contain scroll events within drawer body
+              overscrollBehavior: 'contain',
+            }}
+          >
             {children}
           </div>
 

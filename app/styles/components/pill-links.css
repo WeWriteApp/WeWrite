@@ -1,0 +1,203 @@
+/**
+ * PillLink Styles
+ *
+ * This file contains all styles required for the PillLink component.
+ * These styles support 4 pill variants: filled, outline, text_only, underlined
+ * with optional shiny effects (shimmer + glow) controlled by UI_STYLES setting.
+ *
+ * Dependencies:
+ * - PillStyleContext.tsx (getPillStyleClasses)
+ * - PillLink.tsx (uses data-pill-style attribute)
+ */
+
+/* ============================================
+   SHIMMER ANIMATION
+   Used by shiny pill links and buttons
+   ============================================ */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Single shimmer animation - slides from right to left once */
+@keyframes shimmer-once {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -100% center;
+  }
+}
+
+/* ============================================
+   SHINY SHIMMER BASE SYSTEM
+   Base class for all shiny effects
+   ============================================ */
+.shiny-shimmer-base {
+  position: relative;
+  overflow: hidden;
+}
+
+.shiny-shimmer-base::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 45%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 55%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-position: 200% center;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+}
+
+.shiny-shimmer-base:hover::before {
+  opacity: 1;
+  animation: shimmer-once 0.6s ease-out forwards;
+}
+
+/* ============================================
+   SHINY GLOW BASE
+   Adds colored glow for solid buttons/pills
+   ============================================ */
+.shiny-glow-base {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   SHINY PILL LINK STYLE (FILLED)
+   Uses accent color with shimmer effect on hover/active
+   ============================================ */
+.pill-shiny-style {
+  position: relative;
+  overflow: hidden;
+  background-size: 200% 100%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 4px oklch(var(--accent-base) / 0.3),
+    0 0 8px oklch(var(--accent-base) / 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Shimmer gradient overlay - only animates on hover */
+.pill-shiny-style::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-position: -200% center;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: background-position 0s;
+}
+
+.pill-shiny-style:hover {
+  box-shadow:
+    0 0 10px oklch(var(--accent-base) / 0.5),
+    0 0 20px oklch(var(--accent-base) / 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.pill-shiny-style:hover::before {
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.pill-shiny-style:active::before {
+  animation: shimmer 0.8s ease-in-out infinite;
+}
+
+.pill-shiny-style:active {
+  box-shadow:
+    0 0 14px oklch(var(--accent-base) / 0.6),
+    0 0 28px oklch(var(--accent-base) / 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================
+   SHINY OUTLINE PILL LINK STYLE
+   Outline variant with brighter top border and accent shimmer
+   ============================================ */
+.pill-outline-shiny-style {
+  position: relative;
+  overflow: hidden;
+  border-top-color: oklch(var(--accent-base) / 0.4);
+}
+
+.pill-outline-shiny-style:hover {
+  border-top-color: oklch(var(--accent-base) / 0.6);
+}
+
+.pill-outline-shiny-style:active {
+  border-top-color: oklch(var(--accent-base) / 0.7);
+}
+
+/* Override shimmer to use accent color instead of white */
+.pill-outline-shiny-style::before {
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 45%,
+    oklch(var(--accent-base) / 0.3) 50%,
+    transparent 55%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-position: 200% center;
+}
+
+/* ============================================
+   PILL LINK TOUCH DEVICE FIXES
+   Disable hover effects on touch devices to prevent sticky hover states
+   ============================================ */
+@media (hover: none) {
+  /* Disable hover scale and shadow for pill links on touch devices */
+  a[data-pill-style]:hover,
+  a[data-pill-style]:focus {
+    transform: none !important;
+    box-shadow: inherit !important;
+  }
+
+  /* Keep active state for touch feedback */
+  a[data-pill-style]:active {
+    transform: scale(0.95) !important;
+  }
+
+  /* Disable shiny hover effects on touch devices */
+  .pill-shiny-style:hover {
+    box-shadow: none !important;
+  }
+
+  .pill-shiny-style:hover::before {
+    animation: none !important;
+  }
+
+  /* Keep active shimmer for feedback */
+  .pill-shiny-style:active::before {
+    animation: shimmer 0.8s ease-in-out infinite;
+  }
+
+  /* Disable outline shiny hover effects */
+  .pill-outline-shiny-style:hover {
+    border-top-color: oklch(var(--accent-base) / 0.4) !important;
+  }
+}

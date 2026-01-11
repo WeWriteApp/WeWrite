@@ -86,6 +86,17 @@ const FilteredSearchResults = forwardRef(({
   const [showFilters, setShowFilters] = useState(false);
   const [isCreatingPage, setIsCreatingPage] = useState(false);
 
+  // Track previous initialSearch to detect changes
+  const prevInitialSearchRef = useRef(initialSearch);
+
+  // Sync search state when initialSearch prop changes (e.g., when modal opens with new selected text)
+  useEffect(() => {
+    if (initialSearch !== prevInitialSearchRef.current) {
+      prevInitialSearchRef.current = initialSearch;
+      setSearch(initialSearch);
+    }
+  }, [initialSearch]);
+
   // Refs
   const searchInputRef = useRef(null);
   const abortControllerRef = useRef(null);
