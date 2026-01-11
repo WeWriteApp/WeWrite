@@ -49,14 +49,24 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
+    // Parse query parameters with security bounds
+    const requestedLimit = parseInt(searchParams.get('limit') || '20');
+    const MAX_LIMIT = 100; // Security: Prevent DoS via excessive queries
+    const MIN_LIMIT = 1;
+
+    // Validate orderBy to prevent injection
+    const validOrderBy = ['lastModified', 'createdAt', 'title', 'deletedAt'];
+    const requestedOrderBy = searchParams.get('orderBy');
+    const validOrderDirection = ['asc', 'desc'];
+    const requestedDirection = searchParams.get('orderDirection');
+
     const query: PageQuery = {
       userId: searchParams.get('userId') || currentUserId, // Default to current user if no userId specified
       includeDeleted: searchParams.get('includeDeleted') === 'true',
-      limit: parseInt(searchParams.get('limit') || '20'),
+      limit: Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, requestedLimit)), // Clamp to safe range
       startAfter: searchParams.get('startAfter') || undefined,
-      orderBy: (searchParams.get('orderBy') as any) || 'lastModified',
-      orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
+      orderBy: (validOrderBy.includes(requestedOrderBy || '') ? requestedOrderBy : 'lastModified') as PageQuery['orderBy'],
+      orderDirection: (validOrderDirection.includes(requestedDirection || '') ? requestedDirection : 'desc') as PageQuery['orderDirection']
     };
 
     // ENHANCED CACHING: Check our aggressive pages list cache first

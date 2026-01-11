@@ -27,15 +27,49 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'No file provided');
     }
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return createErrorResponse('BAD_REQUEST', 'File must be an image');
+    // Validate file type - check both MIME type and file extension
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    // Check MIME type
+    if (!allowedMimeTypes.includes(file.type)) {
+      return createErrorResponse('BAD_REQUEST', 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP');
+    }
+
+    // Check file extension (prevent MIME type spoofing)
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    if (!hasValidExtension) {
+      return createErrorResponse('BAD_REQUEST', 'Invalid file extension. Allowed: .jpg, .jpeg, .png, .gif, .webp');
+    }
+
+    // Validate file magic bytes (first few bytes that identify file type)
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer.slice(0, 12));
+
+    const isValidMagic = (
+      // JPEG: FF D8 FF
+      (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) ||
+      // PNG: 89 50 4E 47 0D 0A 1A 0A
+      (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) ||
+      // GIF: 47 49 46 38
+      (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) ||
+      // WebP: 52 49 46 46 ... 57 45 42 50
+      (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+       bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50)
+    );
+
+    if (!isValidMagic) {
+      return createErrorResponse('BAD_REQUEST', 'File content does not match a valid image format');
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       return createErrorResponse('BAD_REQUEST', 'File too large (max 10MB)');
     }
+
+    // Create a new File object from the buffer (since we consumed the original reading magic bytes)
+    const validatedFile = new File([buffer], file.name, { type: file.type });
 
     // Get Firebase Admin instance
     const admin = getFirebaseAdmin();
@@ -54,8 +88,8 @@ export async function POST(request: NextRequest) {
       await deleteBackgroundImageByFilenameServer(userId, userData.backgroundImage.filename);
     }
 
-    // Upload new image to Firebase Storage
-    const downloadURL = await uploadBackgroundImageServer(file, userId);
+    // Upload new image to Firebase Storage (use validatedFile which was recreated from buffer)
+    const downloadURL = await uploadBackgroundImageServer(validatedFile, userId);
 
     if (!downloadURL) {
       return createErrorResponse('INTERNAL_ERROR', 'Failed to upload image to storage');

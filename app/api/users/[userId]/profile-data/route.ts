@@ -187,10 +187,10 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const userId = params.userId;
+    const { userId } = await params;
     
     // Require authentication for updates
     const currentUserId = await getUserIdFromRequest(request);

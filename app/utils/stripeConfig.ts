@@ -65,9 +65,11 @@ export const getStripeSecretKeyAsync = async (): Promise<string | undefined> => 
         const prodKey = process.env.STRIPE_PROD_SECRET_KEY;
 
         if (!prodKey) {
-          console.error(`[Stripe Config] ⚠️  STRIPE_PROD_SECRET_KEY is not set! Add it to .env.local to view production data.`);
-          console.error(`[Stripe Config] Falling back to test keys - you will see TEST data, not production data.`);
-          return process.env.STRIPE_SECRET_KEY;
+          // Security: Don't silently fall back to test keys when production is explicitly requested
+          // This prevents accidental use of test mode in production scenarios
+          console.error(`[Stripe Config] ⚠️ CRITICAL: STRIPE_PROD_SECRET_KEY is not set but production data was requested!`);
+          console.error(`[Stripe Config] Add STRIPE_PROD_SECRET_KEY to environment variables.`);
+          throw new Error('Production Stripe key requested but STRIPE_PROD_SECRET_KEY is not configured');
         }
 
         if (prodKey.startsWith('sk_test_')) {

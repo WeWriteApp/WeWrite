@@ -14,6 +14,7 @@ import { broadcastEmailTemplate } from '../../../lib/emailTemplates';
 import { Resend } from 'resend';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 const GENERAL_AUDIENCE_ID = '493da2d9-7034-4bb0-99de-1dcfac3b424d';
 
@@ -26,16 +27,10 @@ function getResend(): Resend {
   return new Resend(apiKey);
 }
 
-// Verify admin access
+// Verify admin access using proper server-side validation
 async function verifyAdmin(request: NextRequest): Promise<{ valid: boolean; email?: string }> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return { valid: false };
-  }
-  
-  // For simplicity, we'll check admin on the client side
-  // This endpoint should only be accessible to admins
-  return { valid: true };
+  const result = await checkAdminPermissions(request);
+  return { valid: result.success, email: result.userEmail };
 }
 
 interface BroadcastRequest {
@@ -61,6 +56,15 @@ export async function GET(request: NextRequest) {
   // Wrap the entire handler with admin context for proper environment detection
   return withAdminContext(request, async () => {
   try {
+    // Verify admin access
+    const adminCheck = await verifyAdmin(request);
+    if (!adminCheck.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const resend = getResend();
     
     // Fetch audience contacts to get stats
@@ -119,6 +123,15 @@ export async function POST(request: NextRequest) {
   // Wrap the entire handler with admin context for proper environment detection
   return withAdminContext(request, async () => {
   try {
+    // Verify admin access
+    const adminCheck = await verifyAdmin(request);
+    if (!adminCheck.valid) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const body: BroadcastRequest = await request.json();
     const { subject, heading, body: emailBody, ctaText, ctaUrl, testMode, testEmail } = body;
     

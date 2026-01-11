@@ -12,6 +12,7 @@ import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { initAdmin } from '../../../firebase/admin';
 import { sendPasswordResetEmail as sendCustomResetEmail } from '../../../services/emailService';
+import { passwordResetRateLimiter } from '../../../utils/rateLimiter';
 
 const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app';
@@ -240,6 +241,16 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return createErrorResponse('BAD_REQUEST', 'Please enter a valid email address');
+    }
+
+    // Rate limiting by email address to prevent abuse
+    const rateLimitKey = `password-reset:${email.toLowerCase()}`;
+    const rateLimitResult = passwordResetRateLimiter.checkLimit(rateLimitKey);
+    if (!rateLimitResult.allowed) {
+      console.log(`🔐 [Password Reset] Rate limited: ${email}`);
+      return createErrorResponse('BAD_REQUEST',
+        'Too many password reset requests. Please wait before trying again.'
+      );
     }
 
     const maskedEmail = email.substring(0, 3) + '***@' + email.split('@')[1];

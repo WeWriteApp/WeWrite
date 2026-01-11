@@ -42,10 +42,15 @@ export async function POST(request: NextRequest) {
 
     // Verify webhook signature
     try {
+      const webhookSecret = getStripeWebhookSecret();
+      if (!webhookSecret) {
+        console.error('[Webhook] STRIPE_WEBHOOK_SECRET is not configured');
+        return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+      }
       event = stripe.webhooks.constructEvent(
         body,
         signature,
-        getStripeWebhookSecret() || ''
+        webhookSecret
       );
     } catch (err) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });

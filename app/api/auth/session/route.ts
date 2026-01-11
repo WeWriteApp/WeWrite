@@ -315,9 +315,9 @@ async function createSessionCookie(user: User) {
 
   cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    secure: true, // Always use secure cookies (requires HTTPS, localhost is exempted by browsers)
+    sameSite: 'lax', // 'lax' allows top-level navigation while preventing CSRF on POST
+    maxAge: 60 * 60 * 24 * 7, // 7 days - reasonable for session persistence
     path: '/',
   });
 }

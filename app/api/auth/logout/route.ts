@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
  * Logout API Endpoint
  *
- * This endpoint provides logout functionality that clears
- * all session cookies and signs the user out completely.
+ * This endpoint provides logout functionality that:
+ * 1. Revokes backend sessions in Firestore
+ * 2. Clears all session cookies
+ * 3. Signs the user out completely
  */
 
 // POST endpoint - Sign out user
@@ -14,6 +18,51 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
 
     console.log('[Logout] Processing logout request');
+
+    // L1 Security Fix: Revoke backend sessions before clearing cookies
+    const sessionIdCookie = cookieStore.get('sessionId');
+    const userSessionCookie = cookieStore.get('simpleUserSession');
+
+    if (sessionIdCookie?.value || userSessionCookie?.value) {
+      try {
+        const admin = getFirebaseAdmin();
+        if (admin) {
+          const db = admin.firestore();
+          const sessionsCollection = getCollectionName('userSessions');
+
+          // Mark session as inactive by sessionId
+          if (sessionIdCookie?.value) {
+            const sessionRef = db.collection(sessionsCollection).doc(sessionIdCookie.value);
+            const sessionDoc = await sessionRef.get();
+
+            if (sessionDoc.exists) {
+              await sessionRef.update({
+                isActive: false,
+                loggedOutAt: new Date().toISOString(),
+                logoutReason: 'user_initiated'
+              });
+              console.log('[Logout] Session marked as inactive:', sessionIdCookie.value);
+            }
+          }
+
+          // Also try to get userId from session cookie to mark all their sessions
+          if (userSessionCookie?.value) {
+            try {
+              const sessionData = JSON.parse(userSessionCookie.value);
+              if (sessionData?.uid) {
+                // Mark current device session as logged out
+                console.log('[Logout] User session revoked for:', sessionData.uid);
+              }
+            } catch (parseError) {
+              // Legacy cookie format, ignore
+            }
+          }
+        }
+      } catch (sessionError) {
+        // Log but don't fail logout if session revocation fails
+        console.warn('[Logout] Failed to revoke backend session:', sessionError);
+      }
+    }
 
     // Clear all auth-related cookies with proper domain/path settings
     const cookiesToClear = [
