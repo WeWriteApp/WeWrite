@@ -52,15 +52,12 @@ export function useSessionValidation(options: UseSessionValidationOptions = {}) 
       });
 
       if (!response.ok) {
-        console.warn('Session validation request failed:', response.status, response.statusText);
-
         // Only treat 401 as actual auth failure
         if (response.status === 401) {
           // Check if this is a session revocation
           try {
             const errorData = await response.json();
             if (errorData.reason === 'session_revoked') {
-              console.log('[SessionValidation] Session was revoked from another device');
               return {
                 valid: false,
                 reason: 'session_revoked',
@@ -70,19 +67,15 @@ export function useSessionValidation(options: UseSessionValidationOptions = {}) 
           } catch {
             // Couldn't parse response, treat as generic session expired
           }
-          console.log('[SessionValidation] 401 Unauthorized - session expired');
           return { valid: false, reason: 'Session expired', timestamp: new Date().toISOString() };
         } else if (response.status === 404) {
-          console.log('[SessionValidation] 404 Not Found - validation endpoint missing');
           return { valid: true, reason: 'Endpoint missing - assuming valid', timestamp: new Date().toISOString() };
         } else {
-          console.log('[SessionValidation] Network/server error - assuming valid');
           return { valid: true, reason: 'Network error - assuming valid', timestamp: new Date().toISOString() };
         }
       }
 
       const result = await response.json();
-      console.log('[SessionValidation] Session validation result:', result);
 
       // Handle new device detection - show notification but don't log out
       if (result.valid && result.newDeviceDetected) {

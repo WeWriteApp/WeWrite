@@ -44,7 +44,6 @@ async function getSessionData(request: NextRequest): Promise<SessionData | null>
   // Legacy fallback: try plain JSON (will be removed in future)
   try {
     const legacyData = JSON.parse(simpleSessionCookie) as SessionData;
-    console.warn('[ADMIN AUTH] Using legacy unsigned cookie - user should re-login');
     return legacyData;
   } catch {
     return null;

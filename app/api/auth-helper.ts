@@ -162,14 +162,11 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
 
   // Handle legacy dev user format (plain UID string)
   if (simpleSessionCookie === 'dev_admin_user') {
-    console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
     return 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N';
   } else if (simpleSessionCookie === 'dev_test_user_1') {
-    console.log('[AUTH DEBUG] Using legacy session format:', simpleSessionCookie);
     return 'dev_test_user_1';
   }
 
-  console.warn('[AUTH DEBUG] Failed to parse/verify session cookie');
   return null;
 }
 

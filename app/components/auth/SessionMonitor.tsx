@@ -41,18 +41,12 @@ export default function SessionMonitor({
       // Only log out if the session was explicitly revoked
       // The reason will be 'session_revoked' when user manually signed out from another device
       if (result.reason === 'session_revoked') {
-        console.log('[SessionMonitor] Session was revoked, triggering logout');
         await handleSessionRevoked();
-      } else {
-        // For other invalid reasons (like expired cookies), just log
-        // Don't aggressively log out users for transient issues
-        console.log('[SessionMonitor] Session invalid but not revoked. Reason:', result.reason);
       }
-    } else if (result) {
-      // Session is valid
-      // New device detection is handled within validateSession (shows notification)
-      console.log('[SessionMonitor] Session is valid');
+      // For other invalid reasons (like expired cookies), silently ignore
+      // Don't aggressively log out users for transient issues
     }
+    // Session valid - no logging needed
   };
 
   // Start monitoring when user is authenticated

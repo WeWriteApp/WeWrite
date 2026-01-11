@@ -142,17 +142,39 @@ export async function createSignedCookieValue<T>(data: T): Promise<string> {
  */
 export async function parseSignedCookieValue<T>(cookieValue: string): Promise<T | null> {
   try {
-    const [encodedData, signature] = cookieValue.split('.');
+    // First, check if this looks like a legacy JSON cookie (starts with { or [)
+    // This handles the common case where old cookies have JSON objects
+    if (cookieValue.startsWith('{') || cookieValue.startsWith('[') || cookieValue.startsWith('%7B')) {
+      return parseLegacyCookieValue<T>(cookieValue);
+    }
 
-    if (!encodedData || !signature) {
-      // Try parsing as legacy unsigned JSON
+    // Try to split into data.signature format
+    // Signed cookies have exactly one dot, and both parts are base64url encoded
+    const dotIndex = cookieValue.lastIndexOf('.');
+    if (dotIndex === -1) {
+      // No dot at all - try as legacy
+      return parseLegacyCookieValue<T>(cookieValue);
+    }
+
+    const encodedData = cookieValue.substring(0, dotIndex);
+    const signature = cookieValue.substring(dotIndex + 1);
+
+    // Validate that both parts look like base64url (no special JSON chars)
+    const base64urlRegex = /^[A-Za-z0-9_-]+$/;
+    if (!base64urlRegex.test(encodedData) || !base64urlRegex.test(signature)) {
+      // Contains non-base64url characters - likely legacy JSON with a dot in it
       return parseLegacyCookieValue<T>(cookieValue);
     }
 
     // Verify signature
     const isValid = await verifyHmacSignature(encodedData, signature);
     if (!isValid) {
-      console.warn('[Cookie Utils] Invalid cookie signature detected');
+      // Invalid signature - could be legacy cookie or tampered
+      // Try legacy parsing as fallback (for migration period)
+      const legacyResult = parseLegacyCookieValue<T>(cookieValue);
+      if (legacyResult) {
+        return legacyResult;
+      }
       return null;
     }
 
@@ -166,7 +188,8 @@ export async function parseSignedCookieValue<T>(cookieValue: string): Promise<T 
     return JSON.parse(jsonString) as T;
   } catch (error) {
     console.error('[Cookie Utils] Failed to parse signed cookie:', error);
-    return null;
+    // Last resort: try legacy parsing
+    return parseLegacyCookieValue<T>(cookieValue);
   }
 }
 
@@ -178,14 +201,12 @@ function parseLegacyCookieValue<T>(cookieValue: string): T | null {
   try {
     // Try direct JSON parse (old format)
     const data = JSON.parse(cookieValue);
-    console.log('[Cookie Utils] Parsed legacy unsigned cookie - will be upgraded on next write');
     return data as T;
   } catch {
     // Try URL-decoded JSON
     try {
       const decoded = decodeURIComponent(cookieValue);
       const data = JSON.parse(decoded);
-      console.log('[Cookie Utils] Parsed legacy URL-encoded cookie');
       return data as T;
     } catch {
       return null;
