@@ -8,7 +8,6 @@ import { useDemoBalance } from '../../contexts/DemoBalanceContext';
 import { getLoggedOutPageAllocation } from '../../utils/simulatedUsd';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { cn } from '../../lib/utils';
-import { PillLink } from '../utils/PillLink';
 
 // ChevronDown component using Icon
 const ChevronDown = ({ className }: { className?: string }) => (
@@ -147,12 +146,9 @@ export default function HowItWorksSection() {
                 <div className="pl-5 space-y-1.5 pt-1.5">
                   {DEMO_OTHER_PAGES.map((page) => (
                     <div key={page.id} className="flex items-center justify-between py-1">
-                      <PillLink
-                        href={`/${page.id}`}
-                        clickable={false}
-                      >
+                      <span className="inline-flex items-center px-2 py-0.5 text-sm font-medium rounded-lg bg-muted/50 text-foreground">
                         {page.title}
-                      </PillLink>
+                      </span>
                       <span className="text-sm text-muted-foreground tabular-nums">{formatUsdCents(page.amount)}</span>
                     </div>
                   ))}

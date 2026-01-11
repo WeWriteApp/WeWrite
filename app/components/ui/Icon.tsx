@@ -169,6 +169,16 @@ import {
   PanelRight,
   MousePointer,
   Hand,
+  GitCompare,
+  Loader2,
+  Cpu,
+  Briefcase,
+  Brain,
+  Music,
+  Plane,
+  Figma,
+  Code2,
+  Cloud,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -241,7 +251,8 @@ export type IconName =
   | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack"
   | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "Github" | "BookText" | "FolderPlus"
   | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff"
-  | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand";
+  | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand"
+  | "GitCompare" | "Loader2" | "Cpu" | "Briefcase" | "Brain" | "Music" | "Plane" | "Figma" | "Code2" | "Cloud";
 
 // Icon props interface
 export interface IconProps {
@@ -481,6 +492,16 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   PanelRight: PanelRight,
   MousePointer: MousePointer,
   Hand: Hand,
+  GitCompare: GitCompare,
+  Loader2: Loader2,
+  Cpu: Cpu,
+  Briefcase: Briefcase,
+  Brain: Brain,
+  Music: Music,
+  Plane: Plane,
+  Figma: Figma,
+  Code2: Code2,
+  Cloud: Cloud,
 };
 
 // Unified Icon Component

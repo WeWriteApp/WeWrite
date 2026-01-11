@@ -127,12 +127,19 @@ export default function GraphFeatureCard({
       const ForceGraph3D = ForceGraph3DModule.default as any;
       const THREE = await import('three');
 
+      // Re-check ref after async imports - component may have unmounted
+      if (!containerRef.current) return;
+
       if (graphRef.current) {
         graphRef.current._destructor?.();
-        containerRef.current!.innerHTML = '';
+        if (containerRef.current) {
+          containerRef.current.innerHTML = '';
+        }
       }
 
-      const container = containerRef.current!;
+      const container = containerRef.current;
+      if (!container) return;
+
       const width = container.clientWidth;
       const height = container.clientHeight;
 

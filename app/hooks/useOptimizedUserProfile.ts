@@ -69,8 +69,6 @@ export function useOptimizedUserProfile(
     async () => {
       if (!userId) return null;
 
-      console.log(`[useOptimizedUserProfile] Fetching full profile for user: ${userId}`);
-
       try {
         // PERFORMANCE: Use batched endpoint that fetches profile + subscription in single request
         // This reduces 2 sequential API calls to 1, significantly improving page load time
@@ -91,18 +89,8 @@ export function useOptimizedUserProfile(
           throw new Error(result.error || 'Failed to fetch user profile');
         }
 
-        const profileData = result.data;
-
-        console.log(`[useOptimizedUserProfile] Full profile loaded for ${userId}:`, {
-          username: profileData?.username,
-          tier: profileData?.tier,
-          hasSubscription: profileData?.hasSubscription,
-          fromCache: false
-        });
-
-        return profileData;
+        return result.data;
       } catch (error) {
-        console.error(`[useOptimizedUserProfile] Error fetching profile for ${userId}:`, error);
         throw error;
       }
     },
@@ -114,17 +102,6 @@ export function useOptimizedUserProfile(
       refetchOnNavigationSettle: backgroundRefresh
     }
   );
-
-  // Log cache hits for monitoring
-  useEffect(() => {
-    if (profile && isFromCache) {
-      console.log(`[useOptimizedUserProfile] Using cached profile for ${userId}:`, {
-        username: profile?.username,
-        tier: profile?.tier,
-        fromCache: true
-      });
-    }
-  }, [profile, isFromCache, userId]);
 
   return {
     profile,

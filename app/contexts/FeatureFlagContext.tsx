@@ -111,7 +111,8 @@ export function FeatureFlagProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     fetchFlags();
-    fetchSummary();
+    // Note: fetchSummary() removed - it requires admin permissions
+    // Summary should only be fetched from the admin page, not globally
     // Re-fetch when auth user changes (login/logout)
   }, [user?.uid]);
 

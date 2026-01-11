@@ -22,7 +22,7 @@ import { LandingBlobs } from "./LandingBlobs";
  */
 export function GlobalLandingBlobs() {
   const pathname = usePathname();
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Don't show anything while loading - keep it blank
   if (isLoading) {
@@ -38,10 +38,8 @@ export function GlobalLandingBlobs() {
   // Show blobs on root page for logged-out users (they'll be redirected to /welcome)
   const isRootForLoggedOut = pathname === "/" && !isAuthenticated;
 
-  // Show blobs if user exists but is not verified (they're on auth-like flow)
-  const isUnverifiedUser = user && !user.emailVerified;
-
-  const shouldShowBlobs = isAuthPage || isWelcomePage || isRootForLoggedOut || isUnverifiedUser;
+  // Only show blobs on landing/auth pages - NOT for logged-in users on other pages
+  const shouldShowBlobs = isAuthPage || isWelcomePage || isRootForLoggedOut;
 
   if (!shouldShowBlobs) {
     return null;

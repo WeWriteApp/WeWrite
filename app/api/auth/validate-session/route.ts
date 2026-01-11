@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getFirebaseAdmin } from "../../../firebase/firebaseAdmin";
 import { getCollectionName } from "../../../utils/environmentConfig";
+import { parseSignedCookieValue, type SessionCookieData } from "../../../utils/cookieUtils";
 
 // Validate a session by checking if the session cookie exists and is valid
 // Also checks if the session has been revoked from another device
 export async function GET(request: NextRequest) {
-  console.log("[validate-session] GET request received");
-
   try {
     // Get the session cookie
     const cookieStore = await cookies();
@@ -15,33 +14,24 @@ export async function GET(request: NextRequest) {
     const sessionIdCookie = cookieStore.get("sessionId");
 
     if (!sessionCookie?.value) {
-      console.log("[validate-session] No session cookie found");
       return NextResponse.json(
         { valid: false, error: "No session found" },
         { status: 401 }
       );
     }
 
-    // Parse the session data
-    let sessionData;
-    try {
-      sessionData = JSON.parse(decodeURIComponent(sessionCookie.value));
-    } catch (parseError) {
-      // Try without decoding (some cookies may not be encoded)
-      try {
-        sessionData = JSON.parse(sessionCookie.value);
-      } catch {
-        console.error("[validate-session] Failed to parse session cookie:", parseError);
-        return NextResponse.json(
-          { valid: false, error: "Invalid session format" },
-          { status: 401 }
-        );
-      }
+    // Parse the session data using signed cookie parser (supports both signed and legacy formats)
+    const sessionData = await parseSignedCookieValue<SessionCookieData>(sessionCookie.value);
+
+    if (!sessionData) {
+      return NextResponse.json(
+        { valid: false, error: "Invalid session format" },
+        { status: 401 }
+      );
     }
 
     // Validate required fields
     if (!sessionData.uid || !sessionData.email) {
-      console.log("[validate-session] Session missing required fields");
       return NextResponse.json(
         { valid: false, error: "Incomplete session data" },
         { status: 401 }
@@ -65,7 +55,6 @@ export async function GET(request: NextRequest) {
           if (sessionDoc.exists) {
             const data = sessionDoc.data();
             if (data?.isActive === false) {
-              console.log("[validate-session] Session has been revoked");
               sessionRevoked = true;
             }
           }
@@ -91,15 +80,13 @@ export async function GET(request: NextRequest) {
                 const otherSessionCreatedAt = doc.data().createdAt;
                 if (otherSessionCreatedAt > currentSessionCreatedAt) {
                   newDeviceDetected = true;
-                  console.log("[validate-session] New device login detected");
                   break;
                 }
               }
             }
           }
         }
-      } catch (error) {
-        console.error("[validate-session] Error checking session status:", error);
+      } catch {
         // Don't fail validation if we can't check revocation status
       }
     }
@@ -116,8 +103,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[validate-session] Session valid for user: ${sessionData.email}`);
-
     // Return the session data along with validation status
     // Include newDeviceDetected flag so the client can show a notification
     return NextResponse.json({
@@ -130,8 +115,7 @@ export async function GET(request: NextRequest) {
         emailVerified: sessionData.emailVerified || false,
       },
     });
-  } catch (error: unknown) {
-    console.error("[validate-session] Error validating session:", error);
+  } catch {
     return NextResponse.json(
       { valid: false, error: "Session validation failed" },
       { status: 500 }
@@ -141,7 +125,6 @@ export async function GET(request: NextRequest) {
 
 // POST: Refresh session data (optional - can update session with latest user data)
 export async function POST(request: NextRequest) {
-  console.log("[validate-session] POST request received");
 
   try {
     const body = await request.json();
@@ -196,8 +179,7 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error: unknown) {
-    console.error("[validate-session] Error refreshing session:", error);
+  } catch {
     return NextResponse.json(
       { success: false, error: "Session refresh failed" },
       { status: 500 }

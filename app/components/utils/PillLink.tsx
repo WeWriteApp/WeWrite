@@ -3,8 +3,6 @@
 import React, { useState, forwardRef, useEffect, useMemo } from "react";
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
-import { Element, Node as SlateNode, Transforms } from 'slate';
-import { ReactEditor } from 'slate-react';
 import { ShimmerEffect } from "../ui/skeleton";
 import { useAuth } from '../../providers/AuthProvider';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../../utils/linkFormatters";
@@ -110,7 +108,6 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const effectiveHref = useMemo(() => {
     // If we have a pageId and the href is invalid (like '#'), generate the correct href
     if (isPageLinkType && pageId && pageId !== '#' && (href === '#' || !href || href.trim() === '')) {
-      console.log('🔵 PillLink: Generating href from pageId', { pageId, originalHref: href });
       return `/${pageId}`;
     }
     return href;
@@ -179,25 +176,12 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
   // Handle going to link (navigation)
   const handleGoToLink = async () => {
-    console.log('🔵 PillLink: handleGoToLink called', {
-      href,
-      effectiveHref,
-      pageId,
-      isExternalLinkType,
-      isPageLinkType,
-      isUserLinkType,
-      isGroupLinkType,
-      children
-    });
-
     if (isExternalLinkType) {
-      console.log('🔵 PillLink: Opening external link modal');
       setShowExternalLinkModal(true);
     } else if (effectiveHref && effectiveHref !== '#') {
       // Check if this is a "new page" link that might already exist
       if (isPageLinkType && pageId && pageId.startsWith('new:')) {
         const titleFromPageId = pageId.substring(4); // Remove 'new:' prefix
-        console.log('🔵 PillLink: Checking for existing page with title:', titleFromPageId);
 
         try {
           // Search for existing pages with this title
@@ -211,14 +195,12 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
             );
 
             if (exactMatch) {
-              console.log('🔵 PillLink: Found existing page, navigating to:', exactMatch.id);
               // Navigate to the existing page instead of creating a new one
               navigateToPage(exactMatch.id, user, exactMatch, user?.groups, router);
               return;
             }
           }
-        } catch (error) {
-          console.error('🔴 PillLink: Error checking for existing page:', error);
+        } catch {
           // Continue with normal navigation if search fails
         }
       }
@@ -235,20 +217,16 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
       // Handle page links with click-to-edit functionality
       if (isPageLinkType && pageId) {
-        console.log('🔵 PillLink: Navigating to page', { pageId, effectiveHref });
         navigateToPage(pageId, user, pageData, user?.groups, router);
         return;
       }
 
       // Use Next.js router for navigation when possible (for non-page links)
-      console.log('🔵 PillLink: Using router.push for non-page link', { effectiveHref });
       if (typeof window !== 'undefined') {
         router.push(effectiveHref);
       } else {
         window.location.href = effectiveHref;
       }
-    } else {
-      console.log('🔴 PillLink: No valid href to navigate to', { href, effectiveHref });
     }
   };
 
@@ -435,8 +413,6 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           onEditLink={handleEditLink}
           onDeleteLink={() => {
             // Handle delete link action for external links
-            console.log('🗑️ Delete external link clicked for:', href);
-            // TODO: Implement link deletion logic
           }}
           canEdit={canEdit}
           isDeleted={deleted}
@@ -527,38 +503,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         onGoToLink={handleGoToLink}
         onEditLink={handleEditLink}
         onDeleteLink={() => {
-          // Handle delete link action
-          console.log('🗑️ Delete link clicked for:', href);
-
-          // Find and delete the link element from the Slate editor
-          if (editor && ReactEditor.isFocused(editor)) {
-            try {
-              // Find all link nodes that match this element
-              const linkNodes = Array.from(SlateNode.nodes(editor, {
-                match: n => Element.isElement(n) && n.type === 'link' && (
-                  n.pageId === element.pageId ||
-                  n.url === element.url ||
-                  (n.pageTitle === element.pageTitle && n.customText === element.customText)
-                )
-              }));
-
-              if (linkNodes.length > 0) {
-                // Delete the first matching link
-                const [, linkPath] = linkNodes[0];
-                Transforms.removeNodes(editor, { at: linkPath });
-                console.log('🗑️ Link deleted via context menu:', {
-                  pageId: element.pageId,
-                  pageTitle: element.pageTitle,
-                  url: element.url
-                });
-              } else {
-                console.warn('🗑️ Could not find link to delete');
-              }
-            } catch (error) {
-              console.error('🗑️ Error deleting link:', error);
-            }
-          }
-
+          // Handle delete link action - note: editor context is not available here
+          // This would require the PillLink to be used within an editor context
           setShowContextMenu(false);
         }}
         canEdit={canEdit}

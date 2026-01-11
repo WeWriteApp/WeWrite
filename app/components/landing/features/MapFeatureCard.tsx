@@ -80,45 +80,62 @@ export default function MapFeatureCard() {
 
   // Initialize map
   useEffect(() => {
+    // Skip if no container or already initialized
     if (!mapRef.current || mapInstanceRef.current) return;
+
+    // Check if container already has a Leaflet map attached
+    const container = mapRef.current as HTMLElement & { _leaflet_id?: number };
+    if (container._leaflet_id) {
+      // Container was previously initialized - clean it up
+      container._leaflet_id = undefined;
+    }
 
     // Dynamic import of Leaflet
     const initMap = async () => {
       const L = (await import('leaflet')).default;
       await import('leaflet/dist/leaflet.css');
 
-      if (!mapRef.current) return;
+      // Double-check container is still available after async import
+      if (!mapRef.current || mapInstanceRef.current) return;
 
-      // Centered on United States
-      const map = L.map(mapRef.current, {
-        center: [39, -98],
-        zoom: 3,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        tap: false,
-      });
+      try {
+        // Centered on United States
+        const map = L.map(mapRef.current, {
+          center: [39, -98],
+          zoom: 3,
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          touchZoom: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          boxZoom: false,
+          keyboard: false,
+          tap: false,
+        });
 
-      // Add tile layer
-      const tileConfig = getMapTileConfig(isDark);
-      L.tileLayer(tileConfig.url, {
-        maxZoom: tileConfig.maxZoom,
-      }).addTo(map);
+        // Add tile layer
+        const tileConfig = getMapTileConfig(isDark);
+        L.tileLayer(tileConfig.url, {
+          maxZoom: tileConfig.maxZoom,
+        }).addTo(map);
 
-      mapInstanceRef.current = map;
-      setIsLoaded(true);
+        mapInstanceRef.current = map;
+        setIsLoaded(true);
+      } catch (error) {
+        // Silently handle initialization errors (e.g., container already initialized)
+      }
     };
 
     initMap();
 
     return () => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
+        try {
+          mapInstanceRef.current.remove();
+        } catch {
+          // Ignore cleanup errors
+        }
         mapInstanceRef.current = null;
       }
     };

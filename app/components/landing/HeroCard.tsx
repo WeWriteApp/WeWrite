@@ -45,11 +45,10 @@ const preloadPlatformStats = async () => {
           },
           timestamp: now
         };
-        console.log('📦 Preloaded platform stats successfully');
       }
     }
-  } catch (error) {
-    console.warn('Failed to preload platform stats:', error);
+  } catch {
+    // Silently fail on preload - stats will be fetched on component mount
   }
 };
 
@@ -73,9 +72,6 @@ export default function HeroCard({
   heroTitle = 'Write, share, earn.',
   heroSubtitle = 'WeWrite is a free speech social writing app where every page is a fundraiser.',
 }: HeroCardProps) {
-  console.log('🎯🎯🎯 HeroCard: COMPONENT FUNCTION CALLED!');
-  console.log('🎯 HeroCard: Component is rendering!');
-
   const { user } = useAuth();
   const analytics = useWeWriteAnalytics();
   const isAuthenticated = !!user;
@@ -93,12 +89,9 @@ export default function HeroCard({
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        console.log('🚀 HeroCard: Starting to fetch platform stats...');
-
         // Check client-side cache first
         const now = Date.now();
         if (platformStatsCache && (now - platformStatsCache.timestamp) < CACHE_DURATION) {
-          console.log('📦 HeroCard: Using cached platform stats');
           setWriterCount(platformStatsCache.data.totalUsers);
           setPagesLast30Days(platformStatsCache.data.pagesLast30Days);
           setIsLoading(false);
@@ -109,23 +102,16 @@ export default function HeroCard({
         setError(null);
 
         const response = await fetch('/api/public/platform-stats');
-        console.log('🌐 HeroCard: API response status:', response.status, response.ok);
 
         if (response.ok) {
           const data = await response.json();
-          console.log('📊 HeroCard: Platform stats received:', data);
-
-          // Extract the actual data from the API response structure
           const statsData = data.data || data;
-          console.log('📈 HeroCard: Extracted stats data:', statsData);
 
           // Validate and set user count
           const userCount = Number(statsData.totalUsers);
           if (!isNaN(userCount) && userCount >= 0) {
-            console.log('✅ HeroCard: Setting writer count to:', userCount);
             setWriterCount(userCount);
           } else {
-            console.error('❌ HeroCard: Invalid user count:', statsData.totalUsers);
             setError(`Invalid user count received: ${statsData.totalUsers}`);
             return;
           }
@@ -133,10 +119,8 @@ export default function HeroCard({
           // Validate and set pages in last 30 days
           const pagesCount = Number(statsData.pagesLast30Days);
           if (!isNaN(pagesCount) && pagesCount >= 0) {
-            console.log('✅ HeroCard: Setting pages last 30 days to:', pagesCount);
             setPagesLast30Days(pagesCount);
           } else {
-            console.error('❌ HeroCard: Invalid pages count:', statsData.pagesLast30Days);
             setError(`Invalid pages count received: ${statsData.pagesLast30Days}`);
             return;
           }
@@ -150,8 +134,6 @@ export default function HeroCard({
             },
             timestamp: now
           };
-
-          console.log('🎉 HeroCard: Successfully set both values and cached!');
         } else {
           const errorData = await response.json().catch(() => ({}));
           setError(`Failed to fetch stats: ${errorData.error || response.statusText}`);

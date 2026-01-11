@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting by email address to prevent abuse
     const rateLimitKey = `password-reset:${email.toLowerCase()}`;
-    const rateLimitResult = passwordResetRateLimiter.checkLimit(rateLimitKey);
+    const rateLimitResult = await passwordResetRateLimiter.checkLimit(rateLimitKey);
     if (!rateLimitResult.allowed) {
       console.log(`🔐 [Password Reset] Rate limited: ${email}`);
       return createErrorResponse('BAD_REQUEST',
