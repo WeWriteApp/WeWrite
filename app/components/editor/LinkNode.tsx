@@ -44,12 +44,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
         style: { userSelect: 'none', display: 'inline-block', verticalAlign: 'baseline' }
       };
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
-  const [linkNode, setLinkNode] = useState(node);
 
-  // Update linkNode when node prop changes (this handles title updates from Editor)
-  useEffect(() => {
-    setLinkNode(node);
-  }, [node]);
+  // Use node prop directly - no need to sync to state
+  // This avoids the anti-pattern of syncing props to state via useEffect
+  const linkNode = node;
 
   // State for dynamically fetched page title
   const [fetchedPageTitle, setFetchedPageTitle] = useState<string | null>(null);
@@ -72,9 +70,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     // MIGRATION: Apply migration for legacy links that don't have isCustomText property
     let nodeToValidate = linkNode;
     if (linkNode.isCustomText === undefined && linkNode.type === 'link') {
-      console.log('🔄 [LINKNODE] Migrating legacy link:', linkNode);
       nodeToValidate = LinkMigrationHelper.migrateOldLink(linkNode);
-      console.log('🔄 [LINKNODE] Migrated to:', nodeToValidate);
     }
 
     // First try to validate the node directly
@@ -322,8 +318,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
 
   // For internal page links, check if it's a compound link first
   if (pageId) {
-    console.log('RENDERING_PAGE_LINK:', { pageId, displayText, validatedNode });
-
     // CRITICAL FIX: Extract original page title from multiple possible sources
     const originalPageTitle = validatedNode.pageTitle ||
                               validatedNode.originalPageTitle ||
@@ -338,15 +332,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
 
     // Check if this is a compound link with author attribution
     if (validatedNode.showAuthor && (validatedNode.authorUsername || validatedNode.authorUserId)) {
-      console.log('🔥 COMPOUND LINK DEBUG:', {
-        showAuthor: validatedNode.showAuthor,
-        authorUsername: validatedNode.authorUsername,
-        authorUserId: validatedNode.authorUserId,
-        authorTier: validatedNode.authorTier,
-        authorSubscriptionStatus: validatedNode.authorSubscriptionStatus,
-        authorSubscriptionAmount: validatedNode.authorSubscriptionAmount
-      });
-
       // Render compound link as two separate pills: [Page Title] by [Author Username]
       // Use the extracted displayText which already handles custom text properly
       let pageTitleText = displayText || originalPageTitle || 'Page';
@@ -416,15 +401,8 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     // Ensure we have a valid display text for page links
     let finalDisplayText = displayText;
     if (!finalDisplayText) {
-      finalDisplayText = originalPageTitle || `TEST PAGE LINK: ${pageId}`;
+      finalDisplayText = originalPageTitle || `Page: ${pageId}`;
     }
-
-    console.log(`🔍 [LINKNODE] Rendering InternalLinkWithTitle:`, {
-      pageId,
-      href: formattedHref,
-      displayText: finalDisplayText,
-      originalPageTitle
-    });
 
     return (
       <span className="inline-block" {...wrapperProps}>

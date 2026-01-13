@@ -62,7 +62,7 @@ function VisibilityTable() {
     { name: 'Content Area', rules: CONTENT_PAGE_VISIBILITY.filter(r => ['contentDisplay', 'contentEditable', 'denseModeToggle', 'writingIdeasBanner'].includes(r.id)) },
     { name: 'Footer/Metadata', rules: CONTENT_PAGE_VISIBILITY.filter(r => ['contentPageFooter', 'locationField', 'customDateField'].includes(r.id)) },
     { name: 'Page Connections', rules: CONTENT_PAGE_VISIBILITY.filter(r => ['pageGraphView', 'whatLinksHere', 'replyToCard', 'repliesSection', 'relatedPagesSection'].includes(r.id)) },
-    { name: 'Bottom Actions', rules: CONTENT_PAGE_VISIBILITY.filter(r => ['deleteButton', 'cancelButton'].includes(r.id)) },
+    { name: 'Bottom Actions', rules: CONTENT_PAGE_VISIBILITY.filter(r => ['addToPageButton', 'deleteButton', 'cancelButton'].includes(r.id)) },
     { name: 'Floating Elements', rules: CONTENT_PAGE_VISIBILITY.filter(r => ['allocationBar', 'emptyLinesAlert', 'deletedPageBanner'].includes(r.id)) },
   ];
 

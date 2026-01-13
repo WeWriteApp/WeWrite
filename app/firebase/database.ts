@@ -262,29 +262,10 @@ export const appendPageReference = async (
       }
     }
 
-    // Get the source page content
-    let sourceContent = [];
-    if (sourcePageData.content) {
-      try {
-        if (typeof sourcePageData.content === 'string') {
-          sourceContent = JSON.parse(sourcePageData.content);
-        } else if (Array.isArray(sourcePageData.content)) {
-          sourceContent = sourcePageData.content;
-        }
-      } catch (e) {
-        // Create a fallback content if parsing fails
-        sourceContent = [{
-          type: "paragraph",
-          children: [{ text: "Content from source page could not be loaded properly." }]
-        }];
-      }
-    }
-
-    // Create a reference header to append (without bold formatting)
-    const referenceHeader = {
+    // Create a page link to append (just the link, no prefix text or source content)
+    const pageLink = {
       type: "paragraph",
       children: [
-        { text: "Content from " },
         {
           type: "link",
           url: `/pages/${sourcePageData.id}`,
@@ -298,12 +279,10 @@ export const appendPageReference = async (
       ]
     };
 
-    // Append the reference header and source content to the target content
-    // Single newline only - no extra spacing
+    // Append just the page link to the target content (no source content copied)
     const newContent = [
       ...currentContent,
-      referenceHeader,
-      ...sourceContent
+      pageLink
     ];
 
     // Update the page with the new content

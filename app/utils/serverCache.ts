@@ -374,11 +374,9 @@ export async function cachedQuery<T>(
 ): Promise<T> {
   const cached = apiCache.get<T>(key);
   if (cached !== null) {
-    console.log(`🚀 CACHE HIT: ${key}`);
     return cached;
   }
 
-  console.log(`💸 CACHE MISS: ${key} - executing query`);
   const result = await queryFn();
   apiCache.set(key, result, customTtl || CACHE_TTL.DEFAULT);
 

@@ -51,14 +51,19 @@ const Dialog = React.forwardRef<HTMLDivElement, DialogProps>(
       if (typeof window === 'undefined') return
 
       if (open) {
-        // Store current hash before changing (without the # symbol for cleaner comparison)
-        previousHashRef.current = window.location.hash
+        // Store current hash before changing (only if we haven't already)
+        if (!hasSetHashRef.current) {
+          previousHashRef.current = window.location.hash
+        }
 
-        // Set hash if provided
+        // Set hash if provided - but only if it's not already set
         if (fullHashId) {
           const newHash = `#${fullHashId}`
-          // Use replaceState to avoid adding to history
-          window.history.replaceState(null, '', newHash)
+          const currentHash = window.location.hash
+          // Only call replaceState if the hash actually needs to change
+          if (currentHash !== newHash) {
+            window.history.replaceState(null, '', newHash)
+          }
           hasSetHashRef.current = true
         }
 
@@ -234,6 +239,7 @@ DialogHeader.displayName = "DialogHeader"
 /**
  * DialogBody - Scrollable content area between header and footer
  * Use this to wrap your main content when you need header/footer to stay fixed
+ * Has horizontal padding (px-6) and vertical padding (py-4) for consistent spacing
  */
 const DialogBody = ({
   className,
@@ -241,7 +247,7 @@ const DialogBody = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex-1 overflow-y-auto px-6",
+      "flex-1 overflow-y-auto px-6 py-4",
       className
     )}
     {...props}

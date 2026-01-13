@@ -157,7 +157,6 @@ export default function PillLinkContextMenu({
         index={itemIndex++}
         isAnimating={isAnimating}
         onClick={() => {
-          console.log('🔵 CONTEXT_MENU: Go to link clicked');
           onGoToLink();
           onClose();
         }}

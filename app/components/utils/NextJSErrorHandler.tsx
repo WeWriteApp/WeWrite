@@ -177,10 +177,6 @@ export function GlobalErrorHandler() {
     // Clear recovery state on successful page load
     clearChunkErrorRecoveryState()
 
-    if (isDev) {
-      console.log('🔧 NextJS Error Handler: Initializing...')
-    }
-
     // Global error handler for uncaught errors (including ChunkLoadError)
     const handleError = (event: ErrorEvent) => {
       const error = event.error

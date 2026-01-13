@@ -114,11 +114,10 @@ export async function POST(
       return createErrorResponse('BAD_REQUEST', 'Combined content exceeds maximum block limit');
     }
 
-    // Create a reference header to append
-    const referenceHeader = {
+    // Create a page link to append (just the link, no prefix text or source content)
+    const pageLink = {
       type: "paragraph",
       children: [
-        { text: "Content from " },
         {
           type: "link",
           url: `/pages/${sourcePageData.id}`,
@@ -132,11 +131,10 @@ export async function POST(
       ]
     };
 
-    // Append the reference header and source content to the target content
+    // Append just the page link to the target content (no source content copied)
     const newContent = [
       ...currentContent,
-      referenceHeader,
-      ...sourceContent
+      pageLink
     ];
 
     // Update the page with the new content using environment-aware collection naming

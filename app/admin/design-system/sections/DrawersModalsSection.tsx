@@ -185,7 +185,7 @@ export function DrawersModalsSection({ id }: { id: string }) {
             <DialogTitle>Dialog Demo</DialogTitle>
             <DialogDescription>A centered modal for desktop use.</DialogDescription>
           </DialogHeader>
-          <DialogBody className="py-4">
+          <DialogBody>
             <p className="text-sm text-muted-foreground">
               Dialogs are best for quick confirmations and focused tasks on desktop.
             </p>

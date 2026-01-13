@@ -23,9 +23,6 @@ export function GAUserIdentityProvider() {
 
     // Skip in development - GA is disabled there anyway
     if (process.env.NODE_ENV === 'development') {
-      console.log('[GA Identity] Development mode - skipping', {
-        user: user?.username || 'logged_out'
-      });
       return;
     }
 
@@ -54,8 +51,6 @@ export function GAUserIdentityProvider() {
           login_status: 'logged_in',
           username: user.username
         });
-
-        console.log('[GA Identity] User identified:', user.username);
       }
     } else {
       // User is logged out - clear user_id
@@ -72,8 +67,6 @@ export function GAUserIdentityProvider() {
           login_status: 'logged_out',
           username: undefined
         });
-
-        console.log('[GA Identity] User logged out - identity cleared');
       }
     }
   }, [user, isLoading]);

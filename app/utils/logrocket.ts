@@ -34,13 +34,6 @@ class LogRocketService {
     // Only enable LogRocket in actual production environment (wewrite.app domain)
     // Never enable in development, even when using production collections
     this.isProduction = this.isActualProduction();
-
-    console.log('🔍 LogRocketService constructor:', {
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV,
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
-      isProduction: this.isProduction
-    });
   }
 
   /**
@@ -75,25 +68,12 @@ class LogRocketService {
    * Called from the main app component
    */
   init(): void {
-    console.log('🔍 LogRocket initialization check:', {
-      isInitialized: this.isInitialized,
-      isProduction: this.isProduction,
-      isClientSide: typeof window !== 'undefined',
-      hasAppId: !!process.env.NEXT_PUBLIC_LOGROCKET_APP_ID,
-      appIdPreview: process.env.NEXT_PUBLIC_LOGROCKET_APP_ID ?
-        `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...` : 'NOT_SET',
-      nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV,
-      hostname: typeof window !== 'undefined' ? window.location.hostname : 'server'
-    });
-
     // Skip initialization if:
     // - Already initialized
     // - Not in actual production (wewrite.app domain)
     // - Running on server-side
     // - No app ID configured
     if (this.isInitialized) {
-      console.log('⏭️ LogRocket already initialized, skipping (Strict Mode safe)');
       return;
     }
 
@@ -101,12 +81,10 @@ class LogRocketService {
     this.isInitialized = true;
 
     if (!this.isProduction) {
-      console.log('⏭️ LogRocket skipped: Not in actual production environment (only enabled on wewrite.app domain)');
       return;
     }
 
     if (typeof window === 'undefined') {
-      console.log('⏭️ LogRocket skipped: Server-side rendering');
       return;
     }
 
@@ -116,9 +94,6 @@ class LogRocketService {
     }
 
     try {
-      console.log('🚀 Initializing LogRocket with app ID:',
-        `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...`);
-
       // Initialize LogRocket with app ID and minimal sanitization for better debugging
       LogRocket.init(process.env.NEXT_PUBLIC_LOGROCKET_APP_ID, {
         dom: {
@@ -166,20 +141,6 @@ class LogRocketService {
       this.configureIgnoreRules();
 
       this.isInitialized = true;
-      console.log('✅ LogRocket initialized successfully');
-
-      // Log session URL for debugging
-      LogRocket.getSessionURL((sessionURL) => {
-        console.log('🔗 LogRocket session URL:', sessionURL);
-
-        // Test LogRocket functionality
-        LogRocket.log('🧪 LogRocket test message - initialization successful!');
-        LogRocket.track('logrocket_initialization', {
-          environment: process.env.NODE_ENV,
-          timestamp: new Date().toISOString(),
-          appId: process.env.NEXT_PUBLIC_LOGROCKET_APP_ID?.substring(0, 8) + '...'
-        });
-      });
     } catch (error) {
       console.error('❌ Failed to initialize LogRocket:', error);
     }
@@ -199,12 +160,8 @@ class LogRocketService {
     ].some(bot => userAgent.includes(bot));
 
     if (isBotTraffic) {
-      console.log('🤖 Bot traffic detected - LogRocket session ignored');
       return;
     }
-
-    // Note: Domain filtering is now handled in isActualProduction()
-    console.log('✅ LogRocket session allowed - production domain confirmed');
   }
 
   /**
@@ -219,16 +176,7 @@ class LogRocketService {
     createdAt?: string;
     // Don't include: tokens, balances, payment info, etc.
   }): void {
-    console.log('🔍 LogRocket.identify called with:', {
-      userId: user.id,
-      username: user.username,
-      email: user.email ? `${user.email.substring(0, 3)}***` : undefined,
-      isInitialized: this.isInitialized,
-      isProduction: this.isProduction
-    });
-
     if (!this.isInitialized) {
-      console.log('⏭️ LogRocket not initialized, skipping user identification');
       return;
     }
 
@@ -239,12 +187,6 @@ class LogRocketService {
         name: user.username,
         email: user.email ? this.sanitizeEmail(user.email) : undefined,
       };
-
-      console.log('🔍 LogRocket sanitized user data:', {
-        id: sanitizedUser.id,
-        name: sanitizedUser.name,
-        email: sanitizedUser.email ? `${sanitizedUser.email.substring(0, 3)}***` : undefined
-      });
 
       // Additional safe metadata
       const metadata = {
@@ -267,12 +209,8 @@ class LogRocketService {
         timestamp: new Date().toISOString(),
       });
 
-      console.log('👤 User identified in LogRocket successfully:', {
-        userId: user.id,
-        username: user.username
-      });
     } catch (error) {
-      console.error('❌ Failed to identify user in LogRocket:', error);
+      console.error('Failed to identify user in LogRocket:', error);
     }
   }
 
@@ -287,9 +225,8 @@ class LogRocketService {
       const sanitizedProperties = this.sanitizeEventProperties(properties);
 
       LogRocket.track(eventName, sanitizedProperties);
-      console.log('📊 LogRocket event tracked:', eventName, sanitizedProperties);
     } catch (error) {
-      console.error('❌ Failed to track LogRocket event:', error);
+      console.error('Failed to track LogRocket event:', error);
     }
   }
 
@@ -317,9 +254,8 @@ class LogRocketService {
       // Reduce sanitization for debugging - only sanitize truly sensitive data
       const minimalSanitizedExtra = this.minimalSanitizeEventProperties(enhancedExtra);
       LogRocket.captureMessage(message, minimalSanitizedExtra);
-      console.log('📝 LogRocket message captured with enhanced context:', message, minimalSanitizedExtra);
     } catch (error) {
-      console.error('❌ Failed to capture LogRocket message:', error);
+      console.error('Failed to capture LogRocket message:', error);
     }
   }
 

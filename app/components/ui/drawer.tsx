@@ -45,14 +45,19 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
       if (typeof window === 'undefined') return
 
       if (open) {
-        // Store current hash before changing
-        previousHashRef.current = window.location.hash
+        // Store current hash before changing (only if we haven't already)
+        if (!hasSetHashRef.current) {
+          previousHashRef.current = window.location.hash
+        }
 
-        // Set hash if provided
+        // Set hash if provided - but only if it's not already set
         if (hashId) {
           const newHash = `#${hashId}`
-          // Use replaceState to avoid adding to history
-          window.history.replaceState(null, '', newHash)
+          const currentHash = window.location.hash
+          // Only call replaceState if the hash actually needs to change
+          if (currentHash !== newHash) {
+            window.history.replaceState(null, '', newHash)
+          }
           hasSetHashRef.current = true
         }
 

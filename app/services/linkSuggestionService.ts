@@ -37,21 +37,12 @@ export async function findLinkSuggestions(
       return { suggestions: [], totalMatches: 0 };
     }
 
-    console.warn('🔗 LINK_SUGGESTIONS: CLIENT-SIDE findLinkSuggestions called!', {
-      textLength: textContent.length,
-      currentUserId: currentUserId || 'anonymous',
-      excludePageId: excludePageId || 'none',
-      text: textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '')
-    });
-
     // Call the API endpoint instead of doing client-side search
     const params = new URLSearchParams({
       text: textContent,
       ...(currentUserId && { userId: currentUserId }),
       ...(excludePageId && { excludePageId })
     });
-
-    console.warn('🔗 LINK_SUGGESTIONS: Calling API endpoint with params:', params.toString());
 
     const response = await fetch(`/api/link-suggestions?${params}`);
 
@@ -64,15 +55,6 @@ export async function findLinkSuggestions(
     if (!data.success) {
       throw new Error(data.error || 'API request failed');
     }
-
-    console.warn('🔗 LINK_SUGGESTIONS: API response received:', {
-      totalSuggestions: data.suggestions?.length || 0,
-      topSuggestions: data.suggestions?.slice(0, 3).map((s: any) => ({
-        title: s.title,
-        matchedText: s.matchedText,
-        confidence: s.confidence
-      })) || []
-    });
 
     return {
       suggestions: data.suggestions || [],

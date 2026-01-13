@@ -3,12 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '../ui/drawer';
+import { AdaptiveModal } from '../ui/adaptive-modal';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
 import { appendPageReference, getPageById } from '../../utils/apiClient';
@@ -206,44 +201,28 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         return;
       }
 
-      // 2. Validate source page content size
-      const sourceContent = page.content || [];
-      const contentString = typeof sourceContent === 'string' ? sourceContent : JSON.stringify(sourceContent);
-
-      if (contentString.length > MAX_CONTENT_SIZE) {
-        toast.error(ERROR_MESSAGES.content_too_large);
-        setIsCreatingNewPage(false);
-        return;
-      }
-
-      if (Array.isArray(sourceContent) && sourceContent.length > MAX_CONTENT_BLOCKS) {
-        toast.error(ERROR_MESSAGES.too_many_blocks);
-        setIsCreatingNewPage(false);
-        return;
-      }
-
-      // 3. Create the new page with content that includes a link to the source page
-      // Build initial content with a page link to the source
+      // 2. Create the new page with just a link to the source page
+      // Only append a page link - no prefix text, no colon, no source content
+      const pageTitle = page.title || 'Untitled';
       const initialContent = [
         {
           type: "paragraph",
           children: [
-            { text: "From " },
             {
-              type: "pageLink",
+              type: "link",
+              url: `/${page.id}`,
               pageId: page.id,
-              displayText: page.title || 'Untitled',
-              children: [{ text: page.title || 'Untitled' }]
-            },
-            { text: ":" }
+              pageTitle: pageTitle,
+              originalPageTitle: pageTitle,
+              className: "page-link",
+              isPageLink: true,
+              children: [{ text: pageTitle }]
+            }
           ]
-        },
-        { type: "paragraph", children: [{ text: "" }] },
-        // Include the source page's content
-        ...(Array.isArray(sourceContent) ? sourceContent : [])
+        }
       ];
 
-      // 4. Create the page via API
+      // 3. Create the page via API
       const response = await fetch('/api/pages', {
         method: 'POST',
         headers: {
@@ -309,81 +288,68 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         </Button>
       )}
 
-      <Drawer
-        open={isOpen}
-        onOpenChange={(open) => {
-          if (!isAdding && !isCreatingNewPage) {
-            setIsOpen(open);
-            if (!open) setSearchQuery("");
-          }
-        }}
+      <AdaptiveModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Add to another page"
+        subtitle={`Select a page to add "${page?.title || 'this page'}" to.`}
         hashId="add-to-page"
+        mobileHeight="95vh"
+        showCloseButton={true}
       >
-        <DrawerContent
-          height="95vh"
-          accessibleTitle="Add to another page"
+        {/* Tappable area to dismiss keyboard - clicking here blurs any focused input */}
+        <div
+          className="flex-1 min-h-0 overflow-hidden flex flex-col"
+          onMouseDown={(e) => {
+            // If user taps on the container (not on an interactive element), blur active element to dismiss keyboard
+            const target = e.target as HTMLElement;
+            if (!target.closest('input') && !target.closest('button') && !target.closest('[role="option"]')) {
+              (document.activeElement as HTMLElement)?.blur?.();
+            }
+          }}
         >
-          <DrawerHeader>
-            <DrawerTitle>Add to another page</DrawerTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Select a page to add "{page?.title || 'this page'}" to.
-            </p>
-          </DrawerHeader>
-
-          {/* Tappable area to dismiss keyboard - clicking here blurs any focused input */}
-          <div
-            className="flex-1 min-h-0 overflow-hidden px-4 pb-4 flex flex-col"
-            onMouseDown={(e) => {
-              // If user taps on the container (not on an interactive element), blur active element to dismiss keyboard
-              const target = e.target as HTMLElement;
-              if (!target.closest('input') && !target.closest('button') && !target.closest('[role="option"]')) {
-                (document.activeElement as HTMLElement)?.blur?.();
-              }
-            }}
-          >
-            {isAdding || isCreatingNewPage ? (
-              <div className="flex flex-col items-center justify-center py-8">
-                <Icon name="Loader" size={32} className="text-primary mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  {isCreatingNewPage ? "Creating page..." : "Adding page..."}
-                </p>
+          {isAdding || isCreatingNewPage ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Icon name="Loader" size={32} className="text-primary mb-3" />
+              <p className="text-sm text-muted-foreground">
+                {isCreatingNewPage ? "Creating page..." : "Adding page..."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 min-h-0 overflow-auto">
+                <FilteredSearchResults
+                  onSelect={handlePageSelect}
+                  userId={user?.uid}
+                  placeholder="Search your pages..."
+                  editableOnly={true}
+                  preventRedirect={true}
+                  autoFocus={false}
+                  hideCreateButton={true}
+                  currentPageId={page?.id}
+                  maxResults={50}
+                  onInputChange={(value: string) => setSearchQuery(value)}
+                />
               </div>
-            ) : (
-              <>
-                <div className="flex-1 min-h-0 overflow-auto">
-                  <FilteredSearchResults
-                    onSelect={handlePageSelect}
-                    userId={user?.uid}
-                    placeholder="Search your pages..."
-                    editableOnly={true}
-                    preventRedirect={true}
-                    autoFocus={false}
-                    hideCreateButton={true}
-                    currentPageId={page?.id}
-                    maxResults={50}
-                    onInputChange={(value: string) => setSearchQuery(value)}
-                  />
-                </div>
 
-                {/* Create new page button - shown when user types a search query */}
-                {searchQuery.trim().length >= 2 && (
-                  <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
-                    <Button
-                      variant="secondary"
-                      className="w-full justify-center gap-2"
-                      onClick={handleCreateNewPage}
-                      disabled={isCreatingNewPage}
-                    >
-                      <Icon name="Plus" size={16} />
-                      <span>Create new page called "{searchQuery.trim()}"</span>
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </DrawerContent>
-      </Drawer>
+              {/* Create new page button - shown when user types a search query */}
+              {searchQuery.trim().length >= 2 && (
+                <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
+                  <Button
+                    variant="secondary"
+                    className="w-full justify-center gap-2"
+                    onClick={handleCreateNewPage}
+                    disabled={isCreatingNewPage}
+                  >
+                    <Icon name="Plus" size={16} />
+                    <span>Create new page called "{searchQuery.trim()}"</span>
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </AdaptiveModal>
     </>
   );
 };

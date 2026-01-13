@@ -236,6 +236,17 @@ export const CONTENT_PAGE_VISIBILITY: VisibilityRule[] = [
 
   // Bottom Actions
   {
+    id: 'addToPageButton',
+    label: 'Add to Page Button',
+    description: 'Add this page to another page',
+    componentPath: 'app/components/utils/AddToPageButton.tsx',
+    visibility: {
+      myPageSaved: true,
+      myPageNew: false,
+      otherPage: true,
+    },
+  },
+  {
     id: 'deleteButton',
     label: 'Delete Button',
     description: 'Delete this page',

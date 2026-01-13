@@ -223,16 +223,9 @@ export function initializeDevelopmentErrorOverrides(): void {
   if (typeof window === 'undefined') return;
 
   runOnce('development-error-overrides', () => {
-
-  console.log('🔍 Initializing development error overrides...');
-
-  enhanceReactErrors();
-  setupReactDevTools();
-  addHydrationErrorDetection();
-
-    console.log('✅ Development error overrides initialized');
-    console.log('🔍 Enhanced React error logging is now active');
-    console.log('📚 React errors will now show detailed explanations and debugging tips');
+    enhanceReactErrors();
+    setupReactDevTools();
+    addHydrationErrorDetection();
   });
 }
 

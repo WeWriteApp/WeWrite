@@ -303,8 +303,6 @@ export async function getOptimizedPageData(pageId: string, userId?: string) {
         ? `/api/pages/${pageId}?userId=${encodeURIComponent(userId)}`
         : `/api/pages/${pageId}`;
 
-      console.log('🔄 [ReadOptimizer] Fetching page data from:', url);
-
       const response = await fetch(url);
       if (!response.ok) {
         const errorText = await response.text();
@@ -318,14 +316,6 @@ export async function getOptimizedPageData(pageId: string, userId?: string) {
       }
 
       const data = await response.json();
-      console.log('🔄 [ReadOptimizer] Page data fetched:', {
-        pageId,
-        hasData: !!data,
-        title: data?.title,
-        username: data?.username,
-        userId: data?.userId
-      });
-
       return data;
     },
     {

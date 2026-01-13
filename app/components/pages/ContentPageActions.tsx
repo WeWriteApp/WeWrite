@@ -169,7 +169,6 @@ export function ContentPageActions({
           : content;
 
         setCurrentPageContent(parsedContent);
-        console.log("Captured current page content:", parsedContent);
       } catch (error) {
         console.error("Error parsing content:", error);
       }
@@ -390,8 +389,9 @@ export function ContentPageActions({
             </>
           )}
 
-          {/* Add to Page button - available to all users when not editing (ORDER: 2nd) */}
-          {!isEditing && <AddToPageButton page={page} />}
+          {/* Add to Page button - available on saved pages (ORDER: 2nd) */}
+          {/* Visibility: myPageSaved=true, myPageNew=false, otherPage=true */}
+          <AddToPageButton page={page} />
 
           {/* Follow button - available to non-owners (handles auth internally) */}
           {showFollowButton && !isOwner && (

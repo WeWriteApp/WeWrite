@@ -32,10 +32,8 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
 
     const transferAllocations = async () => {
       try {
-        console.log('SessionAuthInitializer: Transferring allocations for user:', user.uid);
         transferLoggedOutAllocationsToUser(user.uid);
         hasTransferredAllocations.current = true;
-        console.log('SessionAuthInitializer: Allocation transfer completed');
       } catch (error) {
         console.error('SessionAuthInitializer: Error transferring allocations:', error);
       }

@@ -15,12 +15,6 @@ if (typeof window !== 'undefined') {
   runOnce('unified-logger-client', () => {
     // Client-side initialization - enable console replacement for unified logging
     logger.replaceConsole();
-    safeLog('ℹ️ Unified logging system initialized (client-side)');
-  });
-} else {
-  runOnce('unified-logger-server', () => {
-    // Server-side initialization - no console replacement needed
-    safeLog('ℹ️ Unified logging system initialized (server-side)');
   });
 }
 

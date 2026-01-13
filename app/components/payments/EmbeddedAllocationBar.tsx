@@ -216,7 +216,6 @@ export function EmbeddedAllocationBar({
   const effectiveIntervalCents = overrideIntervalCents ?? allocationIntervalCents;
 
   const handleButtonClick = (direction: number, e: React.MouseEvent) => {
-    console.log('🔵 EmbeddedAllocationBar: Button clicked!', { direction, pageId, authorId });
     e.preventDefault();
     e.stopPropagation();
     if (isLongPressing.current) {
@@ -237,7 +236,6 @@ export function EmbeddedAllocationBar({
     // Use our shared allocation change handler - it handles both logged-in and logged-out users
     // Use effective interval (override or user's configured amount)
     const changeAmount = direction * effectiveIntervalCents;
-    console.log('🔵 EmbeddedAllocationBar: Calling handleAllocationChange', { changeAmount, pageId });
     handleAllocationChange(changeAmount, e);
   };
 

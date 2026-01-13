@@ -72,14 +72,6 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   // Auto-detect pageId from URL if not provided
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
 
-  // Debug logging
-  console.log('🎯 AllocationBar: pageId info', {
-    propPageId,
-    pathname,
-    derivedPageId: pageId,
-    hasPageId: !!pageId
-  });
-
   // Check if current user is the page owner
   const isPageOwner = !!(user && authorId && user.uid === authorId);
 

@@ -49,7 +49,6 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Initialize PWA installation tracking with user context
         try {
           PWAInstallTrackingService.initialize(user?.uid, user?.username);
-          console.log('PWA installation tracking initialized', user ? `for user: ${user.username}` : 'anonymously');
         } catch (error) {
           console.error('Error initializing PWA installation tracking:', error);
         }
@@ -65,7 +64,6 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         // Reinitialize with updated user context
         PWAInstallTrackingService.initialize(user?.uid, user?.username);
-        console.log('PWA tracking updated for user context:', user?.username || 'anonymous');
       } catch (error) {
         console.error('Error updating PWA tracking user context:', error);
       }

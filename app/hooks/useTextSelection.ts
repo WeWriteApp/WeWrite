@@ -311,11 +311,6 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
 
       // CRITICAL FIX: Allow input fields to work normally regardless of modal state
       if (isInputField) {
-        console.log('🔗 USE_TEXT_SELECTION: Input field clicked - allowing normal behavior', {
-          tagName: target.tagName,
-          id: target.id,
-          className: target.className
-        });
         return; // Let the input field handle the click normally
       }
 
@@ -324,31 +319,17 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
                           document.querySelector('[data-radix-dialog-content]') ||
                           document.querySelector('.text-selection-menu');
 
-      console.log('🔗 USE_TEXT_SELECTION: Click event detected', {
-        target: event.target,
-        targetClass: (event.target as Element)?.className,
-        targetTagName: (event.target as Element)?.tagName,
-        hasOpenModal: !!hasOpenModal
-      });
-
       // Don't clear selection if any modal is open (but input fields are already handled above)
       if (hasOpenModal || isModalOpen) {
-        console.log('🔗 USE_TEXT_SELECTION: Modal is open, preserving selection');
         return;
       }
 
-      console.log('🔗 USE_TEXT_SELECTION: No modal open, checking selection in 10ms...');
       // Small delay to allow selection to be processed first
       setTimeout(() => {
         const selection = window.getSelection();
         const hasSelection = selection && selection.toString().length > 0;
-        console.log('🔗 USE_TEXT_SELECTION: Selection check result:', {
-          hasSelection,
-          selectionText: selection?.toString()
-        });
 
         if (!hasSelection) {
-          console.log('🔗 USE_TEXT_SELECTION: No selection found, hiding text selection menu');
           setSelectionState(prev => ({ ...prev, isVisible: false }));
         }
       }, 10);

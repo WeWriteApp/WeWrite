@@ -1680,7 +1680,6 @@ export default function ContentPageView({
     if (autoSaveEnabled && canEdit && pageId && !autoSaveSessionIdRef.current) {
       // Generate a unique session ID: pageId + timestamp + random suffix
       autoSaveSessionIdRef.current = `autosave-${pageId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      console.log('🔵 AUTO-SAVE: Generated session ID for version batching:', autoSaveSessionIdRef.current);
     }
   }, [autoSaveEnabled, canEdit, pageId]);
 

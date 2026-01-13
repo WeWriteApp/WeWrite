@@ -104,11 +104,8 @@ class GraphDataCache {
     const cached = this.get<PageConnectionsData>(cacheKey);
     
     if (cached) {
-      console.log('🚀 [CACHE] Hit for page connections:', pageId);
       return cached;
     }
-
-    console.log('📡 [CACHE] Miss for page connections, fetching:', pageId);
     
     try {
       const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=${includeSecondHop}&limit=50`);

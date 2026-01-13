@@ -91,16 +91,6 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
 
   const shouldRenderMenu = (isVisible && position && selectedText) || forceMenu;
 
-  // Debug logging for visibility changes
-  useEffect(() => {
-    console.log('🔗 TEXT_SELECTION_PROVIDER: Visibility state changed:', {
-      isVisible,
-      hasPosition: !!position,
-      hasSelectedText: !!selectedText,
-      selectedText: selectedText?.substring(0, 50) + (selectedText?.length > 50 ? '...' : '')
-    });
-  }, [isVisible, position, selectedText]);
-
   return (
     <TextSelectionContext.Provider value={contextValue}>
       {children}

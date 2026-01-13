@@ -502,9 +502,7 @@ export default function ContentPageHeader({
       setPageId(extractedPageId);
 
       // Check if the current user can change ownership (is the page owner)
-      if (user && userId && user.uid === userId) {
-        console.log("User can change page ownership");
-      }
+      // User can change page ownership if they own it
     }
   }, [user, user?.uid]);
 

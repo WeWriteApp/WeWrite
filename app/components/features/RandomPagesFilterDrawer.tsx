@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '../ui/drawer';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '../ui/dialog';
 import { Icon } from '@/components/ui/Icon';
 import {
   SegmentedControl,
@@ -352,9 +352,9 @@ export default function RandomPagesFilterDrawer({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-4">
+            <DialogBody>
               {filterContent}
-            </div>
+            </DialogBody>
 
             <DialogFooter className="flex-row gap-2 sm:justify-stretch">
               {footerButtons}

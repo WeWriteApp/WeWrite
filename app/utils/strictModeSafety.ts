@@ -129,17 +129,7 @@ export function isStrictMode(): boolean {
  * Log Strict Mode detection info
  */
 export function logStrictModeInfo(): void {
-  if (typeof window === 'undefined') return;
-
-  const isStrict = isStrictMode();
-  const stats = getInitializationStats();
-
-  safeLog('🔍 React Strict Mode Detection:', {
-    isStrictMode: isStrict,
-    nodeEnv: process.env.NODE_ENV,
-    initializationCount: Object.keys(stats).length,
-    initializations: stats
-  });
+  // Logging disabled to reduce console noise
 }
 
 /**
