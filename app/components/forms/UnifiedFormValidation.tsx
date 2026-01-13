@@ -21,6 +21,12 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
+import {
+  isValidEmail,
+  validateUsernameFormat,
+  validatePassword,
+  USERNAME_CONSTRAINTS,
+} from '@/utils/validationPatterns';
 
 type ValidationType = 'text' | 'email' | 'username' | 'title' | 'password' | 'custom';
 type ValidationState = 'idle' | 'checking' | 'valid' | 'invalid' | 'duplicate';
@@ -92,30 +98,24 @@ export function UnifiedFormValidation({
   const [validationState, setValidationState] = useState<ValidationState>('idle');
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
-  // Built-in validation patterns
+  // Built-in validation patterns - uses centralized validators from validationPatterns.ts
   const getBuiltInValidator = (type: ValidationType): ((value: string) => Promise<ValidationResult>) => {
     switch (type) {
       case 'email':
         return async (value: string) => {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const valid = isValidEmail(value);
           return {
-            isValid: emailRegex.test(value),
-            message: emailRegex.test(value) ? undefined : 'Please enter a valid email address'
+            isValid: valid,
+            message: valid ? undefined : 'Please enter a valid email address'
           };
         };
 
       case 'username':
         return async (value: string) => {
-          if (value.length < 3) {
-            return { isValid: false, message: 'Username must be at least 3 characters' };
+          const result = validateUsernameFormat(value);
+          if (!result.isValid) {
+            return { isValid: false, message: result.message || 'Invalid username' };
           }
-          if (/\s/.test(value)) {
-            return { isValid: false, message: 'Username cannot contain spaces' };
-          }
-          if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
-            return { isValid: false, message: 'Username can only contain letters, numbers, underscores, and hyphens' };
-          }
-          
           // Check availability (would need API call)
           // For now, just return valid
           return { isValid: true };
@@ -129,7 +129,6 @@ export function UnifiedFormValidation({
           if (value.length > 100) {
             return { isValid: false, message: 'Title must be less than 100 characters' };
           }
-          
           // Check for duplicates (would need API call)
           // For now, just return valid
           return { isValid: true };
@@ -137,10 +136,11 @@ export function UnifiedFormValidation({
 
       case 'password':
         return async (value: string) => {
-          if (value.length < 6) {
-            return { isValid: false, message: 'Password must be at least 6 characters' };
-          }
-          return { isValid: true };
+          const result = validatePassword(value);
+          return {
+            isValid: result.isValid,
+            message: result.message
+          };
         };
 
       case 'text':
@@ -148,7 +148,7 @@ export function UnifiedFormValidation({
         return async (value: string) => {
           const minLength = validation.minLength || 0;
           const maxLength = validation.maxLength || 1000;
-          
+
           if (validation.required && value.trim().length === 0) {
             return { isValid: false, message: 'This field is required' };
           }
@@ -161,7 +161,7 @@ export function UnifiedFormValidation({
           if (validation.pattern && !validation.pattern.test(value)) {
             return { isValid: false, message: 'Invalid format' };
           }
-          
+
           return { isValid: true };
         };
     }
@@ -349,7 +349,12 @@ export function UsernameValidationInput(props: Omit<UnifiedFormValidationProps, 
   return (
     <UnifiedFormValidation
       {...props}
-      validation={{ type: 'username', required: true, minLength: 3, maxLength: 30 }}
+      validation={{
+        type: 'username',
+        required: true,
+        minLength: USERNAME_CONSTRAINTS.MIN_LENGTH,
+        maxLength: USERNAME_CONSTRAINTS.MAX_LENGTH
+      }}
     />
   );
 }

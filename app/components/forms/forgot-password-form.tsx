@@ -4,7 +4,7 @@ import { InlineError } from '../ui/InlineError';
 
 /**
  * Forgot Password Form
- * 
+ *
  * Sends password reset emails via our API (which uses Firebase Admin SDK
  * to generate reset links and Resend to send branded emails).
  */
@@ -17,6 +17,7 @@ import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { cn } from "../../lib/utils";
+import { isValidEmail } from '@/utils/validationPatterns';
 
 export function ForgotPasswordForm({
   className,
@@ -32,8 +33,7 @@ export function ForgotPasswordForm({
 
   // Validate form inputs
   useEffect(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmailValid = emailRegex.test(email);
+    const isEmailValid = isValidEmail(email);
     setIsFormValid(isEmailValid);
   }, [email]);
 

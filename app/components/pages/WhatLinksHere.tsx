@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
 import { BacklinkSummary } from '../../firebase/database/backlinks';
 import { PillLink } from '../utils/PillLink';
@@ -26,41 +26,70 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
   const [backlinks, setBacklinks] = useState<BacklinkSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
-  useEffect(() => {
+  // Fetch backlinks function - extracted for reuse
+  const fetchBacklinks = useCallback(async () => {
     if (!pageId) {
       setLoading(false);
       return;
     }
 
-    // Fetch backlinks via API endpoint (avoids client-side Firestore permission issues)
-    const fetchBacklinks = async () => {
-      try {
-        const response = await fetch(`/api/links/backlinks?pageId=${encodeURIComponent(pageId)}&limit=50`);
+    try {
+      // Add cache-busting param when refreshing to bypass any HTTP caches
+      const cacheBuster = refreshCounter > 0 ? `&_t=${Date.now()}` : '';
+      const response = await fetch(`/api/links/backlinks?pageId=${encodeURIComponent(pageId)}&limit=50${cacheBuster}`);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.data?.backlinks) {
-          setBacklinks(data.data.backlinks);
-        } else {
-          setBacklinks([]);
-        }
-        setError(null);
-      } catch (err) {
-        console.warn('Failed to fetch backlinks:', err);
-        setBacklinks([]);
-        setError(null); // Don't show error UI, just empty state
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
+
+      const data = await response.json();
+
+      if (data.success && data.data?.backlinks) {
+        setBacklinks(data.data.backlinks);
+      } else {
+        setBacklinks([]);
+      }
+      setError(null);
+    } catch (err) {
+      console.warn('Failed to fetch backlinks:', err);
+      setBacklinks([]);
+      setError(null); // Don't show error UI, just empty state
+    } finally {
+      setLoading(false);
+    }
+  }, [pageId, refreshCounter]);
+
+  // Initial fetch on mount and when pageId changes
+  useEffect(() => {
+    fetchBacklinks();
+  }, [fetchBacklinks]);
+
+  // Listen for page save events globally - any page save could create a new backlink
+  useEffect(() => {
+    const handlePageSaved = () => {
+      // Debounce: wait a bit for the backlink index to be updated server-side
+      setTimeout(() => {
+        setRefreshCounter(prev => prev + 1);
+      }, 500);
     };
 
-    fetchBacklinks();
-  }, [pageId]);
+    const handlePageCreated = () => {
+      // New page created - could contain a link to this page
+      setTimeout(() => {
+        setRefreshCounter(prev => prev + 1);
+      }, 500);
+    };
+
+    window.addEventListener('pageSaved', handlePageSaved);
+    window.addEventListener('page-created-immediate', handlePageCreated);
+
+    return () => {
+      window.removeEventListener('pageSaved', handlePageSaved);
+      window.removeEventListener('page-created-immediate', handlePageCreated);
+    };
+  }, []);
 
   // Convert backlinks to PageLinkItem format
   const items: PageLinkItem[] = backlinks.map(backlink => ({

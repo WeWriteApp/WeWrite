@@ -20,6 +20,7 @@ import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSugges
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 import { transferLoggedOutAllocationsToUser } from "../../utils/simulatedUsd"
 import { useAuth } from "../../providers/AuthProvider"
+import { isValidEmail } from '@/utils/validationPatterns'
 
 export function RegisterForm({
   className,
@@ -88,8 +89,7 @@ export function RegisterForm({
 
   // Validate form inputs
   useEffect(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const isEmailValid = emailRegex.test(email)
+    const isEmailValid = isValidEmail(email)
     const isPasswordValid = password.length >= 6
     // Username is valid if it's at least 3 characters and available (not taken)
     const isUsernameValid = username.length >= 3 && isAvailable === true && !validationError

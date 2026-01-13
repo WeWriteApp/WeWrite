@@ -92,7 +92,7 @@ interface SubscriberDetail {
   overspentUnfundedCents: number;   // Max(0, allocated - subscription) - unfunded portion
   unallocatedCents: number;         // Max(0, subscription - allocated) - leftover
   grossEarningsCents: number;       // Funded earnings before fees
-  platformFeeCents: number;         // 7% of funded
+  platformFeeCents: number;         // 10% of funded
   netCreatorPayoutCents: number;    // Funded minus fee
   stripeCustomerId: string;
   status: string;
@@ -503,7 +503,7 @@ export default function MonthlyFinancialsPage() {
                       </span>
                     </div>
                     <div className="flex justify-between p-2 bg-muted/30 rounded">
-                      <span className="text-muted-foreground">Platform Fees (7%)</span>
+                      <span className="text-muted-foreground">Platform Fees (10%)</span>
                       <span className="font-medium text-green-700 dark:text-green-400">
                         {formatUsdCents(data.realtimeBalanceBreakdown.breakdown.platformFeesCents)}
                       </span>
@@ -550,7 +550,7 @@ export default function MonthlyFinancialsPage() {
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground flex items-center">
                     Allocated to Creators
-                    <InfoTooltip text="Total amount subscribers have allocated to creators this month. This is what creators will earn (minus 7% fee)." />
+                    <InfoTooltip text="Total amount subscribers have allocated to creators this month. This is what creators will earn (minus 10% fee)." />
                   </p>
                   <p className="text-2xl font-bold">{formatUsdCents(data.currentMonth.data.totalAllocatedCents)}</p>
                 </div>
@@ -575,7 +575,7 @@ export default function MonthlyFinancialsPage() {
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground flex items-center">
                     Creator Payouts
-                    <InfoTooltip text="What creators actually receive after platform fee. Formula: Allocated to Creators - Platform Fee (7%). This is the net amount paid out to creators." />
+                    <InfoTooltip text="What creators actually receive after platform fee. Formula: Allocated to Creators - Platform Fee (10%). This is the net amount paid out to creators." />
                   </p>
                   <p className="text-xl font-bold">{formatUsdCents(data.currentMonth.data.creatorPayoutsCents)}</p>
                 </div>
@@ -588,15 +588,15 @@ export default function MonthlyFinancialsPage() {
                 </div>
                 <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
                   <p className="text-sm text-muted-foreground flex items-center">
-                    Platform Fee (7%)
-                    <InfoTooltip text="7% fee charged on allocated funds only. Formula: Allocated to Creators * 0.07. This fee is deducted from creator payouts." />
+                    Platform Fee (10%)
+                    <InfoTooltip text="10% fee charged on allocated funds only. Formula: Allocated to Creators * 0.10. This fee is deducted from creator payouts." />
                   </p>
                   <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.platformFeeCents)}</p>
                 </div>
                 <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
                   <p className="text-sm text-muted-foreground flex items-center">
                     Platform Revenue
-                    <InfoTooltip text="Total revenue for WeWrite. Formula: Unallocated + Platform Fee (7%). Includes both the 7% fee on allocations AND any unallocated subscription funds." />
+                    <InfoTooltip text="Total revenue for WeWrite. Formula: Unallocated + Platform Fee (10%). Includes both the 10% fee on allocations AND any unallocated subscription funds." />
                   </p>
                   <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.currentMonth.data.platformRevenueCents)}</p>
                 </div>
@@ -803,8 +803,8 @@ export default function MonthlyFinancialsPage() {
                     </div>
                     <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
                       <p className="text-sm text-muted-foreground">
-                        Platform Fee (7%)
-                        <InfoTooltip text="7% fee deducted from writer earnings. This is the fee taken from payouts, not from subscriber subscriptions." />
+                        Platform Fee (10%)
+                        <InfoTooltip text="10% fee deducted from writer earnings. This is the fee taken from payouts, not from subscriber subscriptions." />
                       </p>
                       <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(data.writerEarnings.reduce((sum, w) => sum + w.platformFeeCents, 0))}</p>
                     </div>
@@ -842,8 +842,8 @@ export default function MonthlyFinancialsPage() {
                           </th>
                           <th className="text-right py-2 px-2">
                             <span className="inline-flex items-center">
-                              Platform Fee (7%)
-                              <InfoTooltip text="7% fee deducted from writer earnings" />
+                              Platform Fee (10%)
+                              <InfoTooltip text="10% fee deducted from writer earnings" />
                             </span>
                           </th>
                         </tr>

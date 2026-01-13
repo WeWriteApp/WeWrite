@@ -132,7 +132,7 @@ WeWrite uses **four dedicated financial contexts** instead of a monolithic syste
 - **Scope**: Users with earnings
 - **Cache**: 10-minute cache (more dynamic)
 
-#### 4. FakeBalanceContext
+#### 4. DemoBalanceContext
 - **Purpose**: Demo balance for non-subscribers
 - **Scope**: Users without active subscriptions
 - **Storage**: localStorage only

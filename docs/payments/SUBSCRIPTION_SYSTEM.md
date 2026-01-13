@@ -56,14 +56,15 @@ SUBSCRIPTION_ENV=development/production
 ## Subscription Tiers
 
 ### Standard Tiers
-- **Tier 1 (Supporter)**: $5/month → $5 USD credits
-- **Tier 2 (Advocate)**: $25/month → $25 USD credits
-- **Tier 3 (Champion)**: $50/month → $50 USD credits
+- **Tier 1 (Supporter)**: $10/month → $10 USD credits
+- **Tier 2 (Advocate)**: $20/month → $20 USD credits
+- **Tier 3 (Champion)**: $30/month → $30 USD credits
 
 ### Custom Tiers
-- **Range**: $100+/month
+- **Range**: $30-$1000/month
 - **USD Calculation**: $1 = $1 USD credit (direct 1:1 mapping)
-- **Minimum Custom**: $100/month for custom amounts
+- **Minimum Custom**: $30/month for custom amounts
+- **Maximum Custom**: $1000/month
 
 ## API Endpoints
 

@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { InlineError } from '../ui/InlineError';
 import Link from 'next/link';
 import { getEnvironmentType } from '../../utils/environmentConfig';
+import { looksLikeEmail } from '@/utils/validationPatterns';
 
 // Constants for rate limiting
 const MAX_ATTEMPTS_BEFORE_WARNING = 3;
@@ -310,7 +311,7 @@ export function LoginForm() {
 
       <div className="text-center space-y-4">
         <Link
-          href={`/auth/forgot-password${emailOrUsername && emailOrUsername.includes('@') ? `?email=${encodeURIComponent(emailOrUsername.trim())}` : ''}`}
+          href={`/auth/forgot-password${looksLikeEmail(emailOrUsername) ? `?email=${encodeURIComponent(emailOrUsername.trim())}` : ''}`}
           className="text-sm text-primary underline underline-offset-2 hover:text-primary/80"
         >
           Forgot your password?

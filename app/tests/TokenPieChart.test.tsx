@@ -10,7 +10,8 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { TokenPieChart } from '../components/ui/TokenPieChart';
+// TokenPieChart is now a backward-compatible export from UsdPieChart
+import { TokenPieChart } from '../components/ui/UsdPieChart';
 
 describe('TokenPieChart', () => {
   describe('Normal State', () => {

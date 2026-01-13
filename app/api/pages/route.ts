@@ -516,8 +516,14 @@ export async function POST(request: NextRequest) {
         // Don't fail the page creation if Typesense sync fails
       }
 
-    } catch (error: any) {
-      return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
+    } catch (versionError: any) {
+      // Log the error but don't fail the page creation - the page was already created
+      console.error('[POST /api/pages] Version creation error (page was still created):', {
+        error: versionError?.message || versionError,
+        pageId,
+        stack: versionError?.stack?.split('\n').slice(0, 3).join('\n')
+      });
+      // Continue to return success - the page exists, just without initial version metadata
     }
 
     return createApiResponse({
@@ -526,6 +532,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    console.error('[POST /api/pages] Failed to create page:', error?.message || error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
   }
 }

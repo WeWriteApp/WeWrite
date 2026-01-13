@@ -21,6 +21,7 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 import { hashDevPassword } from '../../../utils/testUsers';
 import { authRateLimiter } from '../../../utils/rateLimiter';
 import { createSignedCookieValue, type SessionCookieData } from '../../../utils/cookieUtils';
+import { isValidEmailStrict } from '@/utils/validationPatterns';
 
 // Dev mode cookie options (only used when USE_DEV_AUTH=true in development)
 const DEV_SESSION_COOKIE_OPTIONS = {
@@ -98,8 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmailStrict(email)) {
       return createErrorResponse('BAD_REQUEST', 'Invalid email format');
     }
 

@@ -42,12 +42,35 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
 
   if (simpleSessionCookie) {
     try {
-      const userSession: UserSession = JSON.parse(simpleSessionCookie);
+      // Handle signed cookies (format: base64url(data).signature)
+      // Also handle legacy JSON cookies for backward compatibility
+      let cookieData: string = simpleSessionCookie;
+
+      // Check if this is a signed cookie (contains a dot and doesn't start with { or [)
+      if (!simpleSessionCookie.startsWith('{') && !simpleSessionCookie.startsWith('[') && simpleSessionCookie.includes('.')) {
+        // Extract the data part (before the last dot)
+        const dotIndex = simpleSessionCookie.lastIndexOf('.');
+        const encodedData = simpleSessionCookie.substring(0, dotIndex);
+
+        // Decode base64url to JSON
+        try {
+          const base64 = encodedData.replace(/-/g, '+').replace(/_/g, '/');
+          const padding = base64.length % 4;
+          const paddedBase64 = padding ? base64 + '='.repeat(4 - padding) : base64;
+          cookieData = atob(paddedBase64);
+        } catch {
+          // If decoding fails, treat as legacy JSON
+          cookieData = simpleSessionCookie;
+        }
+      }
+
+      const userSession: UserSession = JSON.parse(cookieData);
       isEmailVerified = userSession.emailVerified !== false; // Default to true if not specified
       userEmail = userSession.email;
       sessionIsAdmin = userSession.isAdmin === true;
     } catch (error) {
-      console.log('[Proxy] Error parsing simpleUserSession cookie:', error);
+      // Silent fail - cookie might be in a format we don't understand
+      // Auth will still work, just without email verification info
     }
   } else if (userSessionCookie) {
     // Fallback to legacy userSession cookie

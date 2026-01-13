@@ -12,6 +12,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { sendVerificationEmail } from '../../../services/emailService';
 import { randomUUID } from 'crypto';
+import { isValidEmailStrict } from '@/utils/validationPatterns';
 
 interface UpdateEmailRequest {
   newEmail: string;
@@ -40,8 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
+    if (!isValidEmailStrict(newEmail)) {
       return NextResponse.json(
         { error: 'Invalid email format' },
         { status: 400 }

@@ -13,6 +13,7 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 import { initAdmin } from '../../../firebase/admin';
 import { sendPasswordResetEmail as sendCustomResetEmail } from '../../../services/emailService';
 import { passwordResetRateLimiter } from '../../../utils/rateLimiter';
+import { isValidEmailStrict } from '@/utils/validationPatterns';
 
 const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.getwewrite.app';
@@ -238,8 +239,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Email address is required');
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmailStrict(email)) {
       return createErrorResponse('BAD_REQUEST', 'Please enter a valid email address');
     }
 

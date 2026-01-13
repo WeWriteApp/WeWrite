@@ -89,47 +89,10 @@ export class VisitorValidationService {
         }
       }
 
-      // Check for suspicious session patterns
-      const suspiciousSessions = sessions.filter(s =>
-        s.pageViews > this.VALIDATION_THRESHOLDS.MAX_PAGE_VIEWS_PER_SESSION ||
-        s.sessionDuration < this.VALIDATION_THRESHOLDS.MIN_SESSION_DURATION ||
-        (s.userAgent && s.userAgent.length > this.VALIDATION_THRESHOLDS.SUSPICIOUS_USER_AGENT_LENGTH)
-      );
-
-      if (suspiciousSessions.length > 0) {
-        issues.push(`${suspiciousSessions.length} sessions with suspicious patterns`);
-        recommendations.push('Investigate sessions with unusual behavior patterns');
-        confidence -= 0.1;
-      }
-
-      // 4. Validate interaction patterns
-      const zeroInteractionSessions = sessions.filter(s => 
-        s.sessionDuration > 30 && 
-        s.interactions && 
-        Object.values(s.interactions).every(count => count === 0)
-      );
-
-      if (zeroInteractionSessions.length > sessions.length * 0.2) {
-        issues.push(`${zeroInteractionSessions.length} sessions with no user interactions`);
-        recommendations.push('Review interaction tracking implementation');
-        confidence -= 0.15;
-      }
-
-      // 5. Check for duplicate fingerprints (potential session duplication)
-      const fingerprints = new Map();
-      sessions.forEach(s => {
-        if (s.fingerprint && s.fingerprint.id) {
-          const existing = fingerprints.get(s.fingerprint.id) || 0;
-          fingerprints.set(s.fingerprint.id, existing + 1);
-        }
-      });
-
-      const duplicateFingerprints = Array.from(fingerprints.entries()).filter(([_, count]) => count > 1);
-      if (duplicateFingerprints.length > 0) {
-        issues.push(`${duplicateFingerprints.length} duplicate fingerprints detected`);
-        recommendations.push('Check session deduplication logic');
-        confidence -= 0.1;
-      }
+      // NOTE: Session-level validation (suspicious patterns, interaction patterns,
+      // duplicate fingerprints) has been removed as it required direct Firebase access.
+      // This validation now relies on pattern-level analysis from the API.
+      // For detailed session analysis, use analyzeTrafficPatterns() which fetches session data.
 
       return {
         isValid: confidence > 0.7,
@@ -151,6 +114,7 @@ export class VisitorValidationService {
 
   /**
    * Analyze traffic patterns over time for anomaly detection
+   * MIGRATED: Now uses API endpoint instead of direct Firebase queries
    */
   static async analyzeTrafficPatterns(hours: number = 24): Promise<{
     patterns: TrafficPattern[];
@@ -163,50 +127,31 @@ export class VisitorValidationService {
     };
   }> {
     try {
-      const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
-      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
-      const q = query(
-        visitorsRef,
-        where('startTime', '>=', Timestamp.fromDate(hoursAgo)),
-        orderBy('startTime', 'desc'),
-        limit(1000)
-      );
+      // Use API endpoint instead of direct Firebase access
+      const response = await visitorValidationApi.getTrafficPatterns(hours, true);
 
-      const snapshot = await getDocs(q);
-      const sessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (!response.success || !response.data) {
+        console.error('Failed to get traffic patterns from API:', response.error);
+        return {
+          patterns: [],
+          anomalies: [],
+          summary: {
+            avgVisitorsPerHour: 0,
+            peakVisitors: 0,
+            avgBotPercentage: 0,
+            totalPageViews: 0
+          }
+        };
+      }
 
-      // Group sessions by hour
-      const hourlyData = new Map<string, TrafficPattern>();
-      
-      sessions.forEach(session => {
-        const hour = new Date(session.startTime.toDate()).toISOString().slice(0, 13) + ':00:00';
-        
-        if (!hourlyData.has(hour)) {
-          hourlyData.set(hour, {
-            timestamp: new Date(hour),
-            visitorCount: 0,
-            botCount: 0,
-            authenticatedCount: 0,
-            pageViews: 0
-          });
-        }
-
-        const pattern = hourlyData.get(hour)!;
-        pattern.visitorCount++;
-        pattern.pageViews += session.pageViews || 0;
-        
-        if (session.isBot) {
-          pattern.botCount++;
-        }
-        
-        if (session.isAuthenticated) {
-          pattern.authenticatedCount++;
-        }
-      });
-
-      const patterns = Array.from(hourlyData.values()).sort((a, b) => 
-        a.timestamp.getTime() - b.timestamp.getTime()
-      );
+      // Transform API response to TrafficPattern format
+      const patterns: TrafficPattern[] = (response.data.patterns || []).map((p: any) => ({
+        timestamp: new Date(p.timestamp || p.hour),
+        visitorCount: p.visitorCount || 0,
+        botCount: p.botCount || 0,
+        authenticatedCount: p.authenticatedCount || 0,
+        pageViews: p.pageViews || 0
+      }));
 
       // Detect anomalies
       const anomalies = this.detectAnomalies(patterns);
@@ -215,7 +160,7 @@ export class VisitorValidationService {
       const totalVisitors = patterns.reduce((sum, p) => sum + p.visitorCount, 0);
       const totalBots = patterns.reduce((sum, p) => sum + p.botCount, 0);
       const totalPageViews = patterns.reduce((sum, p) => sum + p.pageViews, 0);
-      const peakVisitors = Math.max(...patterns.map(p => p.visitorCount));
+      const peakVisitors = patterns.length > 0 ? Math.max(...patterns.map(p => p.visitorCount)) : 0;
 
       return {
         patterns,

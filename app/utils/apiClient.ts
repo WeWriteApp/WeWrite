@@ -1,8 +1,15 @@
 /**
  * API Client Utility
- * 
+ *
  * This utility provides functions to replace direct Firebase calls with API route calls.
  * It ensures all operations go through environment-aware API endpoints.
+ *
+ * ARCHITECTURE NOTE: Environment-aware collection switching (DEV_ prefix) happens
+ * SERVER-SIDE in API routes via getCollectionName(). This client doesn't need to
+ * know about collections - it just calls endpoints.
+ *
+ * CONSOLIDATION (January 2026): Refactored from 15+ separate API objects to use
+ * a factory pattern, reducing ~500 lines of repetitive code.
  */
 
 interface ApiResponse<T = any> {
@@ -264,61 +271,41 @@ async function apiCall<T = any>(
   return consolidatedClient.call<T>(endpoint, options);
 }
 
+// ============================================================================
+// API OBJECTS - Consolidated January 2026
+// Only methods with active usage are preserved. Unused methods removed.
+// ============================================================================
+
 /**
  * User Profile Operations
+ * USED: getProfile (userUtils.ts, apiClient wrappers), getBatchUsers (apiClient wrappers)
  */
 export const userProfileApi = {
-  /**
-   * Get user profile by ID or username
-   */
+  /** Get user profile by ID or username */
   async getProfile(idOrUsername: string): Promise<ApiResponse> {
     return apiCall(`/api/users/profile?id=${encodeURIComponent(idOrUsername)}`);
   },
 
-  /**
-   * Update current user's profile
-   */
-  async updateProfile(updates: { displayName?: string; bio?: string; photoURL?: string }): Promise<ApiResponse> {
-    return apiCall('/api/users/profile', {
-      method: 'PUT',
-      body: JSON.stringify(updates)
-    });
-  },
-
-  /**
-   * Get batch user data
-   */
+  /** Get batch user data */
   async getBatchUsers(userIds: string[]): Promise<ApiResponse> {
     return apiCall('/api/users/batch', {
       method: 'POST',
       body: JSON.stringify({ userIds })
     });
   },
-
-  /**
-   * Logout user
-   */
-  async logout(): Promise<ApiResponse> {
-    return apiCall('/api/auth/logout', {
-      method: 'POST'
-    });
-  }
 };
 
 /**
  * Username Operations
+ * USED: checkAvailability (apiClient wrapper), setUsername (profile settings)
  */
 export const usernameApi = {
-  /**
-   * Check username availability
-   */
+  /** Check username availability */
   async checkAvailability(username: string): Promise<ApiResponse> {
     return apiCall(`/api/auth/username?username=${encodeURIComponent(username)}`);
   },
 
-  /**
-   * Set/update username
-   */
+  /** Set/update username */
   async setUsername(username: string): Promise<ApiResponse> {
     return apiCall('/api/auth/username', {
       method: 'POST',
@@ -329,12 +316,11 @@ export const usernameApi = {
 
 /**
  * Page Operations
+ * USED: getPage (analytics, check-link-existence), getSimilarPages (SimilarPages.tsx), appendReference (apiClient wrapper)
+ * UNUSED (removed): getUserPages, createPage, updatePage, deletePage - these are called via other mechanisms
  */
 export const pageApi = {
-  /**
-   * Get page by ID
-   * @param skipCache - If true, bypasses client-side cache to get fresh data (useful for edit mode)
-   */
+  /** Get page by ID. skipCache bypasses client cache for edit mode */
   async getPage(pageId: string, userId?: string, options?: { skipCache?: boolean }): Promise<ApiResponse> {
     const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
     return consolidatedClient.call(`/api/pages/${pageId}${params}`, {
@@ -342,80 +328,13 @@ export const pageApi = {
     });
   },
 
-  /**
-   * Find similar pages based on title keywords
-   */
+  /** Find similar pages based on title keywords */
   async getSimilarPages(pageId: string, title: string, maxPages: number = 3): Promise<ApiResponse> {
-    const params = new URLSearchParams({
-      pageId,
-      title,
-      maxPages: String(maxPages)
-    });
+    const params = new URLSearchParams({ pageId, title, maxPages: String(maxPages) });
     return apiCall(`/api/pages/similar?${params}`);
   },
 
-  /**
-   * Get user's pages
-   */
-  async getUserPages(userId: string, options: {
-    includeDeleted?: boolean;
-    limit?: number;
-    startAfter?: string;
-    orderBy?: string;
-    orderDirection?: string;
-  } = {}): Promise<ApiResponse> {
-    const params = new URLSearchParams({
-      userId,
-      ...Object.fromEntries(
-        Object.entries(options).map(([key, value]) => [key, String(value)])
-      )
-    });
-    return apiCall(`/api/pages?${params}`);
-  },
-
-  /**
-   * Create new page
-   */
-  async createPage(pageData: {
-    title: string;
-    content?: any;
-    groupId?: string;
-    customDate?: string;
-  }): Promise<ApiResponse> {
-    return apiCall('/api/pages', {
-      method: 'POST',
-      body: JSON.stringify(pageData)
-    });
-  },
-
-  /**
-   * Update page
-   */
-  async updatePage(pageId: string, updates: {
-    title?: string;
-    content?: any;
-    location?: any;
-    groupId?: string;
-    customDate?: string;
-  }): Promise<ApiResponse> {
-    return apiCall('/api/pages', {
-      method: 'PUT',
-      body: JSON.stringify({ id: pageId, ...updates })
-    });
-  },
-
-  /**
-   * Delete page (soft delete)
-   */
-  async deletePage(pageId: string, permanent: boolean = false): Promise<ApiResponse> {
-    return apiCall(`/api/pages?id=${pageId}&permanent=${permanent}`, {
-      method: 'DELETE'
-    });
-  },
-
-  /**
-   * Append reference from source page to target page
-   */
+  /** Append reference from source page to target page */
   async appendReference(targetPageId: string, sourcePageData: any): Promise<ApiResponse> {
     return apiCall(`/api/pages/${targetPageId}/append-reference`, {
       method: 'POST',
@@ -424,64 +343,16 @@ export const pageApi = {
   }
 };
 
-/**
- * Activity Operations - REMOVED
- * Activity system has been completely removed in favor of unified version system
- */
-
-/**
- * Search Operations
- */
-export const searchApi = {
-  /**
-   * Search pages
-   */
-  async searchPages(query: string, limit: number = 20): Promise<ApiResponse> {
-    return apiCall(`/api/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-  },
-
-  /**
-   * Search users
-   */
-  async searchUsers(query: string, limit: number = 20): Promise<ApiResponse> {
-    return apiCall(`/api/search-users?q=${encodeURIComponent(query)}&limit=${limit}`);
-  }
-};
-
-/**
- * Home/Dashboard Operations
- */
-export const homeApi = {
-  /**
-   * Get home page data
-   */
-  async getHomeData(): Promise<ApiResponse> {
-    return apiCall('/api/home');
-  },
-
-  /**
-   * Get trending pages
-   */
-  async getTrendingPages(): Promise<ApiResponse> {
-    return apiCall('/api/trending');
-  },
-
-  /**
-   * Get recent pages for a user
-   */
-  async getRecentPages(userId?: string): Promise<ApiResponse> {
-    const params = userId ? `?userId=${userId}` : '';
-    return apiCall(`/api/recent-edits/user${params}`);
-  }
-};
+// searchApi - REMOVED (not used anywhere in codebase)
+// homeApi - REMOVED (not used anywhere in codebase)
 
 /**
  * Analytics Operations
+ * USED: recordPageView (ContentPageView.tsx), getUserStreaks (UserStreak.tsx)
+ * UNUSED (removed): getCounters, getPageAnalytics, getUserAnalytics, updateCounters, getAggregations, updateAggregation
  */
 export const analyticsApi = {
-  /**
-   * Record page view
-   */
+  /** Record page view */
   async recordPageView(pageId: string, userId?: string): Promise<ApiResponse> {
     return apiCall('/api/analytics/page-view', {
       method: 'POST',
@@ -489,71 +360,10 @@ export const analyticsApi = {
     });
   },
 
-  /**
-   * Get user streaks
-   */
+  /** Get user streaks */
   async getUserStreaks(userId: string): Promise<ApiResponse> {
     return apiCall(`/api/analytics/streaks?userId=${encodeURIComponent(userId)}`);
   },
-
-  /**
-   * Get global analytics counters
-   */
-  async getCounters(): Promise<ApiResponse> {
-    return apiCall('/api/analytics/counters');
-  },
-
-  /**
-   * Get page analytics
-   */
-  async getPageAnalytics(pageId: string): Promise<ApiResponse> {
-    return apiCall(`/api/analytics/page/${encodeURIComponent(pageId)}`);
-  },
-
-  /**
-   * Get user analytics
-   */
-  async getUserAnalytics(userId: string): Promise<ApiResponse> {
-    return apiCall(`/api/analytics/user/${encodeURIComponent(userId)}`);
-  },
-
-  /**
-   * Update analytics counters
-   */
-  async updateCounters(counters: any, operation: 'set' | 'increment' = 'set'): Promise<ApiResponse> {
-    return apiCall('/api/analytics/counters', {
-      method: 'POST',
-      body: JSON.stringify({ counters, operation })
-    });
-  },
-
-  /**
-   * Get analytics aggregations
-   */
-  async getAggregations(options: {
-    type: 'hourly' | 'daily';
-    limit?: number;
-    startDate?: string;
-    endDate?: string;
-  }): Promise<ApiResponse> {
-    const params = new URLSearchParams({
-      type: options.type,
-      ...(options.limit && { limit: String(options.limit) }),
-      ...(options.startDate && { startDate: options.startDate }),
-      ...(options.endDate && { endDate: options.endDate })
-    });
-    return apiCall(`/api/analytics/aggregations?${params}`);
-  },
-
-  /**
-   * Create/update analytics aggregation
-   */
-  async updateAggregation(type: 'hourly' | 'daily', date: string, data: any): Promise<ApiResponse> {
-    return apiCall('/api/analytics/aggregations', {
-      method: 'POST',
-      body: JSON.stringify({ type, date, data })
-    });
-  }
 };
 
 /**
@@ -659,117 +469,36 @@ export async function setCurrentVersion(pageId: string, versionId: string): Prom
   return response.success;
 }
 
-/**
- * Visitor Tracking Operations
- */
-export const visitorTrackingApi = {
-  /**
-   * Create or update visitor session
-   */
-  async createOrUpdateSession(sessionData: {
-    fingerprintId: string;
-    userId?: string;
-    isAuthenticated?: boolean;
-    fingerprint?: any;
-    pageId?: string;
-    sessionData?: any;
-  }): Promise<ApiResponse> {
-    return apiCall('/api/visitor-tracking/session', {
-      method: 'POST',
-      body: JSON.stringify(sessionData)
-    });
-  },
-
-  /**
-   * Get existing visitor session
-   */
-  async getSession(fingerprintId: string, userId?: string): Promise<ApiResponse> {
-    const params = new URLSearchParams({ fingerprintId });
-    if (userId) params.append('userId', userId);
-    return apiCall(`/api/visitor-tracking/session?${params}`);
-  },
-
-  /**
-   * Get visitor statistics
-   */
-  async getStats(): Promise<ApiResponse> {
-    return apiCall('/api/visitor-tracking/stats');
-  },
-
-  /**
-   * Update visitor session
-   */
-  async updateSession(sessionId: string, updates: any): Promise<ApiResponse> {
-    return apiCall('/api/visitor-tracking/stats', {
-      method: 'POST',
-      body: JSON.stringify({ sessionId, updates })
-    });
-  }
-};
+// visitorTrackingApi - REMOVED (imported but methods never called)
 
 /**
  * Real-time Database Operations
+ * PRESERVED: Imported in 3 files (realtimeConnectionManager, ContentPageHeader, ContentPageActions)
+ * though methods not currently called - keeping for future use
  */
 export const rtdbApi = {
-  /**
-   * Read data from RTDB
-   */
   async read(path: string): Promise<ApiResponse> {
     return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`);
   },
-
-  /**
-   * Write data to RTDB
-   */
   async write(path: string, data: any, method: 'set' | 'update' | 'push' | 'remove' = 'set'): Promise<ApiResponse> {
-    return apiCall('/api/rtdb', {
-      method: 'POST',
-      body: JSON.stringify({ path, data, method })
-    });
+    return apiCall('/api/rtdb', { method: 'POST', body: JSON.stringify({ path, data, method }) });
   },
-
-  /**
-   * Update data in RTDB
-   */
   async update(path: string, data: any): Promise<ApiResponse> {
-    return apiCall('/api/rtdb', {
-      method: 'PUT',
-      body: JSON.stringify({ path, data })
-    });
+    return apiCall('/api/rtdb', { method: 'PUT', body: JSON.stringify({ path, data }) });
   },
-
-  /**
-   * Remove data from RTDB
-   */
   async remove(path: string): Promise<ApiResponse> {
-    return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`, {
-      method: 'DELETE'
-    });
+    return apiCall(`/api/rtdb?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
   }
 };
 
-/**
- * Batch Operations
- */
-export const batchApi = {
-  /**
-   * Execute batch operations
-   */
-  async executeOperations(operations: any[], options: any = {}): Promise<ApiResponse> {
-    return apiCall('/api/batch/operations', {
-      method: 'POST',
-      body: JSON.stringify({ operations, options })
-    });
-  }
-};
+// batchApi - REMOVED (not used anywhere in codebase)
 
 /**
  * Contributors Operations
+ * USED: getContributors (ContributorsService.ts)
  */
 export const contributorsApi = {
-  /**
-   * Get contributor statistics for a page
-   */
+  /** Get contributor statistics for a page */
   async getContributors(pageId: string): Promise<ApiResponse> {
     return apiCall(`/api/contributors/${pageId}`);
   }
@@ -777,61 +506,25 @@ export const contributorsApi = {
 
 /**
  * Visitor Validation Operations
+ * USED: getTrafficPatterns (VisitorValidationService.ts)
  */
 export const visitorValidationApi = {
-  /**
-   * Validate visitor data
-   */
-  async validateVisitor(visitorData: any, validationType?: string): Promise<ApiResponse> {
-    return apiCall('/api/visitor-validation', {
-      method: 'POST',
-      body: JSON.stringify({ visitorData, validationType })
-    });
-  },
-
-  /**
-   * Get traffic patterns
-   */
+  /** Get traffic patterns */
   async getTrafficPatterns(hours: number = 24, includeDetails: boolean = false): Promise<ApiResponse> {
-    const params = new URLSearchParams({
-      hours: String(hours),
-      includeDetails: String(includeDetails)
-    });
+    const params = new URLSearchParams({ hours: String(hours), includeDetails: String(includeDetails) });
     return apiCall(`/api/visitor-validation/patterns?${params}`);
   }
 };
 
 /**
  * Daily Notes Operations
+ * USED: getLatestDailyNote (dailyNoteNavigation.ts)
  */
 export const dailyNotesApi = {
-  /**
-   * Get latest daily note for a user
-   */
+  /** Get latest daily note for a user */
   async getLatestDailyNote(userId: string): Promise<ApiResponse> {
     return apiCall(`/api/daily-notes?action=latest&userId=${userId}`);
   },
-
-  /**
-   * Get earliest daily note for a user
-   */
-  async getEarliestDailyNote(userId: string): Promise<ApiResponse> {
-    return apiCall(`/api/daily-notes?action=earliest&userId=${userId}`);
-  },
-
-  /**
-   * Check if daily note exists for a date
-   */
-  async checkDailyNoteExists(userId: string, date: string): Promise<ApiResponse> {
-    return apiCall(`/api/daily-notes?action=exists&userId=${userId}&date=${date}`);
-  },
-
-  /**
-   * Find daily note ID for a date
-   */
-  async findDailyNoteId(userId: string, date: string): Promise<ApiResponse> {
-    return apiCall(`/api/daily-notes?action=find&userId=${userId}&date=${date}`);
-  }
 };
 
 /**
@@ -844,158 +537,41 @@ export async function addUsername(username: string) {
 
 /**
  * Follows Operations
+ * USED: followPage, unfollowPage (follows.ts, FollowedPages.tsx)
+ *       followUser, unfollowUser, getFollowedUsers (useUserFollowing.ts, UserFollowingList.tsx)
+ *       getFollowSuggestions (FollowingSuggestions.tsx)
+ * UNUSED (removed): getFollowedPages, getPageFollowers, getUserFollowers
  */
 export const followsApi = {
-  /**
-   * Follow a page
-   */
   async followPage(pageId: string): Promise<ApiResponse> {
-    return apiCall('/api/follows/pages', {
-      method: 'POST',
-      body: JSON.stringify({ pageId })
-    });
+    return apiCall('/api/follows/pages', { method: 'POST', body: JSON.stringify({ pageId }) });
   },
-
-  /**
-   * Unfollow a page
-   */
   async unfollowPage(pageId: string): Promise<ApiResponse> {
-    return apiCall(`/api/follows/pages?pageId=${encodeURIComponent(pageId)}`, {
-      method: 'DELETE'
-    });
+    return apiCall(`/api/follows/pages?pageId=${encodeURIComponent(pageId)}`, { method: 'DELETE' });
   },
-
-  /**
-   * Get pages followed by user
-   */
-  async getFollowedPages(userId: string): Promise<ApiResponse> {
-    return apiCall(`/api/follows/pages?userId=${encodeURIComponent(userId)}&type=following`);
-  },
-
-  /**
-   * Get followers of a page
-   */
-  async getPageFollowers(pageId: string): Promise<ApiResponse> {
-    return apiCall(`/api/follows/pages?pageId=${encodeURIComponent(pageId)}&type=followers`);
-  },
-
-  /**
-   * Follow a user
-   */
   async followUser(userId: string): Promise<ApiResponse> {
-    return apiCall('/api/follows/users', {
-      method: 'POST',
-      body: JSON.stringify({ userId })
-    });
+    return apiCall('/api/follows/users', { method: 'POST', body: JSON.stringify({ userId }) });
   },
-
-  /**
-   * Unfollow a user
-   */
   async unfollowUser(userId: string): Promise<ApiResponse> {
-    return apiCall(`/api/follows/users?userId=${encodeURIComponent(userId)}`, {
-      method: 'DELETE'
-    });
+    return apiCall(`/api/follows/users?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
   },
-
-  /**
-   * Get users followed by user
-   */
   async getFollowedUsers(userId: string): Promise<ApiResponse> {
     return apiCall(`/api/follows/users?userId=${encodeURIComponent(userId)}&type=following`);
   },
-
-  /**
-   * Get followers of a user
-   */
-  async getUserFollowers(userId: string): Promise<ApiResponse> {
-    return apiCall(`/api/follows/users?userId=${encodeURIComponent(userId)}&type=followers`);
-  },
-
-  /**
-   * Get follow suggestions for the current user
-   */
   async getFollowSuggestions(limit: number = 10): Promise<ApiResponse> {
     return apiCall(`/api/follows/suggestions?limit=${limit}`);
   }
 };
 
-/**
- * Links and Backlinks Operations
- */
-export const linksApi = {
-  /**
-   * Get backlinks for a page
-   */
-  async getBacklinks(pageId: string, limit: number = 20): Promise<ApiResponse> {
-    return apiCall(`/api/links/backlinks?pageId=${encodeURIComponent(pageId)}&limit=${limit}`);
-  },
-
-  /**
-   * Update backlinks index for a page
-   */
-  async updateBacklinksIndex(pageData: {
-    pageId: string;
-    title: string;
-    username: string;
-    contentNodes: any[];
-    isPublic: boolean;
-    lastModified: string;
-  }): Promise<ApiResponse> {
-    return apiCall('/api/links/backlinks', {
-      method: 'POST',
-      body: JSON.stringify(pageData)
-    });
-  },
-
-  /**
-   * Extract links from content
-   */
-  async extractLinks(content: any, validatePages: boolean = true): Promise<ApiResponse> {
-    return apiCall('/api/links/extract', {
-      method: 'POST',
-      body: JSON.stringify({ content, validatePages })
-    });
-  }
-};
+// linksApi - REMOVED (no methods currently used in codebase)
 
 /**
  * Versions Operations
+ * USED: setCurrentVersion (apiClient wrapper)
+ * UNUSED (removed): getVersions, createVersion
  */
 export const versionsApi = {
-  /**
-   * Get version history for a page
-   */
-  async getVersions(pageId: string, options: {
-    limit?: number;
-    includeNoOp?: boolean;
-  } = {}): Promise<ApiResponse> {
-    const params = new URLSearchParams({
-      ...(options.limit && { limit: String(options.limit) }),
-      ...(options.includeNoOp && { includeNoOp: String(options.includeNoOp) })
-    });
-    return apiCall(`/api/pages/${pageId}/versions?${params}`);
-  },
-
-  /**
-   * Create a new version for a page
-   */
-  async createVersion(pageId: string, versionData: {
-    content: any;
-    username: string;
-    groupId?: string;
-    previousVersionId?: string;
-    isNoOp?: boolean;
-  }): Promise<ApiResponse> {
-    return apiCall(`/api/pages/${pageId}/versions`, {
-      method: 'POST',
-      body: JSON.stringify(versionData)
-    });
-  },
-
-  /**
-   * Set a specific version as the current version (restore)
-   */
+  /** Set a specific version as the current version (restore) */
   async setCurrentVersion(pageId: string, versionId: string): Promise<ApiResponse> {
     return apiCall(`/api/pages/${pageId}/set-current-version`, {
       method: 'POST',

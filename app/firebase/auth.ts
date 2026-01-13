@@ -22,6 +22,7 @@ import { ref, update as rtdbUpdate } from 'firebase/database';
 import Cookies from 'js-cookie';
 import type { User } from '../types/database';
 import { getCollectionName } from '../utils/environmentConfig';
+import { isValidEmail } from '@/utils/validationPatterns';
 
 // Firebase auth - clean and simple
 
@@ -93,8 +94,7 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
       email = userDoc.data().email;
     } else {
       // User entered an email - validate the format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(trimmedInput)) {
+      if (!isValidEmail(trimmedInput)) {
         // Check for common typos in email domains
         const commonTypos: Record<string, string> = {
           '.con': '.com',

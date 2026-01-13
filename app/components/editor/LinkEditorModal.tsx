@@ -102,7 +102,6 @@ export default function LinkEditorModal({
       if (editingLink) {
         // EDITING MODE: Pre-populate fields from existing link
         const { type, data } = editingLink;
-        console.log('🔥 EDITING LINK DATA:', { type, data });
 
         // Normalize custom-text flags across legacy fields
         const inferredCustomTextFlag =
@@ -127,25 +126,11 @@ export default function LinkEditorModal({
           const isCustomTextLink = inferredCustomTextFlag;
           const customTextValue = isCustomTextLink ? resolvedCustomText : '';
 
-          console.log('🔧 [MODAL INIT] External link initialization:', {
-            isCustomTextLink,
-            customTextValue,
-            dataCustomText: data.customText,
-            dataIsCustomText: data.isCustomText
-          });
-
           // For external links, displayText is not used for the custom text input
           // externalCustomText is used instead
           setDisplayText(''); // Not used for external links
           setExternalCustomText(customTextValue);
           setCustomText(isCustomTextLink);
-
-          // Additional debugging to verify state is set correctly
-          console.log('🔧 [MODAL INIT] External states being set:', {
-            displayText: '',
-            externalCustomText: customTextValue,
-            customText: isCustomTextLink
-          });
         } else {
           // Page, user, or compound link
           setActiveTab('pages');
@@ -155,26 +140,10 @@ export default function LinkEditorModal({
           const isCustomTextLink = inferredCustomTextFlag;
           const customTextValue = isCustomTextLink ? resolvedCustomText : '';
 
-          console.log('🔧 [MODAL INIT] Internal link initialization:', {
-            isCustomTextLink,
-            customTextValue,
-            dataCustomText: data.customText,
-            dataIsCustomText: data.isCustomText,
-            pageTitle: data.pageTitle || data.title,
-            pageId: data.pageId
-          });
-
-          // CRITICAL FIX: Set states in the correct order and ensure they're applied
+          // Set states in the correct order
           setDisplayText(customTextValue);
           setCustomText(isCustomTextLink);
           setShowAuthor(type === 'compound');
-
-          // Additional debugging to verify state is set correctly
-          console.log('🔧 [MODAL INIT] States being set:', {
-            displayText: customTextValue,
-            customText: isCustomTextLink,
-            showAuthor: type === 'compound'
-          });
         }
       } else {
         // NEW LINK MODE: Reset to defaults only when first opening
@@ -221,12 +190,10 @@ export default function LinkEditorModal({
 
       try {
         const pageId = editingLink.data.pageId;
-        console.log('🔍 [LINK EDITOR] Fetching page author for pageId:', pageId);
         const result = await getPageById(pageId, null);
 
         // getPageById returns PageWithLinks with pageData containing the actual page data
         if (result && result.pageData && result.pageData.username) {
-          console.log('✅ [LINK EDITOR] Fetched page author:', result.pageData.username);
           setFetchedPageAuthor({
             username: result.pageData.username,
             userId: result.pageData.userId || ''
@@ -285,7 +252,6 @@ export default function LinkEditorModal({
 
   // Handle custom text toggle change - OPTIMIZED: Use useCallback to prevent re-renders
   const handleCustomTextToggle = useCallback((enabled: boolean) => {
-    console.log('🔧 [TOGGLE] Custom text toggle changed:', { enabled, currentState: customText });
     setCustomText(enabled);
 
     if (enabled) {
@@ -320,17 +286,14 @@ export default function LinkEditorModal({
 
   // OPTIMIZED: Memoized onChange handlers to prevent unnecessary re-renders
   const handleDisplayTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
     setDisplayText(e.target.value);
   }, []);
 
   const handleExternalCustomTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
     setExternalCustomText(e.target.value);
   }, []);
 
   const handleExternalUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
     setExternalUrl(e.target.value);
   }, []);
 
@@ -338,7 +301,7 @@ export default function LinkEditorModal({
   const handleSearchInputChange = useCallback((value: string) => {
     // Check if the input looks like a URL
     if (isUrl(value)) {
-      console.log('🔗 URL detected in search input, switching to external tab:', value);
+      // URL detected in search input, switching to external tab
       // Switch to external tab
       setActiveTab('external');
       // Set the URL in the external URL field
@@ -445,21 +408,6 @@ export default function LinkEditorModal({
       isUser: isUserLink
     };
 
-    console.log('🔗 [MODAL DEBUG] Creating link data:', {
-      customTextToggle: customText,
-      customDisplayText: customDisplayText,
-      finalCustomText: finalCustomText,
-      isCustomTextValue: isCustomTextValue,
-      linkDataPreview: {
-        isCustomText: linkData.isCustomText,
-        text: linkData.text,
-        customText: linkData.customText,
-        pageTitle: linkData.pageTitle
-      },
-      isEditing: isEditing,
-      editingElement: editingLink?.element
-    });
-
     return linkData;
   }, [showAuthor, customText, isEditing, editingLink, fetchedPageAuthor]);
 
@@ -504,13 +452,6 @@ export default function LinkEditorModal({
       element: editingLink?.element
     };
 
-    console.log('🔗 Creating external link data:', {
-      hasCustomText: hasCustomTextValue,
-      customText: externalCustomText,
-      finalText: linkData.text,
-      url: externalUrl
-    });
-
     onInsertLink(linkData);
     // Small delay to ensure Slate operations complete before modal closes
     setTimeout(() => {
@@ -531,19 +472,7 @@ export default function LinkEditorModal({
     const customDisplayText = customText ? displayText.trim() : '';
     const linkData = createLinkData(pageToUse, customDisplayText);
 
-    console.log('🔗 [MODAL DEBUG] About to save link:', {
-      selectedPage: selectedPage,
-      pageToUse: pageToUse,
-      customText: customText,
-      displayText: displayText,
-      customDisplayText: customDisplayText,
-      finalLinkData: linkData,
-      isEditing: isEditing
-    });
-
     onInsertLink(linkData);
-
-    console.log('🔗 [MODAL DEBUG] Called onInsertLink with data:', linkData);
 
     // Small delay to ensure Slate operations complete before modal closes
     setTimeout(() => {
@@ -555,17 +484,9 @@ export default function LinkEditorModal({
   // Focus is now maintained through proper event handling and useCallback optimization
 
   // Generate preview data for the link preview section
+  // PERFORMANCE FIX: Removed hasInitialized from dependencies to prevent infinite re-renders
   const generatePreviewData = useCallback(() => {
-    console.log('🔧 [PREVIEW] Generating preview data:', {
-      activeTab,
-      customText,
-      displayText,
-      externalCustomText,
-      hasInitialized,
-      isEditing,
-      editingLinkData: editingLink?.data
-    });
-
+    // Removed excessive logging that was appearing in production
     if (activeTab === 'external') {
       // External link preview
       const linkText = customText && externalCustomText.trim()
@@ -626,7 +547,7 @@ export default function LinkEditorModal({
         authorUserId
       };
     }
-  }, [activeTab, customText, externalCustomText, externalUrl, displayText, selectedPage, showAuthor, isEditing, editingLink, fetchedPageAuthor, hasInitialized]);
+  }, [activeTab, customText, externalCustomText, externalUrl, displayText, selectedPage, showAuthor, isEditing, editingLink, fetchedPageAuthor]);
 
   const modalContent = (
     <>
@@ -762,26 +683,11 @@ export default function LinkEditorModal({
                       leftIcon={<Icon name="Type" size={16} />}
                       className="w-full min-w-0"
                       autoComplete="off"
-                      onFocus={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onBlur={(e) => {
-                        e.stopPropagation();
-                      }}
                       onKeyDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onKeyUp={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onInput={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                        // Only stop propagation for keys that might interfere with the editor
+                        if (e.key === 'Escape' || e.key === 'Enter') {
+                          e.stopPropagation();
+                        }
                       }}
                     />
                   </div>
@@ -884,10 +790,6 @@ export default function LinkEditorModal({
                         handleCreateExternalLink();
                       }
                     }}
-                    onPaste={(e) => {
-                      // Ensure paste events are handled properly in the modal
-                      e.stopPropagation();
-                    }}
                     placeholder="https://example.com"
                     className="w-full pl-9"
                     autoComplete="off"
@@ -923,28 +825,11 @@ export default function LinkEditorModal({
                     leftIcon={<Icon name="Type" size={16} />}
                     className="w-full min-w-0"
                     autoComplete="off"
-                    onFocus={(e) => {
-                      e.stopPropagation();
-                      console.log('🔒 FOCUS on external custom text input');
-                    }}
-                    onBlur={(e) => {
-                      e.stopPropagation();
-                      console.log('🔓 BLUR from external custom text input');
-                    }}
                     onKeyDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onKeyUp={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onInput={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
+                      // Only stop propagation for keys that might interfere with the editor
+                      if (e.key === 'Escape' || e.key === 'Enter') {
+                        e.stopPropagation();
+                      }
                     }}
                   />
                 </div>
@@ -1011,7 +896,6 @@ export default function LinkEditorModal({
             // Prevent focus from being managed by the drawer
             const target = e.target as HTMLElement;
             if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
-              console.log('🚫 PREVENTING FOCUS OUTSIDE - Input field detected');
               e.preventDefault();
               e.stopPropagation();
             }
@@ -1084,7 +968,6 @@ export default function LinkEditorModal({
           // Prevent focus from being managed by the dialog
           const target = e.target as HTMLElement;
           if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
-            console.log('🚫 PREVENTING FOCUS OUTSIDE - Input field detected');
             e.preventDefault();
             e.stopPropagation();
           }

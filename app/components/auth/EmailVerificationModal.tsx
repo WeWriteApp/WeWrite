@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { auth } from "../../firebase/config";
 import { LandingBlobs } from "../landing/LandingBlobs";
+import { isValidEmail } from '@/utils/validationPatterns';
 
 // Cooldown durations in seconds: 60s, 2min, 5min, 10min
 const COOLDOWN_DURATIONS = [60, 120, 300, 600];
@@ -129,8 +130,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
     if (!user || !newEmail || isUpdatingEmail) return;
 
     // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
+    if (!isValidEmail(newEmail)) {
       setEmailError("Please enter a valid email address");
       return;
     }

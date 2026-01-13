@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { requireDevelopmentEnvironment } from '../debugHelper';
+import { isValidEmailStrict } from '@/utils/validationPatterns';
 
 interface DebugRequest {
   email: string;
@@ -34,8 +35,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Email is required');
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmailStrict(email)) {
       return createErrorResponse('BAD_REQUEST', 'Invalid email format');
     }
 

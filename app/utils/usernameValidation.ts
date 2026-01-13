@@ -1,18 +1,33 @@
 /**
  * Client-side username validation utilities
  * Provides real-time validation for username inputs and centralized username detection logic
+ *
+ * NOTE: Core validation logic is imported from validationPatterns.ts
+ * This file re-exports and extends that functionality with user-specific helpers
  */
 
-export interface UsernameValidationResult {
-  isValid: boolean;
-  error: string | null;
-  message: string | null;
-}
+// Re-export core validation from centralized module
+export {
+  validateUsernameFormat,
+  isValidUsernameString,
+  USERNAME_CONSTRAINTS,
+  RESERVED_USERNAMES,
+  type UsernameValidationResult,
+} from './validationPatterns';
+
+// Import for internal use
+import {
+  validateUsernameFormat,
+  isValidUsernameString,
+  isValidEmail,
+  INVALID_USERNAME_VALUES,
+} from './validationPatterns';
 
 export interface UserData {
   uid?: string;
   email?: string | null;
   username?: string | null;
+  displayName?: string | null;
   [key: string]: any;
 }
 
@@ -25,74 +40,6 @@ export interface UsernameCheckResult {
 }
 
 /**
- * Validates username format on the client side
- * @param username - The username to validate
- * @returns Validation result with error details
- */
-export const validateUsernameFormat = (username: string): UsernameValidationResult => {
-  // Check minimum length
-  if (!username || username.length < 3) {
-    return {
-      isValid: false,
-      error: "TOO_SHORT",
-      message: "Username must be at least 3 characters"
-    };
-  }
-
-  // Check for whitespace characters (comprehensive Unicode whitespace detection)
-  if (/\s/.test(username)) {
-    return {
-      isValid: false,
-      error: "CONTAINS_WHITESPACE",
-      message: "Usernames cannot contain spaces or whitespace characters. Try using underscores (_) instead."
-    };
-  }
-
-  // Check if username contains only allowed characters: letters, numbers, underscores, dashes, and periods
-  if (!/^[a-zA-Z0-9_.\-]+$/.test(username)) {
-    return {
-      isValid: false,
-      error: "INVALID_CHARACTERS",
-      message: "Username can only contain letters, numbers, underscores, dashes, and periods"
-    };
-  }
-
-  // Additional rules for special characters
-  // Cannot start or end with a period, dash, or underscore
-  if (/^[._\-]|[._\-]$/.test(username)) {
-    return {
-      isValid: false,
-      error: "INVALID_START_END",
-      message: "Username cannot start or end with a period, dash, or underscore"
-    };
-  }
-
-  // Cannot have consecutive special characters
-  if (/[._\-]{2,}/.test(username)) {
-    return {
-      isValid: false,
-      error: "CONSECUTIVE_SPECIAL",
-      message: "Username cannot have consecutive periods, dashes, or underscores"
-    };
-  }
-
-  // Check maximum length (optional, can be adjusted)
-  if (username.length > 30) {
-    return {
-      isValid: false,
-      error: "TOO_LONG",
-      message: "Username cannot be longer than 30 characters"
-    };
-  }
-
-  return {
-    isValid: true,
-    error: null,
-    message: null
-  };
-};
-
-/**
  * Checks if a username contains whitespace characters
  * @param username - The username to check
  * @returns True if username contains whitespace
@@ -101,15 +48,8 @@ export const containsWhitespace = (username: string): boolean => {
   return /\s/.test(username);
 };
 
-/**
- * Validates if input is a valid email format
- * @param email - The email to validate
- * @returns True if valid email format
- */
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+// Re-export isValidEmail from centralized module
+export { isValidEmail } from './validationPatterns';
 
 /**
  * Validates login input (email or username)
@@ -238,31 +178,8 @@ export const checkUserHasUsername = (user: UserData | null): UsernameCheckResult
     };
   }
 
-  // Helper function to check if a string is a valid username
-  const isValidUsernameString = (str: string | null | undefined): boolean => {
-    if (!str || typeof str !== 'string') return false;
-
-    const trimmed = str.trim();
-    if (trimmed.length === 0) return false;
-
-    // Check for invalid placeholder values
-    const invalidValues = [
-      'anonymous',
-      'missing username',
-      'user',
-      'undefined',
-      'null'
-    ];
-
-    if (invalidValues.includes(trimmed.toLowerCase())) return false;
-
-    // Check for generated usernames (user_xxxxx pattern)
-    if (/^user_[a-zA-Z0-9]+$/i.test(trimmed)) return false;
-
-    return true;
-  };
-
   // Check username field first (highest priority)
+  // Uses isValidUsernameString from validationPatterns.ts
   if (isValidUsernameString(user.username)) {
     return {
       hasUsername: true,
@@ -331,6 +248,8 @@ export const getUsernameErrorMessage = (error: string | null): string => {
       return "Username cannot have consecutive periods, dashes, or underscores.";
     case "TOO_LONG":
       return "Username cannot be longer than 30 characters";
+    case "RESERVED":
+      return "This username is reserved and cannot be used.";
     case "USERNAME_TAKEN":
       return "Username already taken. Try a different variation.";
     case "CHECK_ERROR":

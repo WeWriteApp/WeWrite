@@ -8,7 +8,7 @@ The WeWrite financial data system has been **refactored into separated, focused 
 
 - **Subscription payments**: Land in Stripe Payments Balance and are recorded as monthly allocation balances in `ServerUsdService` (no immediate storage transfer).
 - **Month-end processing**: Cron `POST /api/cron/storage-balance-processing` aggregates the month via `ServerUsdService.getMonthlyAllocationSummary` and moves **allocated** amounts to **Stripe Storage Balance** while keeping **unallocated** amounts in **Payments Balance** as platform revenue.
-- **Payouts**: Paid **from Storage Balance** to connected accounts; **platform fee (7%)** is retained in **Payments Balance** (with metadata on transfers for auditability).
+- **Payouts**: Paid **from Storage Balance** to connected accounts; **platform fee (10%)** is retained in **Payments Balance** (with metadata on transfers for auditability).
 - **Writer earnings availability**: `/api/usd/process-writer-earnings` promotes pending → available after month-end transfer completes.
 
 ## Separated Context Architecture
@@ -36,8 +36,8 @@ The financial system now consists of **four dedicated contexts**:
 - **Data**: Total earnings, available balance, pending balance
 - **Caching**: 10-minute cache with persistent storage
 
-### 4. FakeBalanceContext
-**Location**: `app/contexts/FakeBalanceContext.tsx`
+### 4. DemoBalanceContext
+**Location**: `app/contexts/DemoBalanceContext.tsx`
 - **Purpose**: Manages demo/trial balance for non-subscribers
 - **Scope**: Logged-out users and users without subscriptions
 - **Data**: Simulated balance stored in localStorage
@@ -62,7 +62,7 @@ The financial system now consists of **four dedicated contexts**:
 │ • AllocationBar │    │ UsdBalanceContext│────│ /api/usd/balance│
 │ • Settings      │    │ SubscriptionCtx  │────│ /api/account-*  │
 │ • Dashboards    │    │ EarningsContext  │────│ /api/earnings/* │
-│                 │    │ FakeBalanceCtx   │────│ localStorage    │
+│                 │    │ DemoBalanceCtx   │────│ localStorage    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
@@ -71,7 +71,7 @@ The financial system now consists of **four dedicated contexts**:
 - **UsdBalance**: 30 minutes (financial data changes less frequently)
 - **Subscription**: 15 minutes (moderate change frequency)
 - **Earnings**: 10 minutes (more dynamic, needs fresher data)
-- **FakeBalance**: No server cache (localStorage only)
+- **DemoBalance**: No server cache (localStorage only)
 - **Unified Cache Utility**: `SimpleCache<T>` with memory + persistent storage
 
 ## Usage Patterns
@@ -91,13 +91,13 @@ const { subscription, hasActiveSubscription, subscriptionAmount } = useSubscript
 import { useEarnings } from '../contexts/EarningsContext';
 const { earnings, hasEarnings, isLoading } = useEarnings();
 
-// For fake/demo balance (logged-out users)
-import { useFakeBalance } from '../contexts/FakeBalanceContext';
-const { fakeBalance, isFakeBalance, allocateFakeBalance } = useFakeBalance();
+// For demo balance (logged-out users)
+import { useDemoBalance } from '../contexts/DemoBalanceContext';
+const { demoBalance, isDemoBalance, allocateDemoBalance } = useDemoBalance();
 
 // Utility hook to determine which balance to use
-import { useShouldUseFakeBalance } from '../contexts/FakeBalanceContext';
-const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
+import { useShouldUseDemoBalance } from '../contexts/DemoBalanceContext';
+const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
 ```
 
 ## Component Integration Examples
@@ -110,18 +110,18 @@ const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
 const { usdBalance, isLoading: usdLoading } = useUsdBalance();
 const { hasActiveSubscription } = useSubscription();
 const { earnings, isLoading: earningsLoading } = useEarnings();
-const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
-const { fakeBalance } = useFakeBalance();
+const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
+const { demoBalance } = useDemoBalance();
 
 // Use appropriate balance based on subscription status
-const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
 ```
 
 ### Settings Pages
 
 Settings pages use specific contexts for their data needs:
 
-- `/settings/spend` - Uses `useUsdBalance()` and `useFakeBalance()` for allocation breakdown
+- `/settings/spend` - Uses `useUsdBalance()` and `useDemoBalance()` for allocation breakdown
 - `/settings/earnings` - Uses `useEarnings()` for payout information
 - `/settings/fund-account` - Uses `useSubscription()` for billing details
 
@@ -133,10 +133,10 @@ Allocation components determine which balance system to use:
 // AllocationBar example
 const { usdBalance } = useUsdBalance();
 const { hasActiveSubscription } = useSubscription();
-const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
-const { fakeBalance } = useFakeBalance();
+const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
+const { demoBalance } = useDemoBalance();
 
-const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
+const currentBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
 ```
 
 ## Benefits of Separated Architecture
@@ -161,7 +161,7 @@ const currentBalance = shouldUseFakeBalance ? fakeBalance : usdBalance;
 - UsdBalance: 30min (stable financial data)
 - Subscription: 15min (moderate changes)
 - Earnings: 10min (more dynamic)
-- FakeBalance: localStorage only
+- DemoBalance: localStorage only
 ### 5. **Clear Data Ownership**
 - No ambiguity about which context provides what data
 - Explicit imports make dependencies obvious
@@ -180,7 +180,7 @@ const {
   earnings,
   hasActiveSubscription,
   earningsLoading,
-  isFakeBalance
+  isDemoBalance
 } = useUsdBalance();
 ```
 
@@ -190,14 +190,14 @@ const {
 import { useUsdBalance } from '../contexts/UsdBalanceContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useEarnings } from '../contexts/EarningsContext';
-import { useFakeBalance, useShouldUseFakeBalance } from '../contexts/FakeBalanceContext';
+import { useDemoBalance, useShouldUseDemoBalance } from '../contexts/DemoBalanceContext';
 
 // Only import what you need
 const { usdBalance } = useUsdBalance();
 const { hasActiveSubscription } = useSubscription();
 const { earnings } = useEarnings();
-const shouldUseFakeBalance = useShouldUseFakeBalance(hasActiveSubscription);
-const { fakeBalance } = useFakeBalance();
+const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
+const { demoBalance } = useDemoBalance();
 ```
 
 ## Supporting Services
@@ -239,7 +239,7 @@ Each context manages its own cache independently:
 - **UsdBalance**: Invalidated on allocation changes
 - **Subscription**: Invalidated on subscription updates
 - **Earnings**: Invalidated on payout events
-- **FakeBalance**: Updated in localStorage immediately
+- **DemoBalance**: Updated in localStorage immediately
 
 ## Error Handling
 

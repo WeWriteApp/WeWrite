@@ -45,15 +45,23 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Listen for page save events to trigger automatic refresh
+  // CRITICAL: Listen for ANY page save, not just the current page
+  // because other pages being saved could create backlinks to this page
   useEffect(() => {
-    const handlePageSave = (event: CustomEvent) => {
-      if (event.detail.pageId === pageId) {
+    const handlePageSave = () => {
+      // Debounce refresh to allow server-side backlink indexing to complete
+      setTimeout(() => {
+        // Invalidate cache for this page before refreshing
+        graphDataCache.invalidatePage(pageId);
         setRefreshTrigger(prev => prev + 1);
-      }
+      }, 500);
     };
 
     const handlePageCreated = () => {
-      setRefreshTrigger(prev => prev + 1);
+      setTimeout(() => {
+        graphDataCache.invalidatePage(pageId);
+        setRefreshTrigger(prev => prev + 1);
+      }, 500);
     };
 
     window.addEventListener('pageSaved', handlePageSave as EventListener);
