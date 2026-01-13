@@ -248,7 +248,10 @@ const DrawerContent = React.forwardRef<
   const [isDragging, setIsDragging] = React.useState(false)
   const [dragY, setDragY] = React.useState(0)
   const [startY, setStartY] = React.useState(0)
-  const contentRef = React.useRef<HTMLDivElement>(null)
+  // Ref for the outer drawer container (for applying transform)
+  const drawerRef = React.useRef<HTMLDivElement>(null)
+  // Ref for finding scrollable content within the drawer
+  const scrollContentRef = React.useRef<HTMLDivElement>(null)
   // Track if swipe should be allowed (only when at top of scroll)
   const canSwipeRef = React.useRef(false)
 
@@ -281,127 +284,144 @@ const DrawerContent = React.forwardRef<
 
   // Check if any scrollable container is not at the top
   const isAnyScrollContainerScrolled = React.useCallback(() => {
-    if (!contentRef.current) return false
-    const scrollContainers = findScrollContainers(contentRef.current)
+    if (!scrollContentRef.current) return false
+    const scrollContainers = findScrollContainers(scrollContentRef.current)
     return scrollContainers.some(container => container.scrollTop > 0)
   }, [findScrollContainers])
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Skip if swipe-to-dismiss is disabled (e.g., for graph views that need drag interactions)
-    if (disableSwipeDismiss) return
+  // Use refs to track drag state for native event handlers
+  const isDraggingRef = React.useRef(false)
+  const startYRef = React.useRef(0)
+  const dragYRef = React.useRef(0)
 
-    // Don't handle touch events on input fields or interactive elements
-    const target = e.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"], [data-radix-scroll-area-viewport]')) {
-      return
+  // Set up native touch event listeners with { passive: false } to allow preventDefault
+  React.useEffect(() => {
+    const element = drawerRef.current
+    if (!element || disableSwipeDismiss) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Don't handle touch events on input fields or interactive elements
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"], [data-radix-scroll-area-viewport]')) {
+        return
+      }
+
+      // Check if we're at the top of ALL scrollable content
+      const isAtTop = !isAnyScrollContainerScrolled()
+      canSwipeRef.current = isAtTop
+
+      if (isAtTop) {
+        isDraggingRef.current = true
+        startYRef.current = e.touches[0].clientY
+        dragYRef.current = 0
+        setIsDragging(true)
+        setStartY(e.touches[0].clientY)
+        setDragY(0)
+
+        if (drawerRef.current) {
+          drawerRef.current.style.transition = 'none'
+        }
+      }
     }
 
-    // Check if we're at the top of ALL scrollable content
-    // Swipe-to-dismiss should only work when all scroll containers are at top
-    const isAtTop = !isAnyScrollContainerScrolled()
+    const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"], [data-radix-scroll-area-viewport]')) {
+        return
+      }
 
-    canSwipeRef.current = isAtTop
+      const currentY = e.touches[0].clientY
+      const deltaY = currentY - startYRef.current
 
-    // Only start drag tracking if we're at the top
-    if (isAtTop) {
-      setIsDragging(true)
-      setStartY(e.touches[0].clientY)
+      // Re-check scroll position
+      if (isDraggingRef.current && isAnyScrollContainerScrolled()) {
+        isDraggingRef.current = false
+        canSwipeRef.current = false
+        setIsDragging(false)
+        if (drawerRef.current) {
+          drawerRef.current.style.transform = ''
+          drawerRef.current.style.transition = ''
+        }
+        return
+      }
+
+      if (!canSwipeRef.current || !isDraggingRef.current) return
+
+      // Cancel if scrolling up
+      if (deltaY < 0) {
+        isDraggingRef.current = false
+        canSwipeRef.current = false
+        setIsDragging(false)
+        if (drawerRef.current) {
+          drawerRef.current.style.transform = ''
+          drawerRef.current.style.transition = ''
+        }
+        return
+      }
+
+      const clampedDeltaY = Math.max(0, deltaY)
+      dragYRef.current = clampedDeltaY
+      setDragY(clampedDeltaY)
+
+      if (drawerRef.current && clampedDeltaY > 0) {
+        // Now we can safely call preventDefault because listener is not passive
+        e.preventDefault()
+
+        const resistance = clampedDeltaY > 100 ? 0.5 : 1
+        const adjustedDelta = clampedDeltaY > 100 ? 100 + (clampedDeltaY - 100) * resistance : clampedDeltaY
+        drawerRef.current.style.transform = `translateY(${adjustedDelta}px)`
+      }
+    }
+
+    const handleTouchEnd = () => {
+      if (!isDraggingRef.current) return
+
+      isDraggingRef.current = false
+      canSwipeRef.current = false
+      setIsDragging(false)
+
+      const currentDragY = dragYRef.current
+
+      if (currentDragY > 100) {
+        if (drawerRef.current) {
+          drawerRef.current.style.transition = 'transform 0.3s ease-out'
+          drawerRef.current.style.transform = 'translateY(100%)'
+
+          setTimeout(() => {
+            const closeButton = drawerRef.current?.querySelector('[data-drawer-close]') as HTMLButtonElement
+            closeButton?.click()
+          }, 300)
+        }
+      } else {
+        if (drawerRef.current) {
+          drawerRef.current.style.transition = 'transform 0.2s ease-out'
+          drawerRef.current.style.transform = 'translateY(0px)'
+
+          setTimeout(() => {
+            if (drawerRef.current) {
+              drawerRef.current.style.transition = ''
+            }
+          }, 200)
+        }
+      }
+
+      dragYRef.current = 0
+      startYRef.current = 0
       setDragY(0)
-
-      // Disable transitions during drag
-      if (contentRef.current) {
-        contentRef.current.style.transition = 'none'
-      }
-    }
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Don't handle touch events on input fields or interactive elements
-    const target = e.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('input, textarea, button, [role="button"], [data-radix-scroll-area-viewport]')) {
-      return
+      setStartY(0)
     }
 
-    const currentY = e.touches[0].clientY
-    const deltaY = currentY - startY
+    // Add listeners with { passive: false } to allow preventDefault on touchmove
+    element.addEventListener('touchstart', handleTouchStart, { passive: true })
+    element.addEventListener('touchmove', handleTouchMove, { passive: false })
+    element.addEventListener('touchend', handleTouchEnd, { passive: true })
 
-    // Re-check scroll position on every move - if user has scrolled content, cancel swipe
-    if (isDragging && isAnyScrollContainerScrolled()) {
-      setIsDragging(false)
-      canSwipeRef.current = false
-      if (contentRef.current) {
-        contentRef.current.style.transform = ''
-        contentRef.current.style.transition = ''
-      }
-      return
+    return () => {
+      element.removeEventListener('touchstart', handleTouchStart)
+      element.removeEventListener('touchmove', handleTouchMove)
+      element.removeEventListener('touchend', handleTouchEnd)
     }
-
-    // If swipe wasn't allowed at touch start, don't process
-    if (!canSwipeRef.current || !isDragging) return
-
-    // If user is trying to scroll up (negative deltaY), cancel the drag and let scroll happen
-    if (deltaY < 0) {
-      setIsDragging(false)
-      canSwipeRef.current = false
-      if (contentRef.current) {
-        contentRef.current.style.transform = ''
-        contentRef.current.style.transition = ''
-      }
-      return
-    }
-
-    // Only allow dragging down
-    const clampedDeltaY = Math.max(0, deltaY)
-    setDragY(clampedDeltaY)
-
-    if (contentRef.current && clampedDeltaY > 0) {
-      // Prevent default to stop scroll from happening while we're dragging
-      e.preventDefault()
-
-      // Add resistance when dragging beyond threshold
-      const resistance = clampedDeltaY > 100 ? 0.5 : 1
-      const adjustedDelta = clampedDeltaY > 100 ? 100 + (clampedDeltaY - 100) * resistance : clampedDeltaY
-      contentRef.current.style.transform = `translateY(${adjustedDelta}px)`
-    }
-  }
-
-  const handleTouchEnd = () => {
-    if (!isDragging) return
-
-    setIsDragging(false)
-    canSwipeRef.current = false
-
-    // If dragged down more than 100px, close the drawer with animation
-    if (dragY > 100) {
-      // Animate to bottom before closing
-      if (contentRef.current) {
-        contentRef.current.style.transition = 'transform 0.3s ease-out'
-        contentRef.current.style.transform = 'translateY(100%)'
-
-        // Wait for animation to complete, then trigger close
-        setTimeout(() => {
-          const closeButton = contentRef.current?.querySelector('[data-drawer-close]') as HTMLButtonElement
-          closeButton?.click()
-        }, 300)
-      }
-    } else {
-      // Snap back to original position with animation
-      if (contentRef.current) {
-        contentRef.current.style.transition = 'transform 0.2s ease-out'
-        contentRef.current.style.transform = 'translateY(0px)'
-
-        // Clear transition after animation
-        setTimeout(() => {
-          if (contentRef.current) {
-            contentRef.current.style.transition = ''
-          }
-        }, 200)
-      }
-    }
-
-    setDragY(0)
-    setStartY(0)
-  }
+  }, [disableSwipeDismiss, isAnyScrollContainerScrolled])
 
   return (
     <DrawerPortal>
@@ -412,69 +432,81 @@ const DrawerContent = React.forwardRef<
           style={{ touchAction: 'none' }}
         />
       )}
-      <DialogPrimitive.Content
-        ref={ref}
+      {/* Wrapper div for applying drag transform to entire drawer */}
+      <div
+        ref={drawerRef}
         className={cn(
           drawerVariants({ side }),
-          // Frosted glass effect: mostly opaque white with subtle blur
-          "flex flex-col p-0 shadow-2xl border-subtle",
-          "bg-white/95 dark:bg-zinc-900/95",
-          "backdrop-blur-xl",
-          // Safe area support for bottom drawer
-          "pb-safe",
           // Extend background below to cover bounce overshoot
           "after:absolute after:left-0 after:right-0 after:top-full after:h-32 after:bg-white/95 dark:after:bg-zinc-900/95",
+          // Apply className here so z-index classes work on the wrapper
           className
         )}
         style={{
           height,
-          borderRadius: '1.5rem 1.5rem 0 0',
-          borderBottom: 'none',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          // Prevent scroll events from bleeding through to content behind
-          overscrollBehavior: 'contain',
+          // will-change for smooth transform animations
+          willChange: 'transform',
         }}
-        tabIndex={-1}
-        {...props}
+        // Touch handlers are attached via useEffect with { passive: false } to allow preventDefault
       >
-        {/* Accessible title for screen readers - visually hidden */}
-        <DialogPrimitive.Title className="sr-only">
-          {accessibleTitle}
-        </DialogPrimitive.Title>
-
-        <div
-          ref={contentRef}
-          className="flex flex-col h-full"
+        <DialogPrimitive.Content
+          ref={ref}
+          className={cn(
+            // Frosted glass effect: mostly opaque white with subtle blur
+            "flex flex-col h-full p-0 shadow-2xl border-subtle",
+            "bg-white/95 dark:bg-zinc-900/95",
+            "backdrop-blur-xl",
+            // Safe area support for bottom drawer
+            "pb-safe",
+            // Match the wrapper's rounded corners
+            "rounded-t-3xl",
+          )}
           style={{
-            // Contain scroll within this container - prevents scroll chaining to body
+            borderRadius: '1.5rem 1.5rem 0 0',
+            borderBottom: 'none',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            // Prevent scroll events from bleeding through to content behind
             overscrollBehavior: 'contain',
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          tabIndex={-1}
+          {...props}
         >
-          {/* Drag Handle - tighter spacing */}
-          <div className="flex justify-center pt-3 pb-1 px-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
-            <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full transition-all duration-200 hover:bg-muted-foreground/60 hover:w-12" />
-          </div>
+          {/* Accessible title for screen readers - visually hidden */}
+          <DialogPrimitive.Title className="sr-only">
+            {accessibleTitle}
+          </DialogPrimitive.Title>
 
-          {/* Content */}
           <div
-            className="flex-1 min-h-0 flex flex-col overflow-y-auto"
+            ref={scrollContentRef}
+            className="flex flex-col h-full"
             style={{
-              // Critical: contain scroll events within drawer body
+              // Contain scroll within this container - prevents scroll chaining to body
               overscrollBehavior: 'contain',
             }}
           >
-            {children}
-          </div>
+            {/* Drag Handle - tighter spacing */}
+            <div className="flex justify-center pt-3 pb-1 px-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
+              <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full transition-all duration-200 hover:bg-muted-foreground/60 hover:w-12" />
+            </div>
 
-          {/* Hidden close button for programmatic closing */}
-          <DialogPrimitive.Close asChild>
-            <button data-drawer-close className="hidden" />
-          </DialogPrimitive.Close>
-        </div>
-      </DialogPrimitive.Content>
+            {/* Content */}
+            <div
+              className="flex-1 min-h-0 flex flex-col overflow-y-auto"
+              style={{
+                // Critical: contain scroll events within drawer body
+                overscrollBehavior: 'contain',
+              }}
+            >
+              {children}
+            </div>
+
+            {/* Hidden close button for programmatic closing */}
+            <DialogPrimitive.Close asChild>
+              <button data-drawer-close className="hidden" />
+            </DialogPrimitive.Close>
+          </div>
+        </DialogPrimitive.Content>
+      </div>
     </DrawerPortal>
   )
 })

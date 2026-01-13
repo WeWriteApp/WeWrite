@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import {
@@ -125,6 +126,7 @@ export default function ActivityFeed({
   showFilters = mode === 'global',
   className = ''
 }: ActivityFeedProps) {
+  const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -473,12 +475,33 @@ export default function ActivityFeed({
           <div className="text-center py-8">
             <Icon name="Activity" size={48} className="text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No recent activity</h3>
-            <p className="text-muted-foreground">
-              {followingOnly && followingCount === 0
-                ? "You're not following anyone yet. Try turning off 'Following only' or follow some users!"
+            <p className="text-muted-foreground mb-4">
+              {followingOnly
+                ? followingCount === 0
+                  ? "You're not following anyone yet."
+                  : "No recent activity from users you follow."
                 : "Check back later for new updates from the community."
               }
             </p>
+            {followingOnly && (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFollowingOnlyChange(false)}
+                >
+                  View all activity
+                </Button>
+                <span className="text-muted-foreground text-sm">or</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => router.push('/following')}
+                >
+                  Follow more users
+                </Button>
+              </div>
+            )}
           </div>
         )
       ) : (
