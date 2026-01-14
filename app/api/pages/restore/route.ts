@@ -66,6 +66,44 @@ export async function POST(request: NextRequest) {
       lastModified: new Date().toISOString()
     });
 
+    // Re-add to search indices (Algolia and Typesense)
+    try {
+      console.log(`🔄 Re-indexing restored page ${pageId} to search indices`);
+
+      const searchSyncData = {
+        pageId,
+        title: pageData.title || '',
+        content: pageData.content,
+        authorId: pageData.userId || '',
+        authorUsername: pageData.username || pageData.authorUsername || '',
+        isPublic: pageData.isPublic ?? true,
+        alternativeTitles: pageData.alternativeTitles || [],
+        lastModified: new Date().toISOString(),
+        createdAt: pageData.createdAt,
+      };
+
+      // Sync to Algolia
+      try {
+        const { syncPageToAlgoliaServer } = await import('../../../lib/algoliaSync');
+        await syncPageToAlgoliaServer(searchSyncData);
+        console.log(`✅ Re-indexed restored page ${pageId} to Algolia`);
+      } catch (algoliaError) {
+        console.error('Error re-indexing to Algolia:', algoliaError);
+      }
+
+      // Sync to Typesense
+      try {
+        const { syncPageToTypesense } = await import('../../../lib/typesenseSync');
+        await syncPageToTypesense(searchSyncData);
+        console.log(`✅ Re-indexed restored page ${pageId} to Typesense`);
+      } catch (typesenseError) {
+        console.error('Error re-indexing to Typesense:', typesenseError);
+      }
+    } catch (searchError) {
+      console.error('Error re-indexing restored page:', searchError);
+      // Don't fail the restoration if search indexing fails
+    }
+
     // Rebuild backlinks when page is restored
     try {
       console.log(`🔄 Rebuilding backlinks for restored page ${pageId}`);
