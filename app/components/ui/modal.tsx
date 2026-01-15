@@ -22,6 +22,12 @@ interface ModalProps {
   className?: string;
   showCloseButton?: boolean;
   preventClickOutside?: boolean;
+  /**
+   * Always center the modal (dialog style), even on mobile.
+   * Use this for alerts/confirmations that should never appear as a drawer.
+   * Default: false (uses adaptive behavior: drawer on mobile, dialog on desktop)
+   */
+  alwaysCentered?: boolean;
 }
 
 /**
@@ -38,7 +44,8 @@ export function Modal({
   footer,
   className = "",
   showCloseButton = true,
-  preventClickOutside = false
+  preventClickOutside = false,
+  alwaysCentered = false
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -145,7 +152,7 @@ export function Modal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-modal flex items-end md:items-center justify-center overflow-hidden"
+          className={`fixed inset-0 z-modal flex ${alwaysCentered ? 'items-center' : 'items-end md:items-center'} justify-center overflow-hidden`}
           onClick={handleBackdropInteraction}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -172,21 +179,24 @@ export function Modal({
             className={cn(
               "relative z-10",
               "bg-[var(--card-bg)] border border-[var(--card-border)] backdrop-blur-md",
-              "w-full md:w-[calc(100%-2rem)] md:max-w-lg md:mx-4 md:my-5",
-              "rounded-t-2xl md:rounded-2xl",
+              alwaysCentered
+                ? "w-[calc(100%-2rem)] max-w-lg mx-4 my-5 rounded-2xl"
+                : "w-full md:w-[calc(100%-2rem)] md:max-w-lg md:mx-4 md:my-5 rounded-t-2xl md:rounded-2xl",
               "max-h-[90vh] md:max-h-[85vh]",
               "overflow-hidden"
             )}
             onWheel={(e) => e.stopPropagation()}
             initial={{
               opacity: 0,
-              y: typeof window !== "undefined" && window.innerWidth < 768 ? 100 : -10,
+              y: alwaysCentered ? 0 : (typeof window !== "undefined" && window.innerWidth < 768 ? 100 : -10),
+              scale: alwaysCentered ? 0.95 : 1,
               x: 0
             }}
-            animate={{ opacity: 1, y: 0, x: 0 }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
             exit={{
               opacity: 0,
-              y: typeof window !== "undefined" && window.innerWidth < 768 ? 100 : 10,
+              y: alwaysCentered ? 0 : (typeof window !== "undefined" && window.innerWidth < 768 ? 100 : 10),
+              scale: alwaysCentered ? 0.95 : 1,
               x: 0
             }}
             transition={{ type: "spring", damping: 25, stiffness: 300, duration: 0.3 }}

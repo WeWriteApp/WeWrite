@@ -69,7 +69,7 @@ export default function UserProfileHeader({ username }: UserProfileHeaderProps) 
 
   return (
     <header
-      className="wewrite-card wewrite-card-sharp wewrite-card-border-bottom wewrite-card-no-padding fixed top-0 left-0 right-0 w-full z-50"
+      className="fixed top-0 left-0 right-0 w-full z-50 bg-background"
       style={{
         top: 'var(--banner-stack-height, 0px)'
       }}

@@ -195,7 +195,7 @@ const drawerVariants = cva(
   {
     variants: {
       side: {
-        bottom: "inset-x-0 bottom-0 rounded-t-3xl data-[state=open]:animate-[drawer-slide-up_0.5s_cubic-bezier(0.32,0.72,0,1)] data-[state=closed]:animate-[drawer-slide-down_0.3s_ease-out]",
+        bottom: "inset-x-0 bottom-0 rounded-t-3xl data-[state=open]:animate-drawer-slide-up data-[state=closed]:animate-drawer-slide-down",
       },
     },
     defaultVariants: {

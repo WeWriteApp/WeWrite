@@ -205,6 +205,9 @@ const config: Config = {
         'reveal-out': 'reveal-out 0.2s ease-in forwards',
         'reveal-scale-in': 'reveal-scale-in 0.25s ease-out forwards',
         'reveal-scale-out': 'reveal-scale-out 0.2s ease-in forwards',
+        // Drawer animations
+        'drawer-slide-up': 'drawer-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
+        'drawer-slide-down': 'drawer-slide-down 0.3s ease-out forwards',
       },
       keyframes: {
         'gradient-x': {

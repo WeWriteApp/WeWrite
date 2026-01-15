@@ -49,12 +49,21 @@ const nextConfig = {
         ...config.watchOptions,
         ignored: [
           '**/node_modules/**',
+          '**/.next/**',
           '**/.git/**',
           '**/logs/**',
           '**/scripts/**',
           '**/docs/**',
           '**/*.tsbuildinfo',
+          '**/.claude/**',
+          '**/coverage/**',
+          '**/dist/**',
+          '**/.turbo/**',
         ],
+        // Debounce file change events to reduce rebuilds
+        aggregateTimeout: 300,
+        // Use polling only if native watchers fail (set to false for native watching)
+        poll: false,
       };
 
       config.stats = {

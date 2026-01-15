@@ -1,23 +1,33 @@
 /**
  * Unified Modal Component - Consolidates all modal types
- * 
+ *
  * Replaces:
  * - AlertModal.tsx
- * - ConfirmationModal.tsx  
+ * - ConfirmationModal.tsx
  * - PromptModal.tsx
  * - ActionModal.tsx (if exists)
- * 
+ *
  * Provides:
  * - Single modal component with variant support
  * - Consistent styling and behavior
  * - All modal types in one place
  * - Simple, maintainable interface
+ *
+ * IMPORTANT: Uses Dialog component (always centered) - NOT Modal/AdaptiveModal
+ * Alert/confirmation modals should ALWAYS be centered dialogs, never drawers.
  */
 
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Modal } from '../ui/modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -74,9 +84,11 @@ type UnifiedModalProps = AlertModalProps | ConfirmModalProps | PromptModalProps 
 
 /**
  * Unified Modal Component
- * 
+ *
  * Handles all modal types with a single, consistent interface.
  * Automatically determines layout and behavior based on variant.
+ *
+ * Uses Dialog component (Radix UI) for proper centered styling.
  */
 export function UnifiedModal(props: UnifiedModalProps) {
   const [inputValue, setInputValue] = useState('');
@@ -126,9 +138,9 @@ export function UnifiedModal(props: UnifiedModalProps) {
     }
   };
 
-  const getButtonVariant = (isConfirm: boolean = false) => {
-    if (!isConfirm) return 'outline';
-    
+  const getButtonVariant = (isConfirm: boolean = false): 'default' | 'destructive' | 'outline' | 'secondary' => {
+    if (!isConfirm) return 'secondary';
+
     const type = props.type || 'default';
     switch (type) {
       case 'destructive':
@@ -158,29 +170,29 @@ export function UnifiedModal(props: UnifiedModalProps) {
     }
   };
 
-  const renderContent = () => {
-    return (
-      <div className="flex flex-col items-center gap-4 p-6">
-        {/* Icon */}
-        {props.icon && (
-          <div className={`p-3 rounded-full ${getIconBackground()}`}>
-            {getIcon()}
-          </div>
-        )}
+  return (
+    <Dialog open={props.isOpen} onOpenChange={(open) => !open && props.onClose()}>
+      <DialogContent showOverlay={true} className="sm:max-w-[425px]">
+        <DialogHeader>
+          {/* Icon */}
+          {props.icon && (
+            <div className="flex justify-center mb-2">
+              <div className={`p-3 rounded-full ${getIconBackground()}`}>
+                {getIcon()}
+              </div>
+            </div>
+          )}
 
-        {/* Title */}
-        <h2 className="text-lg font-semibold text-center">
-          {props.title}
-        </h2>
+          {/* Title */}
+          <DialogTitle>{props.title}</DialogTitle>
 
-        {/* Message */}
-        <p className="text-sm text-muted-foreground text-center">
-          {props.message}
-        </p>
+          {/* Message */}
+          <DialogDescription>{props.message}</DialogDescription>
+        </DialogHeader>
 
         {/* Input Field (for prompt variant) */}
         {props.variant === 'prompt' && (
-          <div className="space-y-2 w-full">
+          <div className="px-6 py-2">
             <Label htmlFor="unified-modal-input" className="sr-only">
               {props.title}
             </Label>
@@ -199,14 +211,13 @@ export function UnifiedModal(props: UnifiedModalProps) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-3 w-full mt-4">
+        <DialogFooter className="gap-2 sm:gap-2">
           {props.variant === 'alert' && (
             <Button
               variant={getButtonVariant(true)}
               onClick={props.onClose}
-              className="min-w-[100px]"
+              className="w-full sm:w-auto"
             >
-              <Icon name="Close" size={16} className="mr-2" />
               {props.buttonText || 'OK'}
             </Button>
           )}
@@ -217,16 +228,16 @@ export function UnifiedModal(props: UnifiedModalProps) {
                 variant="secondary"
                 onClick={props.onClose}
                 disabled={props.isLoading}
-                className="flex-1"
+                className="w-full sm:w-auto"
               >
-                <Icon name="Close" size={16} className="mr-2" />
+                <Icon name="X" size={16} className="mr-2" />
                 {props.cancelText || 'Cancel'}
               </Button>
               <Button
                 variant={getButtonVariant(true)}
                 onClick={handleConfirm}
                 disabled={props.isLoading || (props.variant === 'prompt' && !inputValue.trim())}
-                className="flex-1"
+                className="w-full sm:w-auto"
               >
                 {props.isLoading ? (
                   <Icon name="Loader" size={16} className="mr-2" />
@@ -257,20 +268,9 @@ export function UnifiedModal(props: UnifiedModalProps) {
               ))}
             </div>
           )}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <Modal
-      isOpen={props.isOpen}
-      onClose={props.onClose}
-      className="sm:max-w-[425px]"
-      showCloseButton={false}
-    >
-      {renderContent()}
-    </Modal>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

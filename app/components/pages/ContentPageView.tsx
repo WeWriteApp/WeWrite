@@ -57,6 +57,8 @@ import DenseModeToggle from "../viewer/DenseModeToggle";
 import FullPageError from "../ui/FullPageError";
 import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
+import { useConfirmation } from "../../hooks/useConfirmation";
+import { ConfirmationModal } from "../utils/UnifiedModal";
 import StickySaveHeader from "../layout/StickySaveHeader";
 import AutoSaveIndicator from "../layout/AutoSaveIndicator";
 import { motion } from "framer-motion";
@@ -243,6 +245,9 @@ export default function ContentPageView({
   const { addRecentPage } = useRecentPages();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
   const autoSaveEnabled = isFeatureEnabled('auto_save');
+
+  // Confirmation modals hook (replaces window.confirm)
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
 
   // Logger
   const pageLogger = createLogger('PageView');
@@ -1223,6 +1228,13 @@ export default function ContentPageView({
       return false;
     }
 
+    // CRITICAL: Skip hasChanges check right after save to prevent false positives
+    // The justSaved flag is set after save and cleared after 2 seconds
+    // This prevents the "unsaved changes" warning immediately after saving
+    if (justSaved) {
+      return false;
+    }
+
     // For new pages, check if any content has been added
     if (page?.isNewPage) {
       // New page has changes if content exists and isn't just empty paragraph
@@ -1271,7 +1283,7 @@ export default function ContentPageView({
       // Serialization failed - assume no changes to avoid false positives
       return false;
     }
-  }, [title, location, customDate, editorState, page?.isNewPage, refsInitialized]);
+  }, [title, location, customDate, editorState, page?.isNewPage, refsInitialized, justSaved]);
 
   // No need for handleSetIsEditing - always in edit mode
 
@@ -1565,9 +1577,12 @@ export default function ContentPageView({
         // Update URL using history.replaceState to avoid triggering React re-renders
         const newUrl = `/${pageId}`;
         window.history.replaceState(null, '', newUrl);
-        // Note: We intentionally do NOT update page.isNewPage state here
-        // The ref (isNewPageRef) already tracks the real state and prevents double-triggers
-        // Updating state would cause a re-render that disrupts focus/modals
+        // The ref (isNewPageRef) was already set to false above to prevent double-triggers
+        // Now we defer the page.isNewPage state update to transition the Delete/Cancel button
+        // Using requestAnimationFrame ensures the critical focus-preserving code has completed
+        requestAnimationFrame(() => {
+          setPage(prev => prev ? { ...prev, isNewPage: false } : prev);
+        });
       }
 
       // Trigger save success animation
@@ -1862,7 +1877,13 @@ export default function ContentPageView({
 
   const handleCancel = useCallback(async () => {
     if (hasChanges) {
-      const confirmCancel = window.confirm("You have unsaved changes. Are you sure you want to cancel?");
+      const confirmCancel = await confirm({
+        title: "Discard Changes?",
+        message: "You have unsaved changes. Are you sure you want to discard them?",
+        confirmText: "Discard",
+        cancelText: "Keep Editing",
+        type: "warning"
+      });
       if (!confirmCancel) return;
     }
 
@@ -1891,7 +1912,7 @@ export default function ContentPageView({
     setLocation(lastSavedLocationRef.current);
     setCustomDate(lastSavedCustomDateRef.current);
     setError(null);
-  }, [hasChanges, setEditorState, isNewPageMode, page?.isNewPage, router]);
+  }, [hasChanges, setEditorState, isNewPageMode, page?.isNewPage, router, confirm]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1938,9 +1959,13 @@ export default function ContentPageView({
   const handleDelete = useCallback(async () => {
     if (!page || !pageId) return;
 
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this page? You'll have 30 days to recover it from your Recently Deleted pages."
-    );
+    const confirmDelete = await confirm({
+      title: "Delete Page?",
+      message: "Are you sure you want to delete this page? You'll have 30 days to recover it from your Recently Deleted pages.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      type: "destructive"
+    });
     if (!confirmDelete) return;
 
     try {
@@ -1967,7 +1992,7 @@ export default function ContentPageView({
       console.error("Error deleting page:", error);
       setError("Failed to delete page. Please try again.");
     }
-  }, [page, pageId, router]);
+  }, [page, pageId, router, confirm]);
 
   // ARCHITECTURAL SIMPLIFICATION: Remove complex content processing
   // Let ContentDisplay components handle their own content conversion
@@ -1989,9 +2014,15 @@ export default function ContentPageView({
       return;
     }
 
+    // CRITICAL: Never sync content for new pages - they should start fresh and
+    // the editor already has the content. Syncing here causes focus loss on first save.
+    if (isNewPageMode || isNewPageRef.current) {
+      return;
+    }
+
     // Pass raw content directly - no preprocessing
     setEditorState(page.content);
-  }, [page?.content, hasChanges, justSaved]); // Update whenever page content changes, but respect unsaved changes and recent saves
+  }, [page?.content, hasChanges, justSaved, isNewPageMode]); // Update whenever page content changes, but respect unsaved changes and recent saves
 
   // NEW PAGE MODE: Show skeleton with slide-up animation while setting up
   if (isNewPageMode && !newPageCreated) {
@@ -2355,6 +2386,18 @@ export default function ContentPageView({
         </div>
       </PageProvider>
     </PublicLayout>
+
+    {/* Confirmation Modal - replaces window.confirm for Delete/Cancel actions */}
+    <ConfirmationModal
+      isOpen={confirmationState.isOpen}
+      onClose={closeConfirmation}
+      onConfirm={confirmationState.onConfirm}
+      title={confirmationState.title}
+      message={confirmationState.message}
+      confirmText={confirmationState.confirmText}
+      cancelText={confirmationState.cancelText}
+      type={confirmationState.type}
+    />
 
     {/* Unsaved Changes Dialog - shows when navigating away with unsaved changes */}
     <UnsavedChangesDialog
