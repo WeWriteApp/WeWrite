@@ -16,7 +16,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { sendTemplatedEmail } from '../../../services/emailService';
+import { sendTemplatedEmail, EmailPriority } from '../../../services/emailService';
+import {
+  calculateBatchSchedule,
+  getScheduleDateForBatchIndex,
+} from '../../../services/emailRateLimitService';
 
 export const maxDuration = 300; // 5 minute timeout for processing all users
 
@@ -71,6 +75,7 @@ export async function GET(request: NextRequest) {
     let sent = 0;
     let skipped = 0;
     let failed = 0;
+    let scheduled = 0;
 
     // Get trending pages for the digest (do this once, not per user)
     const trendingPages = await getTrendingPages(db, 3);
@@ -96,6 +101,15 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[WEEKLY DIGEST] Batch fetched ${balancesMap.size} writer balances`);
+
+    // PHASE 1: Collect eligible users first
+    interface EligibleUser {
+      userId: string;
+      email: string;
+      username: string;
+      stats: { pageViews: number; newFollowers: number; earningsThisWeek: number };
+    }
+    const eligibleUsers: EligibleUser[] = [];
 
     for (const userDoc of usersSnapshot.docs) {
       try {
@@ -124,48 +138,82 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Send the digest email
-        const success = await sendTemplatedEmail({
-          templateId: 'weekly-digest',
-          to: userData.email,
-          data: {
-            username: userData.username || 'there',
-            pageViews: stats.pageViews.toString(),
-            newFollowers: stats.newFollowers.toString(),
-            earningsThisWeek: `$${stats.earningsThisWeek.toFixed(2)}`,
-            trendingPages
-          },
+        eligibleUsers.push({
           userId,
-          triggerSource: 'cron'
+          email: userData.email,
+          username: userData.username || 'there',
+          stats,
         });
-
-        if (success) {
-          sent++;
-        } else {
-          failed++;
-        }
-
-        // Rate limit - don't overwhelm Resend
-        if (sent % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
 
       } catch (userError) {
         console.error(`[WEEKLY DIGEST] Error processing user ${userDoc.id}:`, userError);
         failed++;
       }
     }
-    
+
+    console.log(`[WEEKLY DIGEST] Found ${eligibleUsers.length} eligible users for digest`);
+
+    // PHASE 2: Calculate batch schedule to spread across days
+    const batchSchedule = await calculateBatchSchedule(eligibleUsers.length, EmailPriority.P2_ENGAGEMENT);
+    console.log(`[WEEKLY DIGEST] Batch schedule: ${JSON.stringify(batchSchedule.schedule)}`);
+
+    // PHASE 3: Send/schedule emails
+    for (let i = 0; i < eligibleUsers.length; i++) {
+      const user = eligibleUsers[i];
+      try {
+        // Get scheduled date based on batch schedule
+        const scheduledAt = getScheduleDateForBatchIndex(batchSchedule.schedule, i);
+
+        const result = await sendTemplatedEmail({
+          templateId: 'weekly-digest',
+          to: user.email,
+          data: {
+            username: user.username,
+            pageViews: user.stats.pageViews.toString(),
+            newFollowers: user.stats.newFollowers.toString(),
+            earningsThisWeek: `$${user.stats.earningsThisWeek.toFixed(2)}`,
+            trendingPages
+          },
+          userId: user.userId,
+          triggerSource: 'cron',
+          scheduledAt, // Will be undefined for today's batch (send immediately)
+          skipRateLimitCheck: true, // We already calculated the schedule
+        });
+
+        if (result.success) {
+          if (result.wasScheduled) {
+            scheduled++;
+          } else {
+            sent++;
+          }
+        } else {
+          failed++;
+        }
+
+        // Rate limit - don't overwhelm Resend
+        if ((sent + scheduled) % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+      } catch (userError) {
+        console.error(`[WEEKLY DIGEST] Error sending to user ${user.userId}:`, userError);
+        failed++;
+      }
+    }
+
     const duration = Date.now() - startTime;
-    console.log(`[WEEKLY DIGEST] Completed in ${duration}ms - Sent: ${sent}, Skipped: ${skipped}, Failed: ${failed}`);
-    
+    console.log(`[WEEKLY DIGEST] Completed in ${duration}ms - Sent: ${sent}, Scheduled: ${scheduled}, Skipped: ${skipped}, Failed: ${failed}`);
+
     return NextResponse.json({
       success: true,
       summary: {
         totalUsers: usersSnapshot.size,
-        sent,
+        eligible: eligibleUsers.length,
+        sentImmediately: sent,
+        scheduledForLater: scheduled,
         skipped,
         failed,
+        batchSchedule: batchSchedule.schedule,
         durationMs: duration
       }
     });

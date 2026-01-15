@@ -1273,8 +1273,16 @@ export const emailTemplates: EmailTemplate[] = [
   accountSecurityTemplate,
 ];
 
+// Template ID aliases for backwards compatibility
+// Maps legacy/alternate IDs to canonical template IDs
+const templateIdAliases: Record<string, string> = {
+  'email-verification-reminder': 'verification-reminder',
+};
+
 export const getTemplateById = (id: string): EmailTemplate | undefined => {
-  return emailTemplates.find(t => t.id === id);
+  // Check for alias first
+  const canonicalId = templateIdAliases[id] || id;
+  return emailTemplates.find(t => t.id === canonicalId);
 };
 
 export const getTemplatesByCategory = (category: EmailTemplate['category']): EmailTemplate[] => {

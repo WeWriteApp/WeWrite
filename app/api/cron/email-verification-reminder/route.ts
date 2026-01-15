@@ -19,7 +19,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { PRODUCTION_URL } from '../../../utils/urlConfig';
 import { randomUUID } from 'crypto';
-import { sendTemplatedEmail } from '../../../services/emailService';
+import { sendTemplatedEmail, EmailPriority } from '../../../services/emailService';
 
 export const maxDuration = 120; // 2 minute timeout
 
@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
     console.log(`[EMAIL VERIFY REMINDER] Found ${usersSnapshot.size} total users to check`);
 
     let sent = 0;
+    let scheduled = 0;
     let skipped = 0;
     let failed = 0;
     let alreadyVerified = 0;
@@ -139,7 +140,8 @@ export async function GET(request: NextRequest) {
         const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken}`;
 
         // Send the reminder email using our new template
-        const success = await sendTemplatedEmail({
+        // Auto-schedules for later if daily quota is reached
+        const result = await sendTemplatedEmail({
           templateId: 'verification-reminder',
           to: userData.email,
           data: {
@@ -147,15 +149,21 @@ export async function GET(request: NextRequest) {
             verificationLink
           },
           userId,
-          triggerSource: 'cron'
+          triggerSource: 'cron',
+          priority: EmailPriority.P2_ENGAGEMENT,
         });
 
-        if (success) {
-          // Mark that we sent the reminder with timestamp for throttling
+        if (result.success) {
+          // Mark that we sent/scheduled the reminder with timestamp for throttling
           await userDoc.ref.update({
-            verificationReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
+            verificationReminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+            ...(result.wasScheduled && { verificationReminderScheduledFor: result.scheduledFor })
           });
-          sent++;
+          if (result.wasScheduled) {
+            scheduled++;
+          } else {
+            sent++;
+          }
         } else {
           failed++;
         }
@@ -172,13 +180,14 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[EMAIL VERIFY REMINDER] Completed in ${duration}ms - Sent: ${sent}, Skipped: ${skipped}, Already verified: ${alreadyVerified}, Failed: ${failed}`);
+    console.log(`[EMAIL VERIFY REMINDER] Completed in ${duration}ms - Sent: ${sent}, Scheduled: ${scheduled}, Skipped: ${skipped}, Already verified: ${alreadyVerified}, Failed: ${failed}`);
 
     return NextResponse.json({
       success: true,
       summary: {
         totalChecked: usersSnapshot.size,
-        sent,
+        sentImmediately: sent,
+        scheduledForLater: scheduled,
         skipped,
         alreadyVerified,
         failed,

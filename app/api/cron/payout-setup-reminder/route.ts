@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { sendPayoutSetupReminder } from '../../../services/emailService';
+import { sendTemplatedEmail, EmailPriority } from '../../../services/emailService';
 import { WEWRITE_FEE_STRUCTURE } from '../../../utils/feeCalculations';
 import { getOrCreateEmailSettingsToken } from '../../../services/emailSettingsTokenService';
 
@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     console.log(`[PAYOUT REMINDER] Found ${writerBalancesSnapshot.size} users with pending earnings`);
 
     let sent = 0;
+    let scheduled = 0;
     let skipped = 0;
     let failed = 0;
 
@@ -141,20 +142,31 @@ export async function GET(request: NextRequest) {
         const emailSettingsToken = await getOrCreateEmailSettingsToken(userId);
 
         // Send the reminder email
-        const success = await sendPayoutSetupReminder({
+        // Auto-schedules for later if daily quota is reached
+        const result = await sendTemplatedEmail({
+          templateId: 'payout-setup-reminder',
           to: userData.email,
-          username: userData.username || 'there',
-          pendingEarnings: `$${pendingEarnings.toFixed(2)}`,
+          data: {
+            username: userData.username || 'there',
+            pendingEarnings: `$${pendingEarnings.toFixed(2)}`,
+            emailSettingsToken
+          },
           userId,
-          emailSettingsToken
+          triggerSource: 'cron',
+          priority: EmailPriority.P2_ENGAGEMENT,
         });
 
-        if (success) {
-          // Mark that we sent the reminder
+        if (result.success) {
+          // Mark that we sent/scheduled the reminder
           await db.collection(getCollectionName('users')).doc(userId).update({
-            payoutReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
+            payoutReminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+            ...(result.wasScheduled && { payoutReminderScheduledFor: result.scheduledFor })
           });
-          sent++;
+          if (result.wasScheduled) {
+            scheduled++;
+          } else {
+            sent++;
+          }
         } else {
           failed++;
         }
@@ -171,13 +183,14 @@ export async function GET(request: NextRequest) {
     }
     
     const duration = Date.now() - startTime;
-    console.log(`[PAYOUT REMINDER] Completed in ${duration}ms - Sent: ${sent}, Skipped: ${skipped}, Failed: ${failed}`);
-    
+    console.log(`[PAYOUT REMINDER] Completed in ${duration}ms - Sent: ${sent}, Scheduled: ${scheduled}, Skipped: ${skipped}, Failed: ${failed}`);
+
     return NextResponse.json({
       success: true,
       summary: {
         totalBalances: writerBalancesSnapshot.size,
-        sent,
+        sentImmediately: sent,
+        scheduledForLater: scheduled,
         skipped,
         failed,
         durationMs: duration

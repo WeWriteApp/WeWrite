@@ -157,18 +157,25 @@ export async function getRecentEmailLogs(limit: number = 100): Promise<EmailLogE
     const db = admin.firestore();
 
     const collectionName = await getEmailLogsCollectionName();
+    console.log(`[EmailLog] Querying ${limit} recent logs from collection: ${collectionName}`);
+
     const snapshot = await db
       .collection(collectionName)
       .orderBy('sentAt', 'desc')
       .limit(limit)
       .get();
-    
+
+    console.log(`[EmailLog] Found ${snapshot.size} logs in ${collectionName}`);
+
     return snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     })) as EmailLogEntry[];
   } catch (error) {
     console.error('[EmailLog] Failed to get recent logs:', error);
+    // Provide more context for debugging
+    const collectionName = await getEmailLogsCollectionName().catch(() => 'unknown');
+    console.error(`[EmailLog] Was querying collection: ${collectionName}`);
     return [];
   }
 }

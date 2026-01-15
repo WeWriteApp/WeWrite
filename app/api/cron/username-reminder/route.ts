@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { sendTemplatedEmail } from '../../../services/emailService';
+import { sendTemplatedEmail, EmailPriority } from '../../../services/emailService';
 
 export const maxDuration = 120; // 2 minute timeout
 
@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
     console.log(`[USERNAME REMINDER] Found ${usersSnapshot.size} users to check for missing usernames`);
     
     let sent = 0;
+    let scheduled = 0;
     let skipped = 0;
     let failed = 0;
     
@@ -123,23 +124,30 @@ export async function GET(request: NextRequest) {
         }
         
         // Send the reminder email
-        const success = await sendTemplatedEmail({
+        // Auto-schedules for later if daily quota is reached
+        const result = await sendTemplatedEmail({
           templateId: 'choose-username',
           to: userData.email,
           data: {
             currentUsername: username || `user_${userId.slice(0, 8)}`
           },
           userId,
-          triggerSource: 'cron'
+          triggerSource: 'cron',
+          priority: EmailPriority.P2_ENGAGEMENT,
         });
-        
-        if (success) {
-          // Mark that we sent the reminder
+
+        if (result.success) {
+          // Mark that we sent/scheduled the reminder
           await userDoc.ref.update({
             usernameReminderSent: true,
-            usernameReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
+            usernameReminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+            ...(result.wasScheduled && { usernameReminderScheduledFor: result.scheduledFor })
           });
-          sent++;
+          if (result.wasScheduled) {
+            scheduled++;
+          } else {
+            sent++;
+          }
         } else {
           failed++;
         }
@@ -156,13 +164,14 @@ export async function GET(request: NextRequest) {
     }
     
     const duration = Date.now() - startTime;
-    console.log(`[USERNAME REMINDER] Completed in ${duration}ms - Sent: ${sent}, Skipped: ${skipped}, Failed: ${failed}`);
-    
+    console.log(`[USERNAME REMINDER] Completed in ${duration}ms - Sent: ${sent}, Scheduled: ${scheduled}, Skipped: ${skipped}, Failed: ${failed}`);
+
     return NextResponse.json({
       success: true,
       summary: {
         totalChecked: usersSnapshot.size,
-        sent,
+        sentImmediately: sent,
+        scheduledForLater: scheduled,
         skipped,
         failed,
         durationMs: duration

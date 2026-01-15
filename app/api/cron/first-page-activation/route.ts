@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { sendTemplatedEmail } from '../../../services/emailService';
+import { sendTemplatedEmail, EmailPriority } from '../../../services/emailService';
 import { randomUUID } from 'crypto';
 
 export const maxDuration = 120; // 2 minute timeout
@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
     console.log(`[FIRST PAGE ACTIVATION] Checking ${usersSnapshot.size} users for eligibility`);
 
     let sent = 0;
+    let scheduled = 0;
     let skipped = 0;
     let failed = 0;
     let hasPages = 0;
@@ -144,6 +145,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Send the first page activation email
+        // Auto-schedules for later if daily quota is reached
         const result = await sendTemplatedEmail({
           templateId: 'first-page-activation',
           to: userData.email,
@@ -152,16 +154,22 @@ export async function GET(request: NextRequest) {
             emailSettingsToken
           },
           userId,
-          triggerSource: 'cron'
+          triggerSource: 'cron',
+          priority: EmailPriority.P2_ENGAGEMENT,
         });
 
         if (result.success) {
-          // Mark that we sent the reminder
+          // Mark that we sent/scheduled the reminder
           await userDoc.ref.update({
             firstPageActivationSent: true,
-            firstPageActivationSentAt: admin.firestore.FieldValue.serverTimestamp()
+            firstPageActivationSentAt: admin.firestore.FieldValue.serverTimestamp(),
+            ...(result.wasScheduled && { firstPageActivationScheduledFor: result.scheduledFor })
           });
-          sent++;
+          if (result.wasScheduled) {
+            scheduled++;
+          } else {
+            sent++;
+          }
         } else {
           failed++;
         }
@@ -178,13 +186,14 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[FIRST PAGE ACTIVATION] Completed in ${duration}ms - Sent: ${sent}, Not in range: ${notInRange}, Has Pages: ${hasPages}, Already Sent: ${alreadySent}, Opted Out: ${optedOut}, Skipped: ${skipped}, Failed: ${failed}`);
+    console.log(`[FIRST PAGE ACTIVATION] Completed in ${duration}ms - Sent: ${sent}, Scheduled: ${scheduled}, Not in range: ${notInRange}, Has Pages: ${hasPages}, Already Sent: ${alreadySent}, Opted Out: ${optedOut}, Skipped: ${skipped}, Failed: ${failed}`);
 
     return NextResponse.json({
       success: true,
       summary: {
         totalChecked: usersSnapshot.size,
-        sent,
+        sentImmediately: sent,
+        scheduledForLater: scheduled,
         notInRange,
         hasPages,
         alreadySent,

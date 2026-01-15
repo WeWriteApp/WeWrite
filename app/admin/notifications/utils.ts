@@ -4,6 +4,55 @@ import { EmailTemplate } from './types';
 export const INACTIVE_USER_TEMPLATES = ['reactivation'];
 
 /**
+ * Transform email HTML for dark mode preview by replacing inline style values
+ * This is necessary because inline styles override CSS rules (even with !important)
+ */
+export function transformEmailForDarkMode(html: string): string {
+  let transformed = html;
+
+  // Replace inline background colors
+  transformed = transformed.replace(/style="([^"]*?)background:\s*#f9f9f9([^"]*?)"/g, 'style="$1background: #262626$2"');
+  transformed = transformed.replace(/style="([^"]*?)background:\s*#fff([^"]*?)"/g, 'style="$1background: #333333$2"');
+  transformed = transformed.replace(/style="([^"]*?)background:\s*#ffffff([^"]*?)"/g, 'style="$1background: #333333$2"');
+  transformed = transformed.replace(/style="([^"]*?)background:\s*#f5f5f5([^"]*?)"/g, 'style="$1background: #333333$2"');
+  transformed = transformed.replace(/style="([^"]*?)background:\s*#e5e7eb([^"]*?)"/g, 'style="$1background: #404040$2"');
+  transformed = transformed.replace(/style="([^"]*?)background:\s*#fff4f4([^"]*?)"/g, 'style="$1background: #2a1a1a$2"');
+
+  // Replace inline text colors
+  transformed = transformed.replace(/style="([^"]*?)color:\s*#333([^"]*?)"/g, 'style="$1color: #e5e5e5$2"');
+  transformed = transformed.replace(/style="([^"]*?)color:\s*#666([^"]*?)"/g, 'style="$1color: #a3a3a3$2"');
+  transformed = transformed.replace(/style="([^"]*?)color:\s*#999([^"]*?)"/g, 'style="$1color: #737373$2"');
+  transformed = transformed.replace(/style="([^"]*?)color:\s*#000([^"]*?)"/g, 'style="$1color: #ffffff$2"');
+
+  // Replace inline border colors
+  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #eee([^"]*?)"/g, 'style="$1border: 1px solid #404040$2"');
+  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #ddd([^"]*?)"/g, 'style="$1border: 1px solid #404040$2"');
+  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #e5e7eb([^"]*?)"/g, 'style="$1border: 1px solid #404040$2"');
+  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #ffcccc([^"]*?)"/g, 'style="$1border: 1px solid #4a2020$2"');
+  transformed = transformed.replace(/style="([^"]*?)border-color:\s*#eee([^"]*?)"/g, 'style="$1border-color: #404040$2"');
+
+  // Add dark mode CSS for any remaining elements
+  transformed = transformed.replace(
+    '</head>',
+    `<style>
+      .email-body { background-color: #1a1a1a !important; }
+      .dark-text { color: #e5e5e5 !important; }
+      .dark-text-muted { color: #a3a3a3 !important; }
+      .dark-text-heading { color: #ffffff !important; }
+      .dark-card { background-color: #262626 !important; }
+      .dark-card-inner { background-color: #333333 !important; border-color: #404040 !important; }
+      .dark-footer { color: #737373 !important; }
+      .dark-footer a { color: #737373 !important; }
+      .dark-link { color: #60a5fa !important; }
+      .dark-stat-box { background-color: #333333 !important; border-color: #404040 !important; }
+      .dark-alert-security { background-color: #2a1a1a !important; border-color: #4a2020 !important; }
+    </style></head>`
+  );
+
+  return transformed;
+}
+
+/**
  * Helper to split engagement templates into active vs inactive user categories
  */
 export function splitEngagementTemplates(engagementTemplates: EmailTemplate[]) {

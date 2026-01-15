@@ -29,6 +29,13 @@ import {
   getTemplateById,
 } from '../lib/emailTemplates';
 import { logEmailSend, type EmailTriggerSource } from './emailLogService';
+import {
+  canSendEmail,
+  recordEmailSent,
+  getPriorityForTemplate,
+  EmailPriority,
+  type CanSendResult,
+} from './emailRateLimitService';
 
 // Lazy-initialize Resend to avoid build-time errors
 let resendInstance: Resend | null = null;
@@ -66,7 +73,7 @@ async function waitForRateLimit(): Promise<void> {
  * @param maxRetries - Maximum number of retries (default 3)
  */
 async function sendWithRetry<T>(
-  sendFn: () => Promise<{ data: T | null; error: { message: string; name?: string; statusCode?: number } | null }>,
+  sendFn: () => Promise<{ data: T | null; error: { message: string; name?: string; statusCode?: number } | null; headers?: Record<string, string> | null }>,
   maxRetries = 3
 ): Promise<{ data: T | null; error: { message: string; name?: string } | null }> {
   let lastError: { message: string; name?: string } | null = null;
@@ -728,9 +735,15 @@ export { getResend };
  * Send an email using a template ID
  * This is the recommended way to send emails using pre-defined templates
  *
- * @param options.scheduledAt - Optional ISO 8601 date string or natural language (e.g., "in 2 days")
- *                              to schedule the email for future delivery (up to 30 days)
+ * Features:
+ * - Automatic priority-based rate limiting (P0-P3)
+ * - Auto-scheduling when daily quota is reached
+ * - Critical emails (P0) always send immediately
+ *
+ * @param options.scheduledAt - Optional ISO 8601 date string to schedule for future delivery (up to 30 days)
  * @param options.triggerSource - Source of the email trigger: 'cron', 'system', or 'admin'
+ * @param options.priority - Override automatic priority (0-3). If not set, determined from templateId
+ * @param options.skipRateLimitCheck - Skip rate limit check (use with caution, for batch scheduling)
  */
 export const sendTemplatedEmail = async (options: {
   templateId: string;
@@ -739,27 +752,66 @@ export const sendTemplatedEmail = async (options: {
   userId?: string;
   scheduledAt?: string;
   triggerSource?: EmailTriggerSource;
-}): Promise<{ success: boolean; resendId?: string; error?: string }> => {
+  priority?: EmailPriority;
+  skipRateLimitCheck?: boolean;
+}): Promise<{
+  success: boolean;
+  resendId?: string;
+  error?: string;
+  wasScheduled?: boolean;
+  scheduledFor?: string;
+}> => {
   const sentAt = new Date().toISOString();
   try {
-    const { templateId, to, data, userId, scheduledAt, triggerSource } = options;
+    const { templateId, to, data, userId, triggerSource, skipRateLimitCheck } = options;
+    let { scheduledAt } = options;
 
     const template = getTemplateById(templateId);
     if (!template) {
       return { success: false, error: `Template not found: ${templateId}` };
     }
 
+    // Determine priority (explicit > template mapping > default P2)
+    const priority = options.priority ?? getPriorityForTemplate(templateId);
+    let wasAutoScheduled = false;
+
+    // Check rate limits unless explicitly skipped or already scheduled
+    if (!skipRateLimitCheck && !scheduledAt) {
+      const rateLimitResult = await canSendEmail(priority);
+
+      if (!rateLimitResult.canSend) {
+        if (priority === EmailPriority.P0_CRITICAL) {
+          // P0 emails always send - log warning but proceed
+          console.warn(`[Email Service] Sending P0 (critical) email despite quota: ${rateLimitResult.reason}`);
+        } else if (rateLimitResult.suggestedScheduleDate) {
+          // Auto-schedule for later
+          scheduledAt = rateLimitResult.suggestedScheduleDate;
+          wasAutoScheduled = true;
+          console.log(`[Email Service] Auto-scheduling ${templateId} email for ${scheduledAt} (${rateLimitResult.reason})`);
+        } else {
+          // No available slot - this shouldn't happen but handle gracefully
+          console.error(`[Email Service] No available slot for ${templateId}, sending anyway`);
+        }
+      }
+    }
+
     // Use retry wrapper for rate limit handling
-    const { data: resendData, error } = await sendWithRetry(() =>
-      getResend().emails.send({
+    const { data: resendData, error } = await sendWithRetry(async () => {
+      const result = await getResend().emails.send({
         from: FROM_EMAIL,
         replyTo: REPLY_TO_EMAIL,
         to,
         subject: template.subject,
         html: template.generateHtml(data),
         ...(scheduledAt && { scheduledAt }),
-      })
-    );
+      });
+      // Resend returns a discriminated union, normalize to the expected shape
+      return {
+        data: result.data,
+        error: result.error ? { message: result.error.message, name: result.error.name } : null,
+        headers: result.headers,
+      };
+    });
 
     if (error) {
       await logEmailSend({
@@ -771,12 +823,17 @@ export const sendTemplatedEmail = async (options: {
         subject: template.subject,
         status: 'failed',
         errorMessage: error.message,
-        metadata: { ...data, scheduledAt },
+        metadata: { ...data, scheduledAt, priority, wasAutoScheduled },
         triggerSource,
         sentAt,
       });
       return { success: false, error: error.message };
     }
+
+    // Record the email in rate limit tracking
+    // For scheduled emails, record against the scheduled date
+    const recordDate = scheduledAt ? scheduledAt.split('T')[0] : undefined;
+    await recordEmailSent(priority, recordDate);
 
     await logEmailSend({
       templateId,
@@ -787,15 +844,24 @@ export const sendTemplatedEmail = async (options: {
       subject: template.subject,
       status: scheduledAt ? 'scheduled' : 'sent',
       resendId: resendData?.id,
-      metadata: { ...data, scheduledAt },
+      metadata: { ...data, scheduledAt, priority, wasAutoScheduled },
       triggerSource,
       sentAt,
     });
-    return { success: true, resendId: resendData?.id };
+
+    return {
+      success: true,
+      resendId: resendData?.id,
+      wasScheduled: !!scheduledAt,
+      scheduledFor: scheduledAt,
+    };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
+
+// Re-export EmailPriority for convenience
+export { EmailPriority } from './emailRateLimitService';
 
 export default {
   sendEmail,

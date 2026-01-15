@@ -32,62 +32,13 @@ import type { EmailTemplate, EmailLogEntry, GroupedTemplates, UserDetails, UserF
 import { notificationModes, triggerStatus, categoryConfig, getCronSchedules, formatTimeUntil, templateToCronMap, getUserFacingFlow, stageConfig, getFlowItem } from './config';
 
 // Import utility functions
-import { splitEngagementTemplates, formatRelativeTime, formatUserDateTime } from './utils';
+import { splitEngagementTemplates, formatRelativeTime, formatUserDateTime, transformEmailForDarkMode } from './utils';
 
 // Import extracted components
 import { PushNotificationPreview, NotificationPreview, NotificationFlowList } from './components';
 
 // Get cron schedules (regenerates nextRun each time)
 const cronSchedules = getCronSchedules();
-
-/**
- * Transform email HTML for dark mode preview by replacing inline style values
- * This is necessary because inline styles override CSS rules (even with !important)
- */
-function transformEmailForDarkMode(html: string): string {
-  let transformed = html;
-
-  // Replace inline background colors
-  transformed = transformed.replace(/style="([^"]*?)background:\s*#f9f9f9([^"]*?)"/g, 'style="$1background: #262626$2"');
-  transformed = transformed.replace(/style="([^"]*?)background:\s*#fff([^"]*?)"/g, 'style="$1background: #333333$2"');
-  transformed = transformed.replace(/style="([^"]*?)background:\s*#ffffff([^"]*?)"/g, 'style="$1background: #333333$2"');
-  transformed = transformed.replace(/style="([^"]*?)background:\s*#f5f5f5([^"]*?)"/g, 'style="$1background: #333333$2"');
-  transformed = transformed.replace(/style="([^"]*?)background:\s*#e5e7eb([^"]*?)"/g, 'style="$1background: #404040$2"');
-  transformed = transformed.replace(/style="([^"]*?)background:\s*#fff4f4([^"]*?)"/g, 'style="$1background: #2a1a1a$2"');
-
-  // Replace inline text colors
-  transformed = transformed.replace(/style="([^"]*?)color:\s*#333([^"]*?)"/g, 'style="$1color: #e5e5e5$2"');
-  transformed = transformed.replace(/style="([^"]*?)color:\s*#666([^"]*?)"/g, 'style="$1color: #a3a3a3$2"');
-  transformed = transformed.replace(/style="([^"]*?)color:\s*#999([^"]*?)"/g, 'style="$1color: #737373$2"');
-  transformed = transformed.replace(/style="([^"]*?)color:\s*#000([^"]*?)"/g, 'style="$1color: #ffffff$2"');
-
-  // Replace inline border colors
-  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #eee([^"]*?)"/g, 'style="$1border: 1px solid #404040$2"');
-  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #ddd([^"]*?)"/g, 'style="$1border: 1px solid #404040$2"');
-  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #e5e7eb([^"]*?)"/g, 'style="$1border: 1px solid #404040$2"');
-  transformed = transformed.replace(/style="([^"]*?)border:\s*1px solid #ffcccc([^"]*?)"/g, 'style="$1border: 1px solid #4a2020$2"');
-  transformed = transformed.replace(/style="([^"]*?)border-color:\s*#eee([^"]*?)"/g, 'style="$1border-color: #404040$2"');
-
-  // Add dark mode CSS for any remaining elements
-  transformed = transformed.replace(
-    '</head>',
-    `<style>
-      .email-body { background-color: #1a1a1a !important; }
-      .dark-text { color: #e5e5e5 !important; }
-      .dark-text-muted { color: #a3a3a3 !important; }
-      .dark-text-heading { color: #ffffff !important; }
-      .dark-card { background-color: #262626 !important; }
-      .dark-card-inner { background-color: #333333 !important; border-color: #404040 !important; }
-      .dark-footer { color: #737373 !important; }
-      .dark-footer a { color: #737373 !important; }
-      .dark-link { color: #60a5fa !important; }
-      .dark-stat-box { background-color: #333333 !important; border-color: #404040 !important; }
-      .dark-alert-security { background-color: #2a1a1a !important; border-color: #4a2020 !important; }
-    </style></head>`
-  );
-
-  return transformed;
-}
 
 function AdminEmailsPageContent() {
   const { user, isLoading: authLoading } = useAuth();
@@ -175,6 +126,17 @@ function AdminEmailsPageContent() {
   const [showBulkReschedule, setShowBulkReschedule] = useState(false);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
+  // Email quota and scheduled batches state
+  const [quotaData, setQuotaData] = useState<{
+    today: { totalSent: number; remaining: number; percentUsed: number; byPriority: Record<number, number> };
+    thisMonth: { totalSent: number; remaining: number; percentUsed: number };
+    limits: { DAILY: number; MONTHLY: number };
+    scheduledBatches: Array<{ scheduledFor: string; count: number; templateBreakdown: Record<string, number> }>;
+    priorityLabels: Record<number, string>;
+  } | null>(null);
+  const [quotaLoading, setQuotaLoading] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+
   // Template details drawer state
   const [templateDetailsOpen, setTemplateDetailsOpen] = useState(false);
   const [templateDetailsId, setTemplateDetailsId] = useState<string | null>(null);
@@ -256,6 +218,29 @@ function AdminEmailsPageContent() {
 
     loadSentData();
   }, [activeTab, user, authLoading, toast]);
+
+  // Load email quota data when Upcoming tab is active
+  useEffect(() => {
+    const loadQuotaData = async () => {
+      if (activeTab !== 'upcoming' || !user || authLoading) return;
+
+      setQuotaLoading(true);
+      try {
+        const res = await adminFetch('/api/admin/email-quota');
+        const data = await res.json();
+
+        if (data.success) {
+          setQuotaData(data);
+        }
+      } catch (error) {
+        console.error('Failed to load email quota:', error);
+      } finally {
+        setQuotaLoading(false);
+      }
+    };
+
+    loadQuotaData();
+  }, [activeTab, user, authLoading]);
 
   // Load all cron recipients for both tabs (templates shows "upcoming" counts, events shows list)
   // Skip system jobs (backend processing jobs that don't send user-facing emails)
@@ -741,13 +726,166 @@ function AdminEmailsPageContent() {
     const upcomingNotifications = buildUpcomingNotificationsList();
     const isLoadingRecipients = sortedEmailCrons.some(cron => cronRecipients[cron.id]?.loading);
 
+    // Toggle batch expansion
+    const toggleBatch = (batchDate: string) => {
+      setExpandedBatches(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(batchDate)) {
+          newSet.delete(batchDate);
+        } else {
+          newSet.add(batchDate);
+        }
+        return newSet;
+      });
+    };
+
+    // Format date for display
+    const formatBatchDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (dateStr === today.toISOString().split('T')[0]) return 'Today';
+      if (dateStr === tomorrow.toISOString().split('T')[0]) return 'Tomorrow';
+
+      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    };
+
     return (
       <div className="space-y-6">
-        {/* Upcoming Scheduled Notifications */}
+        {/* Email Quota Status */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="Gauge" size={16} className="text-primary" />
+            <h3 className="text-sm font-semibold">Email Quota Status</h3>
+            <Badge variant="outline" className="text-xs">
+              Resend Free Tier
+            </Badge>
+          </div>
+
+          {quotaLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Icon name="Loader" className="text-primary mr-2" />
+              <span className="text-sm text-muted-foreground">Loading quota data...</span>
+            </div>
+          ) : quotaData ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Daily Usage */}
+              <div className="wewrite-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Daily Usage</span>
+                  <span className={`text-xs font-medium ${quotaData.today.percentUsed >= 90 ? 'text-red-500' : quotaData.today.percentUsed >= 70 ? 'text-yellow-500' : 'text-green-500'}`}>
+                    {quotaData.today.totalSent} / {quotaData.limits.DAILY}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 mb-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${quotaData.today.percentUsed >= 90 ? 'bg-red-500' : quotaData.today.percentUsed >= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                    style={{ width: `${Math.min(quotaData.today.percentUsed, 100)}%` }}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {quotaData.today.remaining} remaining today
+                </div>
+              </div>
+
+              {/* Monthly Usage */}
+              <div className="wewrite-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Monthly Usage</span>
+                  <span className={`text-xs font-medium ${quotaData.thisMonth.percentUsed >= 90 ? 'text-red-500' : quotaData.thisMonth.percentUsed >= 70 ? 'text-yellow-500' : 'text-green-500'}`}>
+                    {quotaData.thisMonth.totalSent} / {quotaData.limits.MONTHLY}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 mb-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${quotaData.thisMonth.percentUsed >= 90 ? 'bg-red-500' : quotaData.thisMonth.percentUsed >= 70 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                    style={{ width: `${Math.min(quotaData.thisMonth.percentUsed, 100)}%` }}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {quotaData.thisMonth.remaining} remaining this month
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              Unable to load quota data
+            </div>
+          )}
+        </div>
+
+        {/* Scheduled Batches (emails scheduled for future via Resend) */}
+        {quotaData && quotaData.scheduledBatches.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Icon name="Layers" size={16} className="text-primary" />
+              <h3 className="text-sm font-semibold">Scheduled Email Batches</h3>
+              <Badge variant="secondary" className="text-xs">
+                {quotaData.scheduledBatches.reduce((sum, b) => sum + b.count, 0)} emails
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Emails scheduled via Resend for future delivery (to stay under daily limits).
+            </p>
+
+            <div className="wewrite-card p-0 overflow-hidden">
+              {quotaData.scheduledBatches.map((batch) => {
+                const isExpanded = expandedBatches.has(batch.scheduledFor);
+                const templateEntries = Object.entries(batch.templateBreakdown);
+
+                return (
+                  <div key={batch.scheduledFor} className="border-b border-border last:border-b-0">
+                    <button
+                      onClick={() => toggleBatch(batch.scheduledFor)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon
+                          name={isExpanded ? 'ChevronDown' : 'ChevronRight'}
+                          size={16}
+                          className="text-muted-foreground"
+                        />
+                        <div className="text-left">
+                          <div className="font-medium text-sm">{formatBatchDate(batch.scheduledFor)}</div>
+                          <div className="text-xs text-muted-foreground">{batch.scheduledFor}</div>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {batch.count} {batch.count === 1 ? 'email' : 'emails'}
+                      </Badge>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-3 pt-1 bg-muted/10">
+                        <div className="space-y-1">
+                          {templateEntries.map(([templateId, count]) => (
+                            <div
+                              key={templateId}
+                              className="flex items-center justify-between text-xs py-1 px-2 rounded hover:bg-muted/20"
+                            >
+                              <span className="text-muted-foreground">{templateId}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {count}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming Scheduled Notifications (from cron recipients) */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Icon name="Calendar" size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold">Scheduled Notifications</h3>
+            <h3 className="text-sm font-semibold">Upcoming Cron Recipients</h3>
             {!isLoadingRecipients && (
               <Badge variant="secondary" className="text-xs">
                 {upcomingNotifications.length}
@@ -762,6 +900,9 @@ function AdminEmailsPageContent() {
               <Icon name="RefreshCw" size={14} className={isLoadingRecipients ? 'animate-spin' : ''} />
             </button>
           </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Users who will receive emails when cron jobs next run.
+          </p>
 
           {isLoadingRecipients ? (
             <div className="flex items-center justify-center py-8">
@@ -908,7 +1049,7 @@ function AdminEmailsPageContent() {
 
           {allLogsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Icon name="Loader" className="text-primary mr-2 animate-spin" />
+              <Icon name="Loader" className="text-primary mr-2" />
               <span className="text-sm text-muted-foreground">Loading sent emails...</span>
             </div>
           ) : allEmailLogs.length === 0 ? (
@@ -1400,7 +1541,7 @@ function AdminEmailsPageContent() {
                                                 }}
                                               >
                                                 {bulkActionLoading ? (
-                                                  <Icon name="Loader" size={12} className="animate-spin" />
+                                                  <Icon name="Loader" size={12} />
                                                 ) : (
                                                   <Icon name="Calendar" size={12} />
                                                 )}
@@ -1474,7 +1615,7 @@ function AdminEmailsPageContent() {
                                                 }}
                                               >
                                                 {bulkActionLoading ? (
-                                                  <Icon name="Loader" size={12} className="animate-spin" />
+                                                  <Icon name="Loader" size={12} />
                                                 ) : (
                                                   <Icon name="Send" size={12} />
                                                 )}
@@ -1759,7 +1900,7 @@ function AdminEmailsPageContent() {
                     className="gap-1 flex-1"
                   >
                     {cronActionLoading ? (
-                      <Icon name="Loader" size={14} className="animate-spin" />
+                      <Icon name="Loader" size={14} />
                     ) : (
                       <Icon name="Send" size={14} />
                     )}
@@ -1797,7 +1938,7 @@ function AdminEmailsPageContent() {
                     className="gap-1"
                   >
                     {cronActionLoading ? (
-                      <Icon name="Loader" size={14} className="animate-spin" />
+                      <Icon name="Loader" size={14} />
                     ) : (
                       <Icon name="Send" size={14} />
                     )}
@@ -1903,7 +2044,7 @@ function AdminEmailsPageContent() {
                         setCreateNotifUsername(e.target.value);
                         searchUsers(e.target.value);
                       }}
-                      leftIcon={userSearchLoading ? <Icon name="Loader" size={16} className="animate-spin" /> : <Icon name="Search" size={16} />}
+                      leftIcon={userSearchLoading ? <Icon name="Loader" size={16} /> : <Icon name="Search" size={16} />}
                     />
                     {userSearchResults.length > 0 && (
                       <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
@@ -1989,7 +2130,7 @@ function AdminEmailsPageContent() {
                 onClick={handleCreateNotification}
               >
                 {createNotifLoading ? (
-                  <Icon name="Loader" size={16} className="animate-spin" />
+                  <Icon name="Loader" size={16} />
                 ) : (
                   <Icon name="Send" size={16} />
                 )}

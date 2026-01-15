@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { sendTemplatedEmail } from '../../../services/emailService';
+import { sendTemplatedEmail, EmailPriority } from '../../../services/emailService';
 import { randomUUID } from 'crypto';
 
 export const maxDuration = 120; // 2 minute timeout
@@ -183,6 +183,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Schedule the re-activation email for 2 days from now
+        // Uses P3 (win-back) priority - lowest priority, already scheduled
         const result = await sendTemplatedEmail({
           templateId: 'reactivation',
           to: userData.email,
@@ -193,7 +194,8 @@ export async function GET(request: NextRequest) {
           },
           userId,
           scheduledAt,
-          triggerSource: 'cron'
+          triggerSource: 'cron',
+          priority: EmailPriority.P3_WINBACK,
         });
 
         if (result.success) {
