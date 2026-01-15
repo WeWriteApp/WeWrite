@@ -22,6 +22,7 @@ interface WhatLinksHereSummary {
   id: string;
   title: string;
   username: string;
+  userId?: string;
   lastModified: any;
   isPublic: boolean;
   linkText?: string;
@@ -70,12 +71,74 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get all source page IDs to look up proper usernames
+    const sourcePageIds = whatLinksHereSnapshot.docs.map(doc => doc.data().sourcePageId);
+
+    // Batch lookup source pages to get proper user info
+    const pageUserMap = new Map<string, { username: string; userId: string }>();
+    if (sourcePageIds.length > 0) {
+      // Lookup pages to get userId
+      const pagesRef = db.collection(getCollectionName('pages'));
+      const pageChunks = [];
+      for (let i = 0; i < sourcePageIds.length; i += 10) {
+        pageChunks.push(sourcePageIds.slice(i, i + 10));
+      }
+
+      for (const chunk of pageChunks) {
+        const pagesSnapshot = await pagesRef.where('__name__', 'in', chunk).get();
+        for (const pageDoc of pagesSnapshot.docs) {
+          const pageData = pageDoc.data();
+          const userId = pageData.userId || pageData.ownerId;
+          if (userId) {
+            pageUserMap.set(pageDoc.id, { username: pageData.username || '', userId });
+          }
+        }
+      }
+
+      // Now lookup actual usernames from users collection
+      const userIds = [...new Set([...pageUserMap.values()].map(p => p.userId).filter(Boolean))];
+      if (userIds.length > 0) {
+        const usersRef = db.collection(getCollectionName('users'));
+        const userChunks = [];
+        for (let i = 0; i < userIds.length; i += 10) {
+          userChunks.push(userIds.slice(i, i + 10));
+        }
+
+        const userMap = new Map<string, string>();
+        for (const chunk of userChunks) {
+          const usersSnapshot = await usersRef.where('__name__', 'in', chunk).get();
+          for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            if (userData.username) {
+              userMap.set(userDoc.id, userData.username);
+            }
+          }
+        }
+
+        // Update pageUserMap with actual usernames
+        for (const [pageId, info] of pageUserMap.entries()) {
+          const actualUsername = userMap.get(info.userId);
+          if (actualUsername) {
+            pageUserMap.set(pageId, { ...info, username: actualUsername });
+          }
+        }
+      }
+    }
+
     const linkedPages: WhatLinksHereSummary[] = whatLinksHereSnapshot.docs.map(doc => {
       const data = doc.data();
+      const pageInfo = pageUserMap.get(data.sourcePageId);
+
+      // SECURITY: Use looked-up username, fallback to Anonymous if not found
+      // NEVER use the raw sourceUsername from the index as it may contain email prefixes
+      const safeUsername = pageInfo?.username || 'Anonymous';
+      const userId = pageInfo?.userId || '';
+
       return {
         id: data.sourcePageId,
         title: data.sourcePageTitle || data.sourceTitle || 'Untitled',
-        username: data.sourceUsername || 'Anonymous',
+        username: safeUsername,
+        userId: userId,
         lastModified: data.lastModified,
         isPublic: data.isPublic,
         linkText: data.linkText

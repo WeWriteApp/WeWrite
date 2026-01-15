@@ -4,11 +4,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
 import { WhatLinksHereSummary } from '../../firebase/database/whatLinksHere';
 import { PillLink } from '../utils/PillLink';
-import Link from 'next/link';
 import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
 import AddToPageButton from '../utils/AddToPageButton';
 import type { Page } from '../../types/database';
+import { UsernameBadge } from '../ui/UsernameBadge';
+import { sanitizeUsername, needsUsernameRefresh } from '../../utils/usernameSecurity';
 
 interface WhatLinksHereProps {
   pageId: string;
@@ -21,13 +22,23 @@ interface WhatLinksHereProps {
 }
 
 /**
- * Helper to check if a username is valid for display
- * Returns false for empty, null, undefined, "anonymous", "unknown", etc.
+ * SECURITY: Check if a username is valid and SAFE for display
+ * Returns false for:
+ * - Empty, null, undefined values
+ * - Invalid placeholder values
+ * - Email addresses or email prefixes (NEVER display these)
  */
 function isValidUsername(username: string | null | undefined): boolean {
   if (!username) return false;
-  const invalidUsernames = ['anonymous', 'unknown', 'undefined', 'null', ''];
-  return !invalidUsernames.includes(username.toLowerCase().trim());
+
+  // Use centralized security check
+  if (needsUsernameRefresh(username)) return false;
+
+  const sanitized = sanitizeUsername(username);
+  // If sanitization changes it, it's not valid for direct display
+  if (sanitized !== username.trim()) return false;
+
+  return true;
 }
 
 export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwner = false, page }: WhatLinksHereProps) {
@@ -105,10 +116,12 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
     id: linkedPage.id,
     title: linkedPage.title,
     username: linkedPage.username,
+    userId: linkedPage.userId,
     href: `/${linkedPage.id}`
   }));
 
   // Custom renderer to show username alongside the pill
+  // SECURITY: Uses UsernameBadge which safely fetches/displays usernames and subscription status
   const renderLinkedPageItem = (item: PageLinkItem) => (
     <div key={item.id} className="flex items-center gap-1 flex-wrap">
       <PillLink
@@ -118,15 +131,15 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
       >
         {item.title || 'Untitled'}
       </PillLink>
-      {isValidUsername(item.username) && (
-        <span className="text-xs text-muted-foreground shrink-0">
+      {item.userId && isValidUsername(item.username) && (
+        <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
           by{' '}
-          <Link
-            href={`/users/${item.username}`}
-            className="hover:text-foreground transition-colors hover:underline"
-          >
-            {item.username}
-          </Link>
+          <UsernameBadge
+            userId={item.userId}
+            username={item.username || 'Anonymous'}
+            size="sm"
+            showBadge={true}
+          />
         </span>
       )}
     </div>

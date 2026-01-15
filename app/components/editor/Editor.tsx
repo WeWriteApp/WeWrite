@@ -36,6 +36,7 @@ import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { PillLink } from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useMediaQuery } from '../../hooks/use-media-query';
+import { InlineError } from '../ui/InlineError';
 import {
   Drawer,
   DrawerContent,
@@ -64,16 +65,22 @@ class SimpleErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      const error = this.state.error;
+      const errorDetails = error
+        ? `${error.name}: ${error.message}\n\nStack trace:\n${error.stack || 'No stack trace available'}`
+        : 'Unknown error occurred';
+
       return (
-        <div className="p-4 text-center text-muted-foreground border border-destructive/20 rounded">
-          <p>Editor encountered an error. Please refresh the page.</p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: undefined })}
-            className="mt-2 text-sm underline"
-          >
-            Try again
-          </button>
-        </div>
+        <InlineError
+          message="Editor encountered an error. Please refresh the page."
+          variant="error"
+          size="lg"
+          errorDetails={errorDetails}
+          showCopy={true}
+          showCollapsible={true}
+          onRetry={() => this.setState({ hasError: false, error: undefined })}
+          retryLabel="Try again"
+        />
       );
     }
     return this.props.children;
@@ -538,6 +545,11 @@ const Editor: React.FC<EditorProps> = ({
 
   // Analyze text for link suggestions when content changes
   // Always runs to populate count for the button, regardless of showLinkSuggestions visibility toggle
+  // Note: linkSuggestionActions.analyzeText is stable (memoized with useCallback), so we use a ref
+  // to avoid having linkSuggestionActions in deps which could cause infinite render loops
+  const analyzeTextRef = useRef(linkSuggestionActions.analyzeText);
+  analyzeTextRef.current = linkSuggestionActions.analyzeText;
+
   useEffect(() => {
     if (!editorValue || readOnly) {
       return;
@@ -546,9 +558,9 @@ const Editor: React.FC<EditorProps> = ({
     const plainText = extractPlainText(editorValue);
 
     if (plainText.length >= 10) {
-      linkSuggestionActions.analyzeText(plainText, user?.uid, pageId);
+      analyzeTextRef.current(plainText, user?.uid, pageId);
     }
-  }, [editorValue, user?.uid, pageId, readOnly, extractPlainText, linkSuggestionActions]);
+  }, [editorValue, user?.uid, pageId, readOnly, extractPlainText]);
 
   // Helper function to insert a link from a suggestion
   const insertLinkFromSuggestion = useCallback((suggestion: LinkSuggestion) => {

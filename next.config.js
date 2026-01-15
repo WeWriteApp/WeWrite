@@ -44,6 +44,19 @@ const nextConfig = {
 
     // Reduce webpack output for cleaner development
     if (dev) {
+      // Ignore directories that shouldn't trigger Fast Refresh
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/logs/**',
+          '**/scripts/**',
+          '**/docs/**',
+          '**/*.tsbuildinfo',
+        ],
+      };
+
       config.stats = {
         errors: true,
         warnings: true,

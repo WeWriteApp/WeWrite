@@ -48,11 +48,13 @@ export interface WhatLinksHereEntry {
 
 /**
  * Summary of a page that links to the target page
+ * SECURITY: userId is required for UsernameBadge component to safely fetch/display usernames
  */
 export interface WhatLinksHereSummary {
   id: string;
   title: string;
   username: string;
+  userId?: string;
   lastModified: any;
   isPublic: boolean;
   linkText?: string;

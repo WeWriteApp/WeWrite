@@ -201,6 +201,7 @@ export default function ContentPageView({
   // NOTE: hasUnsavedChanges state removed - now computed via hasChanges memo for accuracy
   const [justSaved, setJustSaved] = useState(false); // Flag to prevent data reload after save
   const justSavedRef = useRef(false); // Ref-based flag for immediate sync access
+  const isNewPageRef = useRef(false); // Ref-based flag to track new page status without re-renders
 
   const [title, setTitle] = useState('');
   const authorUsername = page?.username || (page as any)?.authorUsername || (page as any)?.user?.username || '';
@@ -774,6 +775,7 @@ export default function ContentPageView({
     setLocation(initialLocation);
     setIsLoading(false);
     setNewPageCreated(true);
+    isNewPageRef.current = true; // Track new page status via ref to avoid re-renders on first save
   }, [isNewPageMode, pageId, user, newPageCreated, searchParams]);
 
   // Page loading effect - OPTIMIZED for faster loading
@@ -1345,8 +1347,9 @@ export default function ContentPageView({
       // NEW PAGE MODE: Always use PUT to /api/pages for saving content
       // The draft endpoint only creates the skeleton page document on initial navigation
       // When the user actually saves content, we use PUT which creates versions properly
-      // If this is a new page (isNewPage: true), we add markAsSaved to clear the flag
-      const isFirstSaveOfNewPage = page?.isNewPage === true;
+      // If this is a new page, we add markAsSaved to clear the flag in the database
+      // Check BOTH ref (most accurate) and state (for edge cases) to detect first save
+      const isFirstSaveOfNewPage = isNewPageRef.current || page?.isNewPage === true;
       if (isFirstSaveOfNewPage) {
         updateData.markAsSaved = true;
       }
@@ -1496,23 +1499,33 @@ export default function ContentPageView({
       // The editor already has the current state - we only need to update the page object
       // to reflect what was actually saved to the server.
 
-      // Check if this is the first save of a new page BEFORE updating state
-      const isFirstSaveOfNewPageLocal = isNewPageMode && page?.isNewPage;
+      // Check if this is the first save of a new page using REF to avoid re-renders
+      // The ref check doesn't trigger component re-renders, preserving focus/modal state
+      const isFirstSaveOfNewPageLocal = isNewPageMode && isNewPageRef.current;
 
+      // Clear the ref IMMEDIATELY to prevent double-triggers on rapid saves
+      if (isFirstSaveOfNewPageLocal) {
+        isNewPageRef.current = false;
+      }
+
+      // CRITICAL: Set justSaved flag BEFORE setPage to prevent the editor sync effect
+      // from running during the re-render caused by setPage. This preserves focus/modals.
+      justSavedRef.current = true;
+
+      // SIMPLIFICATION: Only update metadata in page state, NOT content
+      // The Editor already has the latest content via editorState.
+      // Updating page.content triggers Editor's sync effect which resets focus/modals.
+      // Instead, we only update metadata that doesn't affect the Editor.
       if (page) {
-        const updatedPage = {
-          ...page,
-          content: contentToSave, // Store what was actually saved
+        setPage(prev => prev ? {
+          ...prev,
+          // DO NOT update content - it triggers Editor reset!
+          // content is already in editorState and will be synced on next load
           title: titleToSave,
           location: locationToSave,
           customDate: customDateToSave,
           lastModified: new Date().toISOString(),
-          // CRITICAL: For new pages, clear isNewPage flag in the SAME setPage call
-          // to avoid double state updates which can cause stale closure issues
-          ...(isFirstSaveOfNewPageLocal ? { isNewPage: false } : {})
-        };
-        setPage(updatedPage);
-        // Editor state is NOT updated here - it retains the user's current work
+        } : prev);
       }
 
       // Comprehensive cache invalidation - clears ALL caching layers
@@ -1539,10 +1552,8 @@ export default function ContentPageView({
 
       // NOTE: hasChanges is now computed via memo - no need to set hasUnsavedChanges
 
-      // Set justSaved flag FIRST to prevent data reloading when URL changes
-      // This must be set BEFORE router.replace() to prevent race conditions
-      // Set BOTH ref (immediate) and state (for React re-renders)
-      justSavedRef.current = true;
+      // Set justSaved STATE (ref was already set above before setPage)
+      // This triggers React re-renders that depend on justSaved state
       setJustSaved(true);
       setTimeout(() => {
         justSavedRef.current = false;
@@ -1552,9 +1563,11 @@ export default function ContentPageView({
       // NEW PAGE MODE: After first save, update URL to remove draft param
       if (isFirstSaveOfNewPageLocal) {
         // Update URL using history.replaceState to avoid triggering React re-renders
-        // NOTE: Page state (isNewPage: false) is now set in the single setPage call above
         const newUrl = `/${pageId}`;
         window.history.replaceState(null, '', newUrl);
+        // Note: We intentionally do NOT update page.isNewPage state here
+        // The ref (isNewPageRef) already tracks the real state and prevents double-triggers
+        // Updating state would cause a re-render that disrupts focus/modals
       }
 
       // Trigger save success animation

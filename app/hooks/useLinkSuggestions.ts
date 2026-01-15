@@ -97,9 +97,15 @@ export function useLinkSuggestions(options: UseLinkSuggestionsOptions = {}) {
     currentUserId?: string,
     excludePageId?: string
   ) => {
-    // Skip if text is too short
+    // Skip if text is too short - only update state if there's actually something to clear
     if (!text || text.trim().length < 10) {
-      setState(prev => ({ ...prev, activeSuggestion: null, allSuggestions: [], isLoading: false }));
+      // Use functional update and only change if needed to prevent infinite loops
+      setState(prev => {
+        if (prev.activeSuggestion !== null || prev.allSuggestions.length > 0 || prev.isLoading) {
+          return { ...prev, activeSuggestion: null, allSuggestions: [], isLoading: false };
+        }
+        return prev; // Return same reference to prevent re-render
+      });
       return;
     }
 
