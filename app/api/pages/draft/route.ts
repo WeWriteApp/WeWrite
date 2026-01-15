@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       console.log('🔵 NEW PAGE: Created page with auto-generated ID:', pageId);
     }
 
-    // Sync to search engines for search indexing (only if page has a title)
+    // Sync to Typesense for search indexing (only if page has a title)
     if (pageData.title) {
       const searchSyncData = {
         pageId,
@@ -147,17 +147,6 @@ export async function POST(request: NextRequest) {
         createdAt: pageData.createdAt,
       };
 
-      // Sync to Algolia (primary)
-      try {
-        console.log('🔍 Syncing new page to Algolia:', pageId);
-        const { syncPageToAlgoliaServer } = await import('../../../lib/algoliaSync');
-        const algoliaResult = await syncPageToAlgoliaServer(searchSyncData);
-        console.log('✅ Algolia sync result:', algoliaResult);
-      } catch (algoliaError) {
-        console.error('⚠️ Error syncing to Algolia (non-fatal):', algoliaError);
-      }
-
-      // Sync to Typesense (secondary)
       try {
         console.log('🔍 Syncing new page to Typesense:', pageId);
         const { syncPageToTypesenseServer } = await import('../../../lib/typesenseSync');

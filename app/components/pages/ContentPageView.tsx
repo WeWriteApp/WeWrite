@@ -2239,6 +2239,8 @@ export default function ContentPageView({
                 <WhatLinksHere
                   pageId={page.id}
                   pageTitle={page.title}
+                  isOwner={user?.uid === page.userId}
+                  page={page}
                 />
 
                 {page.replyTo && (
@@ -2300,7 +2302,7 @@ export default function ContentPageView({
             {/* Delete/Cancel button - positioned at the very bottom for page owners (hidden in print) */}
             {/* Shows "Cancel" for new pages, "Delete" for existing pages */}
             {page && canEdit && (
-              <div className="mt-8 mb-6 px-4 no-print">
+              <div className="mt-8 mb-6 px-4 no-print flex justify-center">
                 <Button
                   variant={page.isNewPage ? "secondary" : "destructive"}
                   size="lg"

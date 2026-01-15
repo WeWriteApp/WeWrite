@@ -25,7 +25,7 @@ export * from './database/versions';
 export * from './database/access';
 export * from './database/search';
 export * from './database/links';
-export * from './database/backlinks';
+export * from './database/whatLinksHere';
 export * from './database/users';
 export * from './database/analyticsDataLayer';
 
@@ -58,10 +58,10 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
       // Error getting page data for post-update operations (non-fatal)
     }
 
-    // If the update includes content changes, update the backlinks index
+    // If the update includes content changes, update the what-links-here index
     if (result && data.content && pageData?.pageData) {
       try {
-        const { updateBacklinksIndex } = await import('./database/backlinks');
+        const { updateWhatLinksHereIndex } = await import('./database/whatLinksHere');
 
         // Parse content to extract links
         let contentNodes = [];
@@ -69,11 +69,11 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
           try {
             contentNodes = JSON.parse(data.content);
           } catch (parseError) {
-            // Could not parse content for backlinks indexing
+            // Could not parse content for indexing
           }
         }
 
-        await updateBacklinksIndex(
+        await updateWhatLinksHereIndex(
           pageId,
           pageData.pageData.title,
           pageData.pageData.username,
@@ -82,8 +82,8 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
           data.lastModified || pageData.pageData.lastModified
         );
 
-      } catch (backlinkError) {
-        // Error updating backlinks index (non-fatal)
+      } catch (indexError) {
+        // Error updating what-links-here index (non-fatal)
       }
     }
 

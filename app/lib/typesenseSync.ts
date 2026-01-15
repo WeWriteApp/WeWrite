@@ -4,7 +4,7 @@
  * Provides functions to sync pages to Typesense when they are created or updated.
  * Works from both client-side (via API route) and server-side (direct Typesense SDK).
  *
- * This mirrors the Algolia sync pattern for consistency and easy migration.
+ * Primary search sync service for real-time search updates.
  */
 
 import {

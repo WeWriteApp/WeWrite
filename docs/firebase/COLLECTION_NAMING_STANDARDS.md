@@ -80,7 +80,7 @@ LEDGER: 'ledger'
 PLEDGES: 'pledges'
 NOTIFICATIONS: 'notifications'
 COUNTERS: 'counters'
-BACKLINKS: 'backlinks'
+BACKLINKS: 'backlinks'  // "What Links Here" feature (collection name kept for historical reasons)
 FOLLOWS: 'follows'
 PAGE_FOLLOWERS: 'pageFollowers'
 ```

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useAppBackground } from '../../contexts/AppBackgroundContext';
-import { useNeutralColor } from '../../contexts/NeutralColorContext';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../lib/utils';
 import { Label } from '../ui/label';
@@ -14,15 +13,14 @@ interface CardOpacityControlProps {
 
 export default function CardOpacityControl({ className }: CardOpacityControlProps) {
   const { cardOpacity, setCardOpacity, cardBlur, setCardBlur } = useAppBackground();
-  const { neutralColor } = useNeutralColor();
   const { resolvedTheme } = useTheme();
 
   const isDark = resolvedTheme === 'dark';
 
-  // Create appropriate gradient based on theme - unified approach
+  // Create appropriate gradient based on theme - pure grayscale
   const opacityGradient = isDark
-    ? `linear-gradient(to right, ${neutralColor}00, ${neutralColor}80)` // Dark: transparent to 50% neutral
-    : `linear-gradient(to right, #ffffff00, #ffffff)`; // Light: transparent to opaque white
+    ? 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5))' // Dark: transparent to 50% white
+    : 'linear-gradient(to right, transparent, rgba(255, 255, 255, 1))'; // Light: transparent to opaque white
 
   return (
     <div className={cn("space-y-6", className)}>

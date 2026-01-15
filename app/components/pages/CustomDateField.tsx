@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { AdaptiveModal } from '@/components/ui/adaptive-modal';
 import { Button } from '@/components/ui/button';
+import { StatsCard } from '@/components/ui/StatsCard';
 import { useAccentColor, ACCENT_COLOR_VALUES } from '../../contexts/AccentColorContext';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import {
@@ -159,19 +160,22 @@ interface CustomDateFieldProps {
   canEdit?: boolean;
   onCustomDateChange?: (date: string | null) => void;
   className?: string;
+  /** When true, shows a simplified compact view for empty state */
+  compact?: boolean;
 }
 
 /**
  * CustomDateField Component
  *
  * Displays and allows editing of a page's custom date field.
- * Can be used in both edit and view modes.
+ * Uses StatsCard for consistent styling with other page stats.
  */
 export default function CustomDateField({
   customDate,
   canEdit = false,
   onCustomDateChange,
-  className = ""
+  className = "",
+  compact = false
 }: CustomDateFieldProps) {
   const { accentColor, customColors } = useAccentColor();
   const { formatDateString } = useDateFormat();
@@ -193,7 +197,7 @@ export default function CustomDateField({
   const accentColorValue = getAccentColorValue();
 
   const handleDateClick = () => {
-    if (canEdit) {
+    if (canEdit && !showDatePicker) {
       setShowDatePicker(true);
     }
   };
@@ -223,27 +227,89 @@ export default function CustomDateField({
     }
   };
 
-  return (
-    <div
-      className={`wewrite-card w-full flex items-center justify-between ${canEdit ? 'cursor-pointer wewrite-interactive-card' : ''} ${className}`}
-      onClick={handleDateClick}
-    >
-      <div className="flex items-center gap-2">
-        <Icon name="Calendar" size={20} className="text-muted-foreground" />
-        <span className="text-sm font-medium">Custom date</span>
-      </div>
+  // Get formatted date value for display
+  const displayValue = localDate ? formatCustomDate(localDate) : null;
 
-      <div className="flex items-center gap-2">
-        {localDate ? (
-          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
-            {formatCustomDate(localDate) || localDate}
+  // Compact mode: simplified centered display for empty state
+  if (compact && !localDate && canEdit) {
+    return (
+      <>
+        <div
+          className={`wewrite-card cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors ${className}`}
+          onClick={handleDateClick}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Icon name="Calendar" size={18} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Set date</span>
           </div>
-        ) : (
-          <div className="text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium">
-            {canEdit ? 'Click to set date' : 'No custom date'}
+        </div>
+
+        {/* Date picker modal */}
+        <AdaptiveModal
+          isOpen={showDatePicker}
+          onClose={() => setShowDatePicker(false)}
+          title="Select custom date"
+          hashId="custom-date"
+          analyticsId="custom-date-picker"
+          mobileHeight="auto"
+          className="sm:max-w-md"
+        >
+          <div className="space-y-6">
+            <CalendarGrid
+              selectedDate={localDate}
+              onDateSelect={handleCalendarDateSelect}
+              accentColorValue={accentColorValue}
+            />
+            <Button
+              onClick={() => {
+                const today = new Date().toISOString().split('T')[0];
+                if (onCustomDateChange) {
+                  onCustomDateChange(today);
+                }
+                setShowDatePicker(false);
+              }}
+              className="w-full"
+              style={{
+                backgroundColor: accentColorValue,
+                color: 'white'
+              }}
+            >
+              Select Today
+            </Button>
+            <div className="flex gap-2 justify-end pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                onClick={() => setShowDatePicker(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => setShowDatePicker(false)}
+                style={{
+                  backgroundColor: accentColorValue,
+                  color: 'white'
+                }}
+              >
+                Done
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
+        </AdaptiveModal>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StatsCard
+        icon="Calendar"
+        title="Custom date"
+        value={displayValue}
+        onClick={canEdit ? handleDateClick : undefined}
+        className={className}
+        isEditable={canEdit}
+        emptyPlaceholder={canEdit ? "Set date" : undefined}
+      />
 
       {/* Date picker using AdaptiveModal (responsive: Dialog on desktop, Drawer on mobile) */}
       <AdaptiveModal
@@ -309,6 +375,6 @@ export default function CustomDateField({
           </div>
         </div>
       </AdaptiveModal>
-    </div>
+    </>
   );
 }

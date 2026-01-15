@@ -182,10 +182,10 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
   lastModified: any;
   isPublic: boolean;
 }>> => {
-  // Use the new efficient backlinks system
+  // Use the new efficient what-links-here system
   try {
-    const { getBacklinks } = await import('./backlinks');
-    return await getBacklinks(pageId, limitCount);
+    const { getWhatLinksHere } = await import('./whatLinksHere');
+    return await getWhatLinksHere(pageId, limitCount);
   } catch (error) {
     // Fall back to the old inefficient method if the new one fails
   }

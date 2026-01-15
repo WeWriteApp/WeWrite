@@ -240,9 +240,9 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           // Don't fail page creation if counter update fails
         }
 
-        // Update backlinks index for the new page
+        // Update what-links-here index for the new page
         try {
-          const { updateBacklinksIndex } = await import('./backlinks');
+          const { updateWhatLinksHereIndex } = await import('./whatLinksHere');
 
           // Parse content to extract links
           let contentNodes = [];
@@ -250,11 +250,11 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             try {
               contentNodes = JSON.parse(versionData.content);
             } catch (parseError) {
-              // Could not parse content for backlinks indexing
+              // Could not parse content for indexing
             }
           }
 
-          await updateBacklinksIndex(
+          await updateWhatLinksHereIndex(
             pageRef.id,
             pageData.title,
             pageData.username,
@@ -262,11 +262,11 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
             pageData.isPublic,
             pageData.lastModified
           );
-        } catch (backlinkError) {
-          // Error updating backlinks index - non-fatal
+        } catch (indexError) {
+          // Error updating what-links-here index - non-fatal
         }
 
-        // Sync to search engines for real-time search updates
+        // Sync to Typesense for real-time search updates
         // This ensures new pages are immediately searchable
         const contentString = typeof versionData.content === 'string'
           ? versionData.content
@@ -284,15 +284,6 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           createdAt: now,
         };
 
-        // Sync to Algolia (primary)
-        try {
-          const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
-          await syncPageToAlgolia(searchSyncData);
-        } catch (algoliaError) {
-          // Don't fail page creation if Algolia sync fails
-        }
-
-        // Sync to Typesense (secondary)
         try {
           const { syncPageToTypesense } = await import('../../lib/typesenseSync');
           await syncPageToTypesense(searchSyncData);

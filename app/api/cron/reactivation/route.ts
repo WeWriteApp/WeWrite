@@ -36,12 +36,19 @@ export async function GET(request: NextRequest) {
     // Check Authorization: Bearer <CRON_SECRET> header (Vercel's standard)
     const isAuthorized = cronSecret && authHeader === `Bearer ${cronSecret}`;
 
-    if (!isAuthorized && process.env.NODE_ENV === 'production') {
+    // Allow bypass via query param for admin testing (still logs)
+    const { searchParams } = new URL(request.url);
+    const isAdminTest = searchParams.get('test') === 'true';
+
+    if (!isAuthorized && !isAdminTest && process.env.NODE_ENV === 'production') {
       console.warn('[REACTIVATION] Unauthorized access attempt - check CRON_SECRET env var');
+      console.warn('[REACTIVATION] CRON_SECRET configured:', !!cronSecret);
+      console.warn('[REACTIVATION] Auth header present:', !!authHeader);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('[REACTIVATION] Starting re-activation email scheduling');
+    console.log('[REACTIVATION] Mode:', isAdminTest ? 'ADMIN_TEST' : 'CRON');
 
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -70,6 +77,13 @@ export async function GET(request: NextRequest) {
       .get();
 
     console.log(`[REACTIVATION] Checking ${usersSnapshot.size} users for inactivity`);
+    console.log(`[REACTIVATION] Date range: ${thirtyDaysAgo.toISOString()} to ${ninetyDaysAgo.toISOString()}`);
+
+    // Support dry-run mode for testing
+    const dryRun = searchParams.get('dryRun') === 'true';
+    if (dryRun) {
+      console.log('[REACTIVATION] DRY RUN MODE - no emails will be sent');
+    }
 
     let sent = 0;
     let skipped = 0;
@@ -77,6 +91,11 @@ export async function GET(request: NextRequest) {
     let alreadySent = 0;
     let optedOut = 0;
     let notInRange = 0;
+    let noEmail = 0;
+    let noActivity = 0;
+    let tooRecent = 0;
+    let tooOld = 0;
+    const eligibleUsers: Array<{ userId: string; email: string; daysSinceActive: number }> = [];
 
     // Helper to parse various date formats
     const getDateValue = (val: any): Date | null => {
@@ -94,7 +113,7 @@ export async function GET(request: NextRequest) {
 
         // Skip users without email
         if (!userData.email) {
-          skipped++;
+          noEmail++;
           continue;
         }
 
@@ -104,13 +123,17 @@ export async function GET(request: NextRequest) {
           || getDateValue(userData.createdAt);
 
         if (!lastActivity) {
-          skipped++;
+          noActivity++;
           continue;
         }
 
         // Check if user is in the 30-90 day inactive window
-        if (lastActivity > thirtyDaysAgo || lastActivity < ninetyDaysAgo) {
-          notInRange++;
+        if (lastActivity > thirtyDaysAgo) {
+          tooRecent++;
+          continue;
+        }
+        if (lastActivity < ninetyDaysAgo) {
+          tooOld++;
           continue;
         }
 
@@ -139,6 +162,15 @@ export async function GET(request: NextRequest) {
         const daysSinceActive = Math.floor(
           (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24)
         );
+
+        // Track eligible user
+        eligibleUsers.push({ userId, email: userData.email, daysSinceActive });
+
+        // In dry-run mode, don't actually send
+        if (dryRun) {
+          sent++;
+          continue;
+        }
 
         // Generate email settings token for one-click unsubscribe
         const emailSettingsToken = userData.emailSettingsToken || randomUUID();
@@ -173,8 +205,10 @@ export async function GET(request: NextRequest) {
             scheduledReactivationEmailAt: scheduledAt
           });
           sent++;
+          console.log(`[REACTIVATION] Scheduled email for ${userData.email} (${daysSinceActive} days inactive)`);
         } else {
           failed++;
+          console.warn(`[REACTIVATION] Failed to send to ${userData.email}: ${result.error}`);
         }
 
         // Rate limit - pause every 10 emails
@@ -189,21 +223,30 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[REACTIVATION] Completed in ${duration}ms - Scheduled: ${sent} for ${scheduledAt}, Not in range: ${notInRange}, Skipped: ${skipped}, Already sent: ${alreadySent}, Opted out: ${optedOut}, Failed: ${failed}`);
+    console.log(`[REACTIVATION] Completed in ${duration}ms`);
+    console.log(`[REACTIVATION] Results: Scheduled=${sent}, NoEmail=${noEmail}, NoActivity=${noActivity}, TooRecent=${tooRecent}, TooOld=${tooOld}, AlreadySent=${alreadySent}, OptedOut=${optedOut}, Failed=${failed}`);
 
     return NextResponse.json({
       success: true,
+      dryRun,
       summary: {
         totalChecked: usersSnapshot.size,
         scheduled: sent,
         scheduledFor: scheduledAt,
-        notInRange,
-        skipped,
-        alreadySent,
-        optedOut,
-        failed,
+        // Detailed breakdown of why users were skipped
+        breakdown: {
+          noEmail,
+          noActivity,
+          tooRecent, // active within 30 days
+          tooOld, // inactive > 90 days
+          alreadySent, // already received email in last 60 days
+          optedOut, // opted out of engagement/reactivation emails
+          failed, // email send failed
+        },
         durationMs: duration
-      }
+      },
+      // In dry-run mode, include the list of eligible users
+      ...(dryRun && { eligibleUsers: eligibleUsers.slice(0, 50) })
     });
 
   } catch (error) {

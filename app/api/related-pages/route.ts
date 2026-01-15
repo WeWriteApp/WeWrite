@@ -1,7 +1,7 @@
 /**
- * Related Pages API - Algolia-Powered
+ * Related Pages API - Typesense-Powered
  *
- * Enhanced related pages that uses Algolia search for better text similarity
+ * Enhanced related pages that uses Typesense search for better text similarity
  * and includes both "related by content" and "more by same author" sections.
  *
  * Query params:
@@ -15,7 +15,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSearchClient, getAlgoliaIndexName, ALGOLIA_INDICES, type AlgoliaPageRecord } from '../../lib/algolia';
+import {
+  searchPages as typesenseSearchPages,
+  isTypesenseConfigured,
+} from '../../lib/typesense';
 
 // Extended stop words list for better keyword extraction
 const STOP_WORDS = new Set([
@@ -132,6 +135,19 @@ function extractKeywords(text: string, maxKeywords: number = 15): string[] {
     .map(([word]) => word);
 }
 
+interface TypesensePageHit {
+  document: {
+    id: string;
+    title?: string;
+    authorId?: string;
+    authorUsername?: string;
+    isPublic?: boolean;
+    lastModified?: number;
+  };
+  text_match?: number;
+  highlight?: any;
+}
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
@@ -149,6 +165,16 @@ export async function GET(request: NextRequest) {
     if (!pageId) {
       return NextResponse.json({
         error: 'pageId parameter is required',
+        relatedByOthers: [],
+        relatedByAuthor: [],
+        timestamp: new Date().toISOString(),
+      }, { status: 200 });
+    }
+
+    // Check if Typesense is configured
+    if (!isTypesenseConfigured()) {
+      return NextResponse.json({
+        error: 'Search engine not configured',
         relatedByOthers: [],
         relatedByAuthor: [],
         timestamp: new Date().toISOString(),
@@ -179,73 +205,52 @@ export async function GET(request: NextRequest) {
       contentKeywords.join(' ')
     ].filter(Boolean).join(' ').trim();
 
-    const client = getSearchClient();
-    const indexName = getAlgoliaIndexName(ALGOLIA_INDICES.PAGES);
-
-    // Parallel requests for both categories
+    // Parallel requests for both categories using Typesense
     const [byOthersResponse, byAuthorResponse] = await Promise.all([
       // Search for related pages by OTHER authors
-      searchQuery ? client.searchSingleIndex<AlgoliaPageRecord>({
-        indexName,
-        searchParams: {
-          query: searchQuery,
-          hitsPerPage: limitByOthers + excludeIds.size + 5, // Extra to account for filtering
-          filters: authorId
-            ? `isPublic:true AND NOT authorId:${authorId}`
-            : 'isPublic:true',
-          attributesToRetrieve: [
-            'objectID',
-            'title',
-            'authorId',
-            'authorUsername',
-            'isPublic',
-            'lastModified'
-          ],
-        },
-      }) : Promise.resolve({ hits: [] }),
+      searchQuery ? typesenseSearchPages(searchQuery, {
+        perPage: limitByOthers + excludeIds.size + 5, // Extra to account for filtering
+        filterBy: authorId
+          ? `isPublic:=true && authorId:!=${authorId}`
+          : 'isPublic:=true',
+        includeFields: ['id', 'title', 'authorId', 'authorUsername', 'isPublic', 'lastModified'],
+      }) : Promise.resolve({ hits: [], found: 0 }),
 
       // Get more pages by the SAME author
-      authorId ? client.searchSingleIndex<AlgoliaPageRecord>({
-        indexName,
-        searchParams: {
-          query: '', // Empty query to get all
-          hitsPerPage: limitByAuthor + excludeIds.size + 2,
-          filters: `isPublic:true AND authorId:${authorId}`,
-          attributesToRetrieve: [
-            'objectID',
-            'title',
-            'authorId',
-            'authorUsername',
-            'isPublic',
-            'lastModified'
-          ],
-        },
-      }) : Promise.resolve({ hits: [] }),
+      authorId ? typesenseSearchPages('*', {
+        perPage: limitByAuthor + excludeIds.size + 2,
+        filterBy: `isPublic:=true && authorId:=${authorId}`,
+        includeFields: ['id', 'title', 'authorId', 'authorUsername', 'isPublic', 'lastModified'],
+      }) : Promise.resolve({ hits: [], found: 0 }),
     ]);
 
     // Filter out excluded pages and format results
     const relatedByOthers = byOthersResponse.hits
-      .filter((hit: AlgoliaPageRecord) => !excludeIds.has(hit.objectID))
+      .filter((hit: TypesensePageHit) => !excludeIds.has(hit.document.id))
       .slice(0, limitByOthers)
-      .map((hit: AlgoliaPageRecord) => ({
-        id: hit.objectID,
-        title: hit.title,
-        username: hit.authorUsername || 'Unknown',
-        authorId: hit.authorId,
-        lastModified: hit.lastModified,
-        isPublic: hit.isPublic,
+      .map((hit: TypesensePageHit) => ({
+        id: hit.document.id,
+        title: hit.document.title,
+        username: hit.document.authorUsername || 'Unknown',
+        authorId: hit.document.authorId,
+        lastModified: hit.document.lastModified
+          ? new Date(hit.document.lastModified * 1000).toISOString()
+          : undefined,
+        isPublic: hit.document.isPublic,
       }));
 
     const relatedByAuthor = byAuthorResponse.hits
-      .filter((hit: AlgoliaPageRecord) => !excludeIds.has(hit.objectID))
+      .filter((hit: TypesensePageHit) => !excludeIds.has(hit.document.id))
       .slice(0, limitByAuthor)
-      .map((hit: AlgoliaPageRecord) => ({
-        id: hit.objectID,
-        title: hit.title,
-        username: hit.authorUsername || authorUsername || 'Unknown',
-        authorId: hit.authorId,
-        lastModified: hit.lastModified,
-        isPublic: hit.isPublic,
+      .map((hit: TypesensePageHit) => ({
+        id: hit.document.id,
+        title: hit.document.title,
+        username: hit.document.authorUsername || authorUsername || 'Unknown',
+        authorId: hit.document.authorId,
+        lastModified: hit.document.lastModified
+          ? new Date(hit.document.lastModified * 1000).toISOString()
+          : undefined,
+        isPublic: hit.document.isPublic,
       }));
 
     const responseTime = Date.now() - startTime;

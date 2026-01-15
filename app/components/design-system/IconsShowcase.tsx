@@ -191,9 +191,14 @@ interface IconDefinition {
 }
 
 // Master icon list - sorted by usage count (most used first)
+// Icons with animated variants are defined with the animated property
 const ALL_ICONS: IconDefinition[] = [
   { name: 'Loader', usageCount: ICON_USAGE_COUNTS.Loader || 0 },
-  { name: 'Check', usageCount: ICON_USAGE_COUNTS.Check || 0 },
+  {
+    name: 'Check',
+    animated: ({ isActive }) => <AnimatedCheck className="h-5 w-5 text-green-500" isVisible={isActive} bounce />,
+    usageCount: ICON_USAGE_COUNTS.Check || 0
+  },
   { name: 'X', usageCount: ICON_USAGE_COUNTS.X || 0 },
   { name: 'LoaderGrid', usageCount: ICON_USAGE_COUNTS.LoaderGrid || 0 },
   { name: 'AlertTriangle', usageCount: ICON_USAGE_COUNTS.AlertTriangle || 0 },
@@ -202,7 +207,11 @@ const ALL_ICONS: IconDefinition[] = [
   { name: 'AlertCircle', usageCount: ICON_USAGE_COUNTS.AlertCircle || 0 },
   { name: 'CheckCircle', usageCount: ICON_USAGE_COUNTS.CheckCircle || 0 },
   { name: 'CreditCard', usageCount: ICON_USAGE_COUNTS.CreditCard || 0 },
-  { name: 'Plus', usageCount: ICON_USAGE_COUNTS.Plus || 0 },
+  {
+    name: 'Plus',
+    animated: ({ isActive }) => <AnimatedPlus className="h-5 w-5" isActive={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Plus || 0
+  },
   { name: 'TrendingUp', usageCount: ICON_USAGE_COUNTS.TrendingUp || 0 },
   { name: 'Users', usageCount: ICON_USAGE_COUNTS.Users || 0 },
   { name: 'Trash2', usageCount: ICON_USAGE_COUNTS.Trash2 || 0 },
@@ -215,17 +224,33 @@ const ALL_ICONS: IconDefinition[] = [
   { name: 'Copy', usageCount: ICON_USAGE_COUNTS.Copy || 0 },
   { name: 'Clock', usageCount: ICON_USAGE_COUNTS.Clock || 0 },
   { name: 'Calendar', usageCount: ICON_USAGE_COUNTS.Calendar || 0 },
-  { name: 'Bell', usageCount: ICON_USAGE_COUNTS.Bell || 0 },
+  {
+    name: 'Bell',
+    animated: ({ isActive }) => <AnimatedBell className="h-5 w-5" isRinging={isActive} hasNotification={false} />,
+    usageCount: ICON_USAGE_COUNTS.Bell || 0
+  },
   { name: 'Smartphone', usageCount: ICON_USAGE_COUNTS.Smartphone || 0 },
-  { name: 'Settings', usageCount: ICON_USAGE_COUNTS.Settings || 0 },
-  { name: 'Heart', usageCount: ICON_USAGE_COUNTS.Heart || 0 },
+  {
+    name: 'Settings',
+    animated: ({ isActive }) => <AnimatedSettings className="h-5 w-5" isActive={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Settings || 0
+  },
+  {
+    name: 'Heart',
+    animated: ({ isActive }) => <AnimatedHeart className="h-5 w-5 text-red-500" isLiked={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Heart || 0
+  },
   { name: 'FileText', usageCount: ICON_USAGE_COUNTS.FileText || 0 },
   { name: 'ChevronRight', usageCount: ICON_USAGE_COUNTS.ChevronRight || 0 },
   { name: 'Search', usageCount: ICON_USAGE_COUNTS.Search || 0 },
   { name: 'Minus', usageCount: ICON_USAGE_COUNTS.Minus || 0 },
   { name: 'XCircle', usageCount: ICON_USAGE_COUNTS.XCircle || 0 },
   { name: 'User', usageCount: ICON_USAGE_COUNTS.User || 0 },
-  { name: 'Star', usageCount: ICON_USAGE_COUNTS.Star || 0 },
+  {
+    name: 'Star',
+    animated: ({ isActive }) => <AnimatedStar className="h-5 w-5 text-yellow-500" isStarred={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Star || 0
+  },
   { name: 'TrendingDown', usageCount: ICON_USAGE_COUNTS.TrendingDown || 0 },
   { name: 'Shield', usageCount: ICON_USAGE_COUNTS.Shield || 0 },
   { name: 'Save', usageCount: ICON_USAGE_COUNTS.Save || 0 },
@@ -246,7 +271,11 @@ const ALL_ICONS: IconDefinition[] = [
   { name: 'Sparkles', usageCount: ICON_USAGE_COUNTS.Sparkles || 0 },
   { name: 'Image', usageCount: ICON_USAGE_COUNTS.Image || 0 },
   { name: 'BarChart3', usageCount: ICON_USAGE_COUNTS.BarChart3 || 0 },
-  { name: 'Home', usageCount: ICON_USAGE_COUNTS.Home || 0 },
+  {
+    name: 'Home',
+    animated: ({ isActive }) => <AnimatedHome className="h-5 w-5" isActive={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Home || 0
+  },
   { name: 'Download', usageCount: ICON_USAGE_COUNTS.Download || 0 },
   { name: 'UserPlus', usageCount: ICON_USAGE_COUNTS.UserPlus || 0 },
   { name: 'Share', usageCount: ICON_USAGE_COUNTS.Share || 0 },
@@ -266,8 +295,16 @@ const ALL_ICONS: IconDefinition[] = [
   { name: 'UserX', usageCount: ICON_USAGE_COUNTS.UserX || 0 },
   { name: 'Upload', usageCount: ICON_USAGE_COUNTS.Upload || 0 },
   { name: 'Type', usageCount: ICON_USAGE_COUNTS.Type || 0 },
-  { name: 'ThumbsUp', usageCount: ICON_USAGE_COUNTS.ThumbsUp || 0 },
-  { name: 'ThumbsDown', usageCount: ICON_USAGE_COUNTS.ThumbsDown || 0 },
+  {
+    name: 'ThumbsUp',
+    animated: ({ isActive }) => <AnimatedThumbs className="h-5 w-5 text-green-500" direction="up" isVoted={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.ThumbsUp || 0
+  },
+  {
+    name: 'ThumbsDown',
+    animated: ({ isActive }) => <AnimatedThumbs className="h-5 w-5 text-red-500" direction="down" isVoted={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.ThumbsDown || 0
+  },
   { name: 'Sun', usageCount: ICON_USAGE_COUNTS.Sun || 0 },
   { name: 'PenLine', usageCount: ICON_USAGE_COUNTS.PenLine || 0 },
   { name: 'Network', usageCount: ICON_USAGE_COUNTS.Network || 0 },
@@ -281,7 +318,11 @@ const ALL_ICONS: IconDefinition[] = [
   { name: 'Target', usageCount: ICON_USAGE_COUNTS.Target || 0 },
   { name: 'TabletSmartphone', usageCount: ICON_USAGE_COUNTS.TabletSmartphone || 0 },
   { name: 'Shuffle', usageCount: ICON_USAGE_COUNTS.Shuffle || 0 },
-  { name: 'Send', usageCount: ICON_USAGE_COUNTS.Send || 0 },
+  {
+    name: 'Send',
+    animated: ({ isActive }) => <AnimatedSend className="h-5 w-5" isSending={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Send || 0
+  },
   { name: 'Pin', usageCount: ICON_USAGE_COUNTS.Pin || 0 },
   { name: 'Percent', usageCount: ICON_USAGE_COUNTS.Percent || 0 },
   { name: 'Pencil', usageCount: ICON_USAGE_COUNTS.Pencil || 0 },
@@ -340,72 +381,17 @@ const ALL_ICONS: IconDefinition[] = [
   { name: 'Crosshair', usageCount: ICON_USAGE_COUNTS.Crosshair || 0 },
   { name: 'Code', usageCount: ICON_USAGE_COUNTS.Code || 0 },
   { name: 'CheckCheck', usageCount: ICON_USAGE_COUNTS.CheckCheck || 0 },
-  { name: 'Bookmark', usageCount: ICON_USAGE_COUNTS.Bookmark || 0 },
+  {
+    name: 'Bookmark',
+    animated: ({ isActive }) => <AnimatedBookmark className="h-5 w-5 text-blue-500" isSaved={isActive} />,
+    usageCount: ICON_USAGE_COUNTS.Bookmark || 0
+  },
   { name: 'BookText', usageCount: ICON_USAGE_COUNTS.BookText || 0 },
   { name: 'Award', usageCount: ICON_USAGE_COUNTS.Award || 0 },
   { name: 'AtSign', usageCount: ICON_USAGE_COUNTS.AtSign || 0 },
   { name: 'ArrowUpDown', usageCount: ICON_USAGE_COUNTS.ArrowUpDown || 0 },
   { name: 'ArrowUpCircle', usageCount: ICON_USAGE_COUNTS.ArrowUpCircle || 0 },
   { name: 'ArrowDownCircle', usageCount: ICON_USAGE_COUNTS.ArrowDownCircle || 0 },
-  {
-    name: 'Bell',
-    animated: ({ isActive }) => <AnimatedBell className="h-5 w-5" isRinging={isActive} hasNotification={false} />,
-    usageCount: ICON_USAGE_COUNTS.Bell || 0
-  },
-  {
-    name: 'Bookmark',
-    animated: ({ isActive }) => <AnimatedBookmark className="h-5 w-5 text-blue-500" isSaved={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Bookmark || 0
-  },
-  {
-    name: 'Check',
-    animated: ({ isActive }) => <AnimatedCheck className="h-5 w-5 text-green-500" isVisible={isActive} bounce />,
-    usageCount: ICON_USAGE_COUNTS.Check || 0
-  },
-  {
-    name: 'Heart',
-    animated: ({ isActive }) => <AnimatedHeart className="h-5 w-5 text-red-500" isLiked={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Heart || 0
-  },
-  {
-    name: 'Home',
-    animated: ({ isActive }) => <AnimatedHome className="h-5 w-5" isActive={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Home || 0
-  },
-  {
-    name: 'Plus',
-    animated: ({ isActive }) => <AnimatedPlus className="h-5 w-5" isActive={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Plus || 0
-  },
-  {
-    name: 'RefreshCw',
-    usageCount: ICON_USAGE_COUNTS.RefreshCw || 0
-  },
-  {
-    name: 'Send',
-    animated: ({ isActive }) => <AnimatedSend className="h-5 w-5" isSending={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Send || 0
-  },
-  {
-    name: 'Settings',
-    animated: ({ isActive }) => <AnimatedSettings className="h-5 w-5" isActive={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Settings || 0
-  },
-  {
-    name: 'Star',
-    animated: ({ isActive }) => <AnimatedStar className="h-5 w-5 text-yellow-500" isStarred={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.Star || 0
-  },
-  {
-    name: 'ThumbsDown',
-    animated: ({ isActive }) => <AnimatedThumbs className="h-5 w-5 text-red-500" direction="down" isVoted={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.ThumbsDown || 0
-  },
-  {
-    name: 'ThumbsUp',
-    animated: ({ isActive }) => <AnimatedThumbs className="h-5 w-5 text-green-500" direction="up" isVoted={isActive} />,
-    usageCount: ICON_USAGE_COUNTS.ThumbsUp || 0
-  },
 ];
 
 type ViewMode = 'list' | 'grid';

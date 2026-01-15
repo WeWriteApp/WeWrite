@@ -407,7 +407,7 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       // Cache invalidation failed - non-fatal
     }
 
-    // Sync to search engines for real-time search updates
+    // Sync to Typesense for real-time search updates
     try {
       // Get the page data for search sync
       const pageRefForSync = doc(db, getCollectionName("pages"), pageId);
@@ -427,15 +427,6 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
           createdAt: pageSyncData.createdAt,
         };
 
-        // Sync to Algolia (primary)
-        try {
-          const { syncPageToAlgolia } = await import('../../lib/algoliaSync');
-          await syncPageToAlgolia(searchSyncData);
-        } catch (algoliaError) {
-          // Don't fail the save if Algolia sync fails
-        }
-
-        // Sync to Typesense (secondary)
         try {
           const { syncPageToTypesense } = await import('../../lib/typesenseSync');
           await syncPageToTypesense(searchSyncData);

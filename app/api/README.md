@@ -103,8 +103,7 @@ import { getUserFromSession } from '../auth-helper';
 | Endpoint | Purpose |
 |----------|---------|
 | `/search` | Main search |
-| `/search-algolia` | Algolia search |
-| `/search-unified` | Unified search |
+| `/search-unified` | Unified search (Typesense + Firestore fallback) |
 | `/search-users` | User search |
 | `/search-keys` | Search API keys |
 

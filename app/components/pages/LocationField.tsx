@@ -146,6 +146,8 @@ interface LocationFieldProps {
   pageTitle?: string;
   /** IDs of pages linked from this page's content */
   linkedPageIds?: string[];
+  /** When true, shows a simplified compact view for empty state */
+  compact?: boolean;
 }
 
 /**
@@ -162,7 +164,8 @@ export default function LocationField({
   className = "",
   pageId,
   pageTitle,
-  linkedPageIds = []
+  linkedPageIds = [],
+  compact = false
 }: LocationFieldProps) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -533,6 +536,99 @@ export default function LocationField({
     </div>
   );
 
+  // Compact mode: simplified display for empty state (no location AND no linked pages with locations)
+  // Note: We check linkedPageMarkers which is computed from linkedPagesWithLocations after async loading
+  const isEmpty = !normalizedLocation && linkedPageMarkers.length === 0 && !isLoadingLinkedPages;
+  if (compact && isEmpty && canEdit) {
+    return (
+      <>
+        <div
+          className={`wewrite-card cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors ${className}`}
+          onClick={handleLocationClick}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Icon name="MapPin" size={18} className="text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Set location</span>
+          </div>
+        </div>
+
+        {/* Detail View - Drawer on mobile, Modal on desktop */}
+        {isMobile ? (
+          <Drawer open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+            <DrawerContent className="max-h-[90vh]">
+              <DrawerHeader>
+                <DrawerTitle>{pageTitle || 'Location'}</DrawerTitle>
+              </DrawerHeader>
+              {detailViewContent}
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <LocationModal
+            isOpen={isDetailViewOpen}
+            onClose={handleClose}
+            title={pageTitle || 'Location'}
+          >
+            {detailViewContent}
+          </LocationModal>
+        )}
+      </>
+    );
+  }
+
+  // When there's no map content, use simple StatsCard-style layout
+  if (!hasMapContent && !isLoadingLinkedPages) {
+    return (
+      <>
+        <div
+          className={`wewrite-card ${className} ${isCardClickable ? 'cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors' : ''}`}
+          onClick={isCardClickable ? handleLocationClick : undefined}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon name="MapPin" size={20} className="text-muted-foreground" />
+              <span className="text-sm font-medium">Location</span>
+            </div>
+            <div className="text-muted-foreground text-sm">
+              {canEdit ? 'Set location' : 'No location set'}
+            </div>
+          </div>
+        </div>
+
+        {/* Detail View modals */}
+        {isMobile ? (
+          <Drawer open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+            <DrawerContent className="max-h-[90vh]">
+              <DrawerHeader>
+                <DrawerTitle>{pageTitle || 'Location'}</DrawerTitle>
+              </DrawerHeader>
+              {detailViewContent}
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <LocationModal
+            isOpen={isDetailViewOpen}
+            onClose={handleClose}
+            title={pageTitle || 'Location'}
+          >
+            {detailViewContent}
+          </LocationModal>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={showDeleteConfirmation}
+          onClose={() => setShowDeleteConfirmation(false)}
+          onConfirm={handleDeleteLocation}
+          title="Delete Location"
+          message="Are you sure you want to remove the location from this page? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="destructive"
+        />
+      </>
+    );
+  }
+
   return (
     <div
       className={`wewrite-card wewrite-card-no-padding w-full overflow-hidden ${className} ${isCardClickable ? 'cursor-pointer hover:bg-muted/30 transition-colors' : ''}`}
@@ -548,13 +644,6 @@ export default function LocationField({
         <div className="flex items-center gap-2">
           {isLoadingLinkedPages && (
             <Icon name="Loader" size={16} className="text-muted-foreground" />
-          )}
-          {!isLoadingLinkedPages && !normalizedLocation && linkedPageMarkers.length === 0 && (
-            <div
-              className={`text-muted-foreground text-sm font-medium px-2 py-1 rounded-md border border-dashed border-theme-medium`}
-            >
-              {canEdit ? 'Tap to set location' : 'No location set'}
-            </div>
           )}
           {normalizedLocation && canEdit && (
             <span className="text-muted-foreground text-sm">Tap to edit</span>

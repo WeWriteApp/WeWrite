@@ -1,9 +1,12 @@
 /**
- * Efficient Backlinks System
- * 
- * This system precomputes and indexes backlinks for fast retrieval.
+ * What Links Here System
+ *
+ * This system precomputes and indexes incoming page links for fast retrieval.
  * Instead of scanning through all pages on every request, we maintain
  * an index that gets updated when pages are saved.
+ *
+ * Note: The Firestore collection is still named "backlinks" for backward compatibility.
+ * The code terminology uses "whatLinksHere" to match the UI naming.
  */
 
 import {
@@ -25,9 +28,12 @@ import { extractLinksFromNodes } from './links';
 import { getCollectionName } from '../../utils/environmentConfig';
 
 // NOTE: This file is imported by client-side code, so we cannot use firebase-admin here.
-// All operations use the client SDK. Server-side backlink operations should use API routes.
+// All operations use the client SDK. Server-side operations should use API routes.
 
-export interface BacklinkEntry {
+/**
+ * Entry in the what-links-here index (stored in 'backlinks' collection)
+ */
+export interface WhatLinksHereEntry {
   id: string;
   sourcePageId: string;
   sourcePageTitle: string;
@@ -40,7 +46,10 @@ export interface BacklinkEntry {
   isPublic: boolean;
 }
 
-export interface BacklinkSummary {
+/**
+ * Summary of a page that links to the target page
+ */
+export interface WhatLinksHereSummary {
   id: string;
   title: string;
   username: string;
@@ -49,30 +58,34 @@ export interface BacklinkSummary {
   linkText?: string;
 }
 
+// Backward-compatible type aliases
+export type BacklinkEntry = WhatLinksHereEntry;
+export type BacklinkSummary = WhatLinksHereSummary;
+
 /**
- * Get all backlinks for a page (fast index-based lookup)
+ * Get all pages that link to a specific page (fast index-based lookup)
  */
-export async function getBacklinks(
+export async function getWhatLinksHere(
   targetPageId: string,
   limit?: number
-): Promise<BacklinkSummary[]> {
+): Promise<WhatLinksHereSummary[]> {
   try {
-    // Query the backlinks index
-    let backlinksQuery = query(
+    // Query the backlinks collection (name kept for backward compatibility)
+    let whatLinksHereQuery = query(
       collection(db, getCollectionName('backlinks')),
       where('targetPageId', '==', targetPageId),
       where('isPublic', '==', true),
       orderBy('lastModified', 'desc')
     );
-    
+
     if (limit) {
-      backlinksQuery = query(backlinksQuery, firestoreLimit(limit));
+      whatLinksHereQuery = query(whatLinksHereQuery, firestoreLimit(limit));
     }
-    
-    const snapshot = await getDocs(backlinksQuery);
-    
-    const backlinks: BacklinkSummary[] = snapshot.docs.map(doc => {
-      const data = doc.data() as BacklinkEntry;
+
+    const snapshot = await getDocs(whatLinksHereQuery);
+
+    const results: WhatLinksHereSummary[] = snapshot.docs.map(doc => {
+      const data = doc.data() as WhatLinksHereEntry;
       return {
         id: data.sourcePageId,
         title: data.sourcePageTitle,
@@ -83,9 +96,9 @@ export async function getBacklinks(
       };
     });
 
-    return backlinks;
-    
-  } catch (error) {
+    return results;
+
+  } catch (error: any) {
     // If the error is due to index building, provide a fallback
     if (error.code === 'failed-precondition' && error.message.includes('index')) {
       try {
@@ -93,7 +106,7 @@ export async function getBacklinks(
         const { findBacklinks } = await import('./links');
         const fallbackResults = await findBacklinks(targetPageId, limit || 20);
 
-        // Convert to BacklinkSummary format
+        // Convert to WhatLinksHereSummary format
         return fallbackResults.map(result => ({
           id: result.id,
           title: result.title,
@@ -111,10 +124,13 @@ export async function getBacklinks(
   }
 }
 
+// Backward-compatible alias
+export const getBacklinks = getWhatLinksHere;
+
 /**
- * Update backlinks index when a page is saved
+ * Update the what-links-here index when a page is saved
  */
-export async function updateBacklinksIndex(
+export async function updateWhatLinksHereIndex(
   pageId: string,
   pageTitle: string,
   username: string,
@@ -123,8 +139,8 @@ export async function updateBacklinksIndex(
   lastModified: any
 ): Promise<void> {
   try {
-    // First, remove all existing backlinks from this page
-    await removeBacklinksFromPage(pageId);
+    // First, remove all existing entries from this page
+    await removePageLinksFromIndex(pageId);
 
     // Extract links from the page content
     const links = extractLinksFromNodes(content);
@@ -137,13 +153,13 @@ export async function updateBacklinksIndex(
 
     // Create batch for efficient writes using client SDK
     const batch = writeBatch(db);
-    
-    // Add new backlink entries and create notifications
+
+    // Add new entries
     for (const link of pageLinks) {
-      const backlinkId = `${pageId}_to_${link.pageId}`;
-      const backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
-      const backlinkEntry = {
-        id: backlinkId,
+      const entryId = `${pageId}_to_${link.pageId}`;
+      const entryRef = doc(db, getCollectionName("backlinks"), entryId);
+      const entry = {
+        id: entryId,
         sourcePageId: pageId,
         sourcePageTitle: pageTitle,
         sourceUsername: username,
@@ -155,7 +171,7 @@ export async function updateBacklinksIndex(
         isPublic: isPublic
       };
 
-      batch.set(backlinkRef, backlinkEntry);
+      batch.set(entryRef, entry);
     }
 
     // Commit the batch
@@ -168,6 +184,9 @@ export async function updateBacklinksIndex(
     throw error;
   }
 }
+
+// Backward-compatible alias
+export const updateBacklinksIndex = updateWhatLinksHereIndex;
 
 /**
  * Create notifications for page mentions (when pages link to other pages)
@@ -279,21 +298,21 @@ async function createLinkNotifications(
       }
     }
   } catch (error) {
-    // Don't throw - notifications are not critical for backlinks functionality
+    // Don't throw - notifications are not critical for what-links-here functionality
   }
 }
 
 /**
- * Remove all backlinks from a specific source page
+ * Remove all outgoing links from a specific page from the index
  */
-export async function removeBacklinksFromPage(sourcePageId: string): Promise<void> {
+export async function removePageLinksFromIndex(sourcePageId: string): Promise<void> {
   try {
     // Use client SDK
-    const backlinksQuery = query(
+    const linksQuery = query(
       collection(db, getCollectionName('backlinks')),
       where('sourcePageId', '==', sourcePageId)
     );
-    const snapshot = await getDocs(backlinksQuery);
+    const snapshot = await getDocs(linksQuery);
 
     if (snapshot.empty) {
       return;
@@ -312,25 +331,28 @@ export async function removeBacklinksFromPage(sourcePageId: string): Promise<voi
   }
 }
 
+// Backward-compatible alias
+export const removeBacklinksFromPage = removePageLinksFromIndex;
+
 /**
- * Remove a specific page from the backlinks index (when page is deleted)
+ * Remove a page completely from the what-links-here index (when page is deleted)
  */
-export async function removePageFromBacklinksIndex(pageId: string): Promise<void> {
+export async function removePageFromWhatLinksHereIndex(pageId: string): Promise<void> {
   try {
-    // Remove backlinks FROM this page
-    await removeBacklinksFromPage(pageId);
-    
-    // Remove backlinks TO this page
-    const backlinksToPageQuery = query(
+    // Remove outgoing links FROM this page
+    await removePageLinksFromIndex(pageId);
+
+    // Remove incoming links TO this page
+    const incomingLinksQuery = query(
       collection(db, getCollectionName('backlinks')),
       where('targetPageId', '==', pageId)
     );
-    
-    const snapshot = await getDocs(backlinksToPageQuery);
-    
+
+    const snapshot = await getDocs(incomingLinksQuery);
+
     if (!snapshot.empty) {
       const batch = writeBatch(db);
-      
+
       snapshot.docs.forEach(doc => {
         batch.delete(doc.ref);
       });
@@ -343,18 +365,21 @@ export async function removePageFromBacklinksIndex(pageId: string): Promise<void
   }
 }
 
+// Backward-compatible alias
+export const removePageFromBacklinksIndex = removePageFromWhatLinksHereIndex;
+
 /**
- * Get backlinks count for a page (fast)
+ * Get count of pages that link to a specific page (fast)
  */
-export async function getBacklinksCount(targetPageId: string): Promise<number> {
+export async function getWhatLinksHereCount(targetPageId: string): Promise<number> {
   try {
-    const backlinksQuery = query(
+    const linksQuery = query(
       collection(db, getCollectionName('backlinks')),
       where('targetPageId', '==', targetPageId),
       where('isPublic', '==', true)
     );
-    
-    const snapshot = await getDocs(backlinksQuery);
+
+    const snapshot = await getDocs(linksQuery);
     return snapshot.size;
 
   } catch (error) {
@@ -362,3 +387,5 @@ export async function getBacklinksCount(targetPageId: string): Promise<number> {
   }
 }
 
+// Backward-compatible alias
+export const getBacklinksCount = getWhatLinksHereCount;

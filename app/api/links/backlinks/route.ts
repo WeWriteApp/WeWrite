@@ -4,16 +4,21 @@ import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
- * Backlinks API Route
- * 
- * GET: Get backlinks for a page
- * POST: Update backlinks index for a page
- * 
- * This route replaces direct Firebase calls for backlinks operations
+ * What Links Here API Route
+ *
+ * Note: Route path kept as /api/links/backlinks for backward compatibility,
+ * but the feature is called "What Links Here" in the UI.
+ *
+ * GET: Get pages that link to a given page (what links here)
+ * POST: Update the what-links-here index for a page
+ *
+ * This route replaces direct Firebase calls for what-links-here operations
  * and ensures environment-aware collection naming.
+ *
+ * The Firestore collection remains 'backlinks' to preserve existing data.
  */
 
-interface BacklinkSummary {
+interface WhatLinksHereSummary {
   id: string;
   title: string;
   username: string;
@@ -23,6 +28,7 @@ interface BacklinkSummary {
 }
 
 // GET /api/links/backlinks?pageId=xxx&limit=20
+// Returns pages that link to the specified page (what links here)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -41,34 +47,34 @@ export async function GET(request: NextRequest) {
     const admin = initAdmin();
     const db = admin.firestore();
 
-    console.log(`🔍 Getting backlinks for page ${pageId} (limit: ${limit})`);
+    console.log(`🔍 Getting what-links-here for page ${pageId} (limit: ${limit})`);
 
-    // Query the backlinks index
-    let backlinksQuery = db.collection(getCollectionName('backlinks'))
+    // Query the what-links-here index (collection named 'backlinks' for historical reasons)
+    let whatLinksHereQuery = db.collection(getCollectionName('backlinks'))
       .where('targetPageId', '==', pageId)
       .where('isPublic', '==', true)
       .orderBy('lastModified', 'desc');
 
     if (limit) {
-      backlinksQuery = backlinksQuery.limit(limit);
+      whatLinksHereQuery = whatLinksHereQuery.limit(limit);
     }
 
-    const backlinksSnapshot = await backlinksQuery.get();
+    const whatLinksHereSnapshot = await whatLinksHereQuery.get();
 
-    if (backlinksSnapshot.empty) {
-      console.log(`📭 No backlinks found for page ${pageId}`);
+    if (whatLinksHereSnapshot.empty) {
+      console.log(`📭 No linking pages found for page ${pageId}`);
       return createApiResponse({
-        backlinks: [],
+        backlinks: [], // Keep response field name for API compatibility
         count: 0,
         pageId
       });
     }
 
-    const backlinks: BacklinkSummary[] = backlinksSnapshot.docs.map(doc => {
+    const linkedPages: WhatLinksHereSummary[] = whatLinksHereSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: data.sourcePageId,
-        title: data.sourceTitle || 'Untitled',
+        title: data.sourcePageTitle || data.sourceTitle || 'Untitled',
         username: data.sourceUsername || 'Anonymous',
         lastModified: data.lastModified,
         isPublic: data.isPublic,
@@ -76,21 +82,22 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log(`✅ Found ${backlinks.length} backlinks for page ${pageId}`);
+    console.log(`✅ Found ${linkedPages.length} pages linking to page ${pageId}`);
 
     return createApiResponse({
-      backlinks,
-      count: backlinks.length,
+      backlinks: linkedPages, // Keep 'backlinks' field name for API compatibility
+      count: linkedPages.length,
       pageId
     });
 
   } catch (error) {
-    console.error('Error fetching backlinks:', error);
-    return createErrorResponse('Failed to fetch backlinks', 'INTERNAL_ERROR');
+    console.error('Error fetching what-links-here:', error);
+    return createErrorResponse('Failed to fetch linking pages', 'INTERNAL_ERROR');
   }
 }
 
 // POST /api/links/backlinks
+// Updates the what-links-here index for a page
 export async function POST(request: NextRequest) {
   try {
     const currentUserId = await getUserIdFromRequest(request);
@@ -99,13 +106,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { 
-      pageId, 
-      title, 
-      username, 
-      contentNodes, 
-      isPublic, 
-      lastModified 
+    const {
+      pageId,
+      title,
+      username,
+      contentNodes,
+      isPublic,
+      lastModified
     } = body;
 
     if (!pageId || !title || !username || !contentNodes) {
@@ -115,31 +122,31 @@ export async function POST(request: NextRequest) {
     const admin = initAdmin();
     const db = admin.firestore();
 
-    console.log(`🔄 Updating backlinks index for page ${pageId}`);
+    console.log(`🔄 Updating what-links-here index for page ${pageId}`);
 
     // Extract links from content nodes
     const extractedLinks = extractLinksFromContent(contentNodes);
-    
-    // Remove old backlinks for this page
-    const oldBacklinksQuery = db.collection(getCollectionName('backlinks'))
+
+    // Remove old what-links-here entries for this page (collection named 'backlinks' for historical reasons)
+    const oldEntriesQuery = db.collection(getCollectionName('backlinks'))
       .where('sourcePageId', '==', pageId);
-    
-    const oldBacklinksSnapshot = await oldBacklinksQuery.get();
+
+    const oldEntriesSnapshot = await oldEntriesQuery.get();
     const batch = db.batch();
 
-    // Delete old backlinks
-    oldBacklinksSnapshot.docs.forEach(doc => {
+    // Delete old entries
+    oldEntriesSnapshot.docs.forEach(doc => {
       batch.delete(doc.ref);
     });
 
-    // Add new backlinks
+    // Add new what-links-here entries
     for (const link of extractedLinks) {
-      const backlinkId = `${pageId}_${link.targetPageId}`;
-      const backlinkRef = db.collection(getCollectionName('backlinks')).doc(backlinkId);
-      
-      batch.set(backlinkRef, {
+      const entryId = `${pageId}_${link.targetPageId}`;
+      const entryRef = db.collection(getCollectionName('backlinks')).doc(entryId);
+
+      batch.set(entryRef, {
         sourcePageId: pageId,
-        sourceTitle: title,
+        sourcePageTitle: title,
         sourceUsername: username,
         targetPageId: link.targetPageId,
         linkText: link.text || '',
@@ -151,18 +158,18 @@ export async function POST(request: NextRequest) {
 
     await batch.commit();
 
-    console.log(`✅ Updated backlinks index for page ${pageId}: ${extractedLinks.length} links`);
+    console.log(`✅ Updated what-links-here index for page ${pageId}: ${extractedLinks.length} links`);
 
     return createApiResponse({
       success: true,
-      message: 'Backlinks index updated successfully',
+      message: 'What-links-here index updated successfully',
       pageId,
       linksCount: extractedLinks.length
     });
 
   } catch (error) {
-    console.error('Error updating backlinks index:', error);
-    return createErrorResponse('Failed to update backlinks index', 'INTERNAL_ERROR');
+    console.error('Error updating what-links-here index:', error);
+    return createErrorResponse('Failed to update what-links-here index', 'INTERNAL_ERROR');
   }
 }
 

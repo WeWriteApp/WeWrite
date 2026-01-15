@@ -131,7 +131,7 @@ class GraphDataCache {
   }
 
   /**
-   * Get related pages with caching (using Algolia-powered API)
+   * Get related pages with caching (using Typesense-powered API)
    */
   async getRelatedPages(pageId: string, pageTitle?: string, pageContent?: string, excludeUsername?: string): Promise<RelatedPagesData> {
     const cacheKey = `related:${pageId}:${pageTitle?.substring(0, 20) || ''}:${excludeUsername || ''}`;

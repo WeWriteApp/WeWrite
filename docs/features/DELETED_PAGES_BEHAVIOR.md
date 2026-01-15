@@ -49,8 +49,8 @@ Deleted pages are hidden from all dynamically loaded areas:
    - Deleted pages do not appear in trending pages
    - Deleted pages do not appear in random page selections
 
-6. **Backlinks**
-   - Deleted pages do not appear in backlink lists
+6. **What Links Here**
+   - Deleted pages do not appear in "What links here" lists
 
 ## Technical Implementation
 
@@ -78,8 +78,8 @@ When a page is restored via `/api/pages/restore`:
    - Re-indexes page to Algolia
    - Re-indexes page to Typesense
 
-3. **Backlinks Rebuild**
-   - Rebuilds backlink index for restored page
+3. **What Links Here Rebuild**
+   - Rebuilds "what links here" index for restored page
 
 ### Database Queries
 

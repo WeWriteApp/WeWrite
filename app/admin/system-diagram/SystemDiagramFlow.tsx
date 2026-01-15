@@ -56,7 +56,7 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { name: 'firebaseRest()', description: 'REST-based Firebase operations' },
     ],
     upstream: [],
-    downstream: ['firebase', 'stripe', 'algolia', 'resend'],
+    downstream: ['firebase', 'stripe', 'typesense', 'resend'],
     monitoring: [
       { tool: 'Vercel Analytics', description: 'Real-time performance metrics' },
       { tool: 'LogRocket', description: 'Session replay and error tracking' },
@@ -133,49 +133,22 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { label: 'Firebase Console', path: 'https://console.firebase.google.com' },
     ],
   },
-  'algolia': {
-    title: 'Algolia',
-    description: 'Primary full-text search engine',
-    details: [
-      'Instant search results with typo tolerance',
-      'Faceted filtering by author, date, visibility',
-      'Real-time index updates on page changes',
-      'Primary search engine in fallback chain (Algolia → Typesense → Firestore)',
-    ],
-    files: [
-      { path: 'app/lib/algolia.ts', description: 'Algolia client initialization' },
-      { path: 'app/lib/algoliaSync.ts', description: 'Algolia index sync utilities' },
-      { path: 'app/components/search/FilteredSearchResults.tsx', description: 'Search results UI' },
-    ],
-    functions: [
-      { name: 'searchPages()', description: 'Full-text page search' },
-      { name: 'indexPage()', description: 'Add/update page in index' },
-      { name: 'deletePage()', description: 'Remove page from index' },
-    ],
-    upstream: ['infrastructure-group'],
-    downstream: ['content-services', 'typesense'],
-    monitoring: [
-      { tool: 'Algolia Dashboard', description: 'Search analytics and performance' },
-      { tool: 'Index Monitoring', description: 'Index size and record count' },
-    ],
-    links: [
-      { label: 'Algolia Dashboard', path: 'https://www.algolia.com/dashboard' },
-    ],
-  },
   'typesense': {
     title: 'Typesense',
-    description: 'Secondary full-text search engine',
+    description: 'Primary full-text search engine',
     details: [
       'Open-source search engine with typo tolerance',
-      'Secondary search in fallback chain (Algolia → Typesense → Firestore)',
+      'Primary search engine with Firestore fallback',
       'Environment-aware collections (DEV_ prefix in development)',
       'Fast search (<50ms typical)',
+      'Pages, users, and backlinks indexing',
     ],
     files: [
       { path: 'app/lib/typesense.ts', description: 'Typesense client configuration' },
       { path: 'app/lib/typesenseSync.ts', description: 'Typesense sync service' },
       { path: 'app/api/typesense/sync/route.ts', description: 'Batch sync API' },
       { path: 'app/api/typesense/sync-page/route.ts', description: 'Single page sync API' },
+      { path: 'app/components/search/FilteredSearchResults.tsx', description: 'Search results UI' },
     ],
     functions: [
       { name: 'searchPages()', description: 'Full-text page search' },
@@ -183,7 +156,7 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { name: 'syncPageToTypesense()', description: 'Sync page to Typesense' },
       { name: 'ensureCollectionsExist()', description: 'Create collections if missing' },
     ],
-    upstream: ['infrastructure-group', 'algolia'],
+    upstream: ['infrastructure-group'],
     downstream: ['content-services'],
     monitoring: [
       { tool: 'Typesense Dashboard', description: 'Cluster health and performance' },
@@ -285,7 +258,7 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { name: 'getVersionHistory()', description: 'Fetch page versions' },
       { name: 'suggestLinks()', description: 'Generate link suggestions' },
     ],
-    upstream: ['firebase', 'algolia'],
+    upstream: ['firebase', 'typesense'],
     downstream: ['api-routes'],
     monitoring: [
       { tool: '/admin', description: 'Page count and activity metrics' },
@@ -736,25 +709,13 @@ const createInitialNodes = (onNodeClick: (nodeId: string) => void): Node[] => [
     },
   },
   {
-    id: 'algolia',
-    type: 'systemNode',
-    position: { x: 350, y: 180 },
-    data: {
-      label: 'Algolia',
-      icon: 'Search',
-      description: 'Primary search',
-      color: LAYER_COLORS.external,
-      onNodeClick,
-    },
-  },
-  {
     id: 'typesense',
     type: 'systemNode',
-    position: { x: 500, y: 180 },
+    position: { x: 400, y: 180 },
     data: {
       label: 'Typesense',
       icon: 'Search',
-      description: 'Secondary search',
+      description: 'Primary search',
       color: LAYER_COLORS.external,
       onNodeClick,
     },
@@ -950,8 +911,6 @@ const initialEdges: Edge[] = [
   { id: 'e-stripe-financial', source: 'stripe', target: 'financial-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'payments', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-firebase-content', source: 'firebase', target: 'content-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'Firestore', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-firebase-user', source: 'firebase', target: 'user-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'auth', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
-  { id: 'e-algolia-typesense', source: 'algolia', target: 'typesense', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external, strokeDasharray: '5,5' }, label: 'fallback', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
-  { id: 'e-algolia-content', source: 'algolia', target: 'content-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'search', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-typesense-content', source: 'typesense', target: 'content-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'search', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
   { id: 'e-resend-user', source: 'resend', target: 'user-services', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: LAYER_COLORS.external }, label: 'emails', labelStyle: edgeLabelStyle, labelBgStyle: edgeLabelBgStyle },
 

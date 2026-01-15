@@ -17,6 +17,7 @@ import { ColorSystemSection } from './ColorSystemSection';
 import { ContentPageSection } from './ContentPageSection';
 import { ColorTokenReferenceSection } from './ColorTokenReferenceSection';
 import { DrawersModalsSection } from './DrawersModalsSection';
+import { PageStatsSection } from './PageStatsSection';
 import { EmailSection } from './EmailSection';
 import { MenuDropdownSection } from './MenuDropdownSection';
 import { MenuSidebarSection } from './MenuSidebarSection';
@@ -73,6 +74,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'inline-error', label: 'Inline Error Cards', component: InlineErrorSection },
   { id: 'input', label: 'Input', component: InputSection },
   { id: 'loading-states', label: 'Loading States', component: LoadingStatesSection },
+  { id: 'page-stats', label: 'Page Stats', component: PageStatsSection },
   { id: 'pie-chart', label: 'Pie Chart', component: PieChartSection },
   { id: 'pill-link', label: 'PillLink', component: PillLinkSection },
   { id: 'rolling-counter', label: 'Rolling Counter', component: RollingCounterSection },

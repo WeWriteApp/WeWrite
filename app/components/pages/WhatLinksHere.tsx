@@ -2,14 +2,22 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageLinksCard, PageLinkItem } from '../ui/PageLinksCard';
-import { BacklinkSummary } from '../../firebase/database/backlinks';
+import { WhatLinksHereSummary } from '../../firebase/database/whatLinksHere';
 import { PillLink } from '../utils/PillLink';
 import Link from 'next/link';
+import { Button } from '../ui/button';
+import { Icon } from '@/components/ui/Icon';
+import AddToPageButton from '../utils/AddToPageButton';
+import type { Page } from '../../types/database';
 
 interface WhatLinksHereProps {
   pageId: string;
   pageTitle: string;
   className?: string;
+  /** Whether the current user is the page owner */
+  isOwner?: boolean;
+  /** Page data (needed for AddToPageButton when showing empty state CTA) */
+  page?: Page | null;
 }
 
 /**
@@ -22,14 +30,15 @@ function isValidUsername(username: string | null | undefined): boolean {
   return !invalidUsernames.includes(username.toLowerCase().trim());
 }
 
-export default function WhatLinksHere({ pageId, pageTitle, className = "" }: WhatLinksHereProps) {
-  const [backlinks, setBacklinks] = useState<BacklinkSummary[]>([]);
+export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwner = false, page }: WhatLinksHereProps) {
+  const [linkedPages, setLinkedPages] = useState<WhatLinksHereSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isAddToPageOpen, setIsAddToPageOpen] = useState(false);
 
-  // Fetch backlinks function - extracted for reuse
-  const fetchBacklinks = useCallback(async () => {
+  // Fetch pages that link to this page
+  const fetchLinkedPages = useCallback(async () => {
     if (!pageId) {
       setLoading(false);
       return;
@@ -47,14 +56,14 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
       const data = await response.json();
 
       if (data.success && data.data?.backlinks) {
-        setBacklinks(data.data.backlinks);
+        setLinkedPages(data.data.backlinks);
       } else {
-        setBacklinks([]);
+        setLinkedPages([]);
       }
       setError(null);
     } catch (err) {
-      console.warn('Failed to fetch backlinks:', err);
-      setBacklinks([]);
+      console.warn('Failed to fetch what links here:', err);
+      setLinkedPages([]);
       setError(null); // Don't show error UI, just empty state
     } finally {
       setLoading(false);
@@ -63,13 +72,13 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
 
   // Initial fetch on mount and when pageId changes
   useEffect(() => {
-    fetchBacklinks();
-  }, [fetchBacklinks]);
+    fetchLinkedPages();
+  }, [fetchLinkedPages]);
 
-  // Listen for page save events globally - any page save could create a new backlink
+  // Listen for page save events globally - any page save could create a new link to this page
   useEffect(() => {
     const handlePageSaved = () => {
-      // Debounce: wait a bit for the backlink index to be updated server-side
+      // Debounce: wait a bit for the index to be updated server-side
       setTimeout(() => {
         setRefreshCounter(prev => prev + 1);
       }, 500);
@@ -91,17 +100,17 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
     };
   }, []);
 
-  // Convert backlinks to PageLinkItem format
-  const items: PageLinkItem[] = backlinks.map(backlink => ({
-    id: backlink.id,
-    title: backlink.title,
-    username: backlink.username,
-    href: `/${backlink.id}`
+  // Convert linked pages to PageLinkItem format
+  const items: PageLinkItem[] = linkedPages.map(linkedPage => ({
+    id: linkedPage.id,
+    title: linkedPage.title,
+    username: linkedPage.username,
+    href: `/${linkedPage.id}`
   }));
 
   // Custom renderer to show username alongside the pill
-  const renderBacklinkItem = (item: PageLinkItem) => (
-    <div key={item.id} className="flex items-center gap-1">
+  const renderLinkedPageItem = (item: PageLinkItem) => (
+    <div key={item.id} className="flex items-center gap-1 flex-wrap">
       <PillLink
         href={item.href || `/${item.id}`}
         pageId={item.id}
@@ -110,27 +119,75 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "" }: Wha
         {item.title || 'Untitled'}
       </PillLink>
       {isValidUsername(item.username) && (
-        <Link
-          href={`/users/${item.username}`}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
-        >
-          {item.username}
-        </Link>
+        <span className="text-xs text-muted-foreground shrink-0">
+          by{' '}
+          <Link
+            href={`/users/${item.username}`}
+            className="hover:text-foreground transition-colors hover:underline"
+          >
+            {item.username}
+          </Link>
+        </span>
       )}
     </div>
   );
+
+  // For page owners, show empty state with CTA instead of hiding
+  const showEmptyStateForOwner = isOwner && !loading && !error && items.length === 0;
+
+  // Footer content - shown for owners during both loading and empty state to prevent layout shift
+  // Only render the footer wrapper when we actually have content to show
+  const showFooter = isOwner && page && (loading || showEmptyStateForOwner);
+
+  const ownerFooter = showFooter ? (
+    <div className="flex flex-col items-center gap-2 py-2">
+      {loading ? (
+        // Loading placeholder with same structure as empty state
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icon name="Loader" size={16} />
+          <span>Loading...</span>
+        </div>
+      ) : (
+        // Empty state with CTA
+        <>
+          <p className="text-sm text-muted-foreground text-center">
+            No pages link here yet
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setIsAddToPageOpen(true)}
+          >
+            <Icon name="Copy" size={16} />
+            Add this page to another page
+          </Button>
+          <AddToPageButton
+            page={page}
+            isOpen={isAddToPageOpen}
+            setIsOpen={setIsAddToPageOpen}
+            hideButton={true}
+          />
+        </>
+      )}
+    </div>
+  ) : null;
+
+  // For owners, use custom loading in footer instead of PageLinksCard's default loading
+  const showDefaultLoading = loading && !isOwner;
 
   return (
     <PageLinksCard
       icon="Link2"
       title="What links here"
       items={items}
-      loading={loading}
+      loading={showDefaultLoading}
       error={error}
       initialLimit={8}
       className={className}
-      renderItem={renderBacklinkItem}
-      hideWhenEmpty={true}
+      renderItem={renderLinkedPageItem}
+      hideWhenEmpty={!isOwner}
+      footer={ownerFooter}
     />
   );
 }

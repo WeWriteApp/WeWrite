@@ -19,7 +19,7 @@ interface RelatedPagesSectionProps {
 export default function RelatedPagesSection({ page, linkedPageIds = [] }: RelatedPagesSectionProps) {
   const [mounted, setMounted] = useState(false);
 
-  // Use Algolia-powered search
+  // Use Typesense-powered search
   const {
     relatedByOthers,
     relatedByAuthor,

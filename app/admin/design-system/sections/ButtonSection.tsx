@@ -21,25 +21,6 @@ export function ButtonSection({ id }: { id: string }) {
       path="app/components/ui/button.tsx"
       description="Primary interactive element with multiple variants and states"
     >
-      <StateDemo label="Shimmer Base Class (hover me!)">
-        <div className="flex flex-wrap gap-4 items-start">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Add <code className="bg-muted px-1 rounded">shiny-shimmer-base</code> to any element:</p>
-            <Button className="shiny-shimmer-base">With Shimmer</Button>
-            <Button>Without Shimmer</Button>
-          </div>
-          <div className="wewrite-card p-3 text-xs text-muted-foreground max-w-sm">
-            <p className="font-medium text-foreground mb-1">How it works:</p>
-            <ul className="space-y-1">
-              <li>• <code className="bg-muted px-0.5 rounded">::before</code> pseudo-element with gradient</li>
-              <li>• <code className="bg-muted px-0.5 rounded">opacity: 0</code> at rest (invisible)</li>
-              <li>• On hover: <code className="bg-muted px-0.5 rounded">opacity: 1</code> + animate</li>
-              <li>• Gradient slides left-to-right once</li>
-            </ul>
-          </div>
-        </div>
-      </StateDemo>
-
       <StateDemo label="Primary Variants">
         <Button variant="default">Default</Button>
         <Button variant="secondary">Secondary</Button>

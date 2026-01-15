@@ -4,7 +4,6 @@ import { db } from '../../firebase/database';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { searchPerformanceTracker } from '../../utils/searchPerformanceTracker';
 import { trackFirebaseRead } from '../../utils/costMonitor';
-import { searchPages, searchUsers as algoliaSearchUsers } from '../../lib/algolia';
 import {
   searchPages as typesenseSearchPages,
   searchUsers as typesenseSearchUsers,
@@ -17,9 +16,8 @@ export const dynamic = 'force-dynamic';
 // Set max duration for Vercel serverless functions (60 seconds max on Pro plan)
 export const maxDuration = 30;
 
-// Feature flags for search engines
-// Order of fallback: Algolia -> Typesense -> Firestore
-const USE_ALGOLIA = true;
+// Feature flag for search engine
+// Order of fallback: Typesense -> Firestore
 const USE_TYPESENSE = true;
 
 // Type definitions
@@ -87,7 +85,7 @@ interface SearchOptions {
   currentPageId?: string | null;
 }
 
-interface AlgoliaSearchOptions {
+interface SearchEngineOptions {
   maxResults?: number;
   includeUsers?: boolean;
   filterByUserId?: string | null;
@@ -424,7 +422,7 @@ async function searchPagesComprehensive(
 
     // Comprehensive client-side search for substring matches
     // OPTIMIZED: Reduced from 1500 to 300 docs to prevent timeouts
-    // This is a Firestore fallback - primary search should use Algolia/Typesense
+    // This is a Firestore fallback - primary search uses Typesense
     if (!isEmptySearch && allResults.length < finalMaxResults) {
       try {
         // Reduced limit from 1500 to 300 to prevent Vercel function timeouts
@@ -580,98 +578,12 @@ async function searchUsersComprehensive(searchTerm: string, maxResults: number =
 }
 
 /**
- * Search using Algolia
- */
-async function searchWithAlgolia(
-  searchTerm: string,
-  userId: string | null,
-  options: AlgoliaSearchOptions = {}
-): Promise<{ pages: PageSearchResult[]; users: UserSearchResult[]; source: string; totalPages: number; totalUsers: number }> {
-  const {
-    maxResults = 100,
-    includeUsers = true,
-    filterByUserId = null,
-    currentPageId = null,
-    context = SEARCH_CONTEXTS.MAIN
-  } = options;
-
-  try {
-    let filters = '';
-    if (filterByUserId) {
-      filters = `authorId:${filterByUserId}`;
-    }
-
-    const [pagesResponse, usersResponse] = await Promise.all([
-      searchPages(searchTerm, {
-        hitsPerPage: Math.min(maxResults, 100),
-        filters: filters || undefined
-      }),
-      includeUsers ? algoliaSearchUsers(searchTerm, { hitsPerPage: 10 }) : Promise.resolve({ hits: [], nbHits: 0 })
-    ]);
-
-    const pages: PageSearchResult[] = (pagesResponse.hits as Array<{
-      objectID: string;
-      title?: string;
-      authorId?: string;
-      authorUsername?: string;
-      lastModified?: string;
-      isPublic?: boolean;
-      alternativeTitles?: string[];
-      _highlightResult?: unknown;
-    }>)
-      .filter(hit => hit.objectID !== currentPageId)
-      .map(hit => ({
-        id: hit.objectID,
-        title: hit.title || 'Untitled',
-        type: 'page' as const,
-        isOwned: hit.authorId === userId,
-        isEditable: hit.authorId === userId,
-        userId: hit.authorId || '',
-        username: hit.authorUsername || null,
-        lastModified: hit.lastModified || '',
-        isPublic: hit.isPublic,
-        alternativeTitles: hit.alternativeTitles,
-        matchScore: 100,
-        isContentMatch: false,
-        context,
-        _highlightResult: hit._highlightResult
-      }));
-
-    const users: UserSearchResult[] = ((usersResponse.hits || []) as Array<{
-      objectID: string;
-      username?: string;
-      displayName?: string;
-      photoURL?: string;
-      _highlightResult?: unknown;
-    }>).map(hit => ({
-      id: hit.objectID,
-      username: hit.username || '',
-      displayName: hit.displayName,
-      photoURL: hit.photoURL || null,
-      type: 'user' as const,
-      matchScore: 100,
-      _highlightResult: hit._highlightResult
-    }));
-
-    return {
-      pages,
-      users,
-      source: 'algolia',
-      totalPages: pagesResponse.nbHits || 0,
-      totalUsers: (usersResponse as { nbHits?: number }).nbHits || 0
-    };
-  } catch (error) {
-    throw error;
-  }
-}
-
-/**
  * Search using Typesense
  */
 async function searchWithTypesense(
   searchTerm: string,
   userId: string | null,
-  options: AlgoliaSearchOptions = {}
+  options: SearchEngineOptions = {}
 ): Promise<{ pages: PageSearchResult[]; users: UserSearchResult[]; source: string; totalPages: number; totalUsers: number }> {
   const {
     maxResults = 100,
@@ -825,31 +737,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Search fallback chain: Algolia -> Typesense -> Firestore
+    // Search fallback chain: Typesense -> Firestore
     let pages: PageSearchResult[] = [];
     let users: UserSearchResult[] = [];
     let searchSource = 'firestore';
 
-    // Try Algolia first if enabled
-    if (USE_ALGOLIA) {
-      try {
-        const algoliaResults = await searchWithAlgolia(searchTerm, userId, {
-          maxResults: maxResults || 100,
-          includeUsers,
-          filterByUserId,
-          currentPageId,
-          context
-        });
-        pages = algoliaResults.pages;
-        users = algoliaResults.users;
-        searchSource = 'algolia';
-      } catch (algoliaError) {
-        console.log('[Search] Algolia failed, trying Typesense fallback:', algoliaError instanceof Error ? algoliaError.message : 'Unknown error');
-      }
-    }
-
-    // Try Typesense if Algolia failed or is disabled
-    if (searchSource !== 'algolia' && USE_TYPESENSE && isTypesenseConfigured()) {
+    // Try Typesense first if enabled
+    if (USE_TYPESENSE && isTypesenseConfigured()) {
       try {
         const typesenseResults = await searchWithTypesense(searchTerm, userId, {
           maxResults: maxResults || 100,
@@ -867,7 +761,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Firestore fallback (last resort)
-    if (searchSource !== 'algolia' && searchSource !== 'typesense') {
+    if (searchSource !== 'typesense') {
       const [firestorePages, firestoreUsers] = await Promise.all([
         searchPagesComprehensive(userId, searchTerm, {
           context,
@@ -942,7 +836,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const searchResult: SearchResult = {
       pages: pagesWithUsernames || [],
       users: users || [],
-      source: searchSource === 'algolia' ? 'algolia' : 'unified_search',
+      source: 'unified_search',
       searchTerm,
       context,
       performance: {

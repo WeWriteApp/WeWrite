@@ -31,7 +31,7 @@ interface UseRelatedPagesOptions {
 }
 
 /**
- * Hook to fetch related pages using Algolia-powered API
+ * Hook to fetch related pages using Typesense-powered API
  * Returns both "related by others" and "more by same author" sections
  */
 export function useRelatedPages({

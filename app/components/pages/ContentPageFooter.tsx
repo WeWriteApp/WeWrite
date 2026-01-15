@@ -165,56 +165,65 @@ export default function ContentPageFooter({
       {page && (
         <>
           {/* Custom Date and Location in a grid - hide on others' pages if both are empty */}
-          {(isOwner || page.customDate || page.location) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Show custom date if owner OR if it has a value */}
-              {(isOwner || page.customDate) && (
-                <CustomDateField
-                  customDate={page.customDate}
-                  canEdit={isOwner}
-                  onCustomDateChange={async (newDate) => {
-                    try {
-                      const response = await fetch(`/api/pages/${page.id}/custom-date`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ customDate: newDate }),
-                      });
+          {(isOwner || page.customDate || page.location) && (() => {
+            // Determine if both fields are empty (owner viewing their own page)
+            // Note: linkedPageIds existence doesn't mean linked pages have locations,
+            // LocationField handles that internally. We only check the direct location value here.
+            const bothEmpty = isOwner && !page.customDate && !location;
 
-                      if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Failed to update custom date');
+            return (
+              <div className={`grid gap-4 ${bothEmpty ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
+                {/* Show custom date if owner OR if it has a value */}
+                {(isOwner || page.customDate) && (
+                  <CustomDateField
+                    customDate={page.customDate}
+                    canEdit={isOwner}
+                    compact={bothEmpty}
+                    onCustomDateChange={async (newDate) => {
+                      try {
+                        const response = await fetch(`/api/pages/${page.id}/custom-date`, {
+                          method: 'PATCH',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ customDate: newDate }),
+                        });
+
+                        if (!response.ok) {
+                          const errorData = await response.json();
+                          throw new Error(errorData.error || 'Failed to update custom date');
+                        }
+
+                        // Update the page object to reflect the change
+                        page.customDate = newDate;
+
+                        console.log('Custom date updated successfully to:', newDate);
+                      } catch (error) {
+                        console.error('Error updating custom date:', error);
+                        toast({
+                          title: "Failed to update date",
+                          description: "There was a problem saving the date. Please try again.",
+                          variant: "destructive"
+                        });
                       }
-
-                      // Update the page object to reflect the change
-                      page.customDate = newDate;
-
-                      console.log('Custom date updated successfully to:', newDate);
-                    } catch (error) {
-                      console.error('Error updating custom date:', error);
-                      toast({
-                        title: "Failed to update date",
-                        description: "There was a problem saving the date. Please try again.",
-                        variant: "destructive"
-                      });
-                    }
-                  }}
-                />
-              )}
-              {/* Show location if owner OR if it has a value OR if there are linked pages */}
-              {(isOwner || location || linkedPageIds.length > 0) && (
-                <LocationField
-                  location={location}
-                  canEdit={isOwner}
-                  onLocationChange={onLocationChange}
-                  pageId={page.id}
-                  pageTitle={page.title}
-                  linkedPageIds={linkedPageIds}
-                />
-              )}
-            </div>
-          )}
+                    }}
+                  />
+                )}
+                {/* Show location if owner OR if it has a value OR if there are linked pages */}
+                {(isOwner || location || linkedPageIds.length > 0) && (
+                  <LocationField
+                    location={location}
+                    canEdit={isOwner}
+                    compact={bothEmpty}
+                    onLocationChange={onLocationChange}
+                    pageId={page.id}
+                    pageTitle={page.title}
+                    linkedPageIds={linkedPageIds}
+                  />
+                )}
+              </div>
+            );
+          })()}
 
           {/* Page stats section - hide for new unsaved pages */}
           {!page.isNewPage && (

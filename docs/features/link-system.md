@@ -417,3 +417,63 @@ graph TD
 - `app/components/editor/LinkEditorModal.tsx`: Custom text editing interface
 - `app/components/editor/Editor.tsx`: Link creation and update handling
 - `app/types/linkNode.ts`: Data structure definitions and migration helpers
+
+## What Links Here System
+
+The "What Links Here" feature shows which pages link to a given page, enabling bidirectional navigation through the content graph.
+
+### Terminology Note
+
+The feature is called "What Links Here" in the UI, but some internal systems still use "backlinks" terminology for historical reasons:
+- **Firestore collection**: `backlinks` (kept for data compatibility)
+- **API endpoint**: `/api/links/backlinks` (kept for API compatibility)
+- **Code references**: Use `whatLinksHere` in function/variable names
+
+### Key Files
+
+- `app/firebase/database/whatLinksHere.ts`: Core what-links-here database operations
+- `app/components/pages/WhatLinksHere.tsx`: UI component showing linking pages
+- `app/api/links/backlinks/route.ts`: API endpoint for what-links-here queries
+- `scripts/rebuild-what-links-here-index.ts`: Script to rebuild the index
+
+### Data Structure
+
+```typescript
+interface WhatLinksHereEntry {
+  id: string;               // Document ID: `${sourcePageId}_${targetPageId}`
+  sourcePageId: string;     // Page that contains the link
+  sourcePageTitle: string;  // Title of the linking page
+  sourceUsername: string;   // Author of the linking page
+  targetPageId: string;     // Page being linked to
+  linkText: string;         // Text of the link
+  isPublic: boolean;        // Only public pages appear in results
+  lastModified: string;     // ISO timestamp
+  createdAt: string;        // ISO timestamp
+}
+```
+
+### Display Format
+
+Each linking page is shown with author attribution:
+```
+Page Title by username
+```
+
+### Index Updates
+
+The what-links-here index is updated when:
+1. A page is created or updated (extracts all internal links)
+2. A page is deleted (entries are removed from search results via isPublic filter)
+3. A page is restored (index is rebuilt for the restored page)
+
+### Rebuild Script
+
+To rebuild the what-links-here index:
+
+```bash
+# Development environment
+npx tsx scripts/rebuild-what-links-here-index.ts --env=dev
+
+# Production environment
+npx tsx scripts/rebuild-what-links-here-index.ts --env=prod
+```

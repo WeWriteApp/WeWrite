@@ -487,7 +487,7 @@ export async function POST(request: NextRequest) {
         // Don't fail the page creation if notification processing fails
       }
 
-      // Sync to search engines for search indexing
+      // Sync to Typesense for search indexing
       const searchSyncData = {
         pageId,
         title: pageData.title || '',
@@ -500,15 +500,6 @@ export async function POST(request: NextRequest) {
         createdAt: now,
       };
 
-      // Sync to Algolia (primary)
-      try {
-        const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-        await syncPageToAlgoliaServer(searchSyncData);
-      } catch (algoliaError) {
-        // Don't fail the page creation if Algolia sync fails
-      }
-
-      // Sync to Typesense (secondary)
       try {
         const { syncPageToTypesenseServer } = await import('../../lib/typesenseSync');
         await syncPageToTypesenseServer(searchSyncData);
@@ -642,15 +633,7 @@ export async function PUT(request: NextRequest) {
           createdAt: newPageData.createdAt,
         };
 
-        // Sync to Algolia (primary)
-        try {
-          const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-          syncPageToAlgoliaServer(searchSyncData).catch(() => {});
-        } catch (algoliaError) {
-          // Non-fatal Algolia import error
-        }
-
-        // Sync to Typesense (secondary)
+        // Sync to Typesense for search indexing
         try {
           const { syncPageToTypesenseServer } = await import('../../lib/typesenseSync');
           syncPageToTypesenseServer(searchSyncData).catch(() => {});
@@ -1027,11 +1010,11 @@ export async function PUT(request: NextRequest) {
         }
 
         await Promise.allSettled([
-          // Update backlinks index
+          // Update what-links-here index
           (async () => {
             try {
-              const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
-              await updateBacklinksIndex(
+              const { updateWhatLinksHereIndex } = await import('../../firebase/database/whatLinksHere');
+              await updateWhatLinksHereIndex(
                 id,
                 pageTitle,
                 pageUsername,
@@ -1040,7 +1023,7 @@ export async function PUT(request: NextRequest) {
                 new Date().toISOString()
               );
             } catch (err) {
-              // Backlinks update failed - non-fatal
+              // What-links-here update failed - non-fatal
             }
           })(),
 
@@ -1099,7 +1082,7 @@ export async function PUT(request: NextRequest) {
             }
           })(),
 
-          // Sync to search engines for search indexing
+          // Sync to Typesense for search indexing
           (async () => {
             try {
               // Get the content string for search engines
@@ -1119,15 +1102,6 @@ export async function PUT(request: NextRequest) {
                 createdAt: pageData?.createdAt || new Date().toISOString(),
               };
 
-              // Sync to Algolia (primary)
-              try {
-                const { syncPageToAlgoliaServer } = await import('../../lib/algoliaSync');
-                await syncPageToAlgoliaServer(searchSyncData);
-              } catch (err) {
-                // Algolia sync failed - non-fatal
-              }
-
-              // Sync to Typesense (secondary)
               try {
                 const { syncPageToTypesenseServer } = await import('../../lib/typesenseSync');
                 await syncPageToTypesenseServer(searchSyncData);
@@ -1259,12 +1233,12 @@ export async function DELETE(request: NextRequest) {
 
       await pageRef.delete();
 
-      // Remove from Algolia search index
+      // Remove from Typesense search index
       try {
-        const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
-        await removePageFromAlgoliaServer(pageId);
-      } catch (algoliaError) {
-        // Error removing from Algolia - non-fatal
+        const { removePageFromTypesense } = await import('../../lib/typesenseSync');
+        await removePageFromTypesense(pageId);
+      } catch (typesenseError) {
+        // Error removing from Typesense - non-fatal
       }
 
       // Invalidate caches
@@ -1355,12 +1329,12 @@ export async function DELETE(request: NextRequest) {
         // Don't fail the deletion if allocation cleanup fails
       }
 
-      // Remove from Algolia search index (soft-deleted pages shouldn't appear in search)
+      // Remove from Typesense search index (soft-deleted pages shouldn't appear in search)
       try {
-        const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
-        await removePageFromAlgoliaServer(pageId);
-      } catch (algoliaError) {
-        // Error removing from Algolia - non-fatal
+        const { removePageFromTypesense } = await import('../../lib/typesenseSync');
+        await removePageFromTypesense(pageId);
+      } catch (typesenseError) {
+        // Error removing from Typesense - non-fatal
       }
 
       // CRITICAL: Invalidate all caches so deleted page shows in Recently Deleted

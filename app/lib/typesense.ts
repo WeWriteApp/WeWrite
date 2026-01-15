@@ -8,7 +8,7 @@
  * - Development: DEV_pages, DEV_users
  * - Production: pages, users
  *
- * Typesense is used as a fallback/alternative to Algolia for search operations.
+ * Typesense is the primary search engine for WeWrite.
  */
 
 import Typesense from 'typesense';
@@ -127,7 +127,6 @@ export const getAdminClient = (): TypesenseClient => {
 
 /**
  * Page document structure for Typesense
- * Maps closely to AlgoliaPageRecord for easy migration
  */
 export interface TypesensePageDocument {
   id: string; // Same as pageId (Typesense uses 'id' not 'objectID')
@@ -147,7 +146,6 @@ export interface TypesensePageDocument {
 
 /**
  * User document structure for Typesense
- * Maps closely to AlgoliaUserRecord for easy migration
  */
 export interface TypesenseUserDocument {
   id: string; // Same as userId (Typesense uses 'id' not 'objectID')

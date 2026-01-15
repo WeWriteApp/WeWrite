@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Check } from 'lucide-react';
 import { Icon } from '@/components/ui/Icon';
 import { usePillStyle, UI_STYLES, type UIStyle } from "../../contexts/PillStyleContext";
 import { cn } from "../../lib/utils";

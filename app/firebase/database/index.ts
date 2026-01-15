@@ -72,16 +72,8 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
     // Soft delete the page in Firestore
     const result = await updateDoc('pages', pageId, { deleted: true, deletedAt: new Date().toISOString() });
 
-    // Remove from search indices (Algolia and Typesense)
+    // Remove from Typesense search index
     if (result) {
-      try {
-        const { removePageFromAlgoliaServer } = await import('../../lib/algoliaSync');
-        await removePageFromAlgoliaServer(pageId);
-      } catch (algoliaError) {
-        // Non-fatal: page is still deleted in Firestore
-        console.error('Error removing page from Algolia:', algoliaError);
-      }
-
       try {
         const { removePageFromTypesense } = await import('../../lib/typesenseSync');
         await removePageFromTypesense(pageId);

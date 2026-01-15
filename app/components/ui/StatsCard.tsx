@@ -5,6 +5,7 @@ import { Icon, IconName } from '@/components/ui/Icon';
 import SimpleSparkline from '../utils/SimpleSparkline';
 import AnimatedNumber from './AnimatedNumber';
 import { cn } from '../../lib/utils';
+import { usePillStyle } from '../../contexts/PillStyleContext';
 
 /**
  * StatsCard Component
@@ -71,9 +72,15 @@ export function StatsCard({
   emptyPlaceholder,
   isEditable = false,
 }: StatsCardProps) {
+  // Get shiny mode state from context
+  const { isShinyUI } = usePillStyle();
+
   // Accent color values using CSS variables
   const accentColorValue = 'oklch(var(--primary))';
   const pillTextColor = 'oklch(var(--primary-foreground))';
+
+  // Shiny classes for the value pill when shiny mode is enabled
+  const shinyClasses = isShinyUI ? 'shiny-shimmer-base shiny-glow-base pill-shiny-style' : '';
 
   // Check if value is empty
   const isEmpty = value === null || value === undefined || value === '' || value === 0;
@@ -135,10 +142,13 @@ export function StatsCard({
             <Icon name="Loader" size={20} />
           )}
 
-          {/* Value pill */}
+          {/* Value pill - matches PillLink sizing */}
           {!loading && displayValue !== null && (
             <div
-              className="text-sm font-medium px-2 py-1 rounded-md"
+              className={cn(
+                "text-sm font-medium px-2 py-0.5 rounded-lg",
+                shinyClasses
+              )}
               style={{
                 backgroundColor: accentColorValue,
                 color: pillTextColor
@@ -198,9 +208,15 @@ export function StatsCardHeader({
   className,
   children,
 }: StatsCardHeaderProps) {
+  // Get shiny mode state from context
+  const { isShinyUI } = usePillStyle();
+
   // Accent color values using CSS variables
   const accentColorValue = 'oklch(var(--primary))';
   const pillTextColor = 'oklch(var(--primary-foreground))';
+
+  // Shiny classes for the value pill when shiny mode is enabled
+  const shinyClasses = isShinyUI ? 'shiny-shimmer-base shiny-glow-base pill-shiny-style' : '';
 
   const displayValue = (() => {
     if (value === null || value === undefined) return null;
@@ -221,7 +237,10 @@ export function StatsCardHeader({
         {loading && <Icon name="Loader" size={20} />}
         {!loading && displayValue !== null && (
           <div
-            className="text-sm font-medium px-2 py-1 rounded-md"
+            className={cn(
+              "text-sm font-medium px-2 py-0.5 rounded-lg",
+              shinyClasses
+            )}
             style={{
               backgroundColor: accentColorValue,
               color: pillTextColor

@@ -66,9 +66,9 @@ export async function POST(request: NextRequest) {
       lastModified: new Date().toISOString()
     });
 
-    // Re-add to search indices (Algolia and Typesense)
+    // Re-add to Typesense search index
     try {
-      console.log(`🔄 Re-indexing restored page ${pageId} to search indices`);
+      console.log(`🔄 Re-indexing restored page ${pageId} to Typesense`);
 
       const searchSyncData = {
         pageId,
@@ -82,23 +82,9 @@ export async function POST(request: NextRequest) {
         createdAt: pageData.createdAt,
       };
 
-      // Sync to Algolia
-      try {
-        const { syncPageToAlgoliaServer } = await import('../../../lib/algoliaSync');
-        await syncPageToAlgoliaServer(searchSyncData);
-        console.log(`✅ Re-indexed restored page ${pageId} to Algolia`);
-      } catch (algoliaError) {
-        console.error('Error re-indexing to Algolia:', algoliaError);
-      }
-
-      // Sync to Typesense
-      try {
-        const { syncPageToTypesense } = await import('../../../lib/typesenseSync');
-        await syncPageToTypesense(searchSyncData);
-        console.log(`✅ Re-indexed restored page ${pageId} to Typesense`);
-      } catch (typesenseError) {
-        console.error('Error re-indexing to Typesense:', typesenseError);
-      }
+      const { syncPageToTypesense } = await import('../../../lib/typesenseSync');
+      await syncPageToTypesense(searchSyncData);
+      console.log(`✅ Re-indexed restored page ${pageId} to Typesense`);
     } catch (searchError) {
       console.error('Error re-indexing restored page:', searchError);
       // Don't fail the restoration if search indexing fails
@@ -106,13 +92,13 @@ export async function POST(request: NextRequest) {
 
     // Rebuild backlinks when page is restored
     try {
-      console.log(`🔄 Rebuilding backlinks for restored page ${pageId}`);
+      console.log(`🔄 Rebuilding what-links-here index for restored page ${pageId}`);
 
       if (pageData.content) {
-        // Import the backlinks update function
-        const { updateBacklinksIndex } = await import('../../../firebase/database/backlinks');
+        // Import the what-links-here update function
+        const { updateWhatLinksHereIndex } = await import('../../../firebase/database/whatLinksHere');
 
-        await updateBacklinksIndex(
+        await updateWhatLinksHereIndex(
           pageId,
           pageData.title || 'Untitled',
           pageData.username || 'Unknown',
@@ -121,11 +107,11 @@ export async function POST(request: NextRequest) {
           new Date().toISOString()
         );
 
-        console.log(`✅ Rebuilt backlinks for restored page ${pageId}`);
+        console.log(`✅ Rebuilt what-links-here index for restored page ${pageId}`);
       }
-    } catch (backlinkError) {
-      console.error('Error rebuilding backlinks for restored page:', backlinkError);
-      // Don't fail the restoration if backlink rebuild fails
+    } catch (indexError) {
+      console.error('Error rebuilding what-links-here index for restored page:', indexError);
+      // Don't fail the restoration if index rebuild fails
     }
 
     // Invalidate caches so page appears in regular pages list and disappears from deleted
