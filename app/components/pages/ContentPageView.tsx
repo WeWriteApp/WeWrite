@@ -792,8 +792,11 @@ export default function ContentPageView({
 
     // For new page mode: don't try to load from database - page doesn't exist yet
     // The new page mode setup effect handles creating the local page state
-    if (isNewPageMode) {
-      pageLogger.debug('Skipping page load for new page mode', { pageId, newPageCreated });
+    // CRITICAL FIX: Check BOTH ref AND reactive state to handle all cases:
+    // - isNewPageRef.current: Stable after URL changes (prevents re-fetch after first save)
+    // - isNewPageMode: Catches initial mount before ref is set by new page setup effect
+    if (isNewPageRef.current || isNewPageMode) {
+      pageLogger.debug('Skipping page load for new page mode', { pageId, newPageCreated, isNewPageRef: isNewPageRef.current, isNewPageMode });
       return;
     }
 
@@ -988,7 +991,10 @@ export default function ContentPageView({
       }
       clearTimeout(fallbackTimeout);
     };
-  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId, isNewPageMode]);
+  // CRITICAL FIX: Removed isNewPageMode from dependencies to prevent effect re-running
+  // when URL changes from /{pageId}?new=true to /{pageId} after first save.
+  // The ref-based check (isNewPageRef.current) provides stable protection.
+  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId]);
 
   // Record page view and add to recent pages
   useEffect(() => {
