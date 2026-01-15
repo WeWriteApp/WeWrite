@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useRef, useContext } from "react";
+import React, { useState, useRef, useContext, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from '@/components/ui/Icon';
 import dynamic from "next/dynamic";
 import { PillLink } from "./PillLink";
@@ -19,6 +20,8 @@ import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch'
 import { useInfiniteScrollWithLoadMore } from '../../hooks/useInfiniteScroll';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
+import { useSidebarContext } from '../layout/DesktopSidebar';
+import { TAB_BAR_HEIGHT, HEADER_HEIGHTS } from '../../constants/layout';
 
 // PERFORMANCE: Lazy-load heavy tab components to reduce initial bundle size
 // These tabs are not visible on initial load, so we can defer their loading
@@ -164,13 +167,24 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
     migrateFromHash: true, // Handle old #tab URLs gracefully
   });
 
-  console.log('🗺️ UserProfileTabs: Current activeTab state:', activeTab);
   const [direction, setDirection] = useState(0); // -1 for right, 1 for left
   const { user } = useAuth();
   const isCurrentUser = user && profile && user.uid === profile.uid;
   const [loadingError, setLoadingError] = useState(null);
 
-  const tabsRef = useRef(null);
+  // Get sidebar context for fixed tabs positioning on desktop
+  const { sidebarWidth, isExpanded } = useSidebarContext();
+
+  // Calculate sidebar offset for fixed tabs - matches ContentPageHeader logic
+  const headerSidebarWidth = React.useMemo(() => {
+    if (isExpanded) {
+      return sidebarWidth;
+    } else if (sidebarWidth > 0) {
+      return 64; // Collapsed sidebar width
+    } else {
+      return 0;
+    }
+  }, [isExpanded, sidebarWidth]);
 
   // Sorting state for pages tab with persistence
   const [sortBy, setSortBy] = useState(() => {
@@ -367,8 +381,6 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
 
   // Handle tab changes with enhanced slide animation
   const handleTabChange = (newTab) => {
-    console.log('🗺️ UserProfileTabs: handleTabChange called with:', newTab, 'current:', activeTab);
-
     // Track tab switching
     if (newTab !== activeTab) {
       trackInteractionEvent(events.TAB_CHANGED, {
@@ -382,7 +394,6 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
 
     // Use the hook to update tab (which updates query param)
     setActiveTabFromHook(newTab);
-    console.log('🗺️ UserProfileTabs: Updated URL to ?tab=' + newTab);
 
     scrollTabIntoView(newTab);
   };
@@ -393,14 +404,120 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
 
   // 🚨 URGENT FIX: Load more temporarily disabled - simple API doesn't support pagination yet
   const loadMorePages = async () => {
-    console.log("Load more temporarily disabled in urgent production fix");
+    // Pagination disabled - simple API doesn't support it yet
   };
 
   // Removed unfollow all function
 
-  // Sticky tabs are now handled via CSS using position: sticky
-  // The tabs stick to the bottom of the header stack (banner + header)
-  // See globals.css .sticky-tabs for the CSS implementation
+  // Track whether tabs should be in "stuck" (fixed) position
+  const [isStuck, setIsStuck] = useState(false);
+  const [stickyTopPosition, setStickyTopPosition] = useState<number>(HEADER_HEIGHTS.userProfile);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const tabsHeaderRef = useRef<HTMLDivElement>(null);
+  const placeholderRef = useRef<HTMLDivElement>(null);
+
+  // Use IntersectionObserver for reliable sticky detection
+  // The sentinel element sits at the natural position of the tabs
+  // When it goes out of view (above the header), tabs become fixed
+  React.useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    // Calculate the header threshold (banner height + header height)
+    const getThreshold = () => {
+      const bannerHeight = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue('--banner-stack-height') || '0'
+      );
+      return bannerHeight + HEADER_HEIGHTS.userProfile;
+    };
+
+    const threshold = getThreshold();
+    setStickyTopPosition(threshold);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // When sentinel is NOT intersecting (scrolled past threshold), tabs should stick
+          // When sentinel IS intersecting (visible below header), tabs should unstick
+          const shouldStick = !entry.isIntersecting;
+          setIsStuck(shouldStick);
+        });
+      },
+      {
+        // Root margin: negative value on top means trigger before element actually leaves viewport
+        // This makes the sticky trigger when the sentinel reaches the header position
+        rootMargin: `-${threshold}px 0px 0px 0px`,
+        threshold: 0,
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Track header height for placeholder (prevents layout shift)
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  // Measure header height once on mount and when it might change
+  useEffect(() => {
+    const headerElement = tabsHeaderRef.current;
+    if (headerElement) {
+      const height = headerElement.getBoundingClientRect().height;
+      setHeaderHeight(height);
+    }
+  }, []);
+
+  // JavaScript-based sticky positioning (matches StickySection pattern)
+  // Uses direct style manipulation to escape CSS stacking context issues
+  // Both inline and sticky states have matching full-width appearance via CSS
+  useLayoutEffect(() => {
+    const headerElement = tabsHeaderRef.current;
+    const placeholderElement = placeholderRef.current;
+    if (!headerElement) return;
+
+    // Disable transitions to prevent any animation
+    headerElement.style.transition = 'none';
+    if (placeholderElement) {
+      placeholderElement.style.transition = 'none';
+    }
+
+    if (isStuck) {
+      // Set placeholder height FIRST (before removing element from flow)
+      if (placeholderElement && headerHeight > 0) {
+        placeholderElement.style.height = `${headerHeight}px`;
+        placeholderElement.style.display = 'block';
+      }
+
+      // Apply fixed positioning via JavaScript (escapes CSS stacking context issues)
+      headerElement.style.position = 'fixed';
+      headerElement.style.top = `${stickyTopPosition}px`;
+      headerElement.style.left = window.innerWidth >= 768 ? `${headerSidebarWidth}px` : '0px';
+      headerElement.style.right = '0px';
+      headerElement.style.width = window.innerWidth >= 768
+        ? `calc(100% - ${headerSidebarWidth}px)`
+        : '100%';
+      headerElement.style.zIndex = '40'; // Below header (z-50), above content
+      // Reset margins when sticky (CSS negative margins not needed in fixed position)
+      headerElement.style.marginLeft = '0';
+      headerElement.style.marginRight = '0';
+    } else {
+      // Reset to normal flow - do all at once
+      headerElement.style.position = '';
+      headerElement.style.top = '';
+      headerElement.style.left = '';
+      headerElement.style.right = '';
+      headerElement.style.width = '';
+      headerElement.style.zIndex = '';
+      headerElement.style.marginLeft = '';
+      headerElement.style.marginRight = '';
+
+      if (placeholderElement) {
+        placeholderElement.style.height = '0px';
+        placeholderElement.style.display = 'none';
+      }
+    }
+  }, [isStuck, stickyTopPosition, headerSidebarWidth, headerHeight]);
 
   // Use useEffect to scroll the active tab into view when the component mounts or active tab changes
   React.useEffect(() => {
@@ -417,13 +534,25 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
       onValueChange={handleTabChange}
       className="w-full"
     >
-        {/* Tabs header - sticky below page header */}
+        {/* Sentinel element - IntersectionObserver watches this to detect when tabs should stick */}
+        {/* Must have height for IntersectionObserver to work properly */}
+        <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
+
+        {/* Placeholder to maintain layout when tabs are stuck - height managed by useEffect */}
+        <div ref={placeholderRef} style={{ display: 'none' }} aria-hidden="true" />
+
+        {/* Tabs header - positioning managed by JavaScript (matches StickySection pattern) */}
+        {/* Uses negative margins to bleed outside parent padding, matching sticky state */}
+        {/* Both inline and sticky states are full-width with internal padding for seamless transition */}
         <div
+          ref={tabsHeaderRef}
           id="profile-tabs-header"
-          className="sticky top-0 border-b border-border bg-background z-40"
+          data-stuck={isStuck ? 'true' : 'false'}
+          className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-border bg-background"
         >
+          {/* Tabs content area */}
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
-            <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
+              <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
               {/* Bio tab (first/default) */}
               <TabsTrigger
                 value="bio"
@@ -497,8 +626,8 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
               {/* Groups tab removed - groups feature has been completely removed */}
               {/* Following tab removed - now available in sidebar */}
 
-            </TabsList>
-          </div>
+              </TabsList>
+            </div>
         </div>
 
         {/* Tab content container */}
