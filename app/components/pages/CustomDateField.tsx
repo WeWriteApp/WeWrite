@@ -230,85 +230,20 @@ export default function CustomDateField({
   // Get formatted date value for display
   const displayValue = localDate ? formatCustomDate(localDate) : null;
 
-  // Compact mode: simplified centered display for empty state
-  if (compact && !localDate && canEdit) {
-    return (
-      <>
-        <div
-          className={`wewrite-card cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors ${className}`}
-          onClick={handleDateClick}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <Icon name="Calendar" size={18} className="text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Set date</span>
-          </div>
-        </div>
+  // Compact mode now uses StatsCard for consistency - same as normal mode
+  // The "compact" prop is kept for backwards compatibility but no longer changes rendering
 
-        {/* Date picker modal */}
-        <AdaptiveModal
-          isOpen={showDatePicker}
-          onClose={() => setShowDatePicker(false)}
-          title="Select custom date"
-          hashId="custom-date"
-          analyticsId="custom-date-picker"
-          mobileHeight="auto"
-          className="sm:max-w-md"
-        >
-          <div className="space-y-6">
-            <CalendarGrid
-              selectedDate={localDate}
-              onDateSelect={handleCalendarDateSelect}
-              accentColorValue={accentColorValue}
-            />
-            <Button
-              onClick={() => {
-                const today = new Date().toISOString().split('T')[0];
-                if (onCustomDateChange) {
-                  onCustomDateChange(today);
-                }
-                setShowDatePicker(false);
-              }}
-              className="w-full"
-              style={{
-                backgroundColor: accentColorValue,
-                color: 'white'
-              }}
-            >
-              Select Today
-            </Button>
-            <div className="flex gap-2 justify-end pt-4 border-t border-border">
-              <Button
-                variant="outline"
-                onClick={() => setShowDatePicker(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => setShowDatePicker(false)}
-                style={{
-                  backgroundColor: accentColorValue,
-                  color: 'white'
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          </div>
-        </AdaptiveModal>
-      </>
-    );
-  }
+  // For editable empty states, show "Set date" as the title (not "Custom date" with placeholder)
+  const isEmpty = !localDate;
 
   return (
     <>
       <StatsCard
         icon="Calendar"
-        title="Custom date"
+        title={canEdit && isEmpty ? "Set date" : "Custom date"}
         value={displayValue}
         onClick={canEdit ? handleDateClick : undefined}
         className={className}
-        isEditable={canEdit}
-        emptyPlaceholder={canEdit ? "Set date" : undefined}
       />
 
       {/* Date picker using AdaptiveModal (responsive: Dialog on desktop, Drawer on mobile) */}

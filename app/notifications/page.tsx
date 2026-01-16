@@ -30,8 +30,21 @@ function NotificationsContent() {
   } = useNotifications();
   const { trackNotificationInteraction } = useWeWriteAnalytics();
 
-  // Filter state - default to showing only unread
-  const [filter, setFilter] = useState<NotificationFilter>('unread');
+  // Filter state - persisted to localStorage
+  const [filter, setFilter] = useState<NotificationFilter>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('notifications-filter');
+      if (saved === 'all' || saved === 'unread') {
+        return saved;
+      }
+    }
+    return 'unread';
+  });
+
+  // Persist filter to localStorage
+  useEffect(() => {
+    localStorage.setItem('notifications-filter', filter);
+  }, [filter]);
 
   // Filter notifications based on selected filter
   const filteredNotifications = useMemo(() => {

@@ -242,7 +242,7 @@ export function UnifiedModal(props: UnifiedModalProps) {
                 {props.isLoading ? (
                   <Icon name="Loader" size={16} className="mr-2" />
                 ) : (
-                  <Icon name="Check" size={16} className="mr-2" />
+                  <Icon name={props.icon === 'delete' ? 'Trash' : 'Check'} size={16} className="mr-2" />
                 )}
                 {props.isLoading ? 'Processing...' : (props.confirmText || 'Confirm')}
               </Button>

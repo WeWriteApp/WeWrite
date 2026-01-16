@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext';
 import EditableContent from './EditableContent';
 import ViewableContent from './ViewableContent';
@@ -57,6 +57,14 @@ interface ContentDisplayProps {
   showLinkSuggestions?: boolean;
   onLinkSuggestionCountChange?: (count: number) => void;
 
+  // Link modal state - lifted from Editor to survive remounts during save
+  linkModalOpen?: boolean;
+  setLinkModalOpen?: (open: boolean) => void;
+  linkModalEditingLink?: any;
+  setLinkModalEditingLink?: (link: any) => void;
+  linkModalSelectedText?: string;
+  setLinkModalSelectedText?: (text: string) => void;
+
   // Viewing props (only used when isEditable=false)
   showDiff?: boolean;
   showLineNumbers?: boolean;
@@ -93,6 +101,12 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
   initialSelectionPath,
   showLinkSuggestions = false,
   onLinkSuggestionCountChange,
+  linkModalOpen,
+  setLinkModalOpen,
+  linkModalEditingLink,
+  setLinkModalEditingLink,
+  linkModalSelectedText,
+  setLinkModalSelectedText,
   showDiff = false,
   showLineNumbers = true,
   isSearch = false,
@@ -101,13 +115,24 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
 }) => {
   // Defensive defaults so logged-out/static views never crash if context is unavailable
   const { lineMode = LINE_MODES.NORMAL, lineFeaturesEnabled = false } = useLineSettings() ?? {};
-  
+
   // Force normal mode when editing (as per existing behavior)
   const effectiveMode = isEditable
     ? LINE_MODES.NORMAL
     : (lineFeaturesEnabled ? lineMode : LINE_MODES.NORMAL);
   const effectiveShowLineNumbers = showLineNumbers && lineFeaturesEnabled;
-  
+
+  // DEBUG: Track mount/unmount
+  useEffect(() => {
+    console.log('[ContentDisplay] Component MOUNTED, pageId:', pageId);
+    return () => {
+      console.log('[ContentDisplay] Component UNMOUNTED, pageId:', pageId);
+    };
+  }, [pageId]);
+
+  // DEBUG: Log mode changes
+  console.log('[ContentDisplay] Rendering with isEditable:', isEditable, 'pageId:', pageId);
+
   if (isEditable) {
     // EDITING MODE: Use EditableContent component
     return (
@@ -130,6 +155,12 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
         initialSelectionPath={initialSelectionPath}
         showLinkSuggestions={showLinkSuggestions}
         onLinkSuggestionCountChange={onLinkSuggestionCountChange}
+        linkModalOpen={linkModalOpen}
+        setLinkModalOpen={setLinkModalOpen}
+        linkModalEditingLink={linkModalEditingLink}
+        setLinkModalEditingLink={setLinkModalEditingLink}
+        linkModalSelectedText={linkModalSelectedText}
+        setLinkModalSelectedText={setLinkModalSelectedText}
         className={className}
       />
     );

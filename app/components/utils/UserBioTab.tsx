@@ -7,15 +7,12 @@ import { toast } from "../ui/use-toast";
 // REMOVED: recordBioEditActivity - bio activity tracking disabled for cost optimization
 import dynamic from "next/dynamic";
 import { useAuth } from '../../providers/AuthProvider';
-import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 import EmptyContentState from './EmptyContentState';
 import { UserBioSkeleton } from "../ui/page-skeleton";
 
 import TextView from "../editor/TextView";
 import HoverEditContent from './HoverEditContent';
-import ContentPageFooter from "../pages/ContentPageFooter";
-import StickySaveHeader from "../layout/StickySaveHeader";
 import AutoSaveIndicator from "../layout/AutoSaveIndicator";
 import type { UserBioTabProps } from "../../types/components";
 import type { EditorContent, User } from "../../types/database";
@@ -26,10 +23,6 @@ const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), { ssr:
 
 const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const { user } = useAuth();
-  const { isEnabled } = useFeatureFlags();
-
-  // Check if auto-save is enabled via feature flag
-  const autoSaveEnabled = isEnabled('auto_save');
 
   // Always editing mode - bio is always editable for the owner
   const isProfileOwner = user?.uid === profile.uid;
@@ -286,13 +279,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   }, [isProfileOwner, hasUnsavedChanges, isLoading, handleSave, handleCancel]);
 
   // Auto-save effect: triggers save after 1 second of inactivity when there are changes
-  // Only active when auto_save feature flag is enabled
   useEffect(() => {
-    // Skip if auto-save is disabled via feature flag
-    if (!autoSaveEnabled) {
-      return;
-    }
-
     // Don't auto-save if:
     // - Not the profile owner (canEdit is false)
     // - Currently saving or just saved (prevent infinite loop)
@@ -382,7 +369,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [autoSaveEnabled, bioContent, isProfileOwner, isLoading, handleSave, autoSaveStatus]);
+  }, [bioContent, isProfileOwner, isLoading, handleSave, autoSaveStatus]);
 
   // Handle link insertion request - memoized to prevent infinite loops
   const handleInsertLinkRequest = useCallback((triggerFn) => {
@@ -415,27 +402,15 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
   return (
     <>
-      {/* Save UI - Either StickySaveHeader (manual) or AutoSaveIndicator (auto) */}
-      {autoSaveEnabled ? (
-        /* Auto-save mode: Show indicator instead of save bar */
-        isProfileOwner && (
-          <div className="flex justify-end px-4 py-2">
-            <AutoSaveIndicator
-              status={autoSaveStatus}
-              lastSavedAt={lastSavedAt}
-              error={autoSaveError}
-            />
-          </div>
-        )
-      ) : (
-        /* Manual save mode: Show sticky save header */
-        <StickySaveHeader
-          hasUnsavedChanges={hasUnsavedChanges && isProfileOwner}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          isSaving={isLoading}
-          isAnimatingOut={false}
-        />
+      {/* Auto-save indicator */}
+      {isProfileOwner && (
+        <div className="flex justify-end px-4 py-2">
+          <AutoSaveIndicator
+            status={autoSaveStatus}
+            lastSavedAt={lastSavedAt}
+            error={autoSaveError}
+          />
+        </div>
       )}
 
       <div className="space-y-4 page-content-wrapper">
@@ -453,35 +428,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
                   placeholder="Write your bio..."
                   showToolbar={false}
                   onInsertLinkRequest={handleInsertLinkRequest}
-                  // Remove onSave and onCancel - handled by bottom save bar
                 />
-
-              {/* Page Footer with bottom save bar - hidden when auto-save is enabled */}
-              {!autoSaveEnabled && (
-                <ContentPageFooter
-                  page={null} // Bio doesn't have page data
-                  content={bioContent}
-                  linkedPageIds={[]} // Bio doesn't have linked pages
-                  isEditing={isEditing}
-                  canEdit={isProfileOwner}
-                  isOwner={isProfileOwner}
-                  title="" // Bio doesn't have a title
-                  location={null} // Bio doesn't have location
-                  onTitleChange={() => {}} // Bio doesn't have title
-                  onLocationChange={() => {}} // Bio doesn't have location
-                  onSave={async () => {
-                    const success = await handleSave();
-                    return success;
-                  }}
-                  onCancel={handleCancel}
-                  onDelete={null} // Bio doesn't have delete
-                  onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
-                  isSaving={isLoading}
-                  error={error}
-                  titleError={false}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                />
-              )}
             </PageProvider>
           </div>
         ) : (

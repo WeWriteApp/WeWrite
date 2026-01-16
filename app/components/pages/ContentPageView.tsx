@@ -10,7 +10,6 @@ import { useAuth } from '../../providers/AuthProvider';
 import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
 import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
-import { useFeatureFlags } from "../../contexts/FeatureFlagContext";
 import { createLogger } from '../../utils/logger';
 import { extractNewPageReferences, createNewPagesFromLinks } from '../../utils/pageContentHelpers';
 import { createReplyContent } from '../../utils/replyUtils';
@@ -59,7 +58,6 @@ import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import { useConfirmation } from "../../hooks/useConfirmation";
 import { ConfirmationModal } from "../utils/UnifiedModal";
-import StickySaveHeader from "../layout/StickySaveHeader";
 import AutoSaveIndicator from "../layout/AutoSaveIndicator";
 import { motion } from "framer-motion";
 import { ContentPageSkeleton, ContentPageMinimalSkeleton } from "./ContentPageSkeleton";
@@ -230,6 +228,10 @@ export default function ContentPageView({
   const [showLinkSuggestions, setShowLinkSuggestions] = useState(false);
   const [linkSuggestionCount, setLinkSuggestionCount] = useState(0);
 
+  // Link editor modal state - lifted from Editor to survive component remounts during save
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkModalEditingLink, setLinkModalEditingLink] = useState<any>(null);
+  const [linkModalSelectedText, setLinkModalSelectedText] = useState('');
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -243,8 +245,6 @@ export default function ContentPageView({
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { addRecentPage } = useRecentPages();
-  const { isEnabled: isFeatureEnabled } = useFeatureFlags();
-  const autoSaveEnabled = isFeatureEnabled('auto_save');
 
   // Confirmation modals hook (replaces window.confirm)
   const { confirmationState, confirm, closeConfirmation } = useConfirmation();
@@ -1581,7 +1581,10 @@ export default function ContentPageView({
       // NEW PAGE MODE: After first save, update URL to remove draft param
       if (isFirstSaveOfNewPageLocal) {
         // Update URL using history.replaceState to avoid triggering React re-renders
-        const newUrl = `/${pageId}`;
+        // CRITICAL: Preserve any existing hash (e.g., #dialog-link-editor) to prevent
+        // modals from closing and focus from being lost during save
+        const currentHash = window.location.hash;
+        const newUrl = `/${pageId}${currentHash}`;
         window.history.replaceState(null, '', newUrl);
         // The ref (isNewPageRef) was already set to false above to prevent double-triggers
         // Now we defer the page.isNewPage state update to transition the Delete/Cancel button
@@ -1687,7 +1690,6 @@ export default function ContentPageView({
   // Initialize auto-save baseline as soon as content is ready (don't wait for full page load)
   // This allows auto-save to work even if the page object is still loading
   useEffect(() => {
-    if (!autoSaveEnabled) return;
     if (autoSaveBaselineInitialized.current) return;
 
     // Initialize baseline as soon as we have valid editorState
@@ -1700,7 +1702,7 @@ export default function ContentPageView({
       // to avoid false positives from effect ordering
       autoSaveBaselineJustInitialized.current = true;
     }
-  }, [autoSaveEnabled, editorState, title, location]);
+  }, [editorState, title, location]);
 
   // Reset auto-save baseline and session ID when page ID changes (navigating to a different page)
   useEffect(() => {
@@ -1708,23 +1710,17 @@ export default function ContentPageView({
     autoSaveSessionIdRef.current = null; // Reset session ID for new page
   }, [pageId]);
 
-  // Generate auto-save session ID when auto-save mode is active and page is loaded
+  // Generate auto-save session ID when page is loaded for editing
   // This groups all auto-saves within one editing session into a single version
   useEffect(() => {
-    if (autoSaveEnabled && canEdit && pageId && !autoSaveSessionIdRef.current) {
+    if (canEdit && pageId && !autoSaveSessionIdRef.current) {
       // Generate a unique session ID: pageId + timestamp + random suffix
       autoSaveSessionIdRef.current = `autosave-${pageId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
-  }, [autoSaveEnabled, canEdit, pageId]);
+  }, [canEdit, pageId]);
 
   // Auto-save effect: triggers save after 2.5 seconds of inactivity when there are changes
-  // Only active when auto_save feature flag is enabled
   useEffect(() => {
-    // Skip if auto-save is disabled via feature flag
-    if (!autoSaveEnabled) {
-      return;
-    }
-
     // Don't auto-save if:
     // - Not the owner (canEdit is false)
     // - Currently saving or just saved (prevent infinite loop)
@@ -1879,7 +1875,7 @@ export default function ContentPageView({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [autoSaveEnabled, editorState, title, location, canEdit, isSaving, handleSave, page?.isNewPage, autoSaveStatus]);
+  }, [editorState, title, location, canEdit, isSaving, handleSave, page?.isNewPage, autoSaveStatus]);
 
   const handleCancel = useCallback(async () => {
     if (hasChanges) {
@@ -1970,7 +1966,8 @@ export default function ContentPageView({
       message: "Are you sure you want to delete this page? You'll have 30 days to recover it from your Recently Deleted pages.",
       confirmText: "Delete",
       cancelText: "Cancel",
-      type: "destructive"
+      variant: "destructive",
+      icon: "delete"
     });
     if (!confirmDelete) return;
 
@@ -2117,16 +2114,6 @@ export default function ContentPageView({
               onBack={isNewPageMode && page?.isNewPage ? handleCancel : undefined}
           />
 
-          {/* Manual save mode: show sticky save banner (only when auto-save is disabled) */}
-          {!autoSaveEnabled && (
-            <StickySaveHeader
-              hasUnsavedChanges={hasChanges}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              isSaving={isSaving}
-            />
-          )}
-
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}
 
           {isPreviewingDeleted && page && (
@@ -2194,6 +2181,12 @@ export default function ContentPageView({
                               showLineNumbers={true}
                               showLinkSuggestions={showLinkSuggestions}
                               onLinkSuggestionCountChange={setLinkSuggestionCount}
+                              linkModalOpen={linkModalOpen}
+                              setLinkModalOpen={setLinkModalOpen}
+                              linkModalEditingLink={linkModalEditingLink}
+                              setLinkModalEditingLink={setLinkModalEditingLink}
+                              linkModalSelectedText={linkModalSelectedText}
+                              setLinkModalSelectedText={setLinkModalSelectedText}
                             />
 
                             {/* Dense mode toggle below content - only show in view mode (hidden in print) */}
@@ -2203,8 +2196,8 @@ export default function ContentPageView({
                               </div>
                             )}
 
-                            {/* Auto-save indicator - shown below content when auto-save is enabled */}
-                            {autoSaveEnabled && canEdit && (
+                            {/* Auto-save indicator - shown below content when editing */}
+                            {canEdit && (
                               <div className="flex justify-center pt-2 no-print">
                                 <AutoSaveIndicator
                                   status={autoSaveStatus}
@@ -2402,7 +2395,8 @@ export default function ContentPageView({
       message={confirmationState.message}
       confirmText={confirmationState.confirmText}
       cancelText={confirmationState.cancelText}
-      type={confirmationState.type}
+      type={confirmationState.variant}
+      icon={confirmationState.icon}
     />
 
     {/* Unsaved Changes Dialog - shows when navigating away with unsaved changes */}

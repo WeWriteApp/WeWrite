@@ -40,7 +40,7 @@ import { getAnalyticsService } from "../../utils/analytics-service";
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 import AddToPageButton from '../utils/AddToPageButton';
-import { Reveal } from '../ui/reveal';
+import { AnimatedPresenceItem } from '../ui/AnimatedStack';
 
 /**
  * PageActions Component
@@ -323,23 +323,6 @@ export function ContentPageActions({
             </Button>
           )}
 
-          {/* Link Suggestions toggle - shown when editing and suggestions exist (no loading state) */}
-          {isEditing && onToggleLinkSuggestions && (
-            <Reveal show={linkSuggestionCount > 0}>
-              <Button
-                variant={showLinkSuggestions ? "default" : "secondary"}
-                size="lg"
-                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-                onClick={() => onToggleLinkSuggestions(!showLinkSuggestions)}
-              >
-                <Icon name="Lightbulb" size={20} />
-                <span>
-                  {showLinkSuggestions ? 'Hide' : 'Show'} {linkSuggestionCount} link suggestion{linkSuggestionCount === 1 ? '' : 's'}
-                </span>
-              </Button>
-            </Reveal>
-          )}
-
           {/* Reply button - available to all users when not editing (ORDER: 1st) */}
           {!isEditing && (
             <>
@@ -393,6 +376,23 @@ export function ContentPageActions({
           {/* Visibility: myPageSaved=true, myPageNew=false, otherPage=true */}
           <AddToPageButton page={page} />
 
+          {/* Link Suggestions toggle - shown when editing and suggestions exist (ORDER: 3rd) */}
+          {isEditing && onToggleLinkSuggestions && (
+            <AnimatedPresenceItem show={linkSuggestionCount > 0} gap={12} preset="gentleSpring" className="w-full md:w-auto">
+              <Button
+                variant={showLinkSuggestions ? "default" : "secondary"}
+                size="lg"
+                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+                onClick={() => onToggleLinkSuggestions(!showLinkSuggestions)}
+              >
+                <Icon name="Lightbulb" size={20} />
+                <span>
+                  {showLinkSuggestions ? 'Hide' : 'Show'} {linkSuggestionCount} link suggestion{linkSuggestionCount === 1 ? '' : 's'}
+                </span>
+              </Button>
+            </AnimatedPresenceItem>
+          )}
+
           {/* Follow button - available to non-owners (handles auth internally) */}
           {showFollowButton && !isOwner && (
             <FollowButton
@@ -418,7 +418,7 @@ export function ContentPageActions({
         message={confirmationState.message}
         confirmText={confirmationState.confirmText}
         cancelText={confirmationState.cancelText}
-        variant={confirmationState.variant}
+        type={confirmationState.variant}
         isLoading={confirmationState.isLoading}
         icon={confirmationState.icon}
       />

@@ -104,9 +104,9 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        "wewrite-card min-h-[52px]",
+        "wewrite-card min-h-[52px] flex flex-col justify-center",
         onClick && "cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors",
-        children && "flex flex-col gap-3",
+        children && "gap-3",
         className
       )}
       onClick={onClick}

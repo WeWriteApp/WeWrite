@@ -171,7 +171,7 @@ export default function ContentPageStats({
   // Loading state - show cards with titles and loader
   if (loading) {
     return (
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Recent Edits Card Loading - first for confidence in save status */}
         <StatsCard
           icon="Clock"
@@ -231,7 +231,7 @@ export default function ContentPageStats({
   };
 
   return (
-    <div className={`mt-8 grid grid-cols-1 ${gridCols} gap-4`}>
+    <div className={`grid grid-cols-1 ${gridCols} gap-3`}>
       {/* Recent Changes Card - first for confidence in save status */}
       <StatsCard
         icon="Clock"

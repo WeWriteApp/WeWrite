@@ -15,12 +15,9 @@ export default function FeatureFlagsPage() {
   const [lineNumbersGlobal, setLineNumbersGlobal] = useState(false);
   const [onboardingEnabled, setOnboardingEnabled] = useState(false);
   const [onboardingGlobal, setOnboardingGlobal] = useState(false);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
-  const [autoSaveGlobal, setAutoSaveGlobal] = useState(false);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [enabledUsers, setEnabledUsers] = useState<number | null>(null);
   const [onboardingEnabledUsers, setOnboardingEnabledUsers] = useState<number | null>(null);
-  const [autoSaveEnabledUsers, setAutoSaveEnabledUsers] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const enabledFraction =
     totalUsers && totalUsers > 0
@@ -29,10 +26,6 @@ export default function FeatureFlagsPage() {
   const onboardingEnabledFraction =
     totalUsers && totalUsers > 0
       ? `${onboardingEnabledUsers ?? 0}/${totalUsers}`
-      : "—";
-  const autoSaveEnabledFraction =
-    totalUsers && totalUsers > 0
-      ? `${autoSaveEnabledUsers ?? 0}/${totalUsers}`
       : "—";
 
   useEffect(() => {
@@ -56,7 +49,6 @@ export default function FeatureFlagsPage() {
       if (res.ok && data?.flags) {
         setLineNumbersEnabled(Boolean(data.flags.line_numbers));
         setOnboardingEnabled(Boolean(data.flags.onboarding_tutorial));
-        setAutoSaveEnabled(Boolean(data.flags.auto_save));
       }
       const summaryRes = await fetch("/api/feature-flags?summary=1", { credentials: "include" });
       const summaryData = await summaryRes.json();
@@ -71,13 +63,6 @@ export default function FeatureFlagsPage() {
       if (onboardingSummaryRes.ok && onboardingSummaryData?.summary) {
         setOnboardingEnabledUsers(onboardingSummaryData.summary.enabledCount ?? null);
         setOnboardingGlobal(Boolean(onboardingSummaryData.summary.defaultEnabled));
-      }
-      // Load auto-save summary
-      const autoSaveSummaryRes = await fetch("/api/feature-flags?summary=1&flag=auto_save", { credentials: "include" });
-      const autoSaveSummaryData = await autoSaveSummaryRes.json();
-      if (autoSaveSummaryRes.ok && autoSaveSummaryData?.summary) {
-        setAutoSaveEnabledUsers(autoSaveSummaryData.summary.enabledCount ?? null);
-        setAutoSaveGlobal(Boolean(autoSaveSummaryData.summary.defaultEnabled));
       }
     } catch (err) {
       console.warn("[FeatureFlagsPage] Failed to load flag data", err);
@@ -105,12 +90,6 @@ export default function FeatureFlagsPage() {
         } else {
           setOnboardingGlobal(enabled);
         }
-      } else if (flagName === "auto_save") {
-        if (scope === "user") {
-          setAutoSaveEnabled(enabled);
-        } else {
-          setAutoSaveGlobal(enabled);
-        }
       }
       // Refresh summary after change
       await loadFlags();
@@ -125,8 +104,6 @@ export default function FeatureFlagsPage() {
   const handleLineNumbersGlobalToggle = (checked: boolean) => updateFlag("line_numbers", "global", checked);
   const handleOnboardingPersonalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "user", checked);
   const handleOnboardingGlobalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "global", checked);
-  const handleAutoSavePersonalToggle = (checked: boolean) => updateFlag("auto_save", "user", checked);
-  const handleAutoSaveGlobalToggle = (checked: boolean) => updateFlag("auto_save", "global", checked);
 
   if (isLoading || !user) {
     return (
@@ -211,39 +188,6 @@ export default function FeatureFlagsPage() {
               <p className="text-xs text-muted-foreground">New users see tutorial</p>
             </div>
             <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} className="shrink-0" />
-          </div>
-        </div>
-      </div>
-
-      {/* Auto-Save Feature Flag */}
-      <div className="wewrite-card space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="font-semibold">Auto-Save</h2>
-            <p className="text-sm text-muted-foreground">
-              Enabled for: {autoSaveEnabledFraction} users
-            </p>
-          </div>
-          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Enable for me</p>
-              <p className="text-xs text-muted-foreground">Personal override</p>
-            </div>
-            <Switch checked={autoSaveEnabled} onCheckedChange={handleAutoSavePersonalToggle} disabled={saving} className="shrink-0" />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Enable for all users</p>
-              <p className="text-xs text-muted-foreground">Auto-save instead of manual</p>
-            </div>
-            <Switch checked={autoSaveGlobal} onCheckedChange={handleAutoSaveGlobalToggle} disabled={saving} className="shrink-0" />
           </div>
         </div>
       </div>

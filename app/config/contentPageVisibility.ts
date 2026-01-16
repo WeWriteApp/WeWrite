@@ -67,30 +67,17 @@ export const CONTENT_PAGE_VISIBILITY: VisibilityRule[] = [
     },
   },
 
-  // Save/Edit Controls
-  {
-    id: 'stickySaveHeader',
-    label: 'Sticky Save Header',
-    description: 'Save/Cancel bar when manual save mode',
-    componentPath: 'app/components/layout/StickySaveHeader.tsx',
-    visibility: {
-      myPageSaved: 'conditional',
-      myPageNew: 'conditional',
-      otherPage: false,
-    },
-    condition: 'Only when auto-save is disabled AND hasUnsavedChanges',
-  },
+  // Save Status
   {
     id: 'autoSaveIndicator',
     label: 'Auto-Save Indicator',
-    description: 'Shows save status when auto-save enabled',
+    description: 'Shows save status (pending/saving/saved/error)',
     componentPath: 'app/components/layout/AutoSaveIndicator.tsx',
     visibility: {
-      myPageSaved: 'conditional',
-      myPageNew: 'conditional',
+      myPageSaved: true,
+      myPageNew: true,
       otherPage: false,
     },
-    condition: 'Only when auto_save feature flag is enabled',
   },
 
   // Content Area

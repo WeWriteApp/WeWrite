@@ -99,6 +99,16 @@ interface EditorProps {
   initialSelectionPath?: Path; // Optional initial cursor position
   showLinkSuggestions?: boolean; // Show link suggestion underlines when enabled
   onLinkSuggestionCountChange?: (count: number) => void; // Callback when suggestion count changes
+  isSaving?: boolean; // When true, prevents link modal from closing during save
+
+  // Link modal state - lifted from Editor to survive remounts during save
+  // When provided, these override the local state
+  linkModalOpen?: boolean;
+  setLinkModalOpen?: (open: boolean) => void;
+  linkModalEditingLink?: any;
+  setLinkModalEditingLink?: (link: any) => void;
+  linkModalSelectedText?: string;
+  setLinkModalSelectedText?: (text: string) => void;
 }
 
 const Editor: React.FC<EditorProps> = ({
@@ -111,18 +121,49 @@ const Editor: React.FC<EditorProps> = ({
   onInsertLinkRequest,
   initialSelectionPath,
   showLinkSuggestions = false,
-  onLinkSuggestionCountChange
+  onLinkSuggestionCountChange,
+  isSaving = false,
+  linkModalOpen: linkModalOpenProp,
+  setLinkModalOpen: setLinkModalOpenProp,
+  linkModalEditingLink: linkModalEditingLinkProp,
+  setLinkModalEditingLink: setLinkModalEditingLinkProp,
+  linkModalSelectedText: linkModalSelectedTextProp,
+  setLinkModalSelectedText: setLinkModalSelectedTextProp
 }) => {
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
   const { user } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Simple state management - no complex state
-  const [showLinkModal, setShowLinkModal] = useState(false);
-  const [editingLink, setEditingLink] = useState<any>(null);
-  const [selectedText, setSelectedText] = useState('');
+  // These are fallback local states when lifted state is not provided
+  const [showLinkModalLocal, setShowLinkModalLocal] = useState(false);
+  const [editingLinkLocal, setEditingLinkLocal] = useState<any>(null);
+  const [selectedTextLocal, setSelectedTextLocal] = useState('');
+
+  // Use lifted state when provided, otherwise fallback to local state
+  // This allows the modal state to survive component remounts during save
+  const isLiftedState = setLinkModalOpenProp !== undefined;
+  const showLinkModal = isLiftedState ? (linkModalOpenProp ?? false) : showLinkModalLocal;
+  const setShowLinkModal = isLiftedState ? setLinkModalOpenProp! : setShowLinkModalLocal;
+  const editingLink = isLiftedState ? linkModalEditingLinkProp : editingLinkLocal;
+  const setEditingLink = isLiftedState ? setLinkModalEditingLinkProp! : setEditingLinkLocal;
+  const selectedText = isLiftedState ? (linkModalSelectedTextProp ?? '') : selectedTextLocal;
+  const setSelectedText = isLiftedState ? setLinkModalSelectedTextProp! : setSelectedTextLocal;
+
   // Save selection when opening link modal (selection is lost when modal takes focus)
   const savedSelectionRef = useRef<Range | null>(null);
+
+  // DEBUG: Track Editor mount/unmount and showLinkModal state changes
+  useEffect(() => {
+    console.log('[Editor] Component MOUNTED, isLiftedState:', isLiftedState);
+    return () => {
+      console.log('[Editor] Component UNMOUNTED');
+    };
+  }, [isLiftedState]);
+
+  useEffect(() => {
+    console.log('[Editor] showLinkModal state is now:', showLinkModal, 'isSaving:', isSaving, 'isLiftedState:', isLiftedState);
+  }, [showLinkModal, isSaving, isLiftedState]);
 
   // Link suggestions state
   const [activeSuggestionForModal, setActiveSuggestionForModal] = useState<LinkSuggestion | null>(null);
@@ -477,14 +518,6 @@ const Editor: React.FC<EditorProps> = ({
         return;
       }
 
-      // Check if this is a structural change that requires selection reset
-      // Simple heuristic: if the number of blocks changed, we need to reset selection
-      // to avoid stale path errors. Otherwise, preserve selection for better UX.
-      const prevContent = prevContentRef.current ? JSON.parse(prevContentRef.current) : [];
-      const structureChanged =
-        !Array.isArray(prevContent) ||
-        prevContent.length !== normalizedInitialContent.length;
-
       prevContentRef.current = currentContentStr;
 
       // Update state
@@ -494,12 +527,12 @@ const Editor: React.FC<EditorProps> = ({
       // To update content externally, we must directly modify editor.children
       editor.children = normalizedInitialContent;
 
-      // Only reset selection if structure changed to prevent stale path errors
-      // This preserves cursor position and open dialogs when content updates
-      // are minor (e.g., normalization or sync after save)
-      if (structureChanged) {
-        editor.selection = null;
-      }
+      // REMOVED: Selection reset was causing focus loss and modal closures during saves
+      // Previously we would reset selection on structure changes, but this caused issues:
+      // - Focus lost when saving new pages
+      // - Link modals closing unexpectedly
+      // Slate handles stale selection paths automatically via normalization,
+      // so explicit reset is not needed and was doing more harm than good.
 
       // Trigger a re-render by changing the editor
       editor.onChange();
@@ -1379,7 +1412,10 @@ const Editor: React.FC<EditorProps> = ({
         {showLinkModal && typeof document !== 'undefined' && createPortal(
           <LinkEditorModal
             isOpen={showLinkModal}
+            isSaving={isSaving}
             onClose={() => {
+              // Guard: Don't close modal during save operations
+              if (isSaving) return;
               setShowLinkModal(false);
               setEditingLink(null);
               setSelectedText('');

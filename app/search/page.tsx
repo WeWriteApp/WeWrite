@@ -86,12 +86,16 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
     }
   }, [initialValue]);
 
-  // Auto-focus effect
+  // Auto-focus effect - focus immediately for iOS keyboard activation
   useEffect(() => {
     if (autoFocus && searchInputRef.current) {
+      // Focus immediately on mount - this helps iOS PWA open the keyboard
+      searchInputRef.current.focus();
+
+      // Also try again after a brief delay as a fallback for slower renders
       const timer = setTimeout(() => {
         searchInputRef.current?.focus();
-      }, 100);
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [autoFocus]);
@@ -173,6 +177,7 @@ const RealtimeSearchInput = React.memo<IsolatedSearchInputProps & { isLoading?: 
           leftIcon={<Icon name="Search" size={20} />}
           className="w-full pr-12"
           autoComplete="off"
+          autoFocus={autoFocus}
         />
 
         {/* Right side - loading indicator or clear button */}

@@ -47,6 +47,15 @@ interface EditableContentProps {
   pageId?: string;
   showLinkSuggestions?: boolean;
   onLinkSuggestionCountChange?: (count: number) => void;
+
+  // Link modal state - lifted from Editor to survive remounts during save
+  linkModalOpen?: boolean;
+  setLinkModalOpen?: (open: boolean) => void;
+  linkModalEditingLink?: any;
+  setLinkModalEditingLink?: (link: any) => void;
+  linkModalSelectedText?: string;
+  setLinkModalSelectedText?: (text: string) => void;
+
   className?: string;
 }
 
@@ -74,6 +83,12 @@ const EditableContent: React.FC<EditableContentProps> = ({
   pageId,
   showLinkSuggestions = false,
   onLinkSuggestionCountChange,
+  linkModalOpen,
+  setLinkModalOpen,
+  linkModalEditingLink,
+  setLinkModalEditingLink,
+  linkModalSelectedText,
+  setLinkModalSelectedText,
   initialSelectionPath,
   className = ''
 }) => {
@@ -132,6 +147,13 @@ const EditableContent: React.FC<EditableContentProps> = ({
         initialSelectionPath={initialSelectionPath}
         showLinkSuggestions={showLinkSuggestions}
         onLinkSuggestionCountChange={onLinkSuggestionCountChange}
+        isSaving={isSaving}
+        linkModalOpen={linkModalOpen}
+        setLinkModalOpen={setLinkModalOpen}
+        linkModalEditingLink={linkModalEditingLink}
+        setLinkModalEditingLink={setLinkModalEditingLink}
+        linkModalSelectedText={linkModalSelectedText}
+        setLinkModalSelectedText={setLinkModalSelectedText}
       />
     </div>
   );

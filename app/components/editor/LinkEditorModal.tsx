@@ -43,6 +43,7 @@ interface LinkEditorModalProps {
   selectedText?: string;
   linkedPageIds?: string[];
   currentPageId?: string;
+  isSaving?: boolean; // When true, prevents modal from closing during save operations
 }
 
 export default function LinkEditorModal({
@@ -52,7 +53,8 @@ export default function LinkEditorModal({
   editingLink = null,
   selectedText = '',
   linkedPageIds = [],
-  currentPageId
+  currentPageId,
+  isSaving = false
 }: LinkEditorModalProps) {
 
   const { user } = useAuth();
@@ -867,7 +869,14 @@ export default function LinkEditorModal({
   if (isMobile) {
     return (
       <Drawer open={isOpen} onOpenChange={(open) => {
+        // Guard: Don't close modal during save operations
+        console.log('[LinkEditorModal Drawer] onOpenChange called', { open, isSaving });
+        if (!open && isSaving) {
+          console.log('[LinkEditorModal Drawer] BLOCKED close - isSaving is true');
+          return;
+        }
         if (!open) {
+          console.log('[LinkEditorModal Drawer] Closing modal');
           onClose();
         }
       }} hashId="link-editor" analyticsId="link_editor">
@@ -893,12 +902,9 @@ export default function LinkEditorModal({
             }
           }}
           onFocusOutside={(e) => {
-            // Prevent focus from being managed by the drawer
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
-              e.preventDefault();
-              e.stopPropagation();
-            }
+            // Always prevent drawer from closing when focus moves outside
+            // This prevents the drawer from closing when toasts or other UI elements appear during save
+            e.preventDefault();
           }}
           // REMOVED: onFocus handler that was stealing focus from custom text input
         >
@@ -936,7 +942,14 @@ export default function LinkEditorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
+      // Guard: Don't close modal during save operations
+      console.log('[LinkEditorModal Dialog] onOpenChange called', { open, isSaving });
+      if (!open && isSaving) {
+        console.log('[LinkEditorModal Dialog] BLOCKED close - isSaving is true');
+        return;
+      }
       if (!open) {
+        console.log('[LinkEditorModal Dialog] Closing modal');
         onClose();
       }
     }} hashId="link-editor" analyticsId="link_editor">
@@ -965,12 +978,9 @@ export default function LinkEditorModal({
           }
         }}
         onFocusOutside={(e) => {
-          // Prevent focus from being managed by the dialog
-          const target = e.target as HTMLElement;
-          if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.closest('input, textarea, [id*="display-text"]')) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
+          // Always prevent dialog from closing when focus moves outside
+          // This prevents the dialog from closing when toasts or other UI elements appear during save
+          e.preventDefault();
         }}
         // REMOVED: onFocus handler that was stealing focus from custom text input
       >

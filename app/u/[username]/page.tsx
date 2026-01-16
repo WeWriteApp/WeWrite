@@ -47,29 +47,33 @@ export default function UserPage({ params }: UserPageProps) {
     includeSubscription: true
   });
 
+  // Check if we need to redirect (userId in URL instead of username)
+  const needsRedirect = profile && profile.username && profile.username !== username && !hasRedirected;
+
   // If the URL param doesn't match the actual username, redirect to canonical URL
   // This handles the case when someone navigates with userId instead of username
   useEffect(() => {
-    if (profile && profile.username && profile.username !== username && !hasRedirected) {
+    if (needsRedirect) {
       console.log(`[UserPage] Redirecting from /u/${username} to /u/${profile.username}`);
       setHasRedirected(true);
       router.replace(`/u/${profile.username}`);
     }
-  }, [profile, username, router, hasRedirected]);
+  }, [needsRedirect, profile, username, router, hasRedirected]);
 
   // 🚀 OPTIMIZATION: Log cache performance for monitoring
   useEffect(() => {
-    if (profile) {
+    if (profile && !needsRedirect) {
       console.log(`🚀 User profile loaded for ${username}:`, {
         username: profile.username,
         fromCache: isFromCache,
         loadTime: isFromCache ? 'instant' : 'fresh'
       });
     }
-  }, [profile, isFromCache, username]);
+  }, [profile, isFromCache, username, needsRedirect]);
 
   useEffect(() => {
-    if (profile && profile.username) {
+    // Only track analytics if we're on the canonical URL (not during redirect)
+    if (profile && profile.username && !needsRedirect) {
       // Send pageview/event to Google Analytics with username
       if (typeof window !== 'undefined' && window.gtag) {
         // Track the profile view event with username
@@ -90,13 +94,14 @@ export default function UserPage({ params }: UserPageProps) {
         });
       }
     }
-  }, [profile]);
+  }, [profile, needsRedirect]);
 
-  if (isLoading) {
+  // Show loading state while loading OR during redirect to prevent error flash
+  if (isLoading || needsRedirect) {
     return (
       <UnifiedLoader
-        isLoading={isLoading}
-        message="Loading user profile..."
+        isLoading={true}
+        message={needsRedirect ? "Redirecting to user profile..." : "Loading user profile..."}
       />
     );
   }

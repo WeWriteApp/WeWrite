@@ -7,6 +7,7 @@ import MapPicker, { MapMarker } from '../map/MapPicker';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '../ui/drawer';
 import { Button } from '../ui/button';
 import { ConfirmationModal } from '../utils/UnifiedModal';
+import { StatsCard } from '@/components/ui/StatsCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 
@@ -536,21 +537,22 @@ export default function LocationField({
     </div>
   );
 
-  // Compact mode: simplified display for empty state (no location AND no linked pages with locations)
+  // Compact mode and no-map-content mode now both use StatsCard for consistency
   // Note: We check linkedPageMarkers which is computed from linkedPagesWithLocations after async loading
   const isEmpty = !normalizedLocation && linkedPageMarkers.length === 0 && !isLoadingLinkedPages;
-  if (compact && isEmpty && canEdit) {
+
+  // Use StatsCard for empty state (both compact and non-compact)
+  // For editable empty states, show "Set location" as the title (not "Location" with placeholder)
+  if ((compact && isEmpty && canEdit) || (!hasMapContent && !isLoadingLinkedPages)) {
     return (
       <>
-        <div
-          className={`wewrite-card cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors ${className}`}
-          onClick={handleLocationClick}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <Icon name="MapPin" size={18} className="text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Set location</span>
-          </div>
-        </div>
+        <StatsCard
+          icon="MapPin"
+          title={canEdit && isEmpty ? "Set location" : "Location"}
+          onClick={isCardClickable ? handleLocationClick : undefined}
+          className={className}
+          loading={isLoadingLinkedPages}
+        />
 
         {/* Detail View - Drawer on mobile, Modal on desktop */}
         {isMobile ? (
@@ -571,60 +573,6 @@ export default function LocationField({
             {detailViewContent}
           </LocationModal>
         )}
-      </>
-    );
-  }
-
-  // When there's no map content, use simple StatsCard-style layout
-  if (!hasMapContent && !isLoadingLinkedPages) {
-    return (
-      <>
-        <div
-          className={`wewrite-card ${className} ${isCardClickable ? 'cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors' : ''}`}
-          onClick={isCardClickable ? handleLocationClick : undefined}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon name="MapPin" size={20} className="text-muted-foreground" />
-              <span className="text-sm font-medium">Location</span>
-            </div>
-            <div className="text-muted-foreground text-sm">
-              {canEdit ? 'Set location' : 'No location set'}
-            </div>
-          </div>
-        </div>
-
-        {/* Detail View modals */}
-        {isMobile ? (
-          <Drawer open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-            <DrawerContent className="max-h-[90vh]">
-              <DrawerHeader>
-                <DrawerTitle>{pageTitle || 'Location'}</DrawerTitle>
-              </DrawerHeader>
-              {detailViewContent}
-            </DrawerContent>
-          </Drawer>
-        ) : (
-          <LocationModal
-            isOpen={isDetailViewOpen}
-            onClose={handleClose}
-            title={pageTitle || 'Location'}
-          >
-            {detailViewContent}
-          </LocationModal>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={showDeleteConfirmation}
-          onClose={() => setShowDeleteConfirmation(false)}
-          onConfirm={handleDeleteLocation}
-          title="Delete Location"
-          message="Are you sure you want to remove the location from this page? This action cannot be undone."
-          confirmText="Delete"
-          cancelText="Cancel"
-          variant="destructive"
-        />
       </>
     );
   }
