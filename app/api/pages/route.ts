@@ -580,6 +580,7 @@ export async function PUT(request: NextRequest) {
     // Handle new page creation when markAsSaved is true but page doesn't exist
     // This happens when a user creates a new page via /{pageId}?new=true flow
     let pageData: any;
+    let isFirstSaveOfNewPage = false; // Track if this is the first save of a newly created page
     if (!pageDoc.exists) {
       if (markAsSaved) {
         // This is a first-time save of a new page - create the page document
@@ -617,6 +618,7 @@ export async function PUT(request: NextRequest) {
 
         await pageRef.set(newPageData);
         pageData = newPageData;
+        isFirstSaveOfNewPage = true; // Mark that this is the first save of a new page
 
         logger.info('New page document created', { pageId: id }, 'PAGE_SAVE');
 
@@ -791,7 +793,10 @@ export async function PUT(request: NextRequest) {
           content,
           userId: currentUserId,
           username: currentUser?.username || 'Anonymous',
-          groupId: groupId
+          groupId: groupId,
+          // For new pages, pass null as previousContent so diff knows there was no prior content
+          // This prevents comparing new content against itself (which happens because we just created the page)
+          previousContent: isFirstSaveOfNewPage ? null : undefined
         };
 
         // VERSION BATCHING: If batchWithGroup is true, pass it through to enable version batching
@@ -887,6 +892,26 @@ export async function PUT(request: NextRequest) {
       metadataUpdate.lastModified = new Date().toISOString();
 
       await pageRef.update(metadataUpdate);
+
+      // CONTENT VERIFICATION: Verify content was actually written to prevent data loss
+      // This is a safety net for cases where version save appears to succeed but content is missing
+      if (isFirstSaveOfNewPage && content) {
+        const verifyDoc = await pageRef.get();
+        const savedContent = verifyDoc.data()?.content;
+        const contentIsEmpty = !savedContent ||
+          (Array.isArray(savedContent) && savedContent.length === 0) ||
+          (Array.isArray(savedContent) && savedContent.length === 1 &&
+           savedContent[0]?.children?.[0]?.text === '');
+
+        if (contentIsEmpty) {
+          logger.error('Content verification failed - forcing content update', {
+            pageId: id,
+            expectedContentLength: JSON.stringify(content).length
+          }, 'PAGE_SAVE');
+          await pageRef.update({ content: content, lastModified: new Date().toISOString() });
+          logger.info('Forced content update after verification failure', { pageId: id }, 'PAGE_SAVE');
+        }
+      }
 
     } else {
       // For non-content updates (title, location, etc.), just update the page directly

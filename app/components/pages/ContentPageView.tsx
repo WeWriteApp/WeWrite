@@ -1322,9 +1322,10 @@ export default function ContentPageView({
 
     try {
       // Use API route instead of direct Firebase calls
-      // IMPORTANT: Capture the current state at save time - these are what we're actually saving
-      // If user continues typing during the async save, editorState will change but these won't
-      const contentToSave = editorState;
+      // IMPORTANT: Use ref to get the most current content, avoiding stale closure issues
+      // The ref is kept in sync via useEffect and always has the latest editor state
+      // This fixes data loss on new page auto-save where closure captured empty initial state
+      const contentToSave = currentEditorStateRef.current || editorState;
       const titleToSave = title.trim();
       const locationToSave = location;
       const customDateToSave = customDate;
@@ -1530,15 +1531,14 @@ export default function ContentPageView({
       // from running during the re-render caused by setPage. This preserves focus/modals.
       justSavedRef.current = true;
 
-      // SIMPLIFICATION: Only update metadata in page state, NOT content
-      // The Editor already has the latest content via editorState.
-      // Updating page.content triggers Editor's sync effect which resets focus/modals.
-      // Instead, we only update metadata that doesn't affect the Editor.
+      // Update page state with saved content and metadata
+      // CRITICAL FIX: We MUST update page.content here so the sync effect (lines 2011-2032)
+      // has the correct content when it eventually runs after justSaved expires.
+      // The justSaved guard prevents immediate re-sync, so this is safe.
       if (page) {
         setPage(prev => prev ? {
           ...prev,
-          // DO NOT update content - it triggers Editor reset!
-          // content is already in editorState and will be synced on next load
+          content: contentToSave, // CRITICAL: Keep page.content in sync to prevent data loss
           title: titleToSave,
           location: locationToSave,
           customDate: customDateToSave,
@@ -2020,8 +2020,8 @@ export default function ContentPageView({
       return;
     }
 
-    // CRITICAL: Never sync content for new pages - they should start fresh and
-    // the editor already has the content. Syncing here causes focus loss on first save.
+    // Guard for new pages during initial setup (before first save)
+    // After first save, page.content is updated, so this guard is mainly for the initial state
     if (isNewPageMode || isNewPageRef.current) {
       return;
     }

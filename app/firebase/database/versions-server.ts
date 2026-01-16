@@ -15,6 +15,8 @@ export interface VersionData {
   groupId?: string;
   /** When true, update existing version with same groupId instead of creating new one */
   batchWithGroup?: boolean;
+  /** Explicit previous content for diff calculation. Pass null for new pages (no prior content). */
+  previousContent?: any;
 }
 
 /**
@@ -217,11 +219,15 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     let diffResult = null;
     try {
       const { calculateDiff } = await import('../../utils/diffService');
-      const currentPageContent = pageData?.content || '';
+      // Use explicit previousContent if provided (null means new page with no prior content)
+      // Otherwise fall back to the current page content from Firestore
+      const previousContent = data.previousContent !== undefined
+        ? data.previousContent  // Explicit previous content (null for new pages)
+        : (pageData?.content || '');
 
       // Pass the actual content objects to calculateDiff, not JSON strings
       // The diff service will handle text extraction internally
-      diffResult = await calculateDiff(contentForDiff, currentPageContent);
+      diffResult = await calculateDiff(contentForDiff, previousContent);
       console.log("✅ VERSION SERVER: Diff calculated:", {
         added: diffResult.added,
         removed: diffResult.removed,
@@ -229,6 +235,25 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       });
     } catch (diffError) {
       console.error("🔴 VERSION SERVER: Error calculating diff (non-fatal):", diffError);
+    }
+
+    // Compute fallback diffPreview for new pages (extract text instead of using raw JSON)
+    let fallbackDiffPreview = null;
+    if (!diffResult?.preview && isNewPage) {
+      try {
+        const { extractTextContent } = await import('../../utils/text-extraction');
+        const textPreview = extractTextContent(data.content).substring(0, 200);
+        fallbackDiffPreview = {
+          beforeContext: '',
+          addedText: textPreview,
+          removedText: '',
+          afterContext: '',
+          hasAdditions: true,
+          hasRemovals: false
+        };
+      } catch (extractError) {
+        console.error("🔴 VERSION SERVER: Error extracting text for preview:", extractError);
+      }
     }
 
     // Prepare version data with diff information
@@ -253,12 +278,12 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       },
 
       // Rich diff preview for UI display
-      diffPreview: diffResult?.preview || {
+      diffPreview: diffResult?.preview || fallbackDiffPreview || {
         beforeContext: '',
-        addedText: isNewPage ? contentString.substring(0, 200) : '',
+        addedText: '',
         removedText: '',
         afterContext: '',
-        hasAdditions: isNewPage || (diffResult?.added > 0),
+        hasAdditions: diffResult?.added > 0,
         hasRemovals: diffResult?.removed > 0
       },
 
@@ -316,23 +341,10 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     console.log("✅ VERSION SERVER: Page document updated successfully");
 
     // PERFORMANCE: Run non-blocking operations in background (fire and forget)
-    // User activity recording and cache invalidation don't need to block the response
+    // Cache invalidation doesn't need to block the response
     Promise.allSettled([
-      // Record user activity for streak tracking
-      (async () => {
-        try {
-          const { recordUserActivity } = await import('../streaks');
-          await recordUserActivity(data.userId, 'page_edit', {
-            pageId,
-            versionId: versionRef.id,
-            contentLength: contentString.length,
-            isNewPage
-          });
-          console.log("✅ [BG] User activity recorded");
-        } catch (err) {
-          console.error("⚠️ [BG] User activity recording failed:", err);
-        }
-      })(),
+      // TODO: User activity recording is disabled because recordUserActivity is a client-side function
+      // To re-enable, create a server-side version in app/firebase/streaks-server.ts
       // Invalidate cache
       (async () => {
         try {
