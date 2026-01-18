@@ -1215,31 +1215,38 @@ function DashboardRow({
   const hookResult = !hasBatchDataForRow ? row.hook(dateRange, granularity, globalFilters) : { data: [], loading: false, error: null, stats: null, metadata: null };
 
   // Determine data source
-  let data: any[];
-  let loading: boolean;
-  let error: string | null;
-  let stats: any;
-  let metadata: any;
+  let data: any[] = [];
+  let loading: boolean = false;
+  let error: string | null = null;
+  let stats: any = null;
+  let metadata: any = null;
 
-  if (hasBatchDataForRow) {
-    // Use batch data - ensure we always get an array even if the key exists but value is undefined
-    const batchValue = batchData[batchDataKey];
-    data = Array.isArray(batchValue) ? batchValue : [];
-    loading = batchLoading;
-    error = batchError;
-    stats = null;
-    metadata = null;
-  } else {
-    // Use individual hook result - ensure data is always an array
-    data = Array.isArray(hookResult.data) ? hookResult.data : [];
-    loading = hookResult.loading;
-    error = hookResult.error;
-    stats = hookResult.stats;
-    metadata = hookResult.metadata;
+  try {
+    if (hasBatchDataForRow && batchData) {
+      // Use batch data - ensure we always get an array even if the key exists but value is undefined
+      const batchValue = batchDataKey ? batchData[batchDataKey] : undefined;
+      data = Array.isArray(batchValue) ? batchValue : [];
+      loading = batchLoading ?? false;
+      error = batchError ?? null;
+      stats = null;
+      metadata = null;
+    } else if (hookResult) {
+      // Use individual hook result - ensure data is always an array
+      data = Array.isArray(hookResult.data) ? hookResult.data : [];
+      loading = hookResult.loading ?? false;
+      error = hookResult.error ?? null;
+      stats = hookResult.stats ?? null;
+      metadata = hookResult.metadata ?? null;
+    }
+  } catch (e) {
+    console.error('[DashboardRow] Error extracting data:', e);
+    data = [];
+    loading = false;
+    error = 'Error loading data';
   }
 
-  // Ensure rawData is always a valid array (defensive double-check)
-  const rawData = Array.isArray(data) ? data : [];
+  // Ensure rawData is always a valid array (defensive triple-check)
+  const rawData: any[] = Array.isArray(data) ? data : [];
 
   // Check if cumulative mode is enabled
   const isCumulative = globalFilters?.timeDisplayMode === 'cumulative';
@@ -1247,29 +1254,54 @@ function DashboardRow({
   // Step 1: Aggregate data to match granularity (ensures all charts have same number of points)
   // This makes charts visually comparable across different time ranges
   const aggregatedData = useMemo(() => {
-    if (rawData.length === 0) return rawData;
+    // Extra safety: ensure rawData is actually an array
+    if (!Array.isArray(rawData) || rawData.length === 0) return [];
 
-    // Use aggregateKeys if specified, otherwise use cumulativeKeys, otherwise use valueKey
-    const keysToAggregate = row.aggregateKeys || row.cumulativeKeys || [row.valueKey];
-    return aggregateToGranularity(rawData, granularity, keysToAggregate);
+    try {
+      // Use aggregateKeys if specified, otherwise use cumulativeKeys, otherwise use valueKey
+      const keysToAggregate = row.aggregateKeys || row.cumulativeKeys || [row.valueKey];
+      const result = aggregateToGranularity(rawData, granularity, keysToAggregate);
+      return Array.isArray(result) ? result : [];
+    } catch (e) {
+      console.error('[DashboardRow] Error aggregating data:', e);
+      return [];
+    }
   }, [rawData, granularity, row.aggregateKeys, row.cumulativeKeys, row.valueKey]);
 
   // Step 2: Apply cumulative transformation for rows that don't natively support it
   // Use cumulativeKeys if provided, otherwise fall back to valueKey
   const normalizedData = useMemo(() => {
-    if (!isCumulative || row.supportsNativeCumulative || aggregatedData.length === 0) {
+    // Extra safety: ensure aggregatedData is actually an array
+    if (!Array.isArray(aggregatedData) || aggregatedData.length === 0) {
+      return [];
+    }
+    if (!isCumulative || row.supportsNativeCumulative) {
       return aggregatedData;
     }
-    // Use cumulativeKeys if specified, otherwise use valueKey
-    const keysToTransform = row.cumulativeKeys || [row.valueKey];
-    return transformToCumulative(aggregatedData, keysToTransform);
+    try {
+      // Use cumulativeKeys if specified, otherwise use valueKey
+      const keysToTransform = row.cumulativeKeys || [row.valueKey];
+      const result = transformToCumulative(aggregatedData, keysToTransform);
+      return Array.isArray(result) ? result : [];
+    } catch (e) {
+      console.error('[DashboardRow] Error transforming to cumulative:', e);
+      return [];
+    }
   }, [aggregatedData, isCumulative, row.supportsNativeCumulative, row.valueKey, row.cumulativeKeys]);
 
   // Calculate the formatted total value
   const formattedValue = useMemo(() => {
-    if (loading || normalizedData.length === 0) return null;
-    return row.valueFormatter(normalizedData, stats, metadata);
+    if (loading || !Array.isArray(normalizedData) || normalizedData.length === 0) return null;
+    try {
+      return row.valueFormatter(normalizedData, stats, metadata);
+    } catch (e) {
+      console.error('[DashboardRow] Error formatting value:', e);
+      return null;
+    }
   }, [normalizedData, loading, stats, metadata, row]);
+
+  // Ensure we have a safe data array for the chart
+  const safeChartData = Array.isArray(normalizedData) ? normalizedData : [];
 
   return (
     <div
@@ -1300,12 +1332,12 @@ function DashboardRow({
           <div className="h-full flex items-center justify-center text-red-500/70 text-sm">
             Error loading data
           </div>
-        ) : normalizedData.length === 0 ? (
+        ) : safeChartData.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground/50 text-sm">
             No data available
           </div>
         ) : (
-          <row.chartComponent data={normalizedData} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} chartType={chartType} />
+          <row.chartComponent data={safeChartData} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} chartType={chartType} />
         )}
       </div>
     </div>

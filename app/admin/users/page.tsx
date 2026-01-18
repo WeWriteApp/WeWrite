@@ -40,6 +40,7 @@ import { UserDetailsDrawer } from "../../components/admin/UserDetailsDrawer";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import SimpleSparkline from "../../components/utils/SimpleSparkline";
+import { RiskScoreBadge } from "../../components/admin/RiskScoreBadge";
 
 type FinancialInfo = {
   hasSubscription: boolean;
@@ -72,7 +73,64 @@ type User = {
   referralSource?: string;
   pwaInstalled?: boolean;
   notificationSparkline?: number[];
+  riskScore?: number; // Calculated risk score (0-100)
 };
+
+/**
+ * Calculate a simple risk score based on available user data.
+ * This is a client-side approximation for display purposes.
+ * Full risk assessment uses the server-side RiskScoringService.
+ */
+function calculateClientRiskScore(user: User): number {
+  let score = 50; // Start at medium risk
+
+  // Account age reduces risk (max -30 points)
+  if (user.createdAt) {
+    const createdDate = user.createdAt?.toDate?.() || new Date(user.createdAt);
+    const ageInDays = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (ageInDays > 90) score -= 30;
+    else if (ageInDays > 30) score -= 20;
+    else if (ageInDays > 7) score -= 10;
+    else score += 10; // New accounts are higher risk
+  } else {
+    score += 10; // Unknown creation date
+  }
+
+  // Email verification reduces risk (-15 points)
+  if (user.emailVerified) {
+    score -= 15;
+  } else {
+    score += 5;
+  }
+
+  // Content creation shows engagement (-15 points max)
+  if (user.totalPages !== undefined) {
+    if (user.totalPages > 50) score -= 15;
+    else if (user.totalPages > 10) score -= 10;
+    else if (user.totalPages > 0) score -= 5;
+    else score += 5; // No content yet
+  }
+
+  // Subscription shows commitment (-10 points)
+  if (user.financial?.hasSubscription) {
+    score -= 10;
+  }
+
+  // Admin users are trusted (-20 points)
+  if (user.isAdmin) {
+    score -= 20;
+  }
+
+  // Recent login shows activity (-5 points)
+  if (user.lastLogin) {
+    const lastDate = user.lastLogin?.toDate?.() || new Date(user.lastLogin);
+    const daysSinceLogin = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceLogin < 7) score -= 5;
+  }
+
+  // Clamp to 0-100
+  return Math.max(0, Math.min(100, score));
+}
 
 type Column = {
   id: string;
@@ -481,6 +539,19 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
       )
     },
     {
+      id: "riskScore",
+      label: "Risk",
+      sortable: true,
+      minWidth: 80,
+      render: (u) => (
+        <RiskScoreBadge
+          score={u.riskScore ?? calculateClientRiskScore(u)}
+          size="sm"
+          showTooltip={true}
+        />
+      )
+    },
+    {
       id: "referredBy",
       label: "Referred by",
       sortable: true,
@@ -697,6 +768,8 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
         return u.emailVerified ? 1 : 0;
       case "admin":
         return u.isAdmin ? 1 : 0;
+      case "riskScore":
+        return u.riskScore ?? calculateClientRiskScore(u);
       case "referredBy":
         return u.referredBy ? 1 : 0;
       case "payouts":

@@ -15,6 +15,7 @@ import {
 } from '../ui/side-drawer';
 import { adminFetch } from '../../utils/adminFetch';
 import { useToast } from '../ui/use-toast';
+import { RiskAssessmentSection } from './RiskAssessmentSection';
 
 // Types
 interface UserFinancialInfo {
@@ -563,6 +564,9 @@ export function UserDetailsDrawer({
                   <div className="font-medium break-all text-xs">{userDetails.stripeConnectedAccountId || '—'}</div>
                 </div>
               </div>
+
+              {/* Risk Assessment Section */}
+              <RiskAssessmentSection userId={userDetails.uid} />
 
               {/* Subscription Card */}
               <div className="rounded-lg border border-border bg-card p-4">
