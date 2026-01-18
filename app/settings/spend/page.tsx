@@ -181,6 +181,8 @@ export default function SpendPage() {
 
   // Handle increasing allocation (optimistic)
   const handleIncreaseAllocation = async (allocation: UsdAllocation) => {
+    const originalAmount = allocation.usdCents;
+
     // Optimistic update - update UI immediately
     setAllocations(prev => prev.map(a =>
       a.id === allocation.id
@@ -188,25 +190,34 @@ export default function SpendPage() {
         : a
     ));
 
-    // Update USD balance optimistically
-    await refreshUsdBalance();
-
-    // Fire and forget API call - don't wait for response or update UI based on it
+    // CRITICAL FIX: Await API call, THEN refresh balance
+    // This prevents race condition where cache gets stale data
     try {
       const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
       const body = allocation.resourceType === 'user'
         ? { recipientUserId: allocation.resourceId, usdCentsChange: allocationIntervalCents }
         : { pageId: allocation.resourceId, usdCentsChange: allocationIntervalCents };
 
-      fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(() => {
-        // Error increasing allocation (background)
       });
+
+      if (response.ok) {
+        // Only refresh balance after successful API call
+        await refreshUsdBalance();
+      } else {
+        // Rollback optimistic update on failure
+        setAllocations(prev => prev.map(a =>
+          a.id === allocation.id ? { ...a, usdCents: originalAmount } : a
+        ));
+      }
     } catch (error) {
-      // Error increasing allocation
+      // Rollback on error
+      setAllocations(prev => prev.map(a =>
+        a.id === allocation.id ? { ...a, usdCents: originalAmount } : a
+      ));
     }
   };
 
@@ -215,38 +226,52 @@ export default function SpendPage() {
     // Don't allow decreasing below 0
     if (allocation.usdCents <= 0) return;
 
+    const originalAmount = allocation.usdCents;
+    const newAmount = Math.max(0, allocation.usdCents - allocationIntervalCents);
+
     // Optimistic update - update UI immediately
     setAllocations(prev => prev.map(a =>
       a.id === allocation.id
-        ? { ...a, usdCents: Math.max(0, a.usdCents - allocationIntervalCents) }
+        ? { ...a, usdCents: newAmount }
         : a
     ));
 
-    // Update USD balance optimistically
-    await refreshUsdBalance();
-
-    // Fire and forget API call - don't wait for response or update UI based on it
+    // CRITICAL FIX: Await API call, THEN refresh balance
+    // This prevents race condition where cache gets stale data
     try {
       const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
       const body = allocation.resourceType === 'user'
         ? { recipientUserId: allocation.resourceId, usdCentsChange: -allocationIntervalCents }
         : { pageId: allocation.resourceId, usdCentsChange: -allocationIntervalCents };
 
-      fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(() => {
-        // Error decreasing allocation (background)
       });
+
+      if (response.ok) {
+        // Only refresh balance after successful API call
+        await refreshUsdBalance();
+      } else {
+        // Rollback optimistic update on failure
+        setAllocations(prev => prev.map(a =>
+          a.id === allocation.id ? { ...a, usdCents: originalAmount } : a
+        ));
+      }
     } catch (error) {
-      // Error decreasing allocation
+      // Rollback on error
+      setAllocations(prev => prev.map(a =>
+        a.id === allocation.id ? { ...a, usdCents: originalAmount } : a
+      ));
     }
   };
 
   const handleSetAllocationAmount = async (allocation: UsdAllocation, newAmountCents: number) => {
     const delta = newAmountCents - allocation.usdCents;
     if (delta === 0) return;
+
+    const originalAmount = allocation.usdCents;
 
     // Optimistic update
     setAllocations(prev => prev.map(a =>
@@ -255,23 +280,34 @@ export default function SpendPage() {
         : a
     ));
 
-    await refreshUsdBalance();
-
+    // CRITICAL FIX: Await API call, THEN refresh balance
+    // This prevents race condition where cache gets stale data
     try {
       const endpoint = allocation.resourceType === 'user' ? '/api/usd/allocate-user' : '/api/usd/allocate';
       const body = allocation.resourceType === 'user'
         ? { recipientUserId: allocation.resourceId, usdCentsChange: delta }
         : { pageId: allocation.resourceId, usdCentsChange: delta };
 
-      fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(() => {
-        // Error setting allocation (background)
       });
+
+      if (response.ok) {
+        // Only refresh balance after successful API call
+        await refreshUsdBalance();
+      } else {
+        // Rollback optimistic update on failure
+        setAllocations(prev => prev.map(a =>
+          a.id === allocation.id ? { ...a, usdCents: originalAmount } : a
+        ));
+      }
     } catch (error) {
-      // Error setting allocation amount
+      // Rollback on error
+      setAllocations(prev => prev.map(a =>
+        a.id === allocation.id ? { ...a, usdCents: originalAmount } : a
+      ));
     }
   };
 

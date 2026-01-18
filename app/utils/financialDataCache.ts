@@ -89,16 +89,20 @@ export class FinancialDataCache<T> {
 
   /**
    * Clear cached data for a user
+   * Properly removes from both memory and localStorage
    */
   clear(userId: string): void {
     this.memoryCache.delete(userId);
-    
-    if (this.config.persistent) {
-      const persistentKey = generateCacheKey(this.config.keyPrefix, userId);
-      // Note: cacheUtils doesn't have a delete method, so we set with 0 duration
-      setCacheItem(persistentKey, null, 0);
-    }
 
+    if (this.config.persistent && typeof localStorage !== 'undefined') {
+      const persistentKey = generateCacheKey(this.config.keyPrefix, userId);
+      try {
+        localStorage.removeItem(persistentKey);
+      } catch (e) {
+        // localStorage might not be available in some contexts
+        console.warn('[FinancialDataCache] Failed to clear localStorage:', e);
+      }
+    }
   }
 
   /**
@@ -160,4 +164,22 @@ export const earningsCache = new FinancialDataCache<EarningsData>({
  */
 export function createFinancialDataCache<T>(config: CacheConfig): FinancialDataCache<T> {
   return new FinancialDataCache<T>(config);
+}
+
+/**
+ * Clear USD balance cache for a specific user
+ * Call this before fetching fresh balance data to avoid stale cache issues
+ */
+export function clearUsdBalanceCache(userId: string): void {
+  usdBalanceCache.clear(userId);
+}
+
+/**
+ * Clear all financial caches for a user
+ * Useful when subscription status changes or user logs out
+ */
+export function clearAllFinancialCaches(userId: string): void {
+  usdBalanceCache.clear(userId);
+  subscriptionCache.clear(userId);
+  earningsCache.clear(userId);
 }

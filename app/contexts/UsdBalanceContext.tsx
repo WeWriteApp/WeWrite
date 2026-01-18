@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from '../providers/AuthProvider';
 import { formatUsdCents } from '../utils/formatCurrency';
 import { UsdDataService, type UsdBalance } from '../services/usdDataService';
-import { usdBalanceCache } from '../utils/financialDataCache';
+import { usdBalanceCache, clearUsdBalanceCache } from '../utils/financialDataCache';
 import { useSubscription } from './SubscriptionContext';
 import { useShouldUseDemoBalance } from './DemoBalanceContext';
 import { createNotification } from '../services/notificationsService';
@@ -53,6 +53,13 @@ export function UsdBalanceProvider({ children }: { children: React.ReactNode }) 
       setUsdBalance(null);
       setLastUpdated(new Date());
       return;
+    }
+
+    // CRITICAL FIX: Clear cache when forcing refresh to prevent stale data
+    // This fixes the bug where allocation changes weren't reflected due to
+    // the cache returning old values before the API call completed
+    if (forceRefresh) {
+      clearUsdBalanceCache(user.uid);
     }
 
     // Check cache first (unless forcing refresh)
