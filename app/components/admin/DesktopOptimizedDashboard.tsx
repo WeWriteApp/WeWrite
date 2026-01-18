@@ -1206,15 +1206,15 @@ function DashboardRow({
   batchError: string | null;
   useBatchMode: boolean;
 }) {
-  // Use batch data if available and in batch mode, otherwise use individual hook
+  // IMPORTANT: Always call the hook unconditionally to follow React's rules of hooks.
+  // The hook must be called on every render regardless of whether we use its result.
+  const hookResult = row.hook(dateRange, granularity, globalFilters);
+
+  // Use batch data if available and in batch mode, otherwise use individual hook result
   const batchDataKey = BATCH_DATA_MAP[row.id];
-  const hasBatchDataForRow = useBatchMode && batchData && batchDataKey && batchData[batchDataKey];
+  const hasBatchDataForRow = useBatchMode && batchData && batchDataKey && batchDataKey in batchData;
 
-  // Only call the individual hook if NOT using batch mode for this row
-  // This is a conditional hook call which is okay because useBatchMode doesn't change during render
-  const hookResult = !hasBatchDataForRow ? row.hook(dateRange, granularity, globalFilters) : { data: [], loading: false, error: null, stats: null, metadata: null };
-
-  // Determine data source
+  // Determine data source - prefer batch data when available, fallback to hook result
   let data: any[] = [];
   let loading: boolean = false;
   let error: string | null = null;
@@ -1222,9 +1222,9 @@ function DashboardRow({
   let metadata: any = null;
 
   try {
-    if (hasBatchDataForRow && batchData) {
+    if (hasBatchDataForRow && batchData && batchDataKey) {
       // Use batch data - ensure we always get an array even if the key exists but value is undefined
-      const batchValue = batchDataKey ? batchData[batchDataKey] : undefined;
+      const batchValue = batchData[batchDataKey];
       data = Array.isArray(batchValue) ? batchValue : [];
       loading = batchLoading ?? false;
       error = batchError ?? null;
@@ -1245,7 +1245,7 @@ function DashboardRow({
     error = 'Error loading data';
   }
 
-  // Ensure rawData is always a valid array (defensive triple-check)
+  // Ensure rawData is always a valid array (defensive - never undefined)
   const rawData: any[] = Array.isArray(data) ? data : [];
 
   // Check if cumulative mode is enabled
@@ -1300,8 +1300,16 @@ function DashboardRow({
     }
   }, [normalizedData, loading, stats, metadata, row]);
 
-  // Ensure we have a safe data array for the chart
-  const safeChartData = Array.isArray(normalizedData) ? normalizedData : [];
+  // Ensure we have a safe data array for the chart - CRITICAL: must never be undefined
+  // This prevents "Cannot read properties of undefined (reading 'length')" in Recharts
+  const safeChartData: any[] = useMemo(() => {
+    if (!Array.isArray(normalizedData)) return [];
+    return normalizedData;
+  }, [normalizedData]);
+
+  // Final safety check - should never happen but prevents crashes
+  const chartDataToRender = safeChartData ?? [];
+  const hasData = Array.isArray(chartDataToRender) && chartDataToRender.length > 0;
 
   return (
     <div
@@ -1332,12 +1340,12 @@ function DashboardRow({
           <div className="h-full flex items-center justify-center text-red-500/70 text-sm">
             Error loading data
           </div>
-        ) : safeChartData.length === 0 ? (
+        ) : !hasData ? (
           <div className="h-full flex items-center justify-center text-muted-foreground/50 text-sm">
             No data available
           </div>
         ) : (
-          <row.chartComponent data={safeChartData} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} chartType={chartType} />
+          <row.chartComponent data={chartDataToRender} height={height} globalFilters={globalFilters} tooltipFormatter={row.tooltipFormatter} chartType={chartType} />
         )}
       </div>
     </div>
