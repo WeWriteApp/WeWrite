@@ -161,7 +161,7 @@ Results now include pages with substring matches that were previously missed.
 
 Potential enhancements for consideration:
 
-1. **Full-Text Search**: Migrate to Algolia, Elasticsearch, or similar for true full-text search
+1. **Full-Text Search**: Enhance Typesense integration or consider Elasticsearch for advanced full-text search
 2. **Fuzzy Matching**: Add support for typo tolerance ("massses" → "masses")
 3. **Semantic Search**: Use embeddings for meaning-based search
 4. **Search Analytics**: Track common queries to optimize indexing

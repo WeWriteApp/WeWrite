@@ -318,7 +318,7 @@ class LinkTypeDetector {
 **Analysis (January 2026):**
 The file structure by method:
 - **GET** (~180 lines): Page listing with aggressive caching (pagesListCache, serverCache)
-- **POST** (~310 lines): Page creation with versioning, Algolia/Typesense sync, notifications
+- **POST** (~310 lines): Page creation with versioning, Typesense sync, notifications
 - **PUT** (~680 lines): Complex update logic with version batching, diff computation, background ops
 - **DELETE** (~170 lines): Soft/permanent deletion with backlinks, allocations, search cleanup
 

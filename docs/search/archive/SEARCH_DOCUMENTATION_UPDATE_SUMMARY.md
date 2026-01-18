@@ -112,7 +112,7 @@ docs/
 
 ### Optional Enhancements
 1. Add search analytics to track common queries
-2. Consider full-text search service (Algolia, Elasticsearch)
+2. Enhance Typesense integration for advanced search features
 3. Implement fuzzy matching for typo tolerance
 4. Add semantic search capabilities
 5. Monitor performance with larger datasets

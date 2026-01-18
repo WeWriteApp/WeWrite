@@ -256,6 +256,9 @@ const GenericChart = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const { width } = useContainerSize(containerRef);
 
+  // Defensive: ensure data is always an array to prevent Recharts crashes
+  const safeData = Array.isArray(data) ? data : [];
+
   const xAxisProps = {
     dataKey: labelKey,
     axisLine: false,
@@ -280,7 +283,7 @@ const GenericChart = ({
     return (
       <div ref={containerRef} style={{ width: '100%', height }}>
         {canRender && (
-          <BarChart width={width} height={height} data={data}>
+          <BarChart width={width} height={height} data={safeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
@@ -299,7 +302,7 @@ const GenericChart = ({
   return (
     <div ref={containerRef} style={{ width: '100%', height }}>
       {canRender && (
-        <LineChart width={width} height={height} data={data}>
+        <LineChart width={width} height={height} data={safeData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
           <XAxis {...xAxisProps} />
           <YAxis {...yAxisProps} />
@@ -334,6 +337,9 @@ const NotificationsChart = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { width } = useContainerSize(containerRef);
+
+  // Defensive: ensure data is always an array to prevent Recharts crashes
+  const safeData = Array.isArray(data) ? data : [];
 
   const xAxisProps = {
     dataKey: labelKey,
@@ -382,7 +388,7 @@ const NotificationsChart = ({
     return (
       <div ref={containerRef} style={{ width: '100%', height }}>
         {canRender && (
-          <LineChart width={width} height={height} data={data}>
+          <LineChart width={width} height={height} data={safeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
@@ -399,7 +405,7 @@ const NotificationsChart = ({
   return (
     <div ref={containerRef} style={{ width: '100%', height }}>
       {canRender && (
-        <BarChart width={width} height={height} data={data}>
+        <BarChart width={width} height={height} data={safeData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
           <XAxis {...xAxisProps} />
           <YAxis {...yAxisProps} />
@@ -440,6 +446,9 @@ const RepliesChart = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { width } = useContainerSize(containerRef);
+
+  // Defensive: ensure data is always an array to prevent Recharts crashes
+  const safeData = Array.isArray(data) ? data : [];
 
   const xAxisProps = {
     dataKey: labelKey,
@@ -488,7 +497,7 @@ const RepliesChart = ({
     return (
       <div ref={containerRef} style={{ width: '100%', height }}>
         {canRender && (
-          <LineChart width={width} height={height} data={data}>
+          <LineChart width={width} height={height} data={safeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
@@ -529,7 +538,7 @@ const RepliesChart = ({
   return (
     <div ref={containerRef} style={{ width: '100%', height }}>
       {canRender && (
-        <BarChart width={width} height={height} data={data}>
+        <BarChart width={width} height={height} data={safeData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
           <XAxis {...xAxisProps} />
           <YAxis {...yAxisProps} />
@@ -822,12 +831,14 @@ export function DesktopOptimizedDashboard({
         const containerRef = useRef<HTMLDivElement>(null);
         const { width } = useContainerSize(containerRef);
         const canRender = width > 50 && height > 50;
+        // Defensive: ensure data is always an array to prevent Recharts crashes
+        const safeData = Array.isArray(data) ? data : [];
 
         return (
           <div ref={containerRef} style={{ width: '100%', height }}>
             {canRender && (
               chartType === 'bar' ? (
-                <BarChart width={width} height={height} data={data}>
+                <BarChart width={width} height={height} data={safeData}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis
                     dataKey="label"
@@ -848,7 +859,7 @@ export function DesktopOptimizedDashboard({
                   <Bar dataKey="externalLinks" stackId="a" fill="#10b981" name="External Links" />
                 </BarChart>
               ) : (
-                <LineChart width={width} height={height} data={data}>
+                <LineChart width={width} height={height} data={safeData}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis
                     dataKey="label"

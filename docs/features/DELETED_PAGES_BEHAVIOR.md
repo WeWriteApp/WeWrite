@@ -30,7 +30,6 @@ When a user deletes a page, it is "soft-deleted" rather than permanently removed
 Deleted pages are hidden from all dynamically loaded areas:
 
 1. **Search Results**
-   - Algolia search excludes deleted pages
    - Typesense search excludes deleted pages
    - Firestore fallback search excludes deleted pages
 
@@ -63,8 +62,7 @@ When a page is deleted via `deletePage()`:
    - Sets `deletedAt` timestamp
 
 2. **Search Index Removal**
-   - Removes page from Algolia index
-   - Removes page from Typesense index
+   - Removes page from Typesense search index
 
 ### Restore Process
 
@@ -75,7 +73,6 @@ When a page is restored via `/api/pages/restore`:
    - Removes `deletedAt` field
 
 2. **Search Index Re-addition**
-   - Re-indexes page to Algolia
    - Re-indexes page to Typesense
 
 3. **What Links Here Rebuild**
@@ -95,23 +92,5 @@ This ensures deleted pages are consistently hidden across the platform.
 
 - `app/firebase/database/index.ts` - `deletePage()` function
 - `app/api/pages/restore/route.ts` - Page restoration API
-- `app/lib/algoliaSync.ts` - Algolia sync with deletion support
 - `app/lib/typesenseSync.ts` - Typesense sync with deletion support
 - `app/components/settings/RecentlyDeletedPages.tsx` - UI for managing deleted pages
-- `scripts/algolia-cleanup-deleted.ts` - Script to clean up existing deleted pages from Algolia
-
-## Maintenance
-
-### Cleanup Script
-
-To remove any orphaned deleted pages from Algolia:
-
-```bash
-# Dry run (shows what would be removed)
-npx tsx scripts/algolia-cleanup-deleted.ts --env=prod
-
-# Actually perform cleanup
-npx tsx scripts/algolia-cleanup-deleted.ts --env=prod --cleanup
-```
-
-For development environment, use `--env=dev`.

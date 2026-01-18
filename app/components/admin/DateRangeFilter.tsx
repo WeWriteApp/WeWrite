@@ -13,6 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '../ui/dropdown-menu';
+import {
+  SegmentedControl,
+  SegmentedControlList,
+  SegmentedControlTrigger,
+} from '../ui/segmented-control';
 
 export interface DateRange {
   startDate: Date;
@@ -263,31 +268,21 @@ export function DateRangeFilter({
 
           {/* Global Analytics Filters - Combined Mode */}
           {combined && globalFilters && onGlobalFiltersChange && (
-            <>
-              {/* Time Display Mode Toggle */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <div className="flex items-center bg-muted rounded-md p-0.5">
-                  <Button
-                    variant={globalFilters.timeDisplayMode === 'cumulative' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleTimeDisplayModeChange('cumulative')}
-                    className="h-6 px-2 text-xs font-medium"
-                  >
-                    <Icon name="TrendingUp" size={12} className="mr-1" />
-                    Cumulative
-                  </Button>
-                  <Button
-                    variant={globalFilters.timeDisplayMode === 'overTime' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleTimeDisplayModeChange('overTime')}
-                    className="h-6 px-2 text-xs font-medium"
-                  >
-                    <Icon name="Activity" size={12} className="mr-1" />
-                    Over Time
-                  </Button>
-                </div>
-              </div>
-            </>
+            <SegmentedControl
+              value={globalFilters.timeDisplayMode}
+              onValueChange={(value) => handleTimeDisplayModeChange(value as 'cumulative' | 'overTime')}
+            >
+              <SegmentedControlList className="h-8">
+                <SegmentedControlTrigger value="cumulative" className="text-xs px-3 gap-1.5">
+                  <Icon name="TrendingUp" size={12} />
+                  Cumulative
+                </SegmentedControlTrigger>
+                <SegmentedControlTrigger value="overTime" className="text-xs px-3 gap-1.5">
+                  <Icon name="Activity" size={12} />
+                  Over Time
+                </SegmentedControlTrigger>
+              </SegmentedControlList>
+            </SegmentedControl>
           )}
 
           {/* Granularity Controls */}

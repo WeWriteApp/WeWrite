@@ -17,7 +17,7 @@ This document outlines the current search implementation, known limitations, and
 
 ## Current Implementation
 
-### Status: **Production** (with limitations)
+### Status: **Production** (Typesense + Firestore fallback)
 
 ### Architecture Overview
 
@@ -29,20 +29,14 @@ User Input
     |
     v
 +---------------------------+
-|   Phase 1: Prefix Queries |  <-- Fast Firestore queries
-|   (Case variations)       |      Only matches titles STARTING with search term
+|   Engine 1: Typesense     |  <-- Primary search engine
+|   Fast, typo-tolerant     |      Full-text search with typo tolerance
 +---------------------------+
-    |
+    | (on failure/not configured)
     v
 +---------------------------+
-|   Phase 2: Comprehensive  |  <-- Client-side filtering
-|   Search (1500 docs)      |      Scans recent pages for substring matches
-+---------------------------+
-    |
-    v
-+---------------------------+
-|   Phase 3: Fallback       |  <-- Additional fallback
-|   (500 docs by createdAt) |      Catches older pages
+|   Engine 2: Firestore     |  <-- Fallback (slow but reliable)
+|   Prefix + client scan    |      Scans up to 1500 recent docs
 +---------------------------+
     |
     v
@@ -53,8 +47,10 @@ User Input
 
 | File | Purpose |
 |------|---------|
-| `app/api/search-unified/route.js` | Main search API endpoint |
+| `app/api/search-unified/route.ts` | Main search API endpoint with fallback chain |
 | `app/hooks/useUnifiedSearch.ts` | Client-side search hook with debouncing |
+| `app/lib/typesense.ts` | Typesense client configuration |
+| `app/lib/typesenseSync.ts` | Typesense sync service for page updates |
 | `app/utils/searchCache.ts` | Multi-tier caching system |
 | `app/utils/searchUtils.ts` | Shared search utilities |
 
@@ -177,21 +173,29 @@ It does **NOT** support:
 
 ---
 
-### Option 3: Typesense (Self-Hosted or Cloud)
+### Option 3: Typesense (Cloud) ✅ IMPLEMENTED
 
-**Overview**: Open-source alternative focused on simplicity and speed.
+**Overview**: Open-source search engine focused on simplicity and speed.
+
+**Status**: Implemented as PRIMARY search engine.
+
+**Implementation Files**:
+- `app/lib/typesense.ts` - Client configuration and search functions
+- `app/lib/typesenseSync.ts` - Real-time sync service
+- `app/api/typesense/sync/route.ts` - Batch sync API
+- `app/api/typesense/sync-page/route.ts` - Single page sync API
 
 **Pros**:
 - Open source
-- Very fast
+- Very fast (<50ms typical)
 - Typo tolerance
-- Good Firebase integration
-- Simpler than Elasticsearch
+- Environment-aware collections (DEV_ prefix in development)
+- Graceful fallback when not configured
+- Cost-effective
 
 **Cons**:
-- Smaller community than Algolia/Meilisearch
+- Smaller community than Algolia
 - Fewer features than Algolia
-- Self-hosting requires infrastructure management
 
 ---
 
@@ -314,9 +318,9 @@ Implement `titleWords` array approach:
 **Status**: Future Consideration
 
 If search requirements grow:
-- [ ] Evaluate Algolia vs Meilisearch based on usage patterns
+- [ ] Enhance Typesense with synonyms, faceted search, or geo-search
 - [ ] Consider user search analytics to understand needs
-- [ ] Implement chosen solution with Firebase Extension
+- [ ] Evaluate Elasticsearch for advanced use cases if needed
 
 ---
 
@@ -341,24 +345,21 @@ If search requirements grow:
 - [ ] Update tests
 - [ ] Deploy and monitor
 
-### External Search Service (Future)
-- [ ] Choose provider (Algolia vs Meilisearch)
-- [ ] Set up account/infrastructure
-- [ ] Install Firebase Extension
-- [ ] Configure index settings
-- [ ] Implement client integration
-- [ ] Migrate search queries
-- [ ] Monitor costs and performance
+### Search Enhancements (Future)
+- [ ] Add synonyms support in Typesense
+- [ ] Implement faceted search for filtering
+- [ ] Add geo-search capabilities
+- [ ] Monitor and optimize search performance
+- [ ] Consider search analytics dashboard
 
 ---
 
 ## Related Documentation
 
 - [Firebase Full-Text Search Guide](https://firebase.google.com/docs/firestore/solutions/search)
-- [Algolia Firebase Extension](https://extensions.dev/extensions/algolia/firestore-algolia-search)
-- [Meilisearch Firebase Extension](https://github.com/meilisearch/firestore-meilisearch)
+- [Typesense Documentation](https://typesense.org/docs/)
 - [Firebase Data Connect](https://firebase.google.com/docs/data-connect)
 
 ---
 
-*Last updated: December 2024*
+*Last updated: January 2026*

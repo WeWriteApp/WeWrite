@@ -8,16 +8,15 @@ This document outlines the current search implementation, known limitations, and
 
 1. [Current Implementation](#current-implementation)
 2. [Known Limitations](#known-limitations)
-3. [Future Options](#future-options)
-4. [Comparison: Algolia vs Meilisearch](#comparison-algolia-vs-meilisearch)
-5. [Recommended Path Forward](#recommended-path-forward)
-6. [Implementation Checklist](#implementation-checklist)
+3. [Alternative Options](#alternative-options)
+4. [Recommended Path Forward](#recommended-path-forward)
+5. [Implementation Checklist](#implementation-checklist)
 
 ---
 
 ## Current Implementation
 
-### Status: **Production** (with multi-engine fallback)
+### Status: **Production** (Typesense + Firestore fallback)
 
 ### Architecture Overview
 
@@ -29,19 +28,13 @@ User Input
     |
     v
 +---------------------------+
-|   Engine 1: Algolia       |  <-- Primary search engine (when available)
-|   Fast, typo-tolerant     |      Limited by free tier quotas
+|   Engine 1: Typesense     |  <-- Primary search engine
+|   Fast, typo-tolerant     |      Full-text search with typo tolerance
 +---------------------------+
-    | (on failure/limit)
+    | (on failure/not configured)
     v
 +---------------------------+
-|   Engine 2: Typesense     |  <-- Secondary search engine
-|   Fast, self-hosted/cloud |      Full-text search with typo tolerance
-+---------------------------+
-    | (on failure)
-    v
-+---------------------------+
-|   Engine 3: Firestore     |  <-- Fallback (slow but reliable)
+|   Engine 2: Firestore     |  <-- Fallback (slow but reliable)
 |   Prefix + client scan    |      Scans up to 1500 recent docs
 +---------------------------+
     |
@@ -53,15 +46,11 @@ User Input
 
 The unified search implements a waterfall fallback pattern:
 
-1. **Algolia** (Primary) - Fast, managed service with typo tolerance
-   - Free tier: 10K searches/month
-   - Falls back if: quota exceeded, service unavailable, or disabled
-
-2. **Typesense** (Secondary) - Open-source alternative
-   - Uses Typesense Cloud or self-hosted instance
+1. **Typesense** (Primary) - Fast, open-source search engine with typo tolerance
+   - Uses Typesense Cloud instance
    - Falls back if: not configured, service unavailable
 
-3. **Firestore** (Fallback) - Built-in database search
+2. **Firestore** (Fallback) - Built-in database search
    - Prefix queries + client-side filtering
    - Always available but slower
 
@@ -71,8 +60,6 @@ The unified search implements a waterfall fallback pattern:
 |------|---------|
 | `app/api/search-unified/route.ts` | Main search API endpoint with fallback chain |
 | `app/hooks/useUnifiedSearch.ts` | Client-side search hook with debouncing |
-| `app/lib/algolia.ts` | Algolia client configuration |
-| `app/lib/algoliaSync.ts` | Algolia sync service for page updates |
 | `app/lib/typesense.ts` | Typesense client configuration |
 | `app/lib/typesenseSync.ts` | Typesense sync service for page updates |
 | `app/api/typesense/sync/route.ts` | Typesense batch sync API |
@@ -131,79 +118,13 @@ It does **NOT** support:
 
 ---
 
-## Future Options
+## Alternative Options
 
-### Option 1: Algolia (Managed Service)
+### Current: Typesense (Cloud) ✅ IMPLEMENTED
 
-**Overview**: Industry-leading search-as-a-service with Firebase integration.
+**Overview**: Open-source search engine focused on simplicity and speed.
 
-**Implementation**:
-1. Install Algolia Firebase Extension from Firebase Console
-2. Configure which collections to index
-3. Replace search queries with Algolia client
-
-**Pros**:
-- Instant results (<50ms typical)
-- Typo tolerance built-in
-- Synonym support
-- Faceted search & filtering
-- Official Firebase Extension (one-click setup)
-- Excellent documentation
-- Battle-tested at scale (Stripe, Twitch, Medium use it)
-
-**Cons**:
-- **Cost**: $1 per 1,000 search requests (after free tier)
-- **Free tier**: 10,000 searches/month
-- **Vendor lock-in**: Proprietary query syntax
-- **Another service to manage**: API keys, dashboard, billing
-
-**Best for**: Production apps that need reliable, fast search without managing infrastructure.
-
-**Estimated cost at scale**:
-- 10K searches/month: Free
-- 100K searches/month: ~$90/month
-- 1M searches/month: ~$900/month
-
----
-
-### Option 2: Meilisearch (Self-Hosted or Cloud)
-
-**Overview**: Open-source, fast, typo-tolerant search engine. Can self-host or use Meilisearch Cloud.
-
-**Implementation**:
-1. Deploy Meilisearch instance (or use Cloud)
-2. Install Firebase Extension for sync
-3. Configure indexing rules
-4. Replace search queries with Meilisearch client
-
-**Pros**:
-- **Open source** (MIT license)
-- Very fast (<50ms typical)
-- Typo tolerance
-- Easy to deploy (single binary, Docker support)
-- Firebase Extension available
-- No per-search pricing if self-hosted
-- Modern, clean API
-
-**Cons**:
-- **Self-hosted = infrastructure burden**: Need to manage servers, updates, backups
-- **Meilisearch Cloud pricing**: Similar to Algolia
-- **Smaller ecosystem**: Fewer integrations than Algolia
-- **Less mature**: Newer project, smaller community
-
-**Best for**: Teams comfortable with DevOps who want to avoid per-search costs.
-
-**Estimated cost**:
-- Self-hosted: $20-50/month (small VPS)
-- Meilisearch Cloud: Similar to Algolia pricing
-
----
-
-### Option 3: Typesense (Self-Hosted or Cloud) ✅ IMPLEMENTED
-
-**Overview**: Open-source alternative focused on simplicity and speed.
-
-**Status**: Implemented as secondary search engine in fallback chain.
+**Status**: Implemented as PRIMARY search engine.
 
 **Implementation Files**:
 - `app/lib/typesense.ts` - Client configuration and search functions
@@ -230,15 +151,15 @@ TYPESENSE_ADMIN_KEY=your-admin-key (server-side only)
 - Typo tolerance
 - Environment-aware collections (DEV_ prefix in development)
 - Graceful fallback when not configured
+- Cost-effective compared to Algolia
 
 **Cons**:
-- Smaller community than Algolia/Meilisearch
+- Smaller community than Algolia
 - Fewer features than Algolia
-- Self-hosting requires infrastructure management
 
 ---
 
-### Option 4: DIY `titleWords` Array (No External Service)
+### Alternative: DIY `titleWords` Array (No External Service)
 
 **Overview**: Store searchable words as an array field, query with `array-contains`.
 
@@ -290,37 +211,6 @@ const q = query(
 
 ---
 
-## Comparison: Algolia vs Meilisearch
-
-| Feature | Algolia | Meilisearch |
-|---------|---------|-------------|
-| **Ease of Setup** | Excellent (Firebase Extension) | Good (Firebase Extension) |
-| **Search Speed** | <50ms | <50ms |
-| **Typo Tolerance** | Yes | Yes |
-| **Synonyms** | Yes | Yes |
-| **Faceted Search** | Yes | Yes |
-| **Geo Search** | Yes | Yes |
-| **Open Source** | No | Yes (MIT) |
-| **Self-Host Option** | No | Yes |
-| **Free Tier** | 10K searches/month | 100K docs (Cloud) |
-| **Pricing Model** | Per search request | Per document (Cloud) or free (self-host) |
-| **Firebase Extension** | Official | Community |
-| **Documentation** | Excellent | Good |
-| **Community Size** | Large | Growing |
-| **Enterprise Support** | Yes | Yes (Cloud) |
-
-### Recommendation Summary
-
-| Use Case | Recommendation |
-|----------|----------------|
-| **Just make it work, budget available** | Algolia |
-| **Cost-conscious, comfortable with DevOps** | Meilisearch (self-hosted) |
-| **Want managed service, cost-conscious** | Meilisearch Cloud |
-| **Minimal viable search, no external services** | DIY `titleWords` array |
-| **Planning larger backend changes** | Firebase Data Connect |
-
----
-
 ## Recommended Path Forward
 
 ### Short-Term (Now)
@@ -357,9 +247,9 @@ Implement `titleWords` array approach:
 **Status**: Future Consideration
 
 If search requirements grow:
-- [ ] Evaluate Algolia vs Meilisearch based on usage patterns
+- [ ] Enhance Typesense with synonyms, faceted search, or geo-search
 - [ ] Consider user search analytics to understand needs
-- [ ] Implement chosen solution with Firebase Extension
+- [ ] Evaluate Elasticsearch for advanced use cases if needed
 
 ---
 
@@ -384,24 +274,21 @@ If search requirements grow:
 - [ ] Update tests
 - [ ] Deploy and monitor
 
-### External Search Service (Future)
-- [ ] Choose provider (Algolia vs Meilisearch)
-- [ ] Set up account/infrastructure
-- [ ] Install Firebase Extension
-- [ ] Configure index settings
-- [ ] Implement client integration
-- [ ] Migrate search queries
-- [ ] Monitor costs and performance
+### Search Enhancements (Future)
+- [ ] Add synonyms support in Typesense
+- [ ] Implement faceted search for filtering
+- [ ] Add geo-search capabilities
+- [ ] Monitor and optimize search performance
+- [ ] Consider search analytics dashboard
 
 ---
 
 ## Related Documentation
 
 - [Firebase Full-Text Search Guide](https://firebase.google.com/docs/firestore/solutions/search)
-- [Algolia Firebase Extension](https://extensions.dev/extensions/algolia/firestore-algolia-search)
-- [Meilisearch Firebase Extension](https://github.com/meilisearch/firestore-meilisearch)
+- [Typesense Documentation](https://typesense.org/docs/)
 - [Firebase Data Connect](https://firebase.google.com/docs/data-connect)
 
 ---
 
-*Last updated: December 2025*
+*Last updated: January 2026*
