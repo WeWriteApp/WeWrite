@@ -158,6 +158,28 @@ export class LinkNodeHelper {
 }
 
 /**
+ * External Link Paywall Configuration
+ *
+ * Pages created before this date are grandfathered and their external links
+ * will continue to work even if the author doesn't have an active subscription.
+ */
+export const EXTERNAL_LINK_PAYWALL_DATE = '2026-01-20T00:00:00Z';
+
+/**
+ * Check if a page is grandfathered for external links
+ * (created before the paywall feature was launched)
+ */
+export function isPageGrandfatheredForExternalLinks(pageCreatedAt: string | Date | null | undefined): boolean {
+  if (!pageCreatedAt) return false;
+
+  const pageDate = new Date(pageCreatedAt);
+  const launchDate = new Date(EXTERNAL_LINK_PAYWALL_DATE);
+
+  // Page created before launch date is grandfathered
+  return pageDate < launchDate;
+}
+
+/**
  * Migration helper for old link formats
  */
 export class LinkMigrationHelper {

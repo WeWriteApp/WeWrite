@@ -9,7 +9,10 @@ import { Switch } from '../ui/switch';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger, SegmentedControlContent } from '../ui/segmented-control';
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { toast } from '../ui/use-toast';
+import ExternalLinkPaywall from './ExternalLinkPaywall';
+import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../ui/drawer';
 import logger from '../../utils/logger';
@@ -58,6 +61,7 @@ export default function LinkEditorModal({
 }: LinkEditorModalProps) {
 
   const { user } = useAuth();
+  const { hasActiveSubscription, isLoading: isSubscriptionLoading } = useSubscription();
   const isEditing = !!editingLink; // Derive isEditing from editingLink existence
   const [activeTab, setActiveTab] = useState(TABS.PAGES);
   const [externalUrl, setExternalUrl] = useState('');
@@ -631,6 +635,11 @@ export default function LinkEditorModal({
                   <SegmentedControlTrigger value="external" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                     <Icon name="ExternalLink" size={12} className="sm:h-4 sm:w-4" />
                     External<span className="hidden sm:inline"> Link</span>
+                    {!hasActiveSubscription && !isSubscriptionLoading && (
+                      <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
+                        Paid
+                      </Badge>
+                    )}
                   </SegmentedControlTrigger>
                 </SegmentedControlList>
               </SegmentedControl>
@@ -775,64 +784,71 @@ export default function LinkEditorModal({
             </div>
           ) : (
             <div className="flex flex-col space-y-3 transition-all duration-200 ease-out">
-              <div className="space-y-2">
-                <Label htmlFor="external-url">URL</Label>
-                <div className="relative">
-                  <Icon name="Globe" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <Input
-                    ref={externalUrlInputRef}
-                    id="external-url"
-                    value={externalUrl}
-                    onChange={handleExternalUrlChange}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && externalUrl.trim() && !customText) {
-                        e.preventDefault();
-                        handleCreateExternalLink();
-                      }
-                    }}
-                    placeholder="https://example.com"
-                    className="w-full pl-9"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-
-              {/* Custom Text Switch */}
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <label htmlFor="custom-text-external" className="text-sm font-medium text-foreground">
-                      Custom link text
-                    </label>
-                    <Switch
-                      id="custom-text-external"
-                      checked={customText}
-                      onCheckedChange={handleCustomTextToggle}
-                    />
+              {/* Show paywall for non-subscribers (except when editing existing external link) */}
+              {!hasActiveSubscription && !isSubscriptionLoading && !isEditing ? (
+                <ExternalLinkPaywall variant="modal" />
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="external-url">URL</Label>
+                    <div className="relative">
+                      <Icon name="Globe" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                      <Input
+                        ref={externalUrlInputRef}
+                        id="external-url"
+                        value={externalUrl}
+                        onChange={handleExternalUrlChange}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && externalUrl.trim() && !customText) {
+                            e.preventDefault();
+                            handleCreateExternalLink();
+                          }
+                        }}
+                        placeholder="https://example.com"
+                        className="w-full pl-9"
+                        autoComplete="off"
+                      />
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Custom Text Input - Show when enabled */}
-              {customText && (
-                <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                  <Input
-                    ref={externalCustomTextInputRef}
-                    id="display-text-external"
-                    value={externalCustomText}
-                    onChange={handleExternalCustomTextChange}
-                    placeholder="Enter custom link text"
-                    leftIcon={<Icon name="Type" size={16} />}
-                    className="w-full min-w-0"
-                    autoComplete="off"
-                    onKeyDown={(e) => {
-                      // Only stop propagation for keys that might interfere with the editor
-                      if (e.key === 'Escape' || e.key === 'Enter') {
-                        e.stopPropagation();
-                      }
-                    }}
-                  />
-                </div>
+                  {/* Custom Text Switch */}
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="custom-text-external" className="text-sm font-medium text-foreground">
+                          Custom link text
+                        </label>
+                        <Switch
+                          id="custom-text-external"
+                          checked={customText}
+                          onCheckedChange={handleCustomTextToggle}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Custom Text Input - Show when enabled */}
+                  {customText && (
+                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                      <Input
+                        ref={externalCustomTextInputRef}
+                        id="display-text-external"
+                        value={externalCustomText}
+                        onChange={handleExternalCustomTextChange}
+                        placeholder="Enter custom link text"
+                        leftIcon={<Icon name="Type" size={16} />}
+                        className="w-full min-w-0"
+                        autoComplete="off"
+                        onKeyDown={(e) => {
+                          // Only stop propagation for keys that might interfere with the editor
+                          if (e.key === 'Escape' || e.key === 'Enter') {
+                            e.stopPropagation();
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -843,6 +859,9 @@ export default function LinkEditorModal({
   );
 
   // Footer button content - rendered inside DialogFooter/DrawerFooter
+  // For external links, disable button if user doesn't have subscription (unless editing existing)
+  const canCreateExternalLink = hasActiveSubscription || isEditing;
+
   const footerButton = activeTab === 'pages' ? (
     <Button
       onClick={handleCreatePageLink}
@@ -855,7 +874,7 @@ export default function LinkEditorModal({
   ) : (
     <Button
       onClick={handleCreateExternalLink}
-      disabled={!externalUrl.trim()}
+      disabled={!externalUrl.trim() || !canCreateExternalLink}
       className="w-full"
     >
       <Icon name="Link" size={16} className="mr-2" />

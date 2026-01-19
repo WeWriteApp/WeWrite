@@ -72,6 +72,13 @@ import LinkNode from "./LinkNode";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
 import "../diff-styles.css";
 
+// External link paywall context type
+interface ExternalLinkPaywallContext {
+  authorHasSubscription?: boolean;
+  pageCreatedAt?: string | Date | null;
+  isPageOwner?: boolean;
+}
+
 /**
  * TextView Component - Renders text content in normal paragraph mode
  *
@@ -223,7 +230,11 @@ const TextView: React.FC<TextViewProps> = ({
   canEdit: propCanEdit,
   onActiveLine,
   showLineNumbers = true,
-  isEditing = false
+  isEditing = false,
+  // External link paywall context
+  authorHasSubscription,
+  pageCreatedAt,
+  isPageOwner: propIsPageOwner
 }) => {
   // Simple link editing handler - just shows an alert for now
   // In a full implementation, this would open a link editing modal
@@ -260,6 +271,20 @@ const TextView: React.FC<TextViewProps> = ({
       (page.groupId && page.hasGroupAccess)
     )
   );
+
+  // Calculate isPageOwner for external link paywall
+  const isPageOwner = propIsPageOwner !== undefined ? propIsPageOwner : Boolean(
+    user?.uid && page?.userId && user.uid === page.userId
+  );
+
+  // External link paywall context - use props if provided, otherwise get from page context
+  // The page API returns authorHasActiveSubscription and createdAt
+  const effectiveAuthorHasSubscription = authorHasSubscription !== undefined
+    ? authorHasSubscription
+    : (page as any)?.authorHasActiveSubscription;
+  const effectivePageCreatedAt = pageCreatedAt !== undefined
+    ? pageCreatedAt
+    : page?.createdAt;
 
   // All pages are now public, so everyone can view
   const canView = true;
@@ -710,6 +735,10 @@ const TextView: React.FC<TextViewProps> = ({
               handleEditLink={handleEditLink}
               lineFeaturesEnabled={lineFeaturesEnabled}
               showLineNumbers={showLineNumbers}
+              // External link paywall context
+              authorHasSubscription={effectiveAuthorHasSubscription}
+              pageCreatedAt={effectivePageCreatedAt}
+              isPageOwner={isPageOwner}
             />
           )}
         </div>
@@ -748,6 +777,10 @@ export const RenderContent = (props: {
   handleEditLink?: () => void;
   lineFeaturesEnabled?: boolean;
   showLineNumbers?: boolean;
+  // External link paywall context
+  authorHasSubscription?: boolean;
+  pageCreatedAt?: string | Date | null;
+  isPageOwner?: boolean;
 }) => {
   const {
     contents,
@@ -761,7 +794,11 @@ export const RenderContent = (props: {
     isEditing = false,
     handleEditLink,
     lineFeaturesEnabled: lineFeaturesEnabledProp = false,
-    showLineNumbers = true
+    showLineNumbers = true,
+    // External link paywall context
+    authorHasSubscription,
+    pageCreatedAt,
+    isPageOwner = false
   } = props;
 
   // Explicitly coerce the flag to avoid any undefined reference issues in compiled output.
@@ -782,7 +819,18 @@ export const RenderContent = (props: {
           // Handle link nodes with error handling
           if (child.type === 'link') {
             try {
-              return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
+              return (
+                <LinkNode
+                  key={i}
+                  node={child}
+                  canEdit={canEdit}
+                  isEditing={isEditing}
+                  onEditLink={handleEditLink}
+                  authorHasSubscription={authorHasSubscription}
+                  pageCreatedAt={pageCreatedAt}
+                  isPageOwner={isPageOwner}
+                />
+              );
             } catch (error) {
               return <span key={i} className="text-red-500">[Link Error]</span>;
             }
@@ -878,6 +926,10 @@ export const RenderContent = (props: {
                 lineMode={effectiveMode}
                 lineFeaturesEnabled={lineFeaturesEnabled}
                 showLineNumbers={effectiveShowLineNumbers}
+                // External link paywall context
+                authorHasSubscription={authorHasSubscription}
+                pageCreatedAt={pageCreatedAt}
+                isPageOwner={isPageOwner}
               />
             );
           })}
@@ -924,6 +976,10 @@ const SimpleParagraphNode = (props: {
   lineMode?: LINE_MODES;
   lineFeaturesEnabled?: boolean;
   showLineNumbers?: boolean;
+  // External link paywall context
+  authorHasSubscription?: boolean;
+  pageCreatedAt?: string | Date | null;
+  isPageOwner?: boolean;
 }) => {
   const {
     node,
@@ -937,7 +993,11 @@ const SimpleParagraphNode = (props: {
     handleEditLink,
     lineMode = LINE_MODES.NORMAL,
     lineFeaturesEnabled: lineFeaturesEnabledProp = false,
-    showLineNumbers = true
+    showLineNumbers = true,
+    // External link paywall context
+    authorHasSubscription,
+    pageCreatedAt,
+    isPageOwner = false
   } = props;
   const lineFeaturesEnabled = Boolean(lineFeaturesEnabledProp);
   const paragraphRef = useRef(null);
@@ -968,7 +1028,18 @@ const SimpleParagraphNode = (props: {
     // Handle link nodes with error handling
     if (child.type === 'link') {
       try {
-        const linkComponent = <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
+        const linkComponent = (
+          <LinkNode
+            key={i}
+            node={child}
+            canEdit={canEdit}
+            isEditing={isEditing}
+            onEditLink={handleEditLink}
+            authorHasSubscription={authorHasSubscription}
+            pageCreatedAt={pageCreatedAt}
+            isPageOwner={isPageOwner}
+          />
+        );
         return linkComponent;
       } catch (error) {
         return <span key={i} className="text-red-500">[Link Error]</span>;
@@ -1031,7 +1102,18 @@ const SimpleParagraphNode = (props: {
             }
 
             if (nodeToRender.type === 'link') {
-              return <LinkNode key={`${i}-${grandchildIndex}`} node={nodeToRender} canEdit={canEdit} isEditing={isEditing} onEditLink={handleEditLink} />;
+              return (
+                <LinkNode
+                  key={`${i}-${grandchildIndex}`}
+                  node={nodeToRender}
+                  canEdit={canEdit}
+                  isEditing={isEditing}
+                  onEditLink={handleEditLink}
+                  authorHasSubscription={authorHasSubscription}
+                  pageCreatedAt={pageCreatedAt}
+                  isPageOwner={isPageOwner}
+                />
+              );
             } else if (nodeToRender.text) {
               let className = '';
               if (nodeToRender.bold) className += ' font-bold';

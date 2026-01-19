@@ -6,7 +6,9 @@ import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
 import { getPageTitle } from "../../utils/pageUtils";
-import { LinkMigrationHelper } from "../../types/linkNode";
+import { LinkMigrationHelper, isPageGrandfatheredForExternalLinks } from "../../types/linkNode";
+import { useToast } from "../ui/use-toast";
+import { ToastAction } from "../ui/toast";
 
 // Type definitions
 interface LinkNodeProps {
@@ -15,6 +17,10 @@ interface LinkNodeProps {
   isEditing?: boolean;
   onEditLink?: () => void; // Add callback for editing links
   children?: React.ReactNode; // Slate children (must be rendered for DOM mapping)
+  // External link paywall context
+  authorHasSubscription?: boolean; // Whether the page author has an active subscription
+  pageCreatedAt?: string | Date | null; // When the page was created (for grandfathering)
+  isPageOwner?: boolean; // Whether current viewer is the page owner
   // Slate.js attributes for editor integration
   [key: string]: any;
 }
@@ -28,7 +34,18 @@ interface LinkNodeProps {
  * - Protocol links (special WeWrite protocol links)
  * - Compound links (page + author)
  */
-const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = false, onEditLink, children, ...attributes }) => {
+const LinkNode: React.FC<LinkNodeProps> = ({
+  node,
+  canEdit = false,
+  isEditing = false,
+  onEditLink,
+  children,
+  authorHasSubscription,
+  pageCreatedAt,
+  isPageOwner = false,
+  ...attributes
+}) => {
+  const { toast } = useToast();
 
   // Check if we have Slate.js attributes (for editor mode) or not (for viewer mode)
   const hasSlateAttributes = attributes && Object.keys(attributes).length > 0;
@@ -440,6 +457,61 @@ const LinkNode: React.FC<LinkNodeProps> = ({ node, canEdit = false, isEditing = 
     // Truncate the display text for better UI
     const truncatedDisplayText = truncateExternalLinkText(finalDisplayText, href, 50);
 
+    // Check if this page is grandfathered for external links
+    const isGrandfathered = isPageGrandfatheredForExternalLinks(pageCreatedAt);
+
+    // Check if external link should be rendered as plain text (no click functionality)
+    // This happens when:
+    // 1. The page is NOT grandfathered (created after feature launch)
+    // 2. AND the author does NOT have an active subscription
+    const shouldRenderAsPlainText = !isGrandfathered && authorHasSubscription === false;
+
+    // If external link should be plain text (author has no subscription, not grandfathered)
+    if (shouldRenderAsPlainText) {
+      // Handle click for page owner - show upgrade prompt
+      const handlePlainTextClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isPageOwner) {
+          // Show upgrade toast for page owner
+          toast({
+            title: "External links require a subscription",
+            description: "Activate your subscription to add clickable external links.",
+            variant: "default",
+            action: (
+              <ToastAction
+                altText="Upgrade to subscription"
+                onClick={() => {
+                  window.location.href = '/settings/subscription';
+                }}
+              >
+                Upgrade
+              </ToastAction>
+            )
+          });
+        }
+        // For readers, do nothing - just prevent default
+      };
+
+      return (
+        <span
+          {...wrapperProps}
+          className="inline-block"
+        >
+          <span
+            className={`text-muted-foreground ${isPageOwner ? 'cursor-pointer hover:underline' : ''}`}
+            onClick={handlePlainTextClick}
+            title={isPageOwner ? 'Click to learn how to activate external links' : undefined}
+          >
+            {truncatedDisplayText}
+          </span>
+          <span style={{ display: 'none' }}>{children}</span>
+        </span>
+      );
+    }
+
+    // Normal external link behavior (subscribed author or grandfathered page)
     // In view mode, clicking opens the external link modal directly
     // In edit mode, PillLink shows a context menu with view/edit options
     const handleExternalLinkClick = (e: React.MouseEvent) => {

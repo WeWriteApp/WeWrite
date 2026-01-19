@@ -141,6 +141,9 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       username === 'Anonymous' ||
       (username.length > 15 && /^[a-zA-Z0-9]+$/.test(username)); // Looks like a userId
 
+    // Track author subscription status for external link paywall
+    let authorHasActiveSubscription: boolean | undefined;
+
     if (processedPageData.userId && usernameNeedsRefresh) {
       try {
         // Use Firestore for user data with proper DEV_ prefix support
@@ -151,6 +154,8 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
           const userData = userDoc.data();
           // Only use username field, never displayName or email
           username = userData?.username || null;
+          // Get subscription status for external link paywall
+          authorHasActiveSubscription = userData?.subscriptionStatus === 'active';
         }
 
         // If still no username, fall back to a safe identifier
@@ -160,6 +165,18 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       } catch (error) {
         console.error('Error fetching username from Firestore:', error);
         username = `user_${processedPageData.userId.slice(0, 8)}`;
+      }
+    } else if (processedPageData.userId) {
+      // Username doesn't need refresh, but we still need subscription status
+      try {
+        const usersCollection = await getCollectionNameAsync('users');
+        const userDoc = await db.collection(usersCollection).doc(processedPageData.userId).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          authorHasActiveSubscription = userData?.subscriptionStatus === 'active';
+        }
+      } catch (error) {
+        // Non-fatal: we'll default to undefined which will be treated as unknown
       }
     }
 
@@ -206,7 +223,9 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
         username: username || 'Unknown',
         // SEO stats
         sponsorCount,
-        replyCount
+        replyCount,
+        // External link paywall - author subscription status
+        authorHasActiveSubscription
       }
     };
 

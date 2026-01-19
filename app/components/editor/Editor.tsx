@@ -32,6 +32,7 @@ import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { createPortal } from 'react-dom';
 import { useLinkSuggestions, LinkSuggestionState, LinkSuggestionActions } from '../../hooks/useLinkSuggestions';
 import { useAuth } from '../../providers/AuthProvider';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { LinkSuggestion } from '../../services/linkSuggestionService';
 import { PillLink } from '../utils/PillLink';
 import { UsernameBadge } from '../ui/UsernameBadge';
@@ -100,6 +101,7 @@ interface EditorProps {
   showLinkSuggestions?: boolean; // Show link suggestion underlines when enabled
   onLinkSuggestionCountChange?: (count: number) => void; // Callback when suggestion count changes
   isSaving?: boolean; // When true, prevents link modal from closing during save
+  pageCreatedAt?: string | Date | null; // For external link paywall grandfathering
 
   // Link modal state - lifted from Editor to survive remounts during save
   // When provided, these override the local state
@@ -123,6 +125,7 @@ const Editor: React.FC<EditorProps> = ({
   showLinkSuggestions = false,
   onLinkSuggestionCountChange,
   isSaving = false,
+  pageCreatedAt,
   linkModalOpen: linkModalOpenProp,
   setLinkModalOpen: setLinkModalOpenProp,
   linkModalEditingLink: linkModalEditingLinkProp,
@@ -132,6 +135,7 @@ const Editor: React.FC<EditorProps> = ({
 }) => {
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
   const { user } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   // Simple state management - no complex state
@@ -1158,6 +1162,10 @@ const Editor: React.FC<EditorProps> = ({
             isEditing={!readOnly}
             // Pass Slate children through so DOM mapping remains intact for selection
             children={children}
+            // External link paywall context - in edit mode, author is the current user
+            authorHasSubscription={hasActiveSubscription}
+            pageCreatedAt={pageCreatedAt}
+            isPageOwner={true}
             onEditLink={() => {
               // Determine link type based on element properties
               let linkType: 'page' | 'user' | 'external' | 'compound' = 'page';

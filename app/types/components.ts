@@ -38,6 +38,10 @@ export interface TextViewProps extends BaseProps {
   onActiveLine?: (lineIndex: number) => void;
   showLineNumbers?: boolean;
   isEditing?: boolean;
+  // External link paywall context
+  authorHasSubscription?: boolean;
+  pageCreatedAt?: string | Date | null;
+  isPageOwner?: boolean;
 }
 
 // Editor component props
