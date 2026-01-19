@@ -34,7 +34,7 @@ const AdminPages: Record<string, React.LazyExoticComponent<React.ComponentType<a
   'onboarding-tutorial': lazy(() => import('../../../admin/onboarding-tutorial/page')),
   'mobile-onboarding': lazy(() => import('../../../admin/mobile-onboarding/page')),
   'opengraph-images': lazy(() => import('../../../admin/opengraph-images/page')),
-  'design-system': lazy(() => import('../../../admin/design-system/page')),
+  'design-system': lazy(() => import('../../../design-system/page')),
   'system-diagram': lazy(() => import('../../../admin/system-diagram/page')),
   'emails': lazy(() => import('../../../admin/emails/page')),
   'payout-validation': lazy(() => import('../../../admin/payout-validation/page')),

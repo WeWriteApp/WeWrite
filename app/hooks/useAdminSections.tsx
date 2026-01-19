@@ -114,13 +114,6 @@ const ADMIN_SECTIONS: AdminSection[] = [
   },
   // Developer tools
   {
-    id: 'design-system',
-    title: 'Design System',
-    icon: createIconComponent('Palette'),
-    href: '/admin/design-system',
-    description: 'Component documentation'
-  },
-  {
     id: 'system-diagram',
     title: 'System Diagram',
     icon: createIconComponent('Network'),

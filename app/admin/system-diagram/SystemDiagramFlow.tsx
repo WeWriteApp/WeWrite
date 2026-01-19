@@ -454,11 +454,11 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
     upstream: ['api-routes', 'admin-api'],
     downstream: ['clients-group'],
     monitoring: [
-      { tool: '/admin/design-system', description: 'Component showcase' },
+      { tool: '/design-system', description: 'Component showcase' },
       { tool: 'LogRocket', description: 'Component error tracking' },
     ],
     links: [
-      { label: 'Design System', path: '/admin/design-system' },
+      { label: 'Design System', path: '/design-system' },
     ],
   },
   'contexts': {

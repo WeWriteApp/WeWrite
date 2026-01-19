@@ -82,52 +82,48 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
     const containerRef = React.useRef<HTMLDivElement>(null)
     const [underlineStyle, setUnderlineStyle] = React.useState({ width: 0, left: 0 })
 
+    // Function to update underline position
+    const updateUnderline = React.useCallback(() => {
+      const container = containerRef.current
+      const activeTab = triggerRefs.get(value)
+
+      if (container && activeTab) {
+        const containerRect = container.getBoundingClientRect()
+        const tabRect = activeTab.getBoundingClientRect()
+
+        // Account for scroll position in scrollable containers
+        setUnderlineStyle({
+          width: tabRect.width,
+          left: tabRect.left - containerRect.left + container.scrollLeft,
+        })
+      }
+    }, [value, triggerRefs])
+
     // Update underline position when value changes
     React.useEffect(() => {
-      const updateUnderline = () => {
-        const container = containerRef.current
-        const activeTab = triggerRefs.get(value)
-
-        if (container && activeTab) {
-          const containerRect = container.getBoundingClientRect()
-          const tabRect = activeTab.getBoundingClientRect()
-
-          setUnderlineStyle({
-            width: tabRect.width,
-            left: tabRect.left - containerRect.left,
-          })
-        }
-      }
-
       // Small delay to ensure refs are registered
       const timeoutId = setTimeout(updateUnderline, 0)
       return () => clearTimeout(timeoutId)
-    }, [value, triggerRefs])
+    }, [updateUnderline])
 
-    // Also update on mount and resize
+    // Also update on mount, resize, and scroll
     React.useEffect(() => {
-      const updateUnderline = () => {
-        const container = containerRef.current
-        const activeTab = triggerRefs.get(value)
-
-        if (container && activeTab) {
-          const containerRect = container.getBoundingClientRect()
-          const tabRect = activeTab.getBoundingClientRect()
-
-          setUnderlineStyle({
-            width: tabRect.width,
-            left: tabRect.left - containerRect.left,
-          })
-        }
-      }
+      const container = containerRef.current
 
       // Initial measurement
       updateUnderline()
 
       // Update on resize
       window.addEventListener('resize', updateUnderline)
-      return () => window.removeEventListener('resize', updateUnderline)
-    }, [value, triggerRefs])
+
+      // Update on scroll (for horizontally scrollable tabs)
+      container?.addEventListener('scroll', updateUnderline)
+
+      return () => {
+        window.removeEventListener('resize', updateUnderline)
+        container?.removeEventListener('scroll', updateUnderline)
+      }
+    }, [updateUnderline])
 
     return (
       <div

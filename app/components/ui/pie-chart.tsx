@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { Separator } from './separator';
 
@@ -217,6 +217,12 @@ export function PieChart({
   maxValue,
 }: PieChartProps) {
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering SVG paths after mount
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Add padding for hover expansion
   const padding = 4;
@@ -315,8 +321,8 @@ export function PieChart({
             />
           )}
 
-          {/* Render segments as paths with rounded corners */}
-          {segmentData.map((segment) => {
+          {/* Render segments as paths with rounded corners - only after hydration to prevent mismatch */}
+          {hasMounted && segmentData.map((segment) => {
             // Skip segments with no value
             if (segment.value <= 0 || segment.sweepAngle <= 0) return null;
 

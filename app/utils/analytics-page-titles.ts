@@ -121,7 +121,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/admin/mobile-onboarding': 'Admin: Mobile Onboarding',
   '/admin/background-images': 'Admin: Background Images',
   '/admin/opengraph-images': 'Admin: OpenGraph Images',
-  '/admin/design-system': 'Admin: Design System',
+  '/design-system': 'Design System',
   '/admin/broadcast': 'Admin: Broadcast',
 
   // Monitoring/Testing pages

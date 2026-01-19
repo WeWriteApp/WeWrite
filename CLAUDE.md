@@ -35,7 +35,7 @@ When making significant changes to the codebase, you MUST update the following:
 ## Key Files to Know
 
 - **System Diagram**: `app/admin/system-diagram/SystemDiagramFlow.tsx`
-- **Design System**: `app/admin/design-system/page.tsx`
+- **Design System**: `app/design-system/page.tsx`
 - **Icon System**: `app/components/ui/Icon.tsx` (uses Lucide icons)
 - **Theme System**: `app/components/utils/ThemeModal.tsx`
 - **Financial Services**: `app/services/earningsCalculationEngine.ts`, `app/services/platformRevenueService.ts`

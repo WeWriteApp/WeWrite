@@ -20,6 +20,7 @@ const config: Config = {
   safelist: [
     '!text-white',
     '!text-black',
+    'z-[1200]', // Tooltip z-index (above drawers at z-[1100])
   ],
   darkMode: 'class',
   theme: {

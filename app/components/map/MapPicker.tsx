@@ -224,21 +224,48 @@ const MapPicker: React.FC<MapPickerProps> = ({
           tileLayer.options.updateWhenZooming = false;
         }
 
-        // Enhanced error handling for mobile
+        // Enhanced error handling for mobile with success rate tracking
         let tileErrorCount = 0;
+        let tileSuccessCount = 0;
+        let hasShownError = false;
+
         tileLayer.on('tileerror', function(error: any) {
           tileErrorCount++;
-          console.warn('🗺️ Mobile tile error:', {
+          console.warn('🗺️ Tile error:', {
             url: error.tile?.src,
             coords: error.coords,
             error: error.error,
             isMobileSafari,
-            totalErrors: tileErrorCount
+            totalErrors: tileErrorCount,
+            totalSuccess: tileSuccessCount
           });
 
-          // If too many tile errors on mobile, show user-friendly message
-          if (isMobileSafari && tileErrorCount > 5) {
+          // Only show error if:
+          // 1. On mobile Safari AND
+          // 2. Error count is high (>15) AND
+          // 3. Error rate is > 50% (more failures than successes) AND
+          // 4. Haven't already shown this error
+          const totalAttempts = tileErrorCount + tileSuccessCount;
+          const errorRate = totalAttempts > 0 ? tileErrorCount / totalAttempts : 0;
+
+          if (isMobileSafari && tileErrorCount > 15 && errorRate > 0.5 && !hasShownError) {
+            hasShownError = true;
             setError('Map tiles are having trouble loading on mobile. Please check your connection and try refreshing.');
+          }
+        });
+
+        tileLayer.on('tileload', function() {
+          tileSuccessCount++;
+          // If tiles start loading successfully after errors, clear the error
+          if (hasShownError && tileSuccessCount > 10) {
+            const totalAttempts = tileErrorCount + tileSuccessCount;
+            const successRate = tileSuccessCount / totalAttempts;
+            // If success rate improves to > 70%, clear the error
+            if (successRate > 0.7) {
+              hasShownError = false;
+              setError(null);
+              console.log('🗺️ Map tiles recovered, clearing error');
+            }
           }
         });
 

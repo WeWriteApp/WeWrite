@@ -28,6 +28,7 @@ export default function AboutPage() {
     { href: "mailto:support@getwewrite.app", label: "Email support", icon: 'Mail', external: true },
     { href: "/settings/about/follow-us", label: "Follow us", icon: 'Users', hasChevron: true },
     { href: getSocialUrl('github') || 'https://github.com/WeWriteApp/WeWrite', label: "Source code", icon: 'Code', external: true },
+    { href: "/design-system", label: "Design System", icon: 'Palette' },
   ];
 
   const renderIcon = (iconName: string) => {
