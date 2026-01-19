@@ -398,7 +398,7 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
           </summary>
           <div className="mt-2 text-[10px] text-muted-foreground space-y-2 pl-3 border-l border-border">
             <p className="font-medium text-foreground">Risk Score = Weighted average of all factors (0-100)</p>
-            <p>Factors marked with <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-normal">2x</Badge> count double in the calculation.</p>
+            <p>Factors marked with <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-normal">3x</Badge> count triple in the calculation (financial trust is weighted 3x because bots don&apos;t pay).</p>
 
             <div className="space-y-1">
               <p className="font-medium">Risk Levels:</p>
@@ -438,7 +438,8 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
             <div className="space-y-1">
               <p className="font-medium">Risk Signals (Higher Risk):</p>
               <ul className="space-y-0.5 ml-2 text-red-700 dark:text-red-400">
-                <li>- Single page with external links</li>
+                <li>- External links without internal links</li>
+                <li>- High external-to-internal link ratio</li>
                 <li>- New unverified account</li>
                 <li>- VPN/proxy/datacenter IP</li>
                 <li>- No financial engagement</li>

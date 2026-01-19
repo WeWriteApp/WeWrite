@@ -99,18 +99,18 @@ export const RISK_FACTOR_INFO = {
   contentBehavior: {
     icon: 'FileText',
     label: 'Content Behavior',
-    description: 'Analyzes page creation patterns, external links, and content characteristics.',
-    publicDescription: 'We look at the type of content being created and link patterns.',
-    riskExplanation: '0 = Good behavior (multiple pages, internal links, no spam links). Higher scores indicate spam patterns (single page, external links).',
+    description: 'Analyzes page creation patterns, external vs internal links, and content characteristics. High external-to-internal link ratios are suspicious.',
+    publicDescription: 'We look at the type of content being created and link patterns. Users with external links but no internal links to other WeWrite pages are flagged as suspicious.',
+    riskExplanation: '0 = Good behavior (multiple pages, internal links, no spam links). Higher scores indicate spam patterns (single page, external links without internal links).',
     importance: 1
   },
   financialTrust: {
     icon: 'CreditCard',
     label: 'Financial Trust',
     description: 'Evaluates subscription status and financial activity. Paying users are very unlikely to be bots.',
-    publicDescription: 'Subscribers and users who support writers receive higher trust because spam bots don\'t pay.',
+    publicDescription: 'Subscribers and users who support writers receive much higher trust because spam bots don\'t pay.',
     riskExplanation: '0 = Paying subscriber who supports other writers. Higher scores indicate no financial activity (free accounts with no engagement).',
-    importance: 2  // 2x importance - bots don't pay!
+    importance: 3  // 3x importance - bots don't pay!
   }
 } as const;
 
@@ -127,7 +127,8 @@ export const ANTI_SPAM_EXPLANATION = {
     keyPoints: [
       'Lower scores (0-30) indicate trusted accounts',
       'Higher scores (31+) may indicate suspicious activity',
-      'Financial activity is weighted 2x because spam bots don\'t pay',
+      'Financial activity is weighted 3x because spam bots don\'t pay',
+      'External links without internal links raise suspicion',
       'The system continuously learns and adapts'
     ]
   },

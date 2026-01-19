@@ -784,8 +784,8 @@ export default function LinkEditorModal({
             </div>
           ) : (
             <div className="flex flex-col space-y-3 transition-all duration-200 ease-out">
-              {/* Show paywall for non-subscribers (except when editing existing external link) */}
-              {!hasActiveSubscription && !isSubscriptionLoading && !isEditing ? (
+              {/* Show paywall for non-subscribers - no grandfathering, subscription required for all external links */}
+              {!hasActiveSubscription && !isSubscriptionLoading ? (
                 <ExternalLinkPaywall variant="modal" />
               ) : (
                 <>
@@ -859,8 +859,8 @@ export default function LinkEditorModal({
   );
 
   // Footer button content - rendered inside DialogFooter/DrawerFooter
-  // For external links, disable button if user doesn't have subscription (unless editing existing)
-  const canCreateExternalLink = hasActiveSubscription || isEditing;
+  // For external links, disable button if user doesn't have subscription (no grandfathering)
+  const canCreateExternalLink = hasActiveSubscription;
 
   const footerButton = activeTab === 'pages' ? (
     <Button

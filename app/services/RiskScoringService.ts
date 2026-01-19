@@ -144,7 +144,7 @@ const RISK_THRESHOLDS = {
 
 // Risk factor importance multipliers
 // Higher importance = factor counts more in the weighted average
-// Financial trust is 2x because paying users are extremely unlikely to be bots
+// Financial trust is 3x because paying users are extremely unlikely to be bots
 export const RISK_FACTOR_IMPORTANCE: Record<string, number> = {
   botDetection: 1,
   ipReputation: 1,
@@ -152,11 +152,11 @@ export const RISK_FACTOR_IMPORTANCE: Record<string, number> = {
   behavioral: 1,
   velocity: 1,
   contentBehavior: 1,
-  financialTrust: 2,  // 2x importance - paying users are more trusted
+  financialTrust: 3,  // 3x importance - paying users are far more trusted
 };
 
 // Calculate total weight for weighted average
-const TOTAL_IMPORTANCE_WEIGHT = Object.values(RISK_FACTOR_IMPORTANCE).reduce((a, b) => a + b, 0); // = 8
+const TOTAL_IMPORTANCE_WEIGHT = Object.values(RISK_FACTOR_IMPORTANCE).reduce((a, b) => a + b, 0); // = 9
 
 // Account age thresholds (in days)
 const ACCOUNT_AGE_THRESHOLDS = {
@@ -207,7 +207,7 @@ export class RiskScoringService {
 
     // Calculate weighted average of all risk scores
     // Note: accountTrust.riskScore is used (already inverted from trust score)
-    // Financial trust has 2x importance because paying users are unlikely to be bots
+    // Financial trust has 3x importance because paying users are unlikely to be bots
     const weightedRiskScore =
       factors.botDetection.score * RISK_FACTOR_IMPORTANCE.botDetection +
       factors.ipReputation.score * RISK_FACTOR_IMPORTANCE.ipReputation +
@@ -288,7 +288,7 @@ export class RiskScoringService {
    * Get risk level for a user (for display in admin)
    *
    * Uses weighted average based on RISK_FACTOR_IMPORTANCE
-   * Financial trust has 2x importance because paying users are unlikely to be bots
+   * Financial trust has 3x importance because paying users are unlikely to be bots
    */
   static async getUserRiskLevel(userId: string): Promise<{
     score: number;
@@ -307,7 +307,7 @@ export class RiskScoringService {
     };
 
     // Weighted average of all risk scores
-    // Financial trust has 2x importance because paying users are unlikely to be bots
+    // Financial trust has 3x importance because paying users are unlikely to be bots
     const weightedRiskScore =
       factors.botDetection.score * RISK_FACTOR_IMPORTANCE.botDetection +
       factors.ipReputation.score * RISK_FACTOR_IMPORTANCE.ipReputation +
@@ -625,6 +625,18 @@ export class RiskScoringService {
         const externalRisk = Math.min(45, externalLinkCount * 15);
         score += externalRisk;
         suspiciousPatterns.push(`${externalLinkCount} external link${externalLinkCount > 1 ? 's' : ''}`);
+      }
+
+      // HIGH EXTERNAL / LOW INTERNAL RATIO is very suspicious
+      // This is a strong spam indicator: spammers add external links but don't engage with the community
+      if (externalLinkCount > 0 && internalLinkCount === 0) {
+        // External links but NO internal links = very suspicious
+        score += 35;
+        suspiciousPatterns.push('External links without any internal links');
+      } else if (externalLinkCount > internalLinkCount * 2 && externalLinkCount >= 2) {
+        // More than 2x external links vs internal links = suspicious
+        score += 20;
+        suspiciousPatterns.push('High external-to-internal link ratio');
       }
 
       // Internal links are GOOD behavior (-10 risk per link, min 0)
