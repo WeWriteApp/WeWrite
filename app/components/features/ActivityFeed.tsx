@@ -476,11 +476,24 @@ export default function ActivityFeed({
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="hide-likely-spam" className="text-sm font-medium">
-                  Hide likely spam
-                </Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="hide-likely-spam" className="text-sm font-medium">
+                    Hide likely spam
+                  </Label>
+                  <a
+                    href="/settings/about/anti-spam"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    title="Learn how our anti-spam system works"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFilterModalOpen(false);
+                    }}
+                  >
+                    <Icon name="HelpCircle" size={14} />
+                  </a>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  WeWrite runs some fancy algorithms to figure out if an account is a real human
+                  Filter out accounts that may be bots or spam based on our risk scoring system
                 </p>
               </div>
               <Switch

@@ -22,7 +22,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
-import { RISK_FACTOR_IMPORTANCE } from '../../services/RiskScoringService';
+import {
+  RISK_FACTOR_IMPORTANCE,
+  RISK_FACTOR_INFO,
+  RISK_THRESHOLDS,
+  RISK_LEVELS,
+  getRiskLevelFromScore
+} from '../../constants/risk-scoring';
 
 interface RiskFactor {
   name: string;
@@ -113,58 +119,11 @@ function calculateClientRiskScore(userData: {
 }
 
 function scoreToLevel(score: number): RiskLevel {
-  if (score <= 30) return 'allow';
-  if (score <= 60) return 'soft_challenge';
-  if (score <= 85) return 'hard_challenge';
-  return 'block';
+  return getRiskLevelFromScore(score) as RiskLevel;
 }
 
-// Factor info with detailed explanations
+// Use shared RISK_FACTOR_INFO from constants
 // NOTE: All scores displayed are RISK scores (0-100, higher = more risky)
-const FACTOR_INFO: Record<string, { icon: string; label: string; description: string; riskExplanation: string }> = {
-  botDetection: {
-    icon: 'Bot',
-    label: 'Bot Detection',
-    description: 'Analyzes browser fingerprint, user agent, and automation indicators',
-    riskExplanation: '0 = Human behavior detected. Higher scores indicate automated/bot-like patterns.',
-  },
-  ipReputation: {
-    icon: 'Globe',
-    label: 'IP Reputation',
-    description: 'Checks IP against known bad actor lists and proxy/VPN detection',
-    riskExplanation: '0 = Clean IP. Higher scores indicate proxies, VPNs, datacenter IPs, or known bad actors.',
-  },
-  accountTrust: {
-    icon: 'UserCheck',
-    label: 'Account Trust',
-    description: 'Based on account age, email verification, and activity history',
-    riskExplanation: '0 = Fully trusted account (verified, old, active). Higher scores indicate new/unverified accounts.',
-  },
-  behavioral: {
-    icon: 'Activity',
-    label: 'Behavioral',
-    description: 'Session patterns, interaction rates, and browsing behavior',
-    riskExplanation: '0 = Normal browsing patterns. Higher scores indicate suspicious automation or rapid activity.',
-  },
-  velocity: {
-    icon: 'Zap',
-    label: 'Velocity',
-    description: 'Rate of actions relative to account trust level',
-    riskExplanation: '0 = Normal activity rate. Higher scores indicate excessive actions approaching or exceeding limits.',
-  },
-  contentBehavior: {
-    icon: 'FileText',
-    label: 'Content Behavior',
-    description: 'Content patterns: page count, external links, internal connections',
-    riskExplanation: '0 = Good behavior (multiple pages, internal links, no spam links). Higher scores indicate spam patterns (single page, external links).',
-  },
-  financialTrust: {
-    icon: 'CreditCard',
-    label: 'Financial Trust',
-    description: 'Payment activity: subscriptions, allocations to writers, earnings received',
-    riskExplanation: '0 = Paying subscriber who supports other writers. Higher scores indicate no financial activity (free accounts with no engagement).',
-  },
-};
 
 export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssessmentSectionProps) {
   const [loading, setLoading] = useState(false);
@@ -278,7 +237,7 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
           <p className="text-[10px] text-muted-foreground -mt-1">Lower is better. Score = average of all factors.</p>
           <div className="space-y-1.5">
             {Object.entries(data.factors).map(([key, value]) => {
-              const info = FACTOR_INFO[key];
+              const info = RISK_FACTOR_INFO[key as keyof typeof RISK_FACTOR_INFO];
               if (!info || typeof value !== 'object') return null;
 
               // For accountTrust, use riskScore (inverted) instead of trust score

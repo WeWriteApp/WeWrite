@@ -912,7 +912,7 @@ export const pageLinkedTemplate: EmailTemplate = {
 
       <div style="text-align: center; margin: 30px 0;">
         <a href="${pageLink}" style="${emailStyles.button}">
-          See How They Linked You →
+          View Page →
         </a>
       </div>
 

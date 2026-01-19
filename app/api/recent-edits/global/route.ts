@@ -284,14 +284,16 @@ export async function GET(request: NextRequest) {
         return true;
       })
       // Filter out likely spam accounts when hideLikelySpam is enabled
-      // Spam indicators: high risk score (>60), or single-page new accounts
+      // Uses risk score threshold: >= 31 means soft_challenge or higher (yellow/red in admin)
+      // Risk levels: 0-30 = allow, 31-60 = soft_challenge, 61-85 = hard_challenge, 86-100 = block
       .filter(edit => {
         // Skip filter if not enabled
         if (!hideLikelySpam) return true;
         // Admins always show
         if (edit._isAdmin) return true;
-        // If we have a risk score, filter high-risk accounts (score > 60 = "soft_challenge" level)
-        if (edit._riskScore !== null && edit._riskScore > 60) return false;
+        // If we have a risk score, filter accounts at soft_challenge level or higher (score >= 31)
+        // This hides yellow and red risk users from the feed
+        if (edit._riskScore !== null && edit._riskScore >= 31) return false;
         // Single-page accounts from unverified users are more likely spam
         if (edit._pageCount <= 1 && edit._emailVerified !== true) return false;
         return true;
