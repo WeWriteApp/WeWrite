@@ -12,6 +12,7 @@
  * - includeOwn: Whether to include user's own activity (default: false)
  * - followingOnly: Whether to only show activity from followed users (default: false)
  * - hideUnverified: Whether to hide content from users without verified emails (default: true)
+ * - hideLikelySpam: Whether to hide content from accounts flagged as likely spam (default: false)
  * - cursor: Pagination cursor for loading more results
  */
 

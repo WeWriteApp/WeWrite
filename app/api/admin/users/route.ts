@@ -24,6 +24,7 @@ interface UserData {
   referredByUsername?: string;
   referralSource?: string;
   pwaInstalled?: boolean;
+  pwaVerified?: boolean;  // True if user has actually used PWA in standalone mode (not just claimed to install)
   notificationSparkline?: number[];
   financial?: {
     hasSubscription: boolean;
@@ -179,7 +180,8 @@ export async function GET(request: NextRequest) {
         referredBy: data.referredBy || undefined,
         referralSource: data.referralSource || undefined,
         totalPages: pageCountsMap.get(uid) ?? 0,
-        pwaInstalled: pwaInstallsMap.get(uid) ?? false,
+        pwaInstalled: pwaInstallsMap.get(uid)?.installed ?? false,
+        pwaVerified: pwaInstallsMap.get(uid)?.verified ?? false,
         notificationSparkline: notificationSparklinesMap.get(uid) || Array(7).fill(0),
       };
 
@@ -447,45 +449,75 @@ async function batchFetchReferrerUsernames(
 }
 
 // Helper: Batch fetch PWA installation status from analytics_events
-// Checks if a user has ever installed the PWA (app_installed event)
+// Checks if a user has installed PWA (pwa_install event) AND/OR actually used it (pwa_usage_verified)
+// pwaInstalled = claimed to install, pwaVerified = actually used in standalone mode
 async function batchFetchPWAInstalls(
   db: FirebaseFirestore.Firestore,
   collectionName: string,
   userIds: string[]
-): Promise<Map<string, boolean>> {
-  const map = new Map<string, boolean>();
+): Promise<Map<string, { installed: boolean; verified: boolean }>> {
+  const map = new Map<string, { installed: boolean; verified: boolean }>();
   if (userIds.length === 0) return map;
 
   try {
     // Firestore 'in' query supports up to 30 items, batch if needed
     const batchSize = 30;
-    const batches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+    const installBatches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
+    const verifiedBatches: Promise<FirebaseFirestore.QuerySnapshot>[] = [];
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      batches.push(
+      // Query for pwa_install events (claimed installation)
+      installBatches.push(
         db.collection(collectionName)
           .where('eventType', '==', 'pwa_install')
           .where('userId', 'in', batch)
-          .limit(batch.length) // Only need to know if at least one exists per user
+          .limit(batch.length)
+          .get()
+      );
+      // Query for pwa_usage_verified events (actually used PWA in standalone mode)
+      verifiedBatches.push(
+        db.collection(collectionName)
+          .where('eventType', '==', 'pwa_usage_verified')
+          .where('userId', 'in', batch)
+          .limit(batch.length)
           .get()
       );
     }
 
-    const results = await Promise.all(batches);
+    const [installResults, verifiedResults] = await Promise.all([
+      Promise.all(installBatches),
+      Promise.all(verifiedBatches)
+    ]);
 
-    // Mark users as having installed PWA if they have any pwa_install events
-    for (const snapshot of results) {
+    // Track installed users
+    const installedUsers = new Set<string>();
+    for (const snapshot of installResults) {
       for (const doc of snapshot.docs) {
         const data = doc.data();
-        const userId = data.userId;
-        if (userId) {
-          map.set(userId, true);
-        }
+        if (data.userId) installedUsers.add(data.userId);
       }
     }
 
-    console.log(`[Admin Users] Found ${map.size} users with PWA installations`);
+    // Track verified users
+    const verifiedUsers = new Set<string>();
+    for (const snapshot of verifiedResults) {
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        if (data.userId) verifiedUsers.add(data.userId);
+      }
+    }
+
+    // Build result map
+    for (const userId of userIds) {
+      const installed = installedUsers.has(userId);
+      const verified = verifiedUsers.has(userId);
+      if (installed || verified) {
+        map.set(userId, { installed, verified });
+      }
+    }
+
+    console.log(`[Admin Users] Found ${installedUsers.size} PWA installs, ${verifiedUsers.size} verified`);
   } catch (err) {
     console.warn('[Admin Users] Error batch fetching PWA installs:', err);
   }

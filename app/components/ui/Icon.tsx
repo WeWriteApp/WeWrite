@@ -67,7 +67,10 @@ import {
   Fingerprint,
   Shield,
   ShieldCheck,
+  ShieldX,
+  ShieldAlert,
   Lightbulb,
+  Twitch,
   Target,
   Monitor,
   Smartphone,
@@ -233,7 +236,7 @@ export type IconName =
   | "Trophy" | "Award" | "Crown" | "Medal"
   // Settings & Tools
   | "Settings" | "Settings2" | "Link" | "Link2" | "Lock" | "Unlock" | "Key" | "Fingerprint"
-  | "Shield" | "ShieldCheck" | "Zap" | "Lightbulb" | "Sparkles" | "Target"
+  | "Shield" | "ShieldCheck" | "ShieldX" | "ShieldAlert" | "Zap" | "Lightbulb" | "Sparkles" | "Target"
   // Layout & Display
   | "Monitor" | "Smartphone" | "Tablet" | "Laptop"
   | "Sun" | "Moon" | "Palette" | "Type"
@@ -249,7 +252,7 @@ export type IconName =
   | "Flame" | "Tablet" | "Sort"
   | "Flag" | "Ban" | "Wrench"
   | "Circle" | "LayoutPanelLeft" | "ArrowUpDown" | "FileStack"
-  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "Github" | "BookText" | "FolderPlus"
+  | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "Github" | "Twitch" | "BookText" | "FolderPlus"
   | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff"
   | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand"
   | "GitCompare" | "Loader2" | "Cpu" | "Briefcase" | "Brain" | "Music" | "Plane" | "Figma" | "Code2" | "Cloud";
@@ -418,6 +421,8 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Fingerprint: Fingerprint,
   Shield: Shield,
   ShieldCheck: ShieldCheck,
+  ShieldX: ShieldX,
+  ShieldAlert: ShieldAlert,
   Zap: Zap,
   Lightbulb: Lightbulb,
   Sparkles: Sparkles,
@@ -478,6 +483,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Twitter: Twitter,
   Instagram: Instagram,
   Github: Github,
+  Twitch: Twitch,
   BookText: BookText,
   FolderPlus: FolderPlus,
   Printer: Printer,

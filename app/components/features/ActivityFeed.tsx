@@ -164,6 +164,19 @@ export default function ActivityFeed({
     return true;
   });
 
+  // Spam prevention filter - hide likely spam accounts (default: true - opt-out)
+  const [hideLikelySpam, setHideLikelySpam] = useState(() => {
+    if (mode !== 'global') return false;
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('activityFeed_hideLikelySpam');
+        // Default to true (on) unless user explicitly set to false
+        return saved !== 'false';
+      } catch { /* ignore */ }
+    }
+    return true;
+  });
+
   // Filter modal state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -188,6 +201,13 @@ export default function ActivityFeed({
       localStorage.setItem('activityFeed_hideUnverified', String(hideUnverified));
     } catch { /* ignore */ }
   }, [hideUnverified, mode]);
+
+  useEffect(() => {
+    if (mode !== 'global' || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('activityFeed_hideLikelySpam', String(hideLikelySpam));
+    } catch { /* ignore */ }
+  }, [hideLikelySpam, mode]);
 
   const [showFollowSuggestions, setShowFollowSuggestions] = useState(false);
   const [followingCount, setFollowingCount] = useState(0);
@@ -218,6 +238,7 @@ export default function ActivityFeed({
         params.set('includeOwn', includeOwn.toString());
         params.set('followingOnly', followingOnly.toString());
         params.set('hideUnverified', hideUnverified.toString());
+        params.set('hideLikelySpam', hideLikelySpam.toString());
         if (user?.uid) params.set('userId', user.uid);
       } else {
         // User mode parameters
@@ -306,7 +327,7 @@ export default function ActivityFeed({
         setLoadingMoreState(false);
       }
     }
-  }, [mode, filterByUserId, includeOwn, followingOnly, hideUnverified, user?.uid, limit]);
+  }, [mode, filterByUserId, includeOwn, followingOnly, hideUnverified, hideLikelySpam, user?.uid, limit]);
 
   // Initial load
   useEffect(() => {
@@ -361,6 +382,12 @@ export default function ActivityFeed({
 
   const handleHideUnverifiedChange = (checked: boolean) => {
     setHideUnverified(checked);
+    setActivities([]);
+    setNextCursor(null);
+  };
+
+  const handleHideLikelySpamChange = (checked: boolean) => {
+    setHideLikelySpam(checked);
     setActivities([]);
     setNextCursor(null);
   };
@@ -444,6 +471,22 @@ export default function ActivityFeed({
                 id="hide-unverified"
                 checked={hideUnverified}
                 onCheckedChange={handleHideUnverifiedChange}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="hide-likely-spam" className="text-sm font-medium">
+                  Hide likely spam
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  WeWrite runs some fancy algorithms to figure out if an account is a real human
+                </p>
+              </div>
+              <Switch
+                id="hide-likely-spam"
+                checked={hideLikelySpam}
+                onCheckedChange={handleHideLikelySpamChange}
               />
             </div>
           </div>

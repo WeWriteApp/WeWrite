@@ -62,11 +62,13 @@ export async function GET(request: NextRequest) {
     const followingOnly = searchParams.get('followingOnly') === 'true';
     // hideUnverified defaults to true for spam prevention - only show content from verified users
     const hideUnverified = searchParams.get('hideUnverified') !== 'false';
+    // hideLikelySpam defaults to false - opt-in filter to hide accounts flagged as likely spam
+    const hideLikelySpam = searchParams.get('hideLikelySpam') === 'true';
     const cursor = searchParams.get('cursor');
 
     // SIMPLIFIED CACHING: Use server cache system
     const { cacheHelpers } = await import('../../../utils/serverCache');
-    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${hideUnverified}:${cursor || 'first'}`;
+    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${hideUnverified}:${hideLikelySpam}:${cursor || 'first'}`;
 
     return NextResponse.json(await cacheHelpers.getApiData(cacheKey, async () => {
 
@@ -263,7 +265,11 @@ export async function GET(request: NextRequest) {
           subscriptionAmount: userData?.subscriptionAmount || null,
           // Include email verification status for filtering
           _emailVerified: userData?.emailVerified ?? false,
-          _isAdmin: userData?.isAdmin ?? false
+          _isAdmin: userData?.isAdmin ?? false,
+          // Include risk score for spam filtering
+          _riskScore: userData?.riskScore ?? null,
+          // Include page count (single-page accounts are more likely spam)
+          _pageCount: userData?.pageCount ?? 0
         };
       })
       // Filter out pages from users with unverified email (admins bypass this check)
@@ -277,8 +283,21 @@ export async function GET(request: NextRequest) {
         if (edit._emailVerified !== true) return false;
         return true;
       })
+      // Filter out likely spam accounts when hideLikelySpam is enabled
+      // Spam indicators: high risk score (>60), or single-page new accounts
+      .filter(edit => {
+        // Skip filter if not enabled
+        if (!hideLikelySpam) return true;
+        // Admins always show
+        if (edit._isAdmin) return true;
+        // If we have a risk score, filter high-risk accounts (score > 60 = "soft_challenge" level)
+        if (edit._riskScore !== null && edit._riskScore > 60) return false;
+        // Single-page accounts from unverified users are more likely spam
+        if (edit._pageCount <= 1 && edit._emailVerified !== true) return false;
+        return true;
+      })
       // Remove internal fields from response
-      .map(({ _emailVerified, _isAdmin, ...edit }) => edit);
+      .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, ...edit }) => edit);
 
     // Determine if there are more pages available
     // We have more if:
@@ -385,11 +404,12 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
             username: userData.username,
             emailVerified: userData.emailVerified ?? false,  // For hiding unverified users' pages from feed
             isAdmin: userData.isAdmin ?? false,              // Admins bypass email verification check
+            riskScore: userData.riskScore ?? null,           // For spam filtering
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,
             hasActiveSubscription: isActive,
-            pageCount: userData.pageCount || 0,
+            pageCount: userData.pageCount || userData.pagesCount || 0,
             followerCount: userData.followerCount || 0,
             viewCount: userData.viewCount || 0
           };

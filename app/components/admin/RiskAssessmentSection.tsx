@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { RISK_FACTOR_IMPORTANCE } from '../../services/RiskScoringService';
 
 interface RiskFactor {
   name: string;
@@ -44,9 +45,11 @@ interface RiskAssessmentData {
   factors: {
     botDetection: { score: number; confidence?: number; reasons?: string[] };
     ipReputation: { score: number; isProxy?: boolean; isVpn?: boolean; isTor?: boolean };
-    accountTrust: { score: number; trustLevel?: string; accountAge?: number; emailVerified?: boolean };
+    accountTrust: { score: number; riskScore?: number; trustLevel?: string; accountAge?: number; emailVerified?: boolean };
     behavioral: { score: number; suspiciousPatterns?: string[] };
     velocity: { score: number; recentActions?: number; exceededLimit?: boolean };
+    contentBehavior?: { score: number; pageCount?: number; hasExternalLinks?: boolean; externalLinkCount?: number; hasInternalLinks?: boolean; internalLinkCount?: number; suspiciousPatterns?: string[] };
+    financialTrust?: { score: number; hasActiveSubscription?: boolean; subscriptionAmountCents?: number; hasAllocatedToOthers?: boolean; totalAllocatedCents?: number; hasEarnings?: boolean; totalEarningsCents?: number; hasPayoutSetup?: boolean; trustIndicators?: string[]; riskIndicators?: string[] };
   };
   lastAssessment?: string;
   history?: RiskHistoryEntry[];
@@ -116,31 +119,50 @@ function scoreToLevel(score: number): RiskLevel {
   return 'block';
 }
 
-const FACTOR_INFO: Record<string, { icon: string; label: string; description: string }> = {
+// Factor info with detailed explanations
+// NOTE: All scores displayed are RISK scores (0-100, higher = more risky)
+const FACTOR_INFO: Record<string, { icon: string; label: string; description: string; riskExplanation: string }> = {
   botDetection: {
     icon: 'Bot',
     label: 'Bot Detection',
     description: 'Analyzes browser fingerprint, user agent, and automation indicators',
+    riskExplanation: '0 = Human behavior detected. Higher scores indicate automated/bot-like patterns.',
   },
   ipReputation: {
     icon: 'Globe',
     label: 'IP Reputation',
     description: 'Checks IP against known bad actor lists and proxy/VPN detection',
+    riskExplanation: '0 = Clean IP. Higher scores indicate proxies, VPNs, datacenter IPs, or known bad actors.',
   },
   accountTrust: {
     icon: 'UserCheck',
     label: 'Account Trust',
     description: 'Based on account age, email verification, and activity history',
+    riskExplanation: '0 = Fully trusted account (verified, old, active). Higher scores indicate new/unverified accounts.',
   },
   behavioral: {
     icon: 'Activity',
     label: 'Behavioral',
-    description: 'Session patterns, interaction rates, and content velocity',
+    description: 'Session patterns, interaction rates, and browsing behavior',
+    riskExplanation: '0 = Normal browsing patterns. Higher scores indicate suspicious automation or rapid activity.',
   },
   velocity: {
     icon: 'Zap',
     label: 'Velocity',
-    description: 'Rate of actions and whether limits have been exceeded',
+    description: 'Rate of actions relative to account trust level',
+    riskExplanation: '0 = Normal activity rate. Higher scores indicate excessive actions approaching or exceeding limits.',
+  },
+  contentBehavior: {
+    icon: 'FileText',
+    label: 'Content Behavior',
+    description: 'Content patterns: page count, external links, internal connections',
+    riskExplanation: '0 = Good behavior (multiple pages, internal links, no spam links). Higher scores indicate spam patterns (single page, external links).',
+  },
+  financialTrust: {
+    icon: 'CreditCard',
+    label: 'Financial Trust',
+    description: 'Payment activity: subscriptions, allocations to writers, earnings received',
+    riskExplanation: '0 = Paying subscriber who supports other writers. Higher scores indicate no financial activity (free accounts with no engagement).',
   },
 };
 
@@ -253,12 +275,17 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
       {data?.factors && (
         <div className="space-y-2 pt-2 border-t border-border">
           <div className="text-xs font-medium text-muted-foreground">Risk Factors</div>
+          <p className="text-[10px] text-muted-foreground -mt-1">Lower is better. Score = average of all factors.</p>
           <div className="space-y-1.5">
             {Object.entries(data.factors).map(([key, value]) => {
               const info = FACTOR_INFO[key];
               if (!info || typeof value !== 'object') return null;
 
-              const factorScore = (value as any).score ?? 0;
+              // For accountTrust, use riskScore (inverted) instead of trust score
+              // All other factors already display as risk scores
+              const factorScore = key === 'accountTrust'
+                ? ((value as any).riskScore ?? (100 - ((value as any).score ?? 0)))
+                : ((value as any).score ?? 0);
 
               return (
                 <TooltipProvider key={key}>
@@ -268,6 +295,11 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
                         <div className="flex items-center gap-1.5">
                           <Icon name={info.icon} size={12} className="text-muted-foreground" />
                           <span>{info.label}</span>
+                          {RISK_FACTOR_IMPORTANCE[key] > 1 && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-normal text-muted-foreground">
+                              {RISK_FACTOR_IMPORTANCE[key]}x
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -289,12 +321,54 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="max-w-xs">
-                      <p className="text-xs">{info.description}</p>
+                      <p className="text-xs font-medium">{info.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{info.riskExplanation}</p>
                       {key === 'accountTrust' && (value as any).trustLevel && (
-                        <p className="text-xs mt-1">Trust level: {(value as any).trustLevel}</p>
+                        <p className="text-xs mt-1">Trust level: <span className="font-medium">{(value as any).trustLevel}</span></p>
+                      )}
+                      {key === 'accountTrust' && (value as any).emailVerified !== undefined && (
+                        <p className="text-xs">Email: <span className={`font-medium ${(value as any).emailVerified ? 'text-green-600' : 'text-yellow-600'}`}>{(value as any).emailVerified ? 'Verified' : 'Not verified'}</span></p>
                       )}
                       {key === 'velocity' && (value as any).exceededLimit && (
-                        <p className="text-xs mt-1 text-destructive">Rate limit exceeded</p>
+                        <p className="text-xs mt-1 text-destructive font-medium">Rate limit exceeded</p>
+                      )}
+                      {key === 'contentBehavior' && (
+                        <>
+                          {(value as any).pageCount !== undefined && (
+                            <p className="text-xs mt-1">Pages: <span className="font-medium">{(value as any).pageCount}</span></p>
+                          )}
+                          {(value as any).externalLinkCount !== undefined && (value as any).externalLinkCount > 0 && (
+                            <p className="text-xs text-yellow-600">External links: {(value as any).externalLinkCount}</p>
+                          )}
+                          {(value as any).internalLinkCount !== undefined && (value as any).internalLinkCount > 0 && (
+                            <p className="text-xs text-green-600">Internal links: {(value as any).internalLinkCount}</p>
+                          )}
+                        </>
+                      )}
+                      {key === 'financialTrust' && (
+                        <>
+                          {(value as any).hasActiveSubscription && (
+                            <p className="text-xs mt-1 text-green-600 font-medium">
+                              Active subscriber (${((value as any).subscriptionAmountCents / 100).toFixed(2)}/mo)
+                            </p>
+                          )}
+                          {(value as any).hasAllocatedToOthers && (
+                            <p className="text-xs text-green-600">
+                              Supports writers: ${((value as any).totalAllocatedCents / 100).toFixed(2)} allocated
+                            </p>
+                          )}
+                          {(value as any).hasEarnings && (
+                            <p className="text-xs text-green-600">
+                              Has earnings: ${((value as any).totalEarningsCents / 100).toFixed(2)}
+                            </p>
+                          )}
+                          {(value as any).hasPayoutSetup && (
+                            <p className="text-xs text-green-600">Payout account setup</p>
+                          )}
+                          {!(value as any).hasActiveSubscription && !(value as any).hasAllocatedToOthers && !(value as any).hasEarnings && (
+                            <p className="text-xs text-yellow-600 mt-1">No financial activity</p>
+                          )}
+                        </>
                       )}
                     </TooltipContent>
                   </Tooltip>
@@ -355,11 +429,69 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
         </div>
       )}
 
-      {/* Explanation */}
-      <div className="pt-2 border-t border-border">
+      {/* Comprehensive Explanation */}
+      <div className="pt-2 border-t border-border space-y-2">
+        <details className="group">
+          <summary className="text-[10px] text-muted-foreground cursor-pointer flex items-center gap-1 hover:text-foreground">
+            <Icon name="Info" size={10} />
+            <span>How risk scoring works</span>
+            <Icon name="ChevronRight" size={10} className="group-open:rotate-90 transition-transform" />
+          </summary>
+          <div className="mt-2 text-[10px] text-muted-foreground space-y-2 pl-3 border-l border-border">
+            <p className="font-medium text-foreground">Risk Score = Weighted average of all factors (0-100)</p>
+            <p>Factors marked with <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-normal">2x</Badge> count double in the calculation.</p>
+
+            <div className="space-y-1">
+              <p className="font-medium">Risk Levels:</p>
+              <ul className="space-y-0.5 ml-2">
+                <li><span className="text-green-600 font-medium">0-30 (Allow)</span>: Trusted user, no challenges</li>
+                <li><span className="text-yellow-600 font-medium">31-60 (Soft Challenge)</span>: Invisible CAPTCHA check</li>
+                <li><span className="text-orange-600 font-medium">61-85 (Hard Challenge)</span>: Visible CAPTCHA required</li>
+                <li><span className="text-red-600 font-medium">86-100 (Block)</span>: Action blocked entirely</li>
+              </ul>
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-medium">7 Risk Factors Analyzed:</p>
+              <ol className="space-y-0.5 ml-2 list-decimal list-inside">
+                <li><strong>Bot Detection</strong>: Browser fingerprint, automation signals</li>
+                <li><strong>IP Reputation</strong>: Proxy/VPN/TOR detection, known bad IPs</li>
+                <li><strong>Account Trust</strong>: Account age, email verification status</li>
+                <li><strong>Behavioral</strong>: Session patterns, interaction rates</li>
+                <li><strong>Velocity</strong>: Rate of actions relative to trust level</li>
+                <li><strong>Content Behavior</strong>: Page count, external vs internal links</li>
+                <li><strong>Financial Trust</strong>: Subscriptions, allocations to writers</li>
+              </ol>
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-medium">Trust Signals (Lower Risk):</p>
+              <ul className="space-y-0.5 ml-2 text-green-700 dark:text-green-400">
+                <li>+ Active paid subscription</li>
+                <li>+ Allocates money to other writers</li>
+                <li>+ Has earnings from readers</li>
+                <li>+ Verified email address</li>
+                <li>+ Multiple interconnected pages</li>
+                <li>+ Account age 30+ days</li>
+              </ul>
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-medium">Risk Signals (Higher Risk):</p>
+              <ul className="space-y-0.5 ml-2 text-red-700 dark:text-red-400">
+                <li>- Single page with external links</li>
+                <li>- New unverified account</li>
+                <li>- VPN/proxy/datacenter IP</li>
+                <li>- No financial engagement</li>
+                <li>- Rapid action velocity</li>
+                <li>- Bot-like behavior patterns</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+
         <div className="text-[10px] text-muted-foreground">
-          This score determines whether the user faces challenges (CAPTCHA) when performing
-          sensitive actions like creating content or accounts.
+          Score is used for spam filtering in activity feeds and triggering security challenges.
         </div>
       </div>
     </div>

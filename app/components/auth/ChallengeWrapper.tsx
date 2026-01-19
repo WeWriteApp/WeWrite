@@ -234,8 +234,11 @@ export function ChallengeWrapper({
           <p className="text-sm font-medium text-destructive">
             This action has been blocked due to security concerns.
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            If you believe this is an error, please contact support.
+          <p className="text-xs text-muted-foreground mt-2">
+            If you believe this is an error, please{' '}
+            <a href="/settings/about" className="text-primary underline hover:text-primary/80">
+              contact support
+            </a>.
           </p>
         </div>
       </div>

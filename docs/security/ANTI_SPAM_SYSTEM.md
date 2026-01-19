@@ -15,6 +15,7 @@ Technical documentation for WeWrite's comprehensive anti-spam and anti-bot prote
 9. [File Structure](#file-structure)
 10. [Integration Guide](#integration-guide)
 11. [Monitoring & Debugging](#monitoring--debugging)
+12. [Bot Farm Detection](#bot-farm-detection)
 
 ---
 
@@ -43,12 +44,14 @@ User Action
 │         Risk Assessment             │
 │    (RiskScoringService.ts)          │
 │                                     │
-│  Combines signals from:             │
-│  • Bot Detection (30%)              │
-│  • IP Reputation (15%)              │
-│  • Account Trust (25%)              │
-│  • Behavioral Analysis (15%)        │
-│  • Velocity Tracking (15%)          │
+│  Combines signals with importance:  │
+│  • Bot Detection (1x)               │
+│  • IP Reputation (1x)               │
+│  • Account Trust (1x)               │
+│  • Behavioral Analysis (1x)         │
+│  • Velocity Tracking (1x)           │
+│  • Content Behavior (1x)            │
+│  • Financial Trust (2x) ★           │
 └─────────────────────────────────────┘
     │
     ▼
@@ -153,15 +156,25 @@ User Action
 
 Central risk calculation engine that combines multiple signals into a single risk score (0-100).
 
-**Risk Factors & Weights:**
+**Risk Factors & Importance Multipliers:**
 
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| Bot Detection | 30% | Browser fingerprint, user agent, automation indicators |
-| IP Reputation | 15% | Proxy/VPN detection, blocklist status, datacenter detection |
-| Account Trust | 25% | Account age, email verification, activity history |
-| Behavioral | 15% | Session patterns, interaction rates, content velocity |
-| Velocity | 15% | Rate of recent actions, limit violations |
+The risk score is calculated as a weighted average where each factor has an importance multiplier.
+Higher importance means the factor counts more heavily in the final score.
+
+| Factor | Importance | Description |
+|--------|------------|-------------|
+| Bot Detection | 1x | Browser fingerprint, user agent, automation indicators |
+| IP Reputation | 1x | Proxy/VPN detection, blocklist status, datacenter detection |
+| Account Trust | 1x | Account age, email verification, activity history, PWA verification |
+| Behavioral | 1x | Session patterns, interaction rates, content velocity |
+| Velocity | 1x | Rate of recent actions, limit violations |
+| Content Behavior | 1x | Page count, external/internal links, spam patterns |
+| **Financial Trust** | **2x** | Subscription status, allocations to writers, earnings (bots don't pay!) |
+
+**Why Financial Trust is 2x:**
+- Paying users are extremely unlikely to be bots (bot farms don't pay for subscriptions)
+- Users who allocate money to support other writers demonstrate genuine platform engagement
+- This dramatically reduces false positives for legitimate paying users
 
 **Risk Levels:**
 
@@ -926,18 +939,23 @@ app/
 │       └── route.ts              # Risk assessment API endpoint
 ├── components/
 │   ├── admin/
-│   │   ├── RiskAssessmentSection.tsx  # Admin risk display
+│   │   ├── RiskAssessmentSection.tsx  # Admin risk display (with importance badges)
 │   │   └── RiskScoreBadge.tsx         # Risk score badge
-│   └── auth/
-│       └── ChallengeWrapper.tsx       # Turnstile wrapper component
+│   ├── auth/
+│   │   └── ChallengeWrapper.tsx       # Turnstile wrapper component
+│   └── features/
+│       └── ActivityFeed.tsx           # Activity feed with spam filtering
 ├── services/
-│   ├── RiskScoringService.ts          # Central risk orchestrator
+│   ├── RiskScoringService.ts          # Central risk orchestrator (weighted scoring)
 │   ├── BotDetectionService.ts         # Bot/automation detection
 │   ├── TurnstileVerificationService.ts # Server-side CAPTCHA
 │   ├── ContentSpamDetectionService.ts  # Content analysis
 │   ├── AccountSecurityService.ts       # Account trust scoring
 │   ├── IPReputationService.ts          # IP reputation checking
-│   └── VisitorValidationService.ts     # Traffic validation
+│   ├── VisitorValidationService.ts     # Traffic validation
+│   └── pwaInstallTracking.ts          # PWA installation & verification tracking
+├── providers/
+│   └── PWAProvider.tsx                # PWA context (triggers verified usage tracking)
 └── utils/
     ├── rateLimiter.ts                 # Rate limiting utilities
     └── turnstile.ts                   # Client Turnstile utilities
@@ -1092,6 +1110,83 @@ In development without Turnstile keys:
 | `accountVelocity` | Account creation tracking |
 | `securityEvents` | User security event log |
 | `contentHashes` | Content duplicate detection |
+
+---
+
+---
+
+## Bot Farm Detection
+
+### Overview
+
+Bot farms have been observed attempting to game trust signals by:
+- Spoofing PWA installation events (without actually using the app in standalone mode)
+- Creating accounts with verified emails (using email verification services)
+- Creating minimal content to appear legitimate
+
+### PWA Verification System
+
+**File:** `app/services/pwaInstallTracking.ts`
+
+The system distinguishes between:
+1. **PWA Install Event** (`pwa_install`) - Client claims to have installed the PWA
+2. **PWA Usage Verified** (`pwa_usage_verified`) - User actually used the app in standalone mode
+
+**How It Works:**
+
+```typescript
+// Tracked when user actually uses the app in standalone mode
+// (display-mode: standalone or navigator.standalone on iOS)
+PWAInstallTrackingService.trackVerifiedPWAUsage(userId, username);
+```
+
+**Bot Farm Detection Logic:**
+
+When a user has:
+- A `pwa_install` event (claimed installation)
+- NO `pwa_usage_verified` event (never actually used standalone)
+- Zero content created (no pages)
+
+This combination adds +15 to their risk score and flags "PWA claimed but never verified (possible spoofing)".
+
+### Financial Trust Assessment
+
+**File:** `app/services/RiskScoringService.ts` (`assessFinancialTrust` method)
+
+Financial activity is the strongest anti-bot signal because bot farms don't pay.
+
+**Trust Signals (reduce risk):**
+- Active subscription (-30 risk, additional -10 for premium $20+/mo)
+- Allocated money to other writers (-25 risk)
+- Has earnings from supporters (-15 risk)
+- Payout account setup (-10 risk)
+
+**Risk Signals (increase risk):**
+- No financial activity (+10 risk)
+
+### Activity Feed Spam Filtering
+
+**File:** `app/components/features/ActivityFeed.tsx`
+
+The activity feed includes a "Hide likely spam" toggle that filters out:
+- Accounts with high risk scores
+- Accounts without email verification
+- Accounts with suspicious content patterns
+
+**Default Behavior:**
+- The filter defaults to ON (opt-out instead of opt-in)
+- Users can toggle it off to see all activity
+- Setting is persisted in localStorage
+
+### Admin UI Indicators
+
+**File:** `app/components/admin/RiskAssessmentSection.tsx`
+
+The admin UI shows:
+- Importance badges (e.g., "2x" for Financial Trust)
+- PWA installation vs verification status
+- Detailed breakdown of all risk factors
+- Explanation of weighted average calculation
 
 ---
 

@@ -64,6 +64,12 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         // Reinitialize with updated user context
         PWAInstallTrackingService.initialize(user?.uid, user?.username);
+
+        // Track verified PWA usage if user is authenticated and running as PWA
+        // This helps distinguish genuine PWA users from spoofed install events
+        if (user?.uid) {
+          PWAInstallTrackingService.trackVerifiedPWAUsage(user.uid, user.username);
+        }
       } catch (error) {
         console.error('Error updating PWA tracking user context:', error);
       }

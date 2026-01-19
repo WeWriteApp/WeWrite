@@ -5,7 +5,7 @@ export interface PWAInstallEvent {
   userId?: string;
   username?: string;
   timestamp: Date;
-  eventType: 'install_prompt_shown' | 'install_accepted' | 'install_dismissed' | 'app_installed';
+  eventType: 'install_prompt_shown' | 'install_accepted' | 'install_dismissed' | 'app_installed' | 'pwa_usage_verified';
   userAgent: string;
   platform: string;
 }
@@ -195,5 +195,46 @@ export class PWAInstallTrackingService {
       isInstallPromptAvailable: this.isInstallPromptAvailable(),
       platform: this.getPlatform()
     };
+  }
+
+  /**
+   * Track verified PWA usage - called when user is actually using the app in standalone mode
+   * This helps distinguish between spoofed PWA install events and genuine usage.
+   * Only tracks once per session to avoid spam.
+   */
+  static async trackVerifiedPWAUsage(userId: string, username?: string): Promise<void> {
+    if (typeof window === 'undefined') return;
+
+    // Only track if actually running as PWA
+    if (!this.isPWA()) return;
+
+    // Only track once per session
+    const sessionKey = `pwa_usage_verified_${userId}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+
+    try {
+      const firestoreData: any = {
+        timestamp: Timestamp.fromDate(new Date()),
+        eventType: 'pwa_usage_verified',
+        userId,
+        userAgent: navigator.userAgent,
+        platform: this.getPlatform(),
+        displayMode: window.matchMedia('(display-mode: standalone)').matches ? 'standalone' :
+                     (window.navigator as any).standalone ? 'ios-standalone' : 'browser'
+      };
+
+      if (username) {
+        firestoreData.username = username;
+      }
+
+      const analyticsRef = collection(db, 'analytics_events');
+      await addDoc(analyticsRef, firestoreData);
+
+      // Mark as tracked for this session
+      sessionStorage.setItem(sessionKey, 'true');
+
+    } catch (error) {
+      console.error('Error tracking verified PWA usage:', error);
+    }
   }
 }
