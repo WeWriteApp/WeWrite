@@ -66,11 +66,20 @@ export async function GET(request: NextRequest) {
     const hideLikelySpam = searchParams.get('hideLikelySpam') === 'true';
     const cursor = searchParams.get('cursor');
 
-    // SIMPLIFIED CACHING: Use server cache system
-    const { cacheHelpers } = await import('../../../utils/serverCache');
+    // SMART CACHING: Only cache meaningful results to allow backfill to run
+    // Use the local cache (line 11) with conditional caching logic
+    const CACHE_TTL = 10 * 1000; // 10 seconds for good results
+    const EMPTY_CACHE_TTL = 2 * 1000; // 2 seconds for empty/sparse results (allows backfill retry)
     const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${hideUnverified}:${hideLikelySpam}:${cursor || 'first'}`;
 
-    return NextResponse.json(await cacheHelpers.getApiData(cacheKey, async () => {
+    // Check cache first
+    const cached = globalRecentEditsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < (cached.data?.edits?.length > 0 ? CACHE_TTL : EMPTY_CACHE_TTL)) {
+      return NextResponse.json(cached.data);
+    }
+
+    // Cache miss or expired - fetch fresh data
+    const responseData = await (async () => {
 
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;
@@ -353,7 +362,13 @@ export async function GET(request: NextRequest) {
     };
 
     return responseData;
-    }));
+    })();
+
+    // Cache the result - use longer TTL for good results, shorter for empty
+    // This allows backfill to retry quickly when spam filters produce empty results
+    globalRecentEditsCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     return NextResponse.json(
