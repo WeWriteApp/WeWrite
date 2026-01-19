@@ -184,8 +184,6 @@ export default function TrendingPageClient() {
                           userId={page.userId}
                           username={page.username}
                           tier={page.tier}
-                          subscriptionStatus={page.subscriptionStatus}
-                          subscriptionAmount={page.subscriptionAmount}
                           size="sm"
                           onClick={(e) => e.stopPropagation()}
                         />

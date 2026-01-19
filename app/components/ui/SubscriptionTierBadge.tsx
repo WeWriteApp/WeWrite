@@ -3,11 +3,14 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
-import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
+// Simplified interface: tier is now pre-computed by APIs
+// status and amount are deprecated and kept only for backward compatibility
 interface SubscriptionTierBadgeProps {
   tier?: string | null;
+  /** @deprecated No longer used - tier is pre-computed by APIs */
   status?: string | null;
+  /** @deprecated No longer used - tier is pre-computed by APIs */
   amount?: number | null;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -51,8 +54,8 @@ export function SubscriptionTierBadge({
     );
   }
 
-  // Use centralized tier determination logic with safety fallback
-  const finalTier = getEffectiveTier(amount ?? null, tier ?? null, status ?? null) || 'inactive';
+  // Use pre-computed tier directly from API with safety fallback
+  const finalTier = tier || 'inactive';
 
   const config = sizeConfig[size];
 

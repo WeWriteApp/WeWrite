@@ -298,8 +298,6 @@ export default function TrendingPages({ limit = 5 }) {
                       userId={page.userId}
                       username={page.username || 'Anonymous'}
                       tier={page.tier}
-                      subscriptionStatus={page.subscriptionStatus}
-                      subscriptionAmount={page.subscriptionAmount}
                       size="sm"
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -350,8 +348,6 @@ export default function TrendingPages({ limit = 5 }) {
                       userId={page.userId}
                       username={page.username || 'Anonymous'}
                       tier={page.tier}
-                      subscriptionStatus={page.subscriptionStatus}
-                      subscriptionAmount={page.subscriptionAmount}
                       size="sm"
                       onClick={(e) => e.stopPropagation()}
                     />

@@ -10,16 +10,21 @@ import { SubscriptionTiersModal } from '../modals/SubscriptionTiersModal';
 import { cn } from '../../lib/utils';
 import { sanitizeUsername, needsUsernameRefresh, getDisplayUsername } from '../../utils/usernameSecurity';
 
+// Cache structure for full profile data (username + tier)
+interface CachedProfile {
+  username: string;
+  tier?: string | null;
+  timestamp: number;
+}
+
 // Simple in-memory cache to prevent duplicate API calls
-const usernameCache = new Map<string, { username: string; timestamp: number }>();
+const profileCache = new Map<string, CachedProfile>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 interface UsernameBadgeProps {
   userId: string;
   username: string;
   tier?: string | null;
-  subscriptionStatus?: string | null;
-  subscriptionAmount?: number | null;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   showBadge?: boolean;
@@ -34,8 +39,6 @@ export function UsernameBadge({
   userId,
   username,
   tier,
-  subscriptionStatus,
-  subscriptionAmount,
   size = 'sm',
   className = '',
   showBadge = true,
@@ -49,31 +52,47 @@ export function UsernameBadge({
   const [freshUsername, setFreshUsername] = useState<string | null>(null);
   const [isLoadingUsername, setIsLoadingUsername] = useState(false);
 
+  // State for fetched tier data (fallback when props not provided)
+  const [fetchedTier, setFetchedTier] = useState<string | null | undefined>(undefined);
+
   // State for subscription tiers modal
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Get current pathname to detect if we're on a user page
   const pathname = usePathname();
 
-  // Fetch fresh username on mount to ensure consistency
+  // Fetch fresh profile data (username + subscription) on mount
+  // Uses full-profile endpoint when subscription data is needed
   useEffect(() => {
-    const fetchFreshUsername = async () => {
+    const fetchFreshProfile = async () => {
       if (!userId) return;
 
+      // Determine if we need tier data (when props not provided)
+      const needsTier = tier === undefined;
+
       // Check in-memory cache first
-      const cached = usernameCache.get(userId);
+      const cached = profileCache.get(userId);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         setFreshUsername(cached.username);
+        // Use cached tier data if we need it and props aren't provided
+        if (needsTier) {
+          setFetchedTier(cached.tier);
+        }
         return;
       }
 
       // SECURITY: Use centralized logic to determine if username needs refresh
       const needsFreshFetch = needsUsernameRefresh(username);
 
-      if (!needsFreshFetch) {
+      // Use full-profile endpoint if we need tier data, otherwise use regular profile
+      const endpoint = needsTier
+        ? `/api/users/full-profile?id=${encodeURIComponent(userId)}`
+        : `/api/users/profile?id=${encodeURIComponent(userId)}`;
+
+      if (!needsFreshFetch && !needsTier) {
         // Still fetch in background to verify, but don't show loading
         try {
-          const response = await fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`);
+          const response = await fetch(endpoint);
           if (response.ok) {
             const result = await response.json();
             if (result.success && result.data?.username && result.data.username !== username) {
@@ -81,7 +100,11 @@ export function UsernameBadge({
               const newUsername = result.data.username;
               setFreshUsername(newUsername);
               // Update cache
-              usernameCache.set(userId, { username: newUsername, timestamp: Date.now() });
+              profileCache.set(userId, {
+                username: newUsername,
+                tier: result.data.tier,
+                timestamp: Date.now()
+              });
 
               // ENHANCEMENT: Trigger page refresh if this is a significant username change
               if (username === 'Missing username' || username === 'Anonymous') {
@@ -94,36 +117,46 @@ export function UsernameBadge({
             }
           }
         } catch (error) {
-          console.warn('Background username fetch failed:', error);
+          console.warn('Background profile fetch failed:', error);
         }
         return;
       }
 
-      // Show loading and fetch fresh username
+      // Show loading and fetch fresh profile
       setIsLoadingUsername(true);
       try {
-        const response = await fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`);
+        const response = await fetch(endpoint);
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data?.username) {
             const newUsername = result.data.username;
             setFreshUsername(newUsername);
-            // Update cache
-            usernameCache.set(userId, { username: newUsername, timestamp: Date.now() });
 
-            console.log('✅ Fresh username fetched for user:', userId, newUsername);
+            // Update tier state if needed and data is available
+            if (needsTier) {
+              setFetchedTier(result.data.tier ?? null);
+            }
+
+            // Update cache with all data
+            profileCache.set(userId, {
+              username: newUsername,
+              tier: result.data.tier,
+              timestamp: Date.now()
+            });
+
+            console.log('✅ Fresh profile fetched for user:', userId, newUsername);
           } else {
             console.warn('No username found in API response for user:', userId);
             // FALLBACK: Try to generate a reasonable username
             setFreshUsername(`user_${userId.substring(0, 8)}`);
           }
         } else {
-          console.error('Failed to fetch username, status:', response.status);
+          console.error('Failed to fetch profile, status:', response.status);
           // FALLBACK: Use a generated username
           setFreshUsername(`user_${userId.substring(0, 8)}`);
         }
       } catch (error) {
-        console.error('Failed to fetch fresh username:', error);
+        console.error('Failed to fetch fresh profile:', error);
         // FALLBACK: Use a generated username
         setFreshUsername(`user_${userId.substring(0, 8)}`);
       } finally {
@@ -131,30 +164,40 @@ export function UsernameBadge({
       }
     };
 
-    fetchFreshUsername();
-  }, [userId, username]);
+    fetchFreshProfile();
+  }, [userId, username, tier]);
 
   // Listen for global username update events
   useEffect(() => {
     const handleUsernameUpdate = (event: CustomEvent) => {
       const { userId: updatedUserId } = event.detail || {};
 
-      // If this is for our user, refresh the username
+      // If this is for our user, refresh the profile
       if (updatedUserId === userId) {
-        console.log('🔄 Username update detected for user:', userId);
+        console.log('🔄 Profile update detected for user:', userId);
         setFreshUsername(null); // Clear cached username
         setIsLoadingUsername(true);
 
-        // Fetch fresh username
-        fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`)
+        // Fetch fresh profile (with subscription data)
+        fetch(`/api/users/full-profile?id=${encodeURIComponent(userId)}`)
           .then(response => response.json())
           .then(result => {
             if (result.success && result.data?.username) {
               setFreshUsername(result.data.username);
+              // Also update tier data
+              if (tier === undefined) {
+                setFetchedTier(result.data.tier ?? null);
+              }
+              // Update cache
+              profileCache.set(userId, {
+                username: result.data.username,
+                tier: result.data.tier,
+                timestamp: Date.now()
+              });
             }
           })
           .catch(error => {
-            console.error('Failed to refresh username after update:', error);
+            console.error('Failed to refresh profile after update:', error);
           })
           .finally(() => {
             setIsLoadingUsername(false);
@@ -170,7 +213,7 @@ export function UsernameBadge({
       window.removeEventListener('userDataUpdated', handleUsernameUpdate as EventListener);
       window.removeEventListener('invalidate-user-pages', handleUsernameUpdate as EventListener);
     };
-  }, [userId]);
+  }, [userId, tier]);
 
   // SECURITY: Use centralized username sanitization
   const displayUsername = getDisplayUsername(
@@ -178,26 +221,30 @@ export function UsernameBadge({
     isLoadingUsername
   );
 
+  // Use props if provided, otherwise use fetched values as fallback
+  const effectiveTier = tier !== undefined ? tier : fetchedTier;
+
   // Determine if user is inactive (no active subscription)
-  const isInactive = !subscriptionStatus || subscriptionStatus !== 'active';
+  // 'inactive' tier means no active subscription
+  const isInactive = !effectiveTier || effectiveTier === 'inactive';
 
   // Check if we're on a user page
   const isOnUserPage = pathname?.startsWith('/u/');
 
   // Generate tooltip text for subscription status
   const getTooltipText = () => {
-    if (!subscriptionStatus || subscriptionStatus !== 'active') {
+    if (!effectiveTier || effectiveTier === 'inactive') {
       return 'No active subscription - $0/mo';
     }
-
-    if (subscriptionAmount && subscriptionAmount > 30) {
-      return 'Active subscription - above $30/mo';
+    if (effectiveTier === 'tier3') {
+      return 'Champion - $30+/mo';
     }
-
-    if (subscriptionAmount) {
-      return `Active subscription - $${subscriptionAmount}/mo`;
+    if (effectiveTier === 'tier2') {
+      return 'Advocate - $20/mo';
     }
-
+    if (effectiveTier === 'tier1') {
+      return 'Supporter - $10/mo';
+    }
     return 'Active subscription';
   };
 
@@ -240,9 +287,7 @@ export function UsernameBadge({
       </span>
       {showBadge && (
         <SubscriptionTierBadge
-          tier={tier}
-          status={subscriptionStatus}
-          amount={subscriptionAmount}
+          tier={effectiveTier}
           size={size}
           pillVariant={variant === 'pill' ? pillVariant : undefined}
         />

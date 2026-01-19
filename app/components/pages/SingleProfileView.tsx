@@ -51,8 +51,6 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
               userId={profile.uid}
               username={profile.username}
               tier={profile.tier}
-              subscriptionStatus={profile.subscriptionStatus}
-              subscriptionAmount={profile.subscriptionAmount}
               size="md"
               className="text-lg font-semibold"
             />

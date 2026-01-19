@@ -25,9 +25,7 @@ interface PageVersion {
   diff?: { added: number; removed: number; hasChanges: boolean };
   versionId?: string;
   username?: string;
-  subscriptionTier?: string;
-  subscriptionStatus?: string;
-  subscriptionAmount?: number;
+  tier?: string;  // Pre-computed effective tier from API
   hasActiveSubscription?: boolean;
   title?: string;
 }
@@ -246,10 +244,8 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
               isCurrentVersion: index === 0, // First item is most recent
               hasPreviousVersion: index < pageVersions.length - 1, // Has previous version if not the last item
               // Remove subscription data since we're not showing usernames
-              subscriptionTier: null,
-              subscriptionStatus: null,
-              hasActiveSubscription: false,
-              subscriptionAmount: null
+              tier: null,
+              hasActiveSubscription: false
             };
           }));
 
@@ -257,9 +253,7 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
             count: activityItems.length,
             firstItem: activityItems[0] ? {
               username: activityItems[0].username,
-              subscriptionTier: activityItems[0].subscriptionTier,
-              subscriptionStatus: activityItems[0].subscriptionStatus,
-              subscriptionAmount: activityItems[0].subscriptionAmount,
+              tier: activityItems[0].tier,
               hasActiveSubscription: activityItems[0].hasActiveSubscription
             } : null
           });

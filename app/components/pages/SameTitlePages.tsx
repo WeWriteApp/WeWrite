@@ -13,9 +13,7 @@ interface SameTitlePage {
   userId: string;
   username: string | null;
   displayName: string | null;
-  subscriptionTier: string | null;
-  subscriptionStatus: string | null;
-  subscriptionAmount: number | null;
+  tier: string | null;  // Pre-computed effective tier from API
   createdAt: string;
   updatedAt: string;
 }
@@ -98,9 +96,7 @@ export default function SameTitlePages({
     title: page.username || `user_${page.userId.substring(0, 6)}`,
     userId: page.userId,
     username: page.username,
-    subscriptionTier: page.subscriptionTier,
-    subscriptionStatus: page.subscriptionStatus,
-    subscriptionAmount: page.subscriptionAmount,
+    tier: page.tier,
     href: `/${page.pageId}`
   }));
 
@@ -110,9 +106,7 @@ export default function SameTitlePages({
       key={item.id}
       userId={item.userId}
       username={item.username || `user_${item.userId?.substring(0, 6)}`}
-      tier={item.subscriptionTier}
-      subscriptionStatus={item.subscriptionStatus}
-      subscriptionAmount={item.subscriptionAmount}
+      tier={item.tier}
       variant="pill"
       pillVariant="outline"
       size="sm"

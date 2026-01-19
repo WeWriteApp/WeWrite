@@ -7,6 +7,7 @@ import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { getDocWithTimeout, queryWithTimeout } from '../../../utils/firebaseTimeout';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
 import { getUserSubscriptionServer } from '../../../firebase/subscription-server';
+import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 
 /**
  * GET /api/users/full-profile?id=userId&username=username
@@ -128,12 +129,18 @@ export async function GET(request: NextRequest) {
 
         if (subscription) {
           const isActive = subscription.status === 'active' || subscription.status === 'trialing';
-          profileData.tier = subscription.tier || null;
+          // Pre-compute the effective tier using centralized logic
+          profileData.tier = getEffectiveTier(
+            subscription.amount ?? null,
+            subscription.tier ?? null,
+            subscription.status ?? null
+          );
+          // Keep these for admin/debugging but they're no longer needed for badge display
           profileData.subscriptionStatus = subscription.status;
           profileData.subscriptionAmount = isActive ? subscription.amount : 0;
           profileData.hasSubscription = isActive;
         } else {
-          profileData.tier = null;
+          profileData.tier = 'inactive';
           profileData.subscriptionStatus = 'inactive';
           profileData.subscriptionAmount = 0;
           profileData.hasSubscription = false;
@@ -141,7 +148,7 @@ export async function GET(request: NextRequest) {
       } catch (subError) {
         console.warn(`[Full Profile API] Failed to fetch subscription for ${userId}:`, subError);
         // Don't fail the whole request if subscription fetch fails
-        profileData.tier = null;
+        profileData.tier = 'inactive';
         profileData.subscriptionStatus = null;
         profileData.subscriptionAmount = null;
         profileData.hasSubscription = false;

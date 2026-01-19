@@ -162,8 +162,6 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
                         userId={page.userId}
                         username={page.username || 'Anonymous'}
                         tier={page.tier}
-                        subscriptionStatus={page.subscriptionStatus}
-                        subscriptionAmount={page.subscriptionAmount}
                         size="sm"
                         variant="link"
                         onClick={(e) => e.stopPropagation()}

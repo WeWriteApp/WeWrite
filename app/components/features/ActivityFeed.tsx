@@ -126,6 +126,7 @@ export default function ActivityFeed({
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [autoLoadCount, setAutoLoadCount] = useState(0);
+  const [didBackfill, setDidBackfill] = useState(false); // Track if older content was fetched
 
   // Filter state (only used in global mode)
   const [includeOwn, setIncludeOwn] = useState(() => {
@@ -302,6 +303,11 @@ export default function ActivityFeed({
       setHasMore(data.hasMore || false);
       setNextCursor(data.nextCursor || null);
 
+      // Track if backfill occurred (older content fetched due to spam filtering)
+      if (!append && data._meta?.didBackfill) {
+        setDidBackfill(true);
+      }
+
     } catch (error) {
       console.error('Error fetching activity feed:', error);
 
@@ -372,24 +378,28 @@ export default function ActivityFeed({
     setIncludeOwn(checked);
     setActivities([]);
     setNextCursor(null);
+    setDidBackfill(false);
   };
 
   const handleFollowingOnlyChange = (checked: boolean) => {
     setFollowingOnly(checked);
     setActivities([]);
     setNextCursor(null);
+    setDidBackfill(false);
   };
 
   const handleHideUnverifiedChange = (checked: boolean) => {
     setHideUnverified(checked);
     setActivities([]);
     setNextCursor(null);
+    setDidBackfill(false);
   };
 
   const handleHideLikelySpamChange = (checked: boolean) => {
     setHideLikelySpam(checked);
     setActivities([]);
     setNextCursor(null);
+    setDidBackfill(false);
   };
 
   const dismissFollowSuggestions = () => {
@@ -638,10 +648,12 @@ export default function ActivityFeed({
                 ? followingCount === 0
                   ? "You're not following anyone yet."
                   : "No recent activity from users you follow."
-                : "Check back later for new updates from the community."
+                : (hideLikelySpam || hideUnverified)
+                  ? "Spam filters are active. Try adjusting your filters to see more content."
+                  : "Check back later for new updates from the community."
               }
             </p>
-            {followingOnly && (
+            {followingOnly ? (
               <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                 <Button
                   variant="outline"
@@ -659,6 +671,15 @@ export default function ActivityFeed({
                   Follow more users
                 </Button>
               </div>
+            ) : (hideLikelySpam || hideUnverified) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFilterModalOpen(true)}
+              >
+                <Icon name="Filter" size={14} className="mr-2" />
+                Adjust Filters
+              </Button>
             )}
           </div>
         )

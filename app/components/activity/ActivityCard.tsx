@@ -386,8 +386,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                                 userId={activity.userId}
                                 username={activity.username || "Missing username"}
                                 tier={activity.subscriptionTier}
-                                subscriptionStatus={activity.hasActiveSubscription ? 'active' : 'inactive'}
-                                subscriptionAmount={activity.subscriptionAmount}
                                 size="sm"
                                 showBadge={true}
                                 onClick={(e) => e.stopPropagation()}

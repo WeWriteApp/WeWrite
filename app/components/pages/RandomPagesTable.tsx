@@ -145,8 +145,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
           userId={page.userId}
           username={page.username}
           tier={page.tier}
-          subscriptionStatus={page.subscriptionStatus}
-          subscriptionAmount={page.subscriptionAmount}
           size="sm"
           className="inline-flex"
         />
@@ -397,8 +395,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                         userId={page.userId}
                         username={page.username}
                         tier={page.tier}
-                        subscriptionStatus={page.subscriptionStatus}
-                        subscriptionAmount={page.subscriptionAmount}
                         size="sm"
                         className="inline-flex"
                       />
@@ -456,8 +452,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                         userId={selectedGraphPage.userId}
                         username={selectedGraphPage.username}
                         tier={selectedGraphPage.tier}
-                        subscriptionStatus={selectedGraphPage.subscriptionStatus}
-                        subscriptionAmount={selectedGraphPage.subscriptionAmount}
                         size="sm"
                       />
                     </span>

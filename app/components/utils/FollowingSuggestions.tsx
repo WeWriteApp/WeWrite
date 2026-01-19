@@ -192,8 +192,6 @@ function SuggestionCard({ user, onFollow, isFollowing }: SuggestionCardProps) {
           userId={user.id}
           username={user.username}
           tier={user.tier}
-          subscriptionStatus={user.subscriptionStatus}
-          subscriptionAmount={user.subscriptionAmount}
           variant="pill"
           pillVariant="primary"
           size="md"

@@ -994,8 +994,6 @@ export default function ContentPageHeader({
                         userId={userId}
                         username={username}
                         tier={authorSubscription.tier}
-                        subscriptionStatus={authorSubscription.status}
-                        subscriptionAmount={authorSubscription.amount}
                         size="sm"
                         className="text-xs overflow-hidden text-ellipsis"
                       />

@@ -6,6 +6,9 @@ import { WhatLinksHereSummary } from '../../firebase/database/whatLinksHere';
 import { PillLink } from '../utils/PillLink';
 import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
+import { AnimatedPresenceItem } from '../ui/AnimatedStack';
 import AddToPageButton from '../utils/AddToPageButton';
 import type { Page } from '../../types/database';
 import { UsernameBadge } from '../ui/UsernameBadge';
@@ -47,6 +50,23 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
   const [error, setError] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isAddToPageOpen, setIsAddToPageOpen] = useState(false);
+
+  // Filter state
+  const [showFiltersRow, setShowFiltersRow] = useState(false);
+  const [showAuthor, setShowAuthor] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('whatLinksHere_showAuthor');
+      return saved !== 'false'; // Default to true
+    }
+    return true;
+  });
+
+  // Persist showAuthor preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('whatLinksHere_showAuthor', String(showAuthor));
+    }
+  }, [showAuthor]);
 
   // Fetch pages that link to this page
   const fetchLinkedPages = useCallback(async () => {
@@ -131,7 +151,7 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
       >
         {item.title || 'Untitled'}
       </PillLink>
-      {item.userId && isValidUsername(item.username) && (
+      {showAuthor && item.userId && isValidUsername(item.username) && (
         <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
           by{' '}
           <UsernameBadge
@@ -143,6 +163,37 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
         </span>
       )}
     </div>
+  );
+
+  // Filter button for header
+  const filterButton = items.length > 0 ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 w-7 p-0"
+      onClick={() => setShowFiltersRow(!showFiltersRow)}
+      aria-label="Toggle filters"
+    >
+      <Icon name="SlidersHorizontal" size={16} className={showFiltersRow ? "text-primary" : "text-muted-foreground"} />
+    </Button>
+  ) : null;
+
+  // Filter row content
+  const filterRow = (
+    <AnimatedPresenceItem show={showFiltersRow} gap={12} preset="fast">
+      <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+        <div className="flex items-center gap-2">
+          <Label htmlFor="show-author-wlh" className="text-sm text-muted-foreground">
+            Show author
+          </Label>
+        </div>
+        <Switch
+          id="show-author-wlh"
+          checked={showAuthor}
+          onCheckedChange={setShowAuthor}
+        />
+      </div>
+    </AnimatedPresenceItem>
   );
 
   // For page owners, show empty state with CTA instead of hiding
@@ -200,6 +251,8 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
       className={className}
       renderItem={renderLinkedPageItem}
       hideWhenEmpty={!isOwner}
+      headerAction={filterButton}
+      subheader={filterRow}
       footer={ownerFooter}
     />
   );

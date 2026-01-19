@@ -75,8 +75,6 @@ export async function GET(request: NextRequest) {
     // Use the same Firebase Admin instance as my-pages API
     const db = adminDb;
 
-    let pagesQuery;
-
     const pagesCollectionName = await getCollectionNameAsync('pages');
 
     // Fetch followed users list if followingOnly filter is enabled
@@ -97,29 +95,34 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (userId) {
-      // For logged-in users, get recent pages (last 30 days) and filter deleted ones in code
-      // Increased from 7 to 30 days to ensure enough content for pagination
-      const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
+    // BACKFILL LOGIC: When spam filters remove too much content, expand time window
+    // Start with 30 days and expand up to 180 days if needed
+    const MIN_RESULTS_BEFORE_BACKFILL = Math.ceil(limit * 0.5); // Trigger backfill if < 50% of requested limit
+    const MAX_BACKFILL_DAYS = 180; // Don't go back more than 6 months
+    const BACKFILL_INCREMENTS = [30, 60, 90, 180]; // Days to try
 
-      pagesQuery = db.collection(pagesCollectionName)
-        .where('lastModified', '>=', thirtyDaysAgo.toISOString())
-        .orderBy('lastModified', 'desc');
+    let currentTimeWindowDays = 30;
+    let allEnhancedEdits: any[] = [];
+    let hasMorePages = false;
+    let lastCursor: string | null = null;
+    let backfillAttempts = 0;
+    let didBackfill = false;
 
-      // Add cursor support for pagination
-      if (cursor) {
-        pagesQuery = pagesQuery.startAfter(cursor);
+    // Only backfill on initial request (no cursor) and when filters are active
+    const shouldAttemptBackfill = !cursor && (hideUnverified || hideLikelySpam);
+
+    for (const timeWindowDays of BACKFILL_INCREMENTS) {
+      currentTimeWindowDays = timeWindowDays;
+
+      // Skip backfill attempts if we already have enough results or this is a paginated request
+      if (allEnhancedEdits.length >= limit || (cursor && backfillAttempts > 0)) {
+        break;
       }
 
-      // Fetch significantly more documents to account for filtering
-      // This ensures we have enough content after filtering out deleted/private/own pages
-      pagesQuery = pagesQuery.limit(Math.min(limit * 3, 50)); // Fetch 3x the limit to account for filtering
-    } else {
-      // For anonymous users, all pages from last 30 days (all pages are public now)
-      const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
+      const cutoffDate = new Date(Date.now() - (timeWindowDays * 24 * 60 * 60 * 1000));
 
-      pagesQuery = db.collection(pagesCollectionName)
-        .where('lastModified', '>=', thirtyDaysAgo.toISOString())
+      let pagesQuery = db.collection(pagesCollectionName)
+        .where('lastModified', '>=', cutoffDate.toISOString())
         .orderBy('lastModified', 'desc');
 
       // Add cursor support for pagination
@@ -128,205 +131,229 @@ export async function GET(request: NextRequest) {
       }
 
       // Fetch more documents to account for filtering
-      pagesQuery = pagesQuery.limit(Math.min(limit * 2, 30)); // Fetch 2x the limit for anonymous users
-    }
+      // When backfilling, fetch even more to increase chances of finding good content
+      const fetchMultiplier = backfillAttempts > 0 ? 5 : (userId ? 3 : 2);
+      const fetchLimit = Math.min(limit * fetchMultiplier, backfillAttempts > 0 ? 100 : 50);
+      pagesQuery = pagesQuery.limit(fetchLimit);
 
-    const queryStartTime = Date.now();
-    const pagesSnapshot = await pagesQuery.get();
-    const queryTime = Date.now() - queryStartTime;
+      const queryStartTime = Date.now();
+      const pagesSnapshot = await pagesQuery.get();
+      const queryTime = Date.now() - queryStartTime;
 
-    // Track query for cost optimization monitoring
-    trackFirebaseRead('pages', 'global-recent-edits', pagesSnapshot.docs.length, 'api-recent-edits');
+      // Track query for cost optimization monitoring
+      trackFirebaseRead('pages', 'global-recent-edits', pagesSnapshot.docs.length, 'api-recent-edits');
 
-    if (pagesSnapshot.empty) {
-      return NextResponse.json({
-        edits: [],
-        hasMore: false,
-        nextCursor: null,
-        total: 0,
-        timestamp: new Date().toISOString()
+      if (pagesSnapshot.empty) {
+        backfillAttempts++;
+        if (!shouldAttemptBackfill) break;
+        continue;
+      }
+
+      const pages: any[] = pagesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        // Only use username field - displayName and email are deprecated for display
+        const safeUsername = sanitizeUsername(
+          (data as any).username || (data as any).authorName,
+          'User',
+          `user_${doc.id.slice(0, 8)}`
+        );
+        return {
+          id: doc.id,
+          ...data,
+          username: safeUsername
+        };
       });
-    }
 
-    const pages = pagesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      // Only use username field - displayName and email are deprecated for display
-      const safeUsername = sanitizeUsername(
-        (data as any).username || (data as any).authorName,
-        'User',
-        `user_${doc.id.slice(0, 8)}`
-      );
-      return {
-        id: doc.id,
-        ...data,
-        username: safeUsername
-      };
-    });
-
-    // Filter pages based on criteria (same logic as homepage)
-    const filteredPages = pages.filter(page => {
-      // Skip deleted pages (double check)
-      if (page.deleted === true) {
-        return false;
-      }
-
-      // All pages are now public - no visibility filtering needed
-
-      // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
-      if (!includeOwn && page.userId === userId) {
-        return false;
-      }
-
-      // FIXED: Following only filter - only show pages from users we follow
-      if (followingOnly && followedUserIds !== null) {
-        if (!page.userId || !followedUserIds.has(page.userId)) {
+      // Filter pages based on criteria (same logic as homepage)
+      const filteredPages = pages.filter(page => {
+        // Skip deleted pages (double check)
+        if (page.deleted === true) {
           return false;
         }
-      }
 
-      return true;
-    });
+        // All pages are now public - no visibility filtering needed
 
-    // Convert to edits format
-    const edits = filteredPages
-      .slice(0, limit)
-      .map(page => {
-        // Derive a friendly preview for reply/agree/disagree pages
-        const deriveReplyPreview = () => {
-          const isReply = page.isReply || !!page.replyTo;
-          if (!isReply) return null;
+        // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
+        if (!includeOwn && page.userId === userId) {
+          return false;
+        }
 
-          // Try to read replyType from the stored content attribution block
-          let replyType: string | null = page.replyType || null;
-          if (!replyType && Array.isArray(page.content) && page.content.length > 0) {
-            replyType = page.content[0]?.replyType || page.content[0]?.reply_type || null;
+        // FIXED: Following only filter - only show pages from users we follow
+        if (followingOnly && followedUserIds !== null) {
+          if (!page.userId || !followedUserIds.has(page.userId)) {
+            return false;
           }
-          if (!replyType && typeof page.content === 'string') {
-            try {
-              const parsed = JSON.parse(page.content);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                replyType = parsed[0]?.replyType || parsed[0]?.reply_type || null;
-              }
-            } catch (_err) {
-              // ignore parse errors
-            }
-          }
+        }
 
-          const author = page.username || 'Unknown user';
-          const pageTitle = page.title || 'Untitled';
-          const targetTitle = page.replyToTitle || 'the original page';
-
-          let action = 'as a reply to';
-          if (replyType === 'agree') action = 'to agree with';
-          if (replyType === 'disagree') action = 'to disagree with';
-
-          const message = `${pageTitle} was created by ${author} ${action} ${targetTitle}`;
-
-          return {
-            beforeContext: '',
-            addedText: message,
-            removedText: '',
-            afterContext: '',
-            hasAdditions: true,
-            hasRemovals: false
-          };
-        };
-
-        const replyPreview = deriveReplyPreview();
-
-        return {
-          id: page.id,
-          title: page.title || 'Untitled',
-          userId: page.userId,
-          username: page.username,
-          lastModified: page.lastModified,
-          totalPledged: page.totalPledged || 0,
-          pledgeCount: page.pledgeCount || 0,
-          lastDiff: page.lastDiff,
-          diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null,
-          source: 'pages-collection'
-        };
+        return true;
       });
 
-    // Fetch subscription data for all unique user IDs
-    const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
-    const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
+      // Convert to edits format
+      const edits = filteredPages
+        .slice(0, limit * 2) // Take more than needed for spam filtering
+        .map(page => {
+          // Derive a friendly preview for reply/agree/disagree pages
+          const deriveReplyPreview = () => {
+            const isReply = page.isReply || !!page.replyTo;
+            if (!isReply) return null;
 
-    // Enhance edits with user and subscription data
-    const enhancedEdits = edits
-      .map(edit => {
-        const userData = batchUserData[edit.userId];
-        return {
-          ...edit,
-          // Use username from user data if available, fallback to page username
-          username: userData?.username || edit.username,
-          hasActiveSubscription: userData?.hasActiveSubscription || false,
-          subscriptionTier: userData?.tier || null,
-          subscriptionAmount: userData?.subscriptionAmount || null,
-          // Include email verification status for filtering
-          _emailVerified: userData?.emailVerified ?? false,
-          _isAdmin: userData?.isAdmin ?? false,
-          // Include risk score for spam filtering
-          _riskScore: userData?.riskScore ?? null,
-          // Include page count (single-page accounts are more likely spam)
-          _pageCount: userData?.pageCount ?? 0
-        };
-      })
-      // Filter out pages from users with unverified email (admins bypass this check)
-      // Only apply this filter when hideUnverified is true
-      .filter(edit => {
-        // If hideUnverified is false, skip email verification check
-        if (!hideUnverified) return true;
-        // Admins always show
-        if (edit._isAdmin) return true;
-        // Hide pages from unverified users
-        if (edit._emailVerified !== true) return false;
-        return true;
-      })
-      // Filter out likely spam accounts when hideLikelySpam is enabled
-      // Uses risk score threshold: >= 31 means soft_challenge or higher (yellow/red in admin)
-      // Risk levels: 0-30 = allow, 31-60 = soft_challenge, 61-85 = hard_challenge, 86-100 = block
-      .filter(edit => {
-        // Skip filter if not enabled
-        if (!hideLikelySpam) return true;
-        // Admins always show
-        if (edit._isAdmin) return true;
-        // If we have a risk score, filter accounts at soft_challenge level or higher (score >= 31)
-        // This hides yellow and red risk users from the feed
-        if (edit._riskScore !== null && edit._riskScore >= 31) return false;
-        // Single-page accounts from unverified users are more likely spam
-        if (edit._pageCount <= 1 && edit._emailVerified !== true) return false;
-        return true;
-      })
-      // Remove internal fields from response
-      .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, ...edit }) => edit);
+            // Try to read replyType from the stored content attribution block
+            let replyType: string | null = page.replyType || null;
+            if (!replyType && Array.isArray(page.content) && page.content.length > 0) {
+              replyType = page.content[0]?.replyType || page.content[0]?.reply_type || null;
+            }
+            if (!replyType && typeof page.content === 'string') {
+              try {
+                const parsed = JSON.parse(page.content);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  replyType = parsed[0]?.replyType || parsed[0]?.reply_type || null;
+                }
+              } catch (_err) {
+                // ignore parse errors
+              }
+            }
 
-    // Determine if there are more pages available
-    // We have more if:
-    // 1. We got more filtered pages than we're returning (meaning there are more after slicing)
-    // 2. OR we got the maximum number of documents from Firestore (suggesting there might be more)
-    const totalFetched = pagesSnapshot.docs.length;
-    const maxPossibleFetch = userId ? Math.min(limit * 3, 50) : Math.min(limit * 2, 30);
-    const hasMorePages = (filteredPages.length > limit) || (totalFetched >= maxPossibleFetch);
+            const author = page.username || 'Unknown user';
+            const pageTitle = page.title || 'Untitled';
+            const targetTitle = page.replyToTitle || 'the original page';
 
-    const nextCursor = hasMorePages && enhancedEdits.length > 0
-      ? enhancedEdits[enhancedEdits.length - 1].lastModified
+            let action = 'as a reply to';
+            if (replyType === 'agree') action = 'to agree with';
+            if (replyType === 'disagree') action = 'to disagree with';
+
+            const message = `${pageTitle} was created by ${author} ${action} ${targetTitle}`;
+
+            return {
+              beforeContext: '',
+              addedText: message,
+              removedText: '',
+              afterContext: '',
+              hasAdditions: true,
+              hasRemovals: false
+            };
+          };
+
+          const replyPreview = deriveReplyPreview();
+
+          return {
+            id: page.id,
+            title: page.title || 'Untitled',
+            userId: page.userId,
+            username: page.username,
+            lastModified: page.lastModified,
+            totalPledged: page.totalPledged || 0,
+            pledgeCount: page.pledgeCount || 0,
+            lastDiff: page.lastDiff,
+            diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null,
+            source: 'pages-collection'
+          };
+        });
+
+      // Fetch subscription data for all unique user IDs
+      const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
+      const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
+
+      // Enhance edits with user and subscription data
+      const enhancedEdits = edits
+        .map(edit => {
+          const userData = batchUserData[edit.userId];
+          return {
+            ...edit,
+            // Use username from user data if available, fallback to page username
+            username: userData?.username || edit.username,
+            hasActiveSubscription: userData?.hasActiveSubscription || false,
+            subscriptionTier: userData?.tier || null,
+            subscriptionAmount: userData?.subscriptionAmount || null,
+            // Include email verification status for filtering
+            _emailVerified: userData?.emailVerified ?? false,
+            _isAdmin: userData?.isAdmin ?? false,
+            // Include risk score for spam filtering
+            _riskScore: userData?.riskScore ?? null,
+            // Include page count (single-page accounts are more likely spam)
+            _pageCount: userData?.pageCount ?? 0
+          };
+        })
+        // Filter out pages from users with unverified email (admins bypass this check)
+        // Only apply this filter when hideUnverified is true
+        .filter(edit => {
+          // If hideUnverified is false, skip email verification check
+          if (!hideUnverified) return true;
+          // Admins always show
+          if (edit._isAdmin) return true;
+          // Hide pages from unverified users
+          if (edit._emailVerified !== true) return false;
+          return true;
+        })
+        // Filter out likely spam accounts when hideLikelySpam is enabled
+        // Uses risk score threshold: >= 31 means soft_challenge or higher (yellow/red in admin)
+        // Risk levels: 0-30 = allow, 31-60 = soft_challenge, 61-85 = hard_challenge, 86-100 = block
+        .filter(edit => {
+          // Skip filter if not enabled
+          if (!hideLikelySpam) return true;
+          // Admins always show
+          if (edit._isAdmin) return true;
+          // If we have a risk score, filter accounts at soft_challenge level or higher (score >= 31)
+          // This hides yellow and red risk users from the feed
+          if (edit._riskScore !== null && edit._riskScore >= 31) return false;
+          // Single-page accounts from unverified users are more likely spam
+          if (edit._pageCount <= 1 && edit._emailVerified !== true) return false;
+          return true;
+        })
+        // Remove internal fields from response
+        .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, ...edit }) => edit);
+
+      // Deduplicate and merge with existing results (for backfill)
+      const existingIds = new Set(allEnhancedEdits.map(e => e.id));
+      const newEdits = enhancedEdits.filter(e => !existingIds.has(e.id));
+      allEnhancedEdits = [...allEnhancedEdits, ...newEdits];
+
+      // Determine if there are more pages available
+      const totalFetched = pagesSnapshot.docs.length;
+      hasMorePages = (filteredPages.length > limit) || (totalFetched >= fetchLimit);
+
+      if (allEnhancedEdits.length > 0) {
+        lastCursor = allEnhancedEdits[allEnhancedEdits.length - 1].lastModified;
+      }
+
+      // Check if we need to backfill
+      if (allEnhancedEdits.length >= MIN_RESULTS_BEFORE_BACKFILL || !shouldAttemptBackfill) {
+        break;
+      }
+
+      // If we're about to try a longer time window, mark that we're backfilling
+      backfillAttempts++;
+      if (backfillAttempts > 0 && timeWindowDays < MAX_BACKFILL_DAYS) {
+        didBackfill = true;
+      }
+    }
+
+    // Trim to requested limit
+    const finalEdits = allEnhancedEdits.slice(0, limit);
+
+    // Update hasMore based on whether we have more than limit
+    hasMorePages = allEnhancedEdits.length > limit || hasMorePages;
+
+    // Update cursor to last item in final results
+    const nextCursor = hasMorePages && finalEdits.length > 0
+      ? finalEdits[finalEdits.length - 1].lastModified
       : null;
 
     const responseData = {
-      edits: enhancedEdits,
+      edits: finalEdits,
       hasMore: hasMorePages,
       nextCursor: nextCursor,
-      total: enhancedEdits.length,
-      timestamp: new Date().toISOString()
+      total: finalEdits.length,
+      timestamp: new Date().toISOString(),
+      // Include metadata about backfill (useful for debugging/UI hints)
+      _meta: {
+        timeWindowDays: currentTimeWindowDays,
+        didBackfill,
+        backfillAttempts
+      }
     };
 
-        return responseData;
-      },
-      {
-        tags: ['recent-edits', 'global']
-      }
-    ));
+    return responseData;
+    }));
 
   } catch (error) {
     return NextResponse.json(

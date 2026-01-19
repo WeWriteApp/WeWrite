@@ -8,6 +8,7 @@ import { checkAdminPermissions, isUserRecordAdmin } from '../../admin-auth-helpe
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
+import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 
 interface UserData {
   uid: string;
@@ -26,6 +27,7 @@ interface UserData {
   pwaInstalled?: boolean;
   pwaVerified?: boolean;  // True if user has actually used PWA in standalone mode (not just claimed to install)
   notificationSparkline?: number[];
+  tier?: string;  // Pre-computed effective tier for badge display
   financial?: {
     hasSubscription: boolean;
     subscriptionAmount?: number | null;
@@ -205,6 +207,13 @@ export async function GET(request: NextRequest) {
           subscriptionStatus = subscriptionData.status;
           subscriptionCancelReason = subscriptionData.cancelReason || null;
         }
+
+        // Pre-compute effective tier using centralized logic
+        user.tier = getEffectiveTier(
+          subscriptionAmount,
+          subscriptionData?.tier ?? null,
+          subscriptionStatus
+        );
 
         // Get USD balance data for allocation info
         const usdBalanceData = usdBalancesMap.get(uid);

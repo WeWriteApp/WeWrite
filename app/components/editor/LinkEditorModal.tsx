@@ -595,8 +595,6 @@ export default function LinkEditorModal({
                           userId={preview.authorUserId || ''}
                           username={preview.authorUsername?.replace(/^@/, '') || 'Loading...'}
                           tier={editingLink?.data?.authorTier || selectedPage?.tier}
-                          subscriptionStatus={editingLink?.data?.authorSubscriptionStatus || selectedPage?.subscriptionStatus}
-                          subscriptionAmount={editingLink?.data?.authorSubscriptionAmount || selectedPage?.subscriptionAmount}
                           size="sm"
                           variant="pill"
                           pillVariant="outline"

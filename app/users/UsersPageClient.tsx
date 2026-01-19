@@ -260,8 +260,6 @@ export default function UsersPageClient() {
                             userId={user.id}
                             username={user.username || "Unknown User"}
                             tier={user.tier}
-                            subscriptionStatus={user.subscriptionStatus}
-                            subscriptionAmount={user.subscriptionAmount}
                             size="sm"
                             variant="pill"
                             pillVariant="primary"

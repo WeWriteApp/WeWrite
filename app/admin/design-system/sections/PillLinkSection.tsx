@@ -49,8 +49,6 @@ export function PillLinkSection({ id }: { id: string }) {
                   userId="user1"
                   username="alex"
                   tier={null}
-                  subscriptionStatus={null}
-                  subscriptionAmount={null}
                   variant="pill"
                   pillVariant="primary"
                 />
@@ -60,8 +58,6 @@ export function PillLinkSection({ id }: { id: string }) {
                   userId="user2"
                   username="sarah"
                   tier="tier3"
-                  subscriptionStatus="active"
-                  subscriptionAmount={35}
                   variant="pill"
                   pillVariant="primary"
                 />
@@ -77,8 +73,6 @@ export function PillLinkSection({ id }: { id: string }) {
                     userId="user3"
                     username="jamie"
                     tier="tier3"
-                    subscriptionStatus="active"
-                    subscriptionAmount={30}
                     variant="pill"
                     pillVariant="outline"
                   />

@@ -53,6 +53,8 @@ interface PageLinksCardProps {
   hideWhenEmpty?: boolean;
   /** Optional action button in header */
   headerAction?: React.ReactNode;
+  /** Optional content between header and items (e.g., filter row) */
+  subheader?: React.ReactNode;
   /** Optional footer content */
   footer?: React.ReactNode;
   /** Use pill-style counter on right instead of parentheses (matches stats card pattern) */
@@ -72,6 +74,7 @@ export function PageLinksCard({
   emptyMessage,
   hideWhenEmpty = true,
   headerAction,
+  subheader,
   footer,
   pillCounter = false,
 }: PageLinksCardProps) {
@@ -127,6 +130,9 @@ export function PageLinksCard({
           {headerAction}
         </div>
       </div>
+
+      {/* Subheader (e.g., filter row) */}
+      {subheader}
 
       {/* Loading State */}
       {loading && (

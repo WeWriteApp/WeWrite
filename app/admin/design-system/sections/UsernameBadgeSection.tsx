@@ -10,40 +10,32 @@ export function UsernameBadgeSection({ id }: { id: string }) {
       id={id}
       title="UsernameBadge"
       path="app/components/ui/UsernameBadge.tsx"
-      description="Displays a user's username with subscription tier badge. Supports link and pill variants with different styling options."
+      description="Displays a user's username with subscription tier badge. Only requires userId, username, and tier - the tier is pre-computed by APIs. Supports link and pill variants."
     >
       <StateDemo label="Link Variant (default)">
         <div className="flex flex-wrap gap-4 items-center">
           <UsernameBadge
             userId="user1"
             username="alex"
-            tier={null}
-            subscriptionStatus={null}
-            subscriptionAmount={null}
+            tier="inactive"
             variant="link"
           />
           <UsernameBadge
             userId="user2"
             username="sarah"
             tier="tier1"
-            subscriptionStatus="active"
-            subscriptionAmount={10}
             variant="link"
           />
           <UsernameBadge
             userId="user3"
             username="jamie"
             tier="tier2"
-            subscriptionStatus="active"
-            subscriptionAmount={20}
             variant="link"
           />
           <UsernameBadge
             userId="user4"
             username="taylor"
             tier="tier3"
-            subscriptionStatus="active"
-            subscriptionAmount={35}
             variant="link"
           />
         </div>
@@ -54,9 +46,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
           <UsernameBadge
             userId="user1"
             username="alex"
-            tier={null}
-            subscriptionStatus={null}
-            subscriptionAmount={null}
+            tier="inactive"
             variant="pill"
             pillVariant="primary"
           />
@@ -64,8 +54,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             userId="user2"
             username="sarah"
             tier="tier1"
-            subscriptionStatus="active"
-            subscriptionAmount={10}
             variant="pill"
             pillVariant="primary"
           />
@@ -73,8 +61,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             userId="user3"
             username="jamie"
             tier="tier2"
-            subscriptionStatus="active"
-            subscriptionAmount={20}
             variant="pill"
             pillVariant="primary"
           />
@@ -82,8 +68,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             userId="user4"
             username="taylor"
             tier="tier3"
-            subscriptionStatus="active"
-            subscriptionAmount={35}
             variant="pill"
             pillVariant="primary"
           />
@@ -96,9 +80,7 @@ export function UsernameBadgeSection({ id }: { id: string }) {
           <UsernameBadge
             userId="user1"
             username="alex"
-            tier={null}
-            subscriptionStatus={null}
-            subscriptionAmount={null}
+            tier="inactive"
             variant="pill"
             pillVariant="outline"
           />
@@ -106,8 +88,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             userId="user2"
             username="sarah"
             tier="tier2"
-            subscriptionStatus="active"
-            subscriptionAmount={20}
             variant="pill"
             pillVariant="outline"
           />
@@ -120,8 +100,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             userId="user1"
             username="alex"
             tier="tier3"
-            subscriptionStatus="active"
-            subscriptionAmount={35}
             variant="link"
             showBadge={false}
           />
@@ -129,8 +107,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
             userId="user2"
             username="sarah"
             tier="tier3"
-            subscriptionStatus="active"
-            subscriptionAmount={35}
             variant="pill"
             pillVariant="primary"
             showBadge={false}
@@ -146,8 +122,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
               userId="user1"
               username="alex"
               tier="tier2"
-              subscriptionStatus="active"
-              subscriptionAmount={20}
               size="sm"
               variant="link"
             />
@@ -158,8 +132,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
               userId="user2"
               username="sarah"
               tier="tier2"
-              subscriptionStatus="active"
-              subscriptionAmount={20}
               size="md"
               variant="link"
             />
@@ -170,8 +142,6 @@ export function UsernameBadgeSection({ id }: { id: string }) {
               userId="user3"
               username="jamie"
               tier="tier2"
-              subscriptionStatus="active"
-              subscriptionAmount={20}
               size="lg"
               variant="link"
             />
@@ -182,54 +152,64 @@ export function UsernameBadgeSection({ id }: { id: string }) {
       <StateDemo label="Subscription Tiers">
         <div className="wewrite-card p-4 bg-muted/30">
           <p className="text-sm text-muted-foreground mb-3">
-            The badge shows stars based on subscription tier. Inactive users show a crossed-out circle.
+            The badge shows stars based on subscription tier. The tier is pre-computed by APIs using getEffectiveTier().
           </p>
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex flex-col items-center gap-1">
               <UsernameBadge
                 userId="inactive"
                 username="inactive"
-                tier={null}
-                subscriptionStatus={null}
-                subscriptionAmount={null}
+                tier="inactive"
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">No sub</span>
+              <span className="text-xs text-muted-foreground">inactive</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <UsernameBadge
                 userId="tier1"
                 username="tier1"
                 tier="tier1"
-                subscriptionStatus="active"
-                subscriptionAmount={10}
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">$10/mo (1 star)</span>
+              <span className="text-xs text-muted-foreground">tier1 ($10/mo)</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <UsernameBadge
                 userId="tier2"
                 username="tier2"
                 tier="tier2"
-                subscriptionStatus="active"
-                subscriptionAmount={20}
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">$20/mo (2 stars)</span>
+              <span className="text-xs text-muted-foreground">tier2 ($20/mo)</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <UsernameBadge
                 userId="tier3"
                 username="tier3"
                 tier="tier3"
-                subscriptionStatus="active"
-                subscriptionAmount={30}
                 variant="link"
               />
-              <span className="text-xs text-muted-foreground">$30+/mo (3 stars)</span>
+              <span className="text-xs text-muted-foreground">tier3 ($30+/mo)</span>
             </div>
           </div>
+        </div>
+      </StateDemo>
+
+      <StateDemo label="API Integration">
+        <div className="wewrite-card p-4 bg-muted/30">
+          <p className="text-sm text-muted-foreground mb-2">
+            <strong>Simplified Props:</strong> Only <code className="bg-muted px-1 rounded">tier</code> is needed now. APIs pre-compute the effective tier.
+          </p>
+          <p className="text-sm text-muted-foreground mb-2">
+            <strong>Auto-fetch:</strong> If tier is not provided, the component fetches it from <code className="bg-muted px-1 rounded">/api/users/full-profile</code>.
+          </p>
+          <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
+{`// Minimal usage (tier auto-fetched)
+<UsernameBadge userId="abc" username="jamie" />
+
+// With pre-fetched tier
+<UsernameBadge userId="abc" username="jamie" tier="tier2" />`}
+          </pre>
         </div>
       </StateDemo>
     </ComponentShowcase>

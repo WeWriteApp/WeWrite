@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { USD_SUBSCRIPTION_TIERS, getEffectiveUsdTier } from '../../utils/usdConstants';
 import { formatUsdCents, dollarsToCents, parseDollarInputToCents } from '../../utils/formatCurrency';
+import { determineTierFromAmount } from '../../utils/subscriptionTiers';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
@@ -426,8 +427,7 @@ export default function UsdFundingTierSlider({
             <UsernameBadge
               userId={user.uid}
               username={user.username}
-              subscriptionStatus={hasActiveSubscription ? 'active' : 'inactive'}
-              subscriptionAmount={selectedAmount}
+              tier={hasActiveSubscription ? determineTierFromAmount(selectedAmount) : 'inactive'}
               size="md"
               showBadge={true}
               variant="link"

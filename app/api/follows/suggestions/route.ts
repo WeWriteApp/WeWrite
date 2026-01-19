@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 
 /**
  * Follow Suggestions API Route
@@ -111,6 +112,27 @@ export async function GET(request: NextRequest) {
       const userData = userDoc.data();
       const suggestionInfo = suggestionsMap.get(userId)!;
 
+      // Fetch subscription data for this user
+      let subscriptionData = null;
+      try {
+        const { parentPath, subCollectionName } = getSubCollectionPath(
+          PAYMENT_COLLECTIONS.USERS,
+          userId,
+          PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+        );
+        const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
+        subscriptionData = subDoc.exists ? subDoc.data() : null;
+      } catch (error) {
+        console.warn(`Error fetching subscription for user ${userId}:`, error);
+      }
+
+      // Pre-compute effective tier using centralized logic
+      const effectiveTier = getEffectiveTier(
+        subscriptionData?.amount ?? null,
+        subscriptionData?.tier ?? null,
+        subscriptionData?.status ?? null
+      );
+
       // Parse bio if it's EditorContent format
       let bioText = '';
       if (userData?.bio) {
@@ -133,9 +155,7 @@ export async function GET(request: NextRequest) {
         username: userData?.username || `user_${userDoc.id.slice(0, 8)}`,
         photoURL: userData?.photoURL,
         bio: bioText,
-        tier: userData?.tier,
-        subscriptionStatus: userData?.subscriptionStatus,
-        subscriptionAmount: userData?.subscriptionAmount,
+        tier: effectiveTier,
         followerCount: userData?.followerCount || 0,
         source: suggestionInfo.source,
         score: suggestionInfo.score
