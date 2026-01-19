@@ -117,6 +117,26 @@ export async function GET(request: NextRequest) {
     let backfillAttempts = 0;
     let didBackfill = false;
 
+    // Diagnostic counters for debugging filter behavior
+    let _diagnostics: {
+      totalPagesFetched: number;
+      afterBasicFilters: number;
+      afterUserDataEnhancement: number;
+      filteredByUnverified: number;
+      filteredByLikelySpam: number;
+      usersWithoutDocuments: number;
+      finalCount: number;
+      usedSafetyValve?: boolean;
+    } = {
+      totalPagesFetched: 0,
+      afterBasicFilters: 0,
+      afterUserDataEnhancement: 0,
+      filteredByUnverified: 0,
+      filteredByLikelySpam: 0,
+      usersWithoutDocuments: 0,
+      finalCount: 0
+    };
+
     // Only backfill on initial request (no cursor) and when filters are active
     const shouldAttemptBackfill = !cursor && (hideUnverified || hideLikelySpam);
 
@@ -173,6 +193,8 @@ export async function GET(request: NextRequest) {
         };
       });
 
+      _diagnostics.totalPagesFetched += pages.length;
+
       // Filter pages based on criteria (same logic as homepage)
       const filteredPages = pages.filter(page => {
         // Skip deleted pages (double check)
@@ -196,6 +218,8 @@ export async function GET(request: NextRequest) {
 
         return true;
       });
+
+      _diagnostics.afterBasicFilters += filteredPages.length;
 
       // Convert to edits format
       const edits = filteredPages
@@ -263,9 +287,16 @@ export async function GET(request: NextRequest) {
       const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
 
       // Enhance edits with user and subscription data
-      const enhancedEdits = edits
+      const enhancedEditsPreFilter = edits
         .map(edit => {
           const userData = batchUserData[edit.userId];
+          const hasUserDocument = userData !== undefined;
+
+          // Track users without documents
+          if (!hasUserDocument) {
+            _diagnostics.usersWithoutDocuments++;
+          }
+
           return {
             ...edit,
             // Use username from user data if available, fallback to page username
@@ -279,41 +310,92 @@ export async function GET(request: NextRequest) {
             // Include risk score for spam filtering
             _riskScore: userData?.riskScore ?? null,
             // Include page count (single-page accounts are more likely spam)
-            _pageCount: userData?.pageCount ?? 0
+            _pageCount: userData?.pageCount ?? 0,
+            // Track if user document exists
+            _hasUserDocument: hasUserDocument
           };
-        })
-        // Filter out pages from users with unverified email (admins bypass this check)
-        // Only apply this filter when hideUnverified is true
-        .filter(edit => {
-          // If hideUnverified is false, skip email verification check
-          if (!hideUnverified) return true;
-          // Admins always show
-          if (edit._isAdmin) return true;
-          // Hide pages from unverified users
-          if (edit._emailVerified !== true) return false;
-          return true;
-        })
-        // Filter out likely spam accounts when hideLikelySpam is enabled
-        // Uses risk score threshold: >= 31 means soft_challenge or higher (yellow/red in admin)
-        // Risk levels: 0-30 = allow, 31-60 = soft_challenge, 61-85 = hard_challenge, 86-100 = block
+        });
+
+      _diagnostics.afterUserDataEnhancement += enhancedEditsPreFilter.length;
+
+
+      // Filter out pages from users with unverified email (admins bypass this check)
+      // Only apply this filter when hideUnverified is true
+      const afterUnverifiedFilter = enhancedEditsPreFilter.filter(edit => {
+        // If hideUnverified is false, skip email verification check
+        if (!hideUnverified) return true;
+        // Admins always show
+        if (edit._isAdmin) return true;
+        // CRITICAL FIX: Established users (multiple pages) should show even if not email verified
+        // This prevents filtering out legitimate users who just haven't verified email
+        if (edit._pageCount >= 3) return true;
+        // CRITICAL FIX: If user has no document but hideLikelySpam is OFF, be lenient
+        // Users without documents are "unknown" not "proven spam"
+        // The hideLikelySpam filter will handle them more aggressively if enabled
+        if (!edit._hasUserDocument && !hideLikelySpam) return true;
+        // Hide pages from unverified users with few pages
+        if (edit._emailVerified !== true) {
+          _diagnostics.filteredByUnverified++;
+          return false;
+        }
+        return true;
+      });
+
+      // Filter out likely spam accounts when hideLikelySpam is enabled
+      // Uses risk score threshold: >= 31 means soft_challenge or higher (yellow/red in admin)
+      // Risk levels: 0-30 = allow, 31-60 = soft_challenge, 61-85 = hard_challenge, 86-100 = block
+      const enhancedEdits = afterUnverifiedFilter
         .filter(edit => {
           // Skip filter if not enabled
           if (!hideLikelySpam) return true;
           // Admins always show
           if (edit._isAdmin) return true;
+          // CRITICAL FIX: Established users should show even with higher risk score
+          if (edit._pageCount >= 5) return true;
           // If we have a risk score, filter accounts at soft_challenge level or higher (score >= 31)
           // This hides yellow and red risk users from the feed
-          if (edit._riskScore !== null && edit._riskScore >= 31) return false;
+          if (edit._riskScore !== null && edit._riskScore >= 31) {
+            _diagnostics.filteredByLikelySpam++;
+            return false;
+          }
           // Single-page accounts from unverified users are more likely spam
-          if (edit._pageCount <= 1 && edit._emailVerified !== true) return false;
+          if (edit._pageCount <= 1 && edit._emailVerified !== true) {
+            _diagnostics.filteredByLikelySpam++;
+            return false;
+          }
           return true;
         })
         // Remove internal fields from response
-        .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, ...edit }) => edit);
+        .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, _hasUserDocument, ...edit }) => edit);
+
+      // SAFETY VALVE: If all content was filtered and we have pre-filter pages,
+      // relax filtering to show SOME content (better than empty feed)
+      let editsToUse = enhancedEdits;
+      if (enhancedEdits.length === 0 && enhancedEditsPreFilter.length > 0) {
+        // Show the least risky items from pre-filter results
+        // Sort by risk score (nulls last, lower is better) and take up to limit
+        const relaxedEdits = [...enhancedEditsPreFilter]
+          .sort((a, b) => {
+            // Prioritize: verified > has user doc > lower risk score
+            if (a._emailVerified && !b._emailVerified) return -1;
+            if (!a._emailVerified && b._emailVerified) return 1;
+            if (a._hasUserDocument && !b._hasUserDocument) return -1;
+            if (!a._hasUserDocument && b._hasUserDocument) return 1;
+            const aRisk = a._riskScore ?? 50;
+            const bRisk = b._riskScore ?? 50;
+            return aRisk - bRisk;
+          })
+          .slice(0, limit)
+          .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, _hasUserDocument, ...edit }) => edit);
+
+        editsToUse = relaxedEdits;
+        // Mark that we used the safety valve (for debugging)
+        _diagnostics.usedSafetyValve = true;
+      }
 
       // Deduplicate and merge with existing results (for backfill)
       const existingIds = new Set(allEnhancedEdits.map(e => e.id));
-      const newEdits = enhancedEdits.filter(e => !existingIds.has(e.id));
+      const newEdits = editsToUse.filter(e => !existingIds.has(e.id));
       allEnhancedEdits = [...allEnhancedEdits, ...newEdits];
 
       // Determine if there are more pages available
@@ -339,6 +421,9 @@ export async function GET(request: NextRequest) {
     // Trim to requested limit
     const finalEdits = allEnhancedEdits.slice(0, limit);
 
+    // Update diagnostics with final count
+    _diagnostics.finalCount = finalEdits.length;
+
     // Update hasMore based on whether we have more than limit
     hasMorePages = allEnhancedEdits.length > limit || hasMorePages;
 
@@ -353,11 +438,13 @@ export async function GET(request: NextRequest) {
       nextCursor: nextCursor,
       total: finalEdits.length,
       timestamp: new Date().toISOString(),
-      // Include metadata about backfill (useful for debugging/UI hints)
+      // Include metadata about backfill and filtering (useful for debugging/UI hints)
       _meta: {
         timeWindowDays: currentTimeWindowDays,
         didBackfill,
-        backfillAttempts
+        backfillAttempts,
+        // Include filter diagnostics to help debug empty results
+        diagnostics: _diagnostics
       }
     };
 
