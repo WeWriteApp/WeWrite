@@ -554,8 +554,7 @@ export default function ActivityFeed({
               className="rounded-2xl"
               onClick={() => setIsFilterModalOpen(true)}
             >
-              <Icon name="SlidersHorizontal" size={16} className="mr-1.5" />
-              Filters
+              Filter
             </Button>
           )}
         </div>
