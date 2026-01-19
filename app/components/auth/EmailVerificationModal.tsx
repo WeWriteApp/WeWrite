@@ -285,7 +285,7 @@ export function EmailVerificationModal({ onDismiss, showDismissButton = false }:
                 )}
 
                 <p className="text-sm text-muted-foreground mt-4">
-                  Click the link in your email to verify your account and start using WeWrite.
+                  Click the link in your email to verify your account. Your pages won't appear on the home page or trending until you verify.
                 </p>
               </div>
 

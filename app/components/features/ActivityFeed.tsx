@@ -4,18 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
-} from '../ui/dropdown-menu';
 import { Switch } from '../ui/switch';
+import { AdaptiveModal } from '../ui/adaptive-modal';
+import { Label } from '../ui/label';
 import ActivityCard from '../activity/ActivityCard';
 import EmptyState from '../ui/EmptyState';
 import { useAuth } from '../../providers/AuthProvider';
@@ -160,6 +151,22 @@ export default function ActivityFeed({
     return false;
   });
 
+  // Spam prevention filter - hide unverified users (default: true for spam protection)
+  const [hideUnverified, setHideUnverified] = useState(() => {
+    if (mode !== 'global') return true;
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('activityFeed_hideUnverified');
+        // Default to true if not set
+        return saved === null ? true : saved === 'true';
+      } catch { /* ignore */ }
+    }
+    return true;
+  });
+
+  // Filter modal state
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
   // Save filter preferences
   useEffect(() => {
     if (mode !== 'global' || typeof window === 'undefined') return;
@@ -174,6 +181,13 @@ export default function ActivityFeed({
       localStorage.setItem('activityFeed_followingOnly', String(followingOnly));
     } catch { /* ignore */ }
   }, [followingOnly, mode]);
+
+  useEffect(() => {
+    if (mode !== 'global' || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('activityFeed_hideUnverified', String(hideUnverified));
+    } catch { /* ignore */ }
+  }, [hideUnverified, mode]);
 
   const [showFollowSuggestions, setShowFollowSuggestions] = useState(false);
   const [followingCount, setFollowingCount] = useState(0);
@@ -203,6 +217,7 @@ export default function ActivityFeed({
         // Global mode parameters
         params.set('includeOwn', includeOwn.toString());
         params.set('followingOnly', followingOnly.toString());
+        params.set('hideUnverified', hideUnverified.toString());
         if (user?.uid) params.set('userId', user.uid);
       } else {
         // User mode parameters
@@ -291,7 +306,7 @@ export default function ActivityFeed({
         setLoadingMoreState(false);
       }
     }
-  }, [mode, filterByUserId, includeOwn, followingOnly, user?.uid, limit]);
+  }, [mode, filterByUserId, includeOwn, followingOnly, hideUnverified, user?.uid, limit]);
 
   // Initial load
   useEffect(() => {
@@ -344,6 +359,12 @@ export default function ActivityFeed({
     setNextCursor(null);
   };
 
+  const handleHideUnverifiedChange = (checked: boolean) => {
+    setHideUnverified(checked);
+    setActivities([]);
+    setNextCursor(null);
+  };
+
   const dismissFollowSuggestions = () => {
     setShowFollowSuggestions(false);
   };
@@ -351,111 +372,193 @@ export default function ActivityFeed({
   // Determine display title
   const displayTitle = title || (mode === 'global' ? 'Activity Feed' : `${filterByUsername}'s Recent Activity`);
 
+  // Filter modal - rendered outside conditional returns to persist across loading states
+  const filterModal = showFilters && isAuthenticated && (
+    <AdaptiveModal
+      isOpen={isFilterModalOpen}
+      onClose={() => setIsFilterModalOpen(false)}
+      title="Activity Feed Filters"
+      subtitle="Customize what appears in your feed"
+      hashId="feed-filters"
+      showCloseButton
+    >
+      <div className="space-y-6">
+        {/* Content Filters Section */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Content Filters
+          </h3>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="include-own" className="text-sm font-medium">
+                  Include my activity
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Show your own edits in the feed
+                </p>
+              </div>
+              <Switch
+                id="include-own"
+                checked={includeOwn}
+                onCheckedChange={handleIncludeOwnChange}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="following-only" className="text-sm font-medium">
+                  Following only
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Only show activity from users you follow
+                </p>
+              </div>
+              <Switch
+                id="following-only"
+                checked={followingOnly}
+                onCheckedChange={handleFollowingOnlyChange}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Spam Prevention Section */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Spam Prevention
+          </h3>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="hide-unverified" className="text-sm font-medium">
+                  Hide unverified users
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Only show content from users with verified emails
+                </p>
+              </div>
+              <Switch
+                id="hide-unverified"
+                checked={hideUnverified}
+                onCheckedChange={handleHideUnverifiedChange}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Done button */}
+        <div className="pt-2">
+          <Button
+            onClick={() => setIsFilterModalOpen(false)}
+            className="w-full"
+          >
+            Done
+          </Button>
+        </div>
+      </div>
+    </AdaptiveModal>
+  );
+
   if (loading) {
     return (
-      <div className={`space-y-4 ${className}`}>
-        <SectionTitle
-          icon="Activity"
-          title={displayTitle}
-        />
-        {mode === 'user' ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
-            ))}
+      <>
+        {filterModal}
+        <div className={`space-y-4 ${className}`}>
+          <div className="flex items-center justify-between">
+            <SectionTitle
+              icon="Activity"
+              title={displayTitle}
+            />
+            {showFilters && isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-2xl"
+                onClick={() => setIsFilterModalOpen(true)}
+              >
+                Filter
+              </Button>
+            )}
           </div>
-        ) : (
-          <div className="flex items-center justify-center py-8">
-            <Icon name="Loader" size={24} className="text-muted-foreground" />
-          </div>
-        )}
-      </div>
+          {mode === 'user' ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <Icon name="Loader" size={24} className="text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className={`space-y-4 ${className}`}>
-        <SectionTitle
-          icon="Activity"
-          title={displayTitle}
-        />
-        <div className={mode === 'user'
-          ? "border border-destructive/20 rounded-lg p-4 text-center text-destructive"
-          : "text-center py-8"
-        }>
-          <p className={mode === 'global' ? "text-muted-foreground mb-4" : ""}>{error}</p>
-          {mode === 'global' && (
-            <Button onClick={() => fetchActivities()} variant="secondary">
-              Try Again
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <SectionTitle
-          icon="Activity"
-          title={displayTitle}
-        />
-
-        {/* Filter controls (global mode only) */}
-        {showFilters && isAuthenticated && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+      <>
+        {filterModal}
+        <div className={`space-y-4 ${className}`}>
+          <div className="flex items-center justify-between">
+            <SectionTitle
+              icon="Activity"
+              title={displayTitle}
+            />
+            {showFilters && isAuthenticated && (
               <Button
                 variant="outline"
                 size="sm"
                 className="rounded-2xl"
-                data-dropdown-trigger="true"
-                data-dropdown-id="activity-feed-filter"
+                onClick={() => setIsFilterModalOpen(true)}
               >
-                Filters
+                Filter
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Filter Options</DropdownMenuLabel>
-              <DropdownMenuSeparator />
+            )}
+          </div>
+          <div className={mode === 'user'
+            ? "border border-destructive/20 rounded-lg p-4 text-center text-destructive"
+            : "text-center py-8"
+          }>
+            <p className={mode === 'global' ? "text-muted-foreground mb-4" : ""}>{error}</p>
+            {mode === 'global' && (
+              <Button onClick={() => fetchActivities()} variant="secondary">
+                Try Again
+              </Button>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
 
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleIncludeOwnChange(!includeOwn);
-                }}
-                className="flex items-center justify-between px-2 py-1.5 cursor-pointer"
-              >
-                <span className="text-sm">Include my activity</span>
-                <Switch
-                  checked={includeOwn}
-                  onCheckedChange={handleIncludeOwnChange}
-                  size="sm"
-                />
-              </DropdownMenuItem>
+  return (
+    <>
+      {filterModal}
+      <div className={`space-y-4 ${className}`}>
+        <div className="flex items-center justify-between">
+          <SectionTitle
+            icon="Activity"
+            title={displayTitle}
+          />
 
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleFollowingOnlyChange(!followingOnly);
-                }}
-                className="flex items-center justify-between px-2 py-1.5 cursor-pointer"
-              >
-                <span className="text-sm">Following only</span>
-                <Switch
-                  checked={followingOnly}
-                  onCheckedChange={handleFollowingOnlyChange}
-                  size="sm"
-                />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
+          {/* Filter button (global mode only) */}
+          {showFilters && isAuthenticated && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-2xl"
+              onClick={() => setIsFilterModalOpen(true)}
+            >
+              <Icon name="SlidersHorizontal" size={16} className="mr-1.5" />
+              Filters
+            </Button>
+          )}
+        </div>
 
       {/* Follow suggestions (global mode only) */}
       {showFollowSuggestions && mode === 'global' && isAuthenticated && (
@@ -568,6 +671,7 @@ export default function ActivityFeed({
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

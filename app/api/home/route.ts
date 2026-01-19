@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Enhanced batch user data fetching with smart caching
     const uniqueUserIds = [...new Set(recentlyVisitedPages.map(page => page.userId).filter(Boolean))];
-    let batchUserData = {};
+    let batchUserData: Record<string, any> = {};
 
     if (uniqueUserIds.length > 0) {
       try {
@@ -89,13 +89,28 @@ export async function GET(request: NextRequest) {
         // Continue without user data rather than failing the entire request
       }
     }
-    
+
+    // Filter out pages from users with unverified email (admins bypass this check)
+    const filterVerifiedPages = (pages: any[]) => pages.filter(page => {
+      const userData = batchUserData[page.userId];
+      // If no user data, allow the page (fail-open for data issues)
+      if (!userData) return true;
+      // Admins always show
+      if (userData.isAdmin) return true;
+      // Hide pages from unverified users
+      if (userData.emailVerified !== true) return false;
+      return true;
+    });
+
+    const filteredRecentlyVisitedPages = filterVerifiedPages(recentlyVisitedPages);
+    const filteredTrendingPages = filterVerifiedPages(trendingPages);
+
     const endTime = performance.now();
     const loadTime = endTime - startTime;
-    
+
     const homeData: HomeData = {
-      recentlyVisitedPages,
-      trendingPages,
+      recentlyVisitedPages: filteredRecentlyVisitedPages,
+      trendingPages: filteredTrendingPages,
       userStats,
       batchUserData,
       timestamp: Date.now(),
@@ -314,6 +329,8 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
             uid: doc.id,
             username: userData.username,
             email: userData.email,
+            emailVerified: userData.emailVerified ?? false,  // For filtering unverified users' pages
+            isAdmin: userData.isAdmin ?? false,              // Admins bypass email verification check
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,

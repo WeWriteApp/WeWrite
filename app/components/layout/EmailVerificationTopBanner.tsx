@@ -72,8 +72,8 @@ export default function EmailVerificationTopBanner() {
           <div className="flex items-center gap-2 min-w-0">
             <Icon name="Mail" size={16} className="flex-shrink-0" />
             <span className="text-xs md:text-sm font-medium truncate">
-              <span className="hidden sm:inline">Please verify your email address to unlock all features</span>
-              <span className="sm:hidden">Verify your email</span>
+              <span className="hidden sm:inline">Verify your email to show your pages on the home page</span>
+              <span className="sm:hidden">Verify email to show pages</span>
             </span>
           </div>
 

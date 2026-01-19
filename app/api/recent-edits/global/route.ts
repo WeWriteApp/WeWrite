@@ -60,11 +60,13 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 20); // REDUCED LIMIT FOR COST OPTIMIZATION
     const includeOwn = searchParams.get('includeOwn') === 'true';
     const followingOnly = searchParams.get('followingOnly') === 'true';
+    // hideUnverified defaults to true for spam prevention - only show content from verified users
+    const hideUnverified = searchParams.get('hideUnverified') !== 'false';
     const cursor = searchParams.get('cursor');
 
     // SIMPLIFIED CACHING: Use server cache system
     const { cacheHelpers } = await import('../../../utils/serverCache');
-    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${cursor || 'first'}`;
+    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${hideUnverified}:${cursor || 'first'}`;
 
     return NextResponse.json(await cacheHelpers.getApiData(cacheKey, async () => {
 
@@ -249,17 +251,34 @@ export async function GET(request: NextRequest) {
     const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
 
     // Enhance edits with user and subscription data
-    const enhancedEdits = edits.map(edit => {
-      const userData = batchUserData[edit.userId];
-      return {
-        ...edit,
-        // Use username from user data if available, fallback to page username
-        username: userData?.username || edit.username,
-        hasActiveSubscription: userData?.hasActiveSubscription || false,
-        subscriptionTier: userData?.tier || null,
-        subscriptionAmount: userData?.subscriptionAmount || null
-      };
-    });
+    const enhancedEdits = edits
+      .map(edit => {
+        const userData = batchUserData[edit.userId];
+        return {
+          ...edit,
+          // Use username from user data if available, fallback to page username
+          username: userData?.username || edit.username,
+          hasActiveSubscription: userData?.hasActiveSubscription || false,
+          subscriptionTier: userData?.tier || null,
+          subscriptionAmount: userData?.subscriptionAmount || null,
+          // Include email verification status for filtering
+          _emailVerified: userData?.emailVerified ?? false,
+          _isAdmin: userData?.isAdmin ?? false
+        };
+      })
+      // Filter out pages from users with unverified email (admins bypass this check)
+      // Only apply this filter when hideUnverified is true
+      .filter(edit => {
+        // If hideUnverified is false, skip email verification check
+        if (!hideUnverified) return true;
+        // Admins always show
+        if (edit._isAdmin) return true;
+        // Hide pages from unverified users
+        if (edit._emailVerified !== true) return false;
+        return true;
+      })
+      // Remove internal fields from response
+      .map(({ _emailVerified, _isAdmin, ...edit }) => edit);
 
     // Determine if there are more pages available
     // We have more if:
@@ -364,6 +383,8 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
             uid: doc.id,
             // Only use username field - displayName is deprecated
             username: userData.username,
+            emailVerified: userData.emailVerified ?? false,  // For hiding unverified users' pages from feed
+            isAdmin: userData.isAdmin ?? false,              // Admins bypass email verification check
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,

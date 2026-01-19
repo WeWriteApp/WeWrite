@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../utils/environmentConfig';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../utils/environmentConfig';
 
 export const maxDuration = 30;
 
@@ -104,10 +104,26 @@ export async function GET(request: NextRequest) {
       sortedPages = pages.sort((a, b) => b.backlinkCount - a.backlinkCount);
     }
 
+    // Fetch user data to check email verification status
+    const uniqueUserIds = [...new Set(sortedPages.map(p => p.userId).filter(Boolean))];
+    const userData = await fetchUserEmailVerificationData(db, uniqueUserIds);
+
+    // Filter out pages from users with unverified email (admins bypass)
+    const filteredPages = sortedPages.filter(page => {
+      const user = userData[page.userId];
+      // If no user data, allow the page (fail-open for data issues)
+      if (!user) return true;
+      // Admins always show
+      if (user.isAdmin) return true;
+      // Hide pages from unverified users
+      if (user.emailVerified !== true) return false;
+      return true;
+    });
+
     return NextResponse.json({
       success: true,
-      pages: sortedPages.slice(0, limit),
-      totalCount: sortedPages.length
+      pages: filteredPages.slice(0, limit),
+      totalCount: filteredPages.length
     });
 
   } catch (error) {
@@ -117,4 +133,38 @@ export async function GET(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
+}
+
+/**
+ * Fetch email verification and admin status for a batch of user IDs
+ */
+async function fetchUserEmailVerificationData(
+  db: FirebaseFirestore.Firestore,
+  userIds: string[]
+): Promise<Record<string, { emailVerified: boolean; isAdmin: boolean }>> {
+  if (userIds.length === 0) return {};
+
+  const results: Record<string, { emailVerified: boolean; isAdmin: boolean }> = {};
+  const batchSize = 10;
+
+  for (let i = 0; i < userIds.length; i += batchSize) {
+    const batch = userIds.slice(i, i + batchSize);
+
+    try {
+      const usersQuery = db.collection(getCollectionName('users')).where('__name__', 'in', batch);
+      const usersSnapshot = await usersQuery.get();
+
+      usersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        results[doc.id] = {
+          emailVerified: userData.emailVerified ?? false,
+          isAdmin: userData.isAdmin ?? false
+        };
+      });
+    } catch (error) {
+      // Continue silently on errors
+    }
+  }
+
+  return results;
 }

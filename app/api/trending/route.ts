@@ -151,8 +151,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return b.totalViews - a.totalViews;
     });
 
+    // Fetch user email verification status and filter out unverified users
+    const userData = await fetchUserEmailVerificationData(db, Array.from(userIds));
+
+    // Filter out pages from users with unverified email (admins bypass)
+    const verifiedPages = pagesWithActivity.filter(page => {
+      const user = userData[page.userId];
+      // If no user data, allow the page (fail-open for data issues)
+      if (!user) return true;
+      // Admins always show
+      if (user.isAdmin) return true;
+      // Hide pages from unverified users
+      if (user.emailVerified !== true) return false;
+      return true;
+    });
+
     // Limit to requested count
-    const finalPages = pagesWithActivity.slice(0, limitCount);
+    const finalPages = verifiedPages.slice(0, limitCount);
 
     return createApiResponse({
       trendingPages: finalPages
@@ -299,6 +314,40 @@ async function getRealPageViewData(db: any, pageId: string): Promise<PageViewDat
       hourly: Array(24).fill(0)
     };
   }
+}
+
+/**
+ * Fetch email verification and admin status for a batch of user IDs
+ */
+async function fetchUserEmailVerificationData(
+  db: any,
+  userIds: string[]
+): Promise<Record<string, { emailVerified: boolean; isAdmin: boolean }>> {
+  if (userIds.length === 0) return {};
+
+  const results: Record<string, { emailVerified: boolean; isAdmin: boolean }> = {};
+  const batchSize = 10;
+
+  for (let i = 0; i < userIds.length; i += batchSize) {
+    const batch = userIds.slice(i, i + batchSize);
+
+    try {
+      const usersQuery = db.collection(getCollectionName('users')).where('__name__', 'in', batch);
+      const usersSnapshot = await usersQuery.get();
+
+      usersSnapshot.forEach(doc => {
+        const userData = doc.data();
+        results[doc.id] = {
+          emailVerified: userData.emailVerified ?? false,
+          isAdmin: userData.isAdmin ?? false
+        };
+      });
+    } catch (error) {
+      // Continue silently on errors
+    }
+  }
+
+  return results;
 }
 
 

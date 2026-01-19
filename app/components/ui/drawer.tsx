@@ -4,6 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Icon } from "@/components/ui/Icon"
 import { cn } from "../../lib/utils"
 
+// Context to share open state with DrawerContent for animations
+const DrawerContext = React.createContext<{ open: boolean }>({ open: false })
+
 /**
  * Custom Drawer Root that adds:
  * - URL hash tracking (optional hashId prop)
@@ -161,9 +164,11 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
     }, [open, hashId, analyticsId, onOpenChange])
 
     return (
-      <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props}>
-        {children}
-      </DialogPrimitive.Root>
+      <DrawerContext.Provider value={{ open: open ?? false }}>
+        <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props}>
+          {children}
+        </DialogPrimitive.Root>
+      </DrawerContext.Provider>
     )
   }
 )
@@ -232,6 +237,9 @@ const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
 >(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, accessibleTitle = "Drawer", ...props }, ref) => {
+  // Get open state from context for animations
+  const { open } = React.useContext(DrawerContext)
+
   // Handle legacy noOverlay prop
   const shouldShowOverlay = noOverlay ? false : showOverlay
 
@@ -435,6 +443,7 @@ const DrawerContent = React.forwardRef<
       {/* Wrapper div for applying drag transform to entire drawer */}
       <div
         ref={drawerRef}
+        data-state={open ? "open" : "closed"}
         className={cn(
           drawerVariants({ side }),
           // Extend background below to cover bounce overshoot

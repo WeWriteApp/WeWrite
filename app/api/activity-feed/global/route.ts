@@ -11,6 +11,7 @@
  * - userId: Current user's ID for filtering
  * - includeOwn: Whether to include user's own activity (default: false)
  * - followingOnly: Whether to only show activity from followed users (default: false)
+ * - hideUnverified: Whether to hide content from users without verified emails (default: true)
  * - cursor: Pagination cursor for loading more results
  */
 
