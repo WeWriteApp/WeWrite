@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ProfilePagesProvider } from "../../providers/ProfilePageProvider";
@@ -11,6 +11,8 @@ import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
 import UserProfileHeader from './UserProfileHeader';
 import UserProfileStats from '../utils/UserProfileStats';
+import { UserDetailsDrawer } from '../admin/UserDetailsDrawer';
+import { Icon } from '../ui/Icon';
 
 interface Profile {
   uid: string;
@@ -28,6 +30,7 @@ interface SingleProfileViewProps {
 const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
   const { user } = useAuth();
   const router = useRouter();
+  const [adminDrawerOpen, setAdminDrawerOpen] = useState(false);
 
   // Early return if profile is not available
   if (!profile) {
@@ -36,6 +39,9 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
 
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
+
+  // Check if current user is admin
+  const isAdmin = user?.isAdmin === true;
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
@@ -68,6 +74,18 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
                 className="w-full sm:w-auto min-w-[140px] h-10"
               />
             )}
+
+            {/* Admin info button - only visible to admins */}
+            {isAdmin && (
+              <button
+                onClick={() => setAdminDrawerOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
+                title="View admin details for this user"
+              >
+                <Icon name="Shield" size={16} />
+                Admin info
+              </button>
+            )}
           </div>
         </div>
 
@@ -88,6 +106,16 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
           variant="user"
           isUserAllocation={true}
           username={profile.username || 'User'}
+        />
+      )}
+
+      {/* Admin user details drawer */}
+      {isAdmin && (
+        <UserDetailsDrawer
+          open={adminDrawerOpen}
+          onOpenChange={setAdminDrawerOpen}
+          userId={profile.uid}
+          username={profile.username}
         />
       )}
     </ProfilePagesProvider>
