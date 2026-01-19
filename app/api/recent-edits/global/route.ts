@@ -340,6 +340,60 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * Calculate risk score server-side (mirrors client-side calculateClientRiskScore)
+ * Used when riskScore is not stored in the user document
+ */
+function calculateServerRiskScore(userData: {
+  createdAt?: any;
+  emailVerified?: boolean;
+  pageCount?: number;
+  hasActiveSubscription?: boolean;
+  isAdmin?: boolean;
+}): number {
+  let score = 50; // Start at medium risk
+
+  // Account age reduces risk (max -30 points)
+  if (userData.createdAt) {
+    const createdDate = userData.createdAt?.toDate?.()
+      || (typeof userData.createdAt === 'string' ? new Date(userData.createdAt) : new Date());
+    const ageInDays = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (ageInDays > 90) score -= 30;
+    else if (ageInDays > 30) score -= 20;
+    else if (ageInDays > 7) score -= 10;
+    else score += 10; // New accounts are higher risk
+  } else {
+    score += 10; // Unknown creation date
+  }
+
+  // Email verification reduces risk (-15 points)
+  if (userData.emailVerified) {
+    score -= 15;
+  } else {
+    score += 5;
+  }
+
+  // Content creation shows engagement (-15 points max)
+  const pageCount = userData.pageCount || 0;
+  if (pageCount > 50) score -= 15;
+  else if (pageCount > 10) score -= 10;
+  else if (pageCount > 0) score -= 5;
+  else score += 5; // No content yet
+
+  // Subscription shows commitment (-10 points)
+  if (userData.hasActiveSubscription) {
+    score -= 10;
+  }
+
+  // Admin users are trusted (-20 points)
+  if (userData.isAdmin) {
+    score -= 20;
+  }
+
+  // Clamp to 0-100
+  return Math.max(0, Math.min(100, score));
+}
+
+/**
  * Fetch batch user data including subscription information
  */
 async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<string, any>> {
@@ -400,18 +454,33 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
           // Check if subscription is active
           const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
 
+          const emailVerified = userData.emailVerified ?? false;
+          const isAdmin = userData.isAdmin ?? false;
+          const pageCount = userData.pageCount || userData.pagesCount || 0;
+
+          // Calculate risk score if not stored - mirrors client-side calculation
+          const storedRiskScore = userData.riskScore;
+          const calculatedRiskScore = calculateServerRiskScore({
+            createdAt: userData.createdAt,
+            emailVerified,
+            pageCount,
+            hasActiveSubscription: isActive,
+            isAdmin
+          });
+
           results[doc.id] = {
             uid: doc.id,
             // Only use username field - displayName is deprecated
             username: userData.username,
-            emailVerified: userData.emailVerified ?? false,  // For hiding unverified users' pages from feed
-            isAdmin: userData.isAdmin ?? false,              // Admins bypass email verification check
-            riskScore: userData.riskScore ?? null,           // For spam filtering
+            emailVerified,  // For hiding unverified users' pages from feed
+            isAdmin,              // Admins bypass email verification check
+            // Use stored risk score if available, otherwise calculate it
+            riskScore: storedRiskScore ?? calculatedRiskScore,
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,
             hasActiveSubscription: isActive,
-            pageCount: userData.pageCount || userData.pagesCount || 0,
+            pageCount,
             followerCount: userData.followerCount || 0,
             viewCount: userData.viewCount || 0
           };
