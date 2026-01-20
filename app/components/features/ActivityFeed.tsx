@@ -708,7 +708,10 @@ export default function ActivityFeed({
                 hasChanges: activity.lastDiff.hasChanges || false,
                 isNewPage: isNewPageCreation
               } : null,
-              diffPreview: activity.diffPreview || activity.lastDiff?.preview || null
+              diffPreview: activity.diffPreview || activity.lastDiff?.preview || null,
+              // Page quality score (admin-only visibility)
+              pageScore: (activity as any).pageScore ?? null,
+              pageScoreFactors: (activity as any).pageScoreFactors ?? null
             };
 
             return (

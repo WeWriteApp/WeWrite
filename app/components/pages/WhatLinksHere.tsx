@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
-import { AnimatedPresenceItem } from '../ui/AnimatedStack';
+import { AnimatedPresenceItem, AnimatedHorizontalPresence } from '../ui/AnimatedStack';
 import AddToPageButton from '../utils/AddToPageButton';
 import type { Page } from '../../types/database';
 import { UsernameBadge } from '../ui/UsernameBadge';
@@ -143,7 +143,7 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
   // Custom renderer to show username alongside the pill
   // SECURITY: Uses UsernameBadge which safely fetches/displays usernames and subscription status
   const renderLinkedPageItem = (item: PageLinkItem) => (
-    <div key={item.id} className="flex items-center gap-1 flex-wrap">
+    <div key={item.id} className="flex items-center flex-wrap">
       <PillLink
         href={item.href || `/${item.id}`}
         pageId={item.id}
@@ -151,17 +151,21 @@ export default function WhatLinksHere({ pageId, pageTitle, className = "", isOwn
       >
         {item.title || 'Untitled'}
       </PillLink>
-      {showAuthor && item.userId && isValidUsername(item.username) && (
+      <AnimatedHorizontalPresence
+        show={showAuthor && !!item.userId && isValidUsername(item.username)}
+        gap={4}
+        preset="fast"
+      >
         <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
           by{' '}
           <UsernameBadge
-            userId={item.userId}
+            userId={item.userId!}
             username={item.username || 'Anonymous'}
             size="sm"
             showBadge={true}
           />
         </span>
-      )}
+      </AnimatedHorizontalPresence>
     </div>
   );
 

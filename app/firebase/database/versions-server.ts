@@ -151,10 +151,11 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
             batchCount
           });
 
-          // BACKGROUND: Calculate diff and update version/page asynchronously
+          // BACKGROUND: Calculate diff and PageScore asynchronously
           // This doesn't block the save response
           const originalContent = existingVersionData.originalContent || existingVersionData.previousContent || pageData?.content;
 
+          // Background diff calculation
           (async () => {
             try {
               const { calculateDiff } = await import('../../utils/diffService');
@@ -190,6 +191,33 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
               }
             } catch (diffError) {
               console.error("⚠️ [BG] Batch diff calculation failed (non-fatal):", diffError);
+            }
+          })();
+
+          // Background PageScore calculation
+          (async () => {
+            try {
+              const { PageScoringService } = await import('../../services/PageScoringService');
+              const scoreResult = await PageScoringService.calculatePageScore(
+                pageId,
+                contentForDiff,
+                data.userId,
+                db
+              );
+
+              await pageRef.update({
+                pageScore: scoreResult.score,
+                pageScoreFactors: {
+                  externalRatio: scoreResult.factors.externalRatio.score,
+                  internalUserLinks: scoreResult.factors.internalUserLinks.score,
+                  showAuthorLinks: scoreResult.factors.showAuthorLinks.score,
+                  backlinks: scoreResult.factors.backlinks.score
+                },
+                pageScoreUpdatedAt: new Date().toISOString()
+              });
+              console.log('✅ [BG] PageScore calculated (batched):', scoreResult.score, scoreResult.level);
+            } catch (err) {
+              console.error('⚠️ [BG] PageScore calculation failed (non-fatal):', err);
             }
           })();
 
@@ -354,6 +382,33 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
           console.log('✅ [BG] Cache invalidated');
         } catch (err) {
           console.error('⚠️ [BG] Cache invalidation failed:', err);
+        }
+      })(),
+      // Calculate and update PageScore (page quality scoring)
+      (async () => {
+        try {
+          const { PageScoringService } = await import('../../services/PageScoringService');
+          const scoreResult = await PageScoringService.calculatePageScore(
+            pageId,
+            contentForDiff,
+            data.userId,
+            db
+          );
+
+          // Update page with score data
+          await pageRef.update({
+            pageScore: scoreResult.score,
+            pageScoreFactors: {
+              externalRatio: scoreResult.factors.externalRatio.score,
+              internalUserLinks: scoreResult.factors.internalUserLinks.score,
+              showAuthorLinks: scoreResult.factors.showAuthorLinks.score,
+              backlinks: scoreResult.factors.backlinks.score
+            },
+            pageScoreUpdatedAt: new Date().toISOString()
+          });
+          console.log('✅ [BG] PageScore calculated:', scoreResult.score, scoreResult.level);
+        } catch (err) {
+          console.error('⚠️ [BG] PageScore calculation failed (non-fatal):', err);
         }
       })()
     ]).catch(err => console.error('⚠️ [BG] Background ops failed:', err));

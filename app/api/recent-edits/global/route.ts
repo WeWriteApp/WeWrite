@@ -278,6 +278,9 @@ export async function GET(request: NextRequest) {
             pledgeCount: page.pledgeCount || 0,
             lastDiff: page.lastDiff,
             diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null,
+            // Page quality score (admin-only visibility)
+            pageScore: page.pageScore ?? null,
+            pageScoreFactors: page.pageScoreFactors ?? null,
             source: 'pages-collection'
           };
         });

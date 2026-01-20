@@ -28,6 +28,7 @@ import { IconsSection } from './IconsSection';
 import { InlineErrorSection } from './InlineErrorSection';
 import { InputSection } from './InputSection';
 import { LoadingStatesSection } from './LoadingStatesSection';
+import { PageLinksCardSection } from './PageLinksCardSection';
 import { PieChartSection } from './PieChartSection';
 import { PillLinkSection } from './PillLinkSection';
 import { RollingCounterSection } from './RollingCounterSection';
@@ -75,6 +76,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'inline-error', label: 'Inline Error Cards', component: InlineErrorSection },
   { id: 'input', label: 'Input', component: InputSection },
   { id: 'loading-states', label: 'Loading States', component: LoadingStatesSection },
+  { id: 'page-links-card', label: 'Page Links Card', component: PageLinksCardSection },
   { id: 'page-stats', label: 'Page Stats', component: PageStatsSection },
   { id: 'pie-chart', label: 'Pie Chart', component: PieChartSection },
   { id: 'pill-link', label: 'PillLink', component: PillLinkSection },

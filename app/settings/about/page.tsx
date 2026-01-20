@@ -4,32 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import FeedbackModal from '../../components/layout/FeedbackModal';
-import { getSocialUrl } from '@/config/social-links';
-
-interface AboutLink {
-  href: string;
-  label: string;
-  icon: string;
-  external?: boolean;
-  onClick?: () => void;
-  hasChevron?: boolean;
-}
+import { ABOUT_LINKS } from '@/constants/about-links';
 
 export default function AboutPage() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-
-  const aboutLinks: AboutLink[] = [
-    { href: "/zRNwhNgIEfLFo050nyAT", label: "Feature Roadmap", icon: 'Map' },
-    { href: "/sUASL4gNdCMVHkr7Qzty", label: "About us", icon: 'Info' },
-    { href: "#", label: "Feedback", icon: 'MessageSquare', onClick: () => setShowFeedbackModal(true) },
-    { href: "/credits", label: "Credits", icon: 'Heart' },
-    { href: "/privacy", label: "Privacy", icon: 'Shield' },
-    { href: "/terms", label: "Terms", icon: 'FileText' },
-    { href: "mailto:support@getwewrite.app", label: "Email support", icon: 'Mail', external: true },
-    { href: "/settings/about/follow-us", label: "Follow us", icon: 'Users', hasChevron: true },
-    { href: getSocialUrl('github') || 'https://github.com/WeWriteApp/WeWrite', label: "Source code", icon: 'Code', external: true },
-    { href: "/design-system", label: "Design System", icon: 'Palette' },
-  ];
 
   const renderIcon = (iconName: string) => {
     return <Icon name={iconName} size={16} />;
@@ -39,11 +17,15 @@ export default function AboutPage() {
     <>
       <div className="p-6 lg:p-8">
         <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
-          {aboutLinks.map((link, index) => (
-            link.onClick ? (
+          {ABOUT_LINKS.map((link) => (
+            link.isAction ? (
               <button
-                key={index}
-                onClick={link.onClick}
+                key={link.id}
+                onClick={() => {
+                  if (link.id === 'feedback') {
+                    setShowFeedbackModal(true);
+                  }
+                }}
                 className="w-full flex items-center gap-3 px-4 py-4 text-left hover:bg-muted/50 transition-colors bg-card"
               >
                 {renderIcon(link.icon)}
@@ -51,7 +33,7 @@ export default function AboutPage() {
               </button>
             ) : link.hasChevron ? (
               <Link
-                key={index}
+                key={link.id}
                 href={link.href}
                 className="w-full flex items-center justify-between px-4 py-4 hover:bg-muted/50 transition-colors bg-card"
               >
@@ -63,7 +45,7 @@ export default function AboutPage() {
               </Link>
             ) : link.external ? (
               <a
-                key={index}
+                key={link.id}
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -77,7 +59,7 @@ export default function AboutPage() {
               </a>
             ) : (
               <Link
-                key={index}
+                key={link.id}
                 href={link.href}
                 className="w-full flex items-center gap-3 px-4 py-4 hover:bg-muted/50 transition-colors bg-card"
               >

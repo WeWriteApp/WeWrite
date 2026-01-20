@@ -8,7 +8,7 @@ import { Button } from '../ui/button';
 import { Icon } from '@/components/ui/Icon';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
-import { AnimatedPresenceItem } from '../ui/AnimatedStack';
+import { AnimatedPresenceItem, AnimatedHorizontalPresence } from '../ui/AnimatedStack';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { sanitizeUsername, needsUsernameRefresh } from '../../utils/usernameSecurity';
 
@@ -107,7 +107,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
 
   // Custom renderer for "Related pages by others" to show author with UsernameBadge
   const renderRelatedByOthersItem = (item: PageLinkItem) => (
-    <div key={item.id} className="flex items-center gap-1 flex-wrap">
+    <div key={item.id} className="flex items-center flex-wrap">
       <PillLink
         href={item.href || `/${item.id}`}
         pageId={item.id}
@@ -115,17 +115,21 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
       >
         {item.title || 'Untitled'}
       </PillLink>
-      {showAuthor && item.userId && isValidUsername(item.username) && (
+      <AnimatedHorizontalPresence
+        show={showAuthor && !!item.userId && isValidUsername(item.username)}
+        gap={4}
+        preset="fast"
+      >
         <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
           by{' '}
           <UsernameBadge
-            userId={item.userId}
+            userId={item.userId!}
             username={item.username || 'Anonymous'}
             size="sm"
             showBadge={true}
           />
         </span>
-      )}
+      </AnimatedHorizontalPresence>
     </div>
   );
 

@@ -255,4 +255,79 @@ export function AnimatedPresenceItem({
   );
 }
 
+/**
+ * Horizontal animated presence for inline elements
+ * Animates width from 0 to auto for smooth horizontal expand/collapse
+ *
+ * @example
+ * ```tsx
+ * <span className="flex items-center">
+ *   <span>Title</span>
+ *   <AnimatedHorizontalPresence show={showAuthor} gap={4}>
+ *     <span>by Author</span>
+ *   </AnimatedHorizontalPresence>
+ * </span>
+ * ```
+ */
+interface AnimatedHorizontalPresenceProps {
+  /** Whether to show the item */
+  show: boolean;
+  /** The content to animate */
+  children: React.ReactNode;
+  /** Gap/margin when visible (in pixels) - applied to left side */
+  gap?: number;
+  /** Animation preset */
+  preset?: AnimationPreset;
+  /** Additional className */
+  className?: string;
+}
+
+export function AnimatedHorizontalPresence({
+  show,
+  children,
+  gap = 0,
+  preset = 'fast',
+  className,
+}: AnimatedHorizontalPresenceProps) {
+  const transition = ANIMATION_PRESETS[preset];
+
+  const variants: Variants = {
+    hidden: {
+      opacity: 0,
+      width: 0,
+      marginLeft: 0,
+      marginRight: 0,
+    },
+    visible: {
+      opacity: 1,
+      width: 'auto',
+      marginLeft: gap,
+      marginRight: 0,
+    },
+    exit: {
+      opacity: 0,
+      width: 0,
+      marginLeft: 0,
+      marginRight: 0,
+    },
+  };
+
+  return (
+    <AnimatePresence mode="sync">
+      {show && (
+        <motion.span
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          variants={variants}
+          transition={transition}
+          className={cn('inline-flex overflow-hidden whitespace-nowrap', className)}
+        >
+          {children}
+        </motion.span>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default AnimatedStack;

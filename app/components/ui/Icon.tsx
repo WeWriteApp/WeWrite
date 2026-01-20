@@ -182,6 +182,7 @@ import {
   Figma,
   Code2,
   Cloud,
+  SlidersHorizontal,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -255,7 +256,8 @@ export type IconName =
   | "TabletSmartphone" | "Youtube" | "Twitter" | "Instagram" | "Github" | "Twitch" | "BookText" | "FolderPlus"
   | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff"
   | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand"
-  | "GitCompare" | "Loader2" | "Cpu" | "Briefcase" | "Brain" | "Music" | "Plane" | "Figma" | "Code2" | "Cloud";
+  | "GitCompare" | "Loader2" | "Cpu" | "Briefcase" | "Brain" | "Music" | "Plane" | "Figma" | "Code2" | "Cloud"
+  | "SlidersHorizontal";
 
 // Icon props interface
 export interface IconProps {
@@ -508,6 +510,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Figma: Figma,
   Code2: Code2,
   Cloud: Cloud,
+  SlidersHorizontal: SlidersHorizontal,
 };
 
 // Unified Icon Component

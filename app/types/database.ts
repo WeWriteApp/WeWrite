@@ -64,6 +64,15 @@ export interface Page {
   deleted?: boolean;
   deletedAt?: string | Timestamp;
   deletedBy?: string;
+  // Page quality score (admin-only, lower = better quality)
+  pageScore?: number;
+  pageScoreFactors?: {
+    externalRatio: number;
+    internalUserLinks: number;
+    showAuthorLinks: number;
+    backlinks: number;
+  };
+  pageScoreUpdatedAt?: string;
 }
 
 // Page version types

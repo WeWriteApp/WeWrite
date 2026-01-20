@@ -17,6 +17,8 @@ import { sanitizeUsername } from "../../utils/usernameSecurity";
 import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import DiffPreview, { DiffStats } from "./DiffPreview";
+import { PageScoreBadge } from "../admin/PageScoreBadge";
+import { PageScoreBreakdown } from "../admin/PageScoreBreakdown";
 
 import { navigateToPage } from "../../utils/pagePermissions";
 import { useRouter } from "next/navigation";
@@ -53,6 +55,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const { isEnabled } = useFeatureFlags();
   const showUILabels = isEnabled('ui_labels');
   const [isRestoring, setIsRestoring] = useState(false);
+  const [showPageScoreBreakdown, setShowPageScoreBreakdown] = useState(false);
+
+  // Check if current user is admin (for showing PageScore badge)
+  const isAdmin = user?.isAdmin === true;
 
   // Check if user can restore this version (is page owner and in activity context)
   const canRestore = (activity.isActivityContext || activity.isHistoryContext) &&
@@ -382,15 +388,30 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                                 {sanitizeUsername(activity.username)}
                               </span>
                             ) : (
-                              <UsernameBadge
-                                userId={activity.userId}
-                                username={activity.username || "Missing username"}
-                                tier={activity.subscriptionTier}
-                                size="sm"
-                                showBadge={true}
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex flex-shrink-0"
-                              />
+                              <>
+                                <UsernameBadge
+                                  userId={activity.userId}
+                                  username={activity.username || "Missing username"}
+                                  tier={activity.subscriptionTier}
+                                  size="sm"
+                                  showBadge={true}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex flex-shrink-0"
+                                />
+                                {/* PageScore badge - admin only */}
+                                {isAdmin && activity.pageScore !== undefined && activity.pageScore !== null && (
+                                  <PageScoreBadge
+                                    score={activity.pageScore}
+                                    size="sm"
+                                    showScore={true}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowPageScoreBreakdown(true);
+                                    }}
+                                    className="ml-1"
+                                  />
+                                )}
+                              </>
                             )}
                           </>
                         )}
@@ -540,6 +561,17 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           </Tooltip>
         )}
       </TooltipProvider>
+
+      {/* PageScore Breakdown Dialog - admin only */}
+      {isAdmin && (
+        <PageScoreBreakdown
+          isOpen={showPageScoreBreakdown}
+          onClose={() => setShowPageScoreBreakdown(false)}
+          pageTitle={currentPageName || 'Untitled'}
+          pageScore={activity.pageScore}
+          pageScoreFactors={activity.pageScoreFactors}
+        />
+      )}
     </div>
   );
 };
