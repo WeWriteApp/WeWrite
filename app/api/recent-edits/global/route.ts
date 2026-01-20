@@ -345,19 +345,19 @@ export async function GET(request: NextRequest) {
       });
 
       // Filter out likely spam accounts when hideLikelySpam is enabled
-      // Uses risk score threshold: >= 31 means soft_challenge or higher (yellow/red in admin)
-      // Risk levels: 0-30 = allow, 31-60 = soft_challenge, 61-85 = hard_challenge, 86-100 = block
+      // Uses trust score threshold: < 50 means soft_challenge or lower (yellow/orange/red in admin)
+      // Trust levels: 75-100 = allow (trusted), 50-74 = soft_challenge, 25-49 = hard_challenge, 0-24 = block
       const enhancedEdits = afterUnverifiedFilter
         .filter(edit => {
           // Skip filter if not enabled
           if (!hideLikelySpam) return true;
           // Admins always show
           if (edit._isAdmin) return true;
-          // CRITICAL FIX: Established users should show even with higher risk score
+          // CRITICAL FIX: Established users should show even with lower trust score
           if (edit._pageCount >= 5) return true;
-          // If we have a risk score, filter accounts at soft_challenge level or higher (score >= 31)
-          // This hides yellow and red risk users from the feed
-          if (edit._riskScore !== null && edit._riskScore >= 31) {
+          // If we have a trust score, filter accounts at soft_challenge level or lower (score < 50)
+          // This hides yellow/orange/red trust users from the feed
+          if (edit._riskScore !== null && edit._riskScore < 50) {
             _diagnostics.filteredByLikelySpam++;
             return false;
           }
@@ -375,18 +375,18 @@ export async function GET(request: NextRequest) {
       // relax filtering to show SOME content (better than empty feed)
       let editsToUse = enhancedEdits;
       if (enhancedEdits.length === 0 && enhancedEditsPreFilter.length > 0) {
-        // Show the least risky items from pre-filter results
-        // Sort by risk score (nulls last, lower is better) and take up to limit
+        // Show the most trusted items from pre-filter results
+        // Sort by trust score (nulls last, higher is better) and take up to limit
         const relaxedEdits = [...enhancedEditsPreFilter]
           .sort((a, b) => {
-            // Prioritize: verified > has user doc > lower risk score
+            // Prioritize: verified > has user doc > higher trust score
             if (a._emailVerified && !b._emailVerified) return -1;
             if (!a._emailVerified && b._emailVerified) return 1;
             if (a._hasUserDocument && !b._hasUserDocument) return -1;
             if (!a._hasUserDocument && b._hasUserDocument) return 1;
-            const aRisk = a._riskScore ?? 50;
-            const bRisk = b._riskScore ?? 50;
-            return aRisk - bRisk;
+            const aTrust = a._riskScore ?? 50;
+            const bTrust = b._riskScore ?? 50;
+            return bTrust - aTrust; // Higher trust score first
           })
           .slice(0, limit)
           .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, _hasUserDocument, ...edit }) => edit);
@@ -472,8 +472,9 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Calculate risk score server-side (mirrors client-side calculateClientRiskScore)
- * Used when riskScore is not stored in the user document
+ * Calculate trust score server-side (mirrors client-side calculateClientRiskScore)
+ * Used when riskScore/trustScore is not stored in the user document
+ * Note: Higher scores = more trusted (100 = trusted, 0 = suspicious)
  */
 function calculateServerRiskScore(userData: {
   createdAt?: any;
@@ -482,43 +483,43 @@ function calculateServerRiskScore(userData: {
   hasActiveSubscription?: boolean;
   isAdmin?: boolean;
 }): number {
-  let score = 50; // Start at medium risk
+  let score = 50; // Start at medium trust
 
-  // Account age reduces risk (max -30 points)
+  // Account age increases trust (max +30 points)
   if (userData.createdAt) {
     const createdDate = userData.createdAt?.toDate?.()
       || (typeof userData.createdAt === 'string' ? new Date(userData.createdAt) : new Date());
     const ageInDays = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (ageInDays > 90) score -= 30;
-    else if (ageInDays > 30) score -= 20;
-    else if (ageInDays > 7) score -= 10;
-    else score += 10; // New accounts are higher risk
+    if (ageInDays > 90) score += 30;
+    else if (ageInDays > 30) score += 20;
+    else if (ageInDays > 7) score += 10;
+    else score -= 10; // New accounts are less trusted
   } else {
-    score += 10; // Unknown creation date
+    score -= 10; // Unknown creation date
   }
 
-  // Email verification reduces risk (-15 points)
+  // Email verification increases trust (+15 points)
   if (userData.emailVerified) {
-    score -= 15;
+    score += 15;
   } else {
-    score += 5;
+    score -= 5;
   }
 
-  // Content creation shows engagement (-15 points max)
+  // Content creation shows engagement (+15 points max)
   const pageCount = userData.pageCount || 0;
-  if (pageCount > 50) score -= 15;
-  else if (pageCount > 10) score -= 10;
-  else if (pageCount > 0) score -= 5;
-  else score += 5; // No content yet
+  if (pageCount > 50) score += 15;
+  else if (pageCount > 10) score += 10;
+  else if (pageCount > 0) score += 5;
+  else score -= 5; // No content yet
 
-  // Subscription shows commitment (-10 points)
+  // Subscription shows commitment (+10 points)
   if (userData.hasActiveSubscription) {
-    score -= 10;
+    score += 10;
   }
 
-  // Admin users are trusted (-20 points)
+  // Admin users are trusted (+20 points)
   if (userData.isAdmin) {
-    score -= 20;
+    score += 20;
   }
 
   // Clamp to 0-100

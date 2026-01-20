@@ -226,54 +226,60 @@ function extractLinkStats(content: any): LinkStats {
 }
 
 /**
- * Calculate external ratio score (0-25, lower is better)
+ * Calculate external ratio score (0-25, higher is better)
  */
 function calculateExternalRatioScore(externalCount: number, internalCount: number): number {
-  if (externalCount === 0) return 0;
-  if (internalCount === 0 && externalCount > 0) return 25;
+  if (externalCount === 0) return 25; // No external links = perfect
+  if (internalCount === 0 && externalCount > 0) return 0; // All external, no internal = worst
   const ratio = externalCount / (internalCount + externalCount);
-  return Math.round(ratio * 25);
+  return Math.round((1 - ratio) * 25); // Invert so higher is better
 }
 
 /**
- * Calculate internal user links score (0-25, lower is better)
+ * Calculate internal user links score (0-25, higher is better)
  */
 function calculateInternalUserLinksScore(linksToOtherUsers: number): number {
-  if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.EXCELLENT.min) return INTERNAL_USER_LINKS_SCORING.EXCELLENT.score;
-  if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.GOOD.min) return INTERNAL_USER_LINKS_SCORING.GOOD.score;
-  if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.FAIR.min) return INTERNAL_USER_LINKS_SCORING.FAIR.score;
-  if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.MINIMAL.min) return INTERNAL_USER_LINKS_SCORING.MINIMAL.score;
-  return INTERNAL_USER_LINKS_SCORING.NONE.score;
+  let rawScore: number;
+  if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.EXCELLENT.min) rawScore = INTERNAL_USER_LINKS_SCORING.EXCELLENT.score;
+  else if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.GOOD.min) rawScore = INTERNAL_USER_LINKS_SCORING.GOOD.score;
+  else if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.FAIR.min) rawScore = INTERNAL_USER_LINKS_SCORING.FAIR.score;
+  else if (linksToOtherUsers >= INTERNAL_USER_LINKS_SCORING.MINIMAL.min) rawScore = INTERNAL_USER_LINKS_SCORING.MINIMAL.score;
+  else rawScore = INTERNAL_USER_LINKS_SCORING.NONE.score;
+  return 25 - rawScore; // Invert so higher is better
 }
 
 /**
- * Calculate show author score (0-25, lower is better)
+ * Calculate show author score (0-25, higher is better)
  */
 function calculateShowAuthorScore(showAuthorCount: number): number {
-  if (showAuthorCount >= SHOW_AUTHOR_LINKS_SCORING.EXCELLENT.min) return SHOW_AUTHOR_LINKS_SCORING.EXCELLENT.score;
-  if (showAuthorCount >= SHOW_AUTHOR_LINKS_SCORING.GOOD.min) return SHOW_AUTHOR_LINKS_SCORING.GOOD.score;
-  if (showAuthorCount >= SHOW_AUTHOR_LINKS_SCORING.MINIMAL.min) return SHOW_AUTHOR_LINKS_SCORING.MINIMAL.score;
-  return SHOW_AUTHOR_LINKS_SCORING.NONE.score;
+  let rawScore: number;
+  if (showAuthorCount >= SHOW_AUTHOR_LINKS_SCORING.EXCELLENT.min) rawScore = SHOW_AUTHOR_LINKS_SCORING.EXCELLENT.score;
+  else if (showAuthorCount >= SHOW_AUTHOR_LINKS_SCORING.GOOD.min) rawScore = SHOW_AUTHOR_LINKS_SCORING.GOOD.score;
+  else if (showAuthorCount >= SHOW_AUTHOR_LINKS_SCORING.MINIMAL.min) rawScore = SHOW_AUTHOR_LINKS_SCORING.MINIMAL.score;
+  else rawScore = SHOW_AUTHOR_LINKS_SCORING.NONE.score;
+  return 25 - rawScore; // Invert so higher is better
 }
 
 /**
- * Calculate backlinks score (0-25, lower is better)
+ * Calculate backlinks score (0-25, higher is better)
  */
 function calculateBacklinksScore(backlinkCount: number): number {
-  if (backlinkCount >= BACKLINKS_SCORING.EXCELLENT.min) return BACKLINKS_SCORING.EXCELLENT.score;
-  if (backlinkCount >= BACKLINKS_SCORING.GOOD.min) return BACKLINKS_SCORING.GOOD.score;
-  if (backlinkCount >= BACKLINKS_SCORING.FAIR.min) return BACKLINKS_SCORING.FAIR.score;
-  if (backlinkCount >= BACKLINKS_SCORING.MINIMAL.min) return BACKLINKS_SCORING.MINIMAL.score;
-  return BACKLINKS_SCORING.NONE.score;
+  let rawScore: number;
+  if (backlinkCount >= BACKLINKS_SCORING.EXCELLENT.min) rawScore = BACKLINKS_SCORING.EXCELLENT.score;
+  else if (backlinkCount >= BACKLINKS_SCORING.GOOD.min) rawScore = BACKLINKS_SCORING.GOOD.score;
+  else if (backlinkCount >= BACKLINKS_SCORING.FAIR.min) rawScore = BACKLINKS_SCORING.FAIR.score;
+  else if (backlinkCount >= BACKLINKS_SCORING.MINIMAL.min) rawScore = BACKLINKS_SCORING.MINIMAL.score;
+  else rawScore = BACKLINKS_SCORING.NONE.score;
+  return 25 - rawScore; // Invert so higher is better
 }
 
 /**
- * Get score level from total score
+ * Get score level from total score (higher = better)
  */
 function getScoreLevel(score: number): 'excellent' | 'good' | 'fair' | 'poor' {
-  if (score <= 25) return 'excellent';
-  if (score <= 50) return 'good';
-  if (score <= 75) return 'fair';
+  if (score >= 75) return 'excellent';
+  if (score >= 50) return 'good';
+  if (score >= 25) return 'fair';
   return 'poor';
 }
 
@@ -515,10 +521,10 @@ async function main() {
   console.log(`   Errors:             ${allStats.errors}`);
   console.log('────────────────────────────────────────────────────────────');
   console.log('   Score Distribution:');
-  console.log(`      🟢 Excellent (0-25):   ${allStats.scoreDistribution.excellent}`);
-  console.log(`      🔵 Good (26-50):       ${allStats.scoreDistribution.good}`);
-  console.log(`      🟡 Fair (51-75):       ${allStats.scoreDistribution.fair}`);
-  console.log(`      🔴 Poor (76-100):      ${allStats.scoreDistribution.poor}`);
+  console.log(`      🟢 Excellent (75-100): ${allStats.scoreDistribution.excellent}`);
+  console.log(`      🔵 Good (50-74):       ${allStats.scoreDistribution.good}`);
+  console.log(`      🟡 Fair (25-49):       ${allStats.scoreDistribution.fair}`);
+  console.log(`      🔴 Poor (0-24):        ${allStats.scoreDistribution.poor}`);
   console.log('════════════════════════════════════════════════════════════');
 
   if (dryRun) {

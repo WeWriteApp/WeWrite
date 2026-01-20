@@ -53,18 +53,18 @@ function FactorRow({
   const info = PAGE_SCORE_FACTOR_INFO[factorKey];
   const percentage = Math.min(100, (score / maxScore) * 100);
 
-  // Lower score = better quality, so invert color logic
+  // Higher score = better quality
   const getScoreColor = (score: number) => {
-    if (score <= 5) return 'text-green-600 dark:text-green-400';
-    if (score <= 10) return 'text-blue-600 dark:text-blue-400';
-    if (score <= 15) return 'text-yellow-600 dark:text-yellow-400';
+    if (score >= 20) return 'text-green-600 dark:text-green-400';
+    if (score >= 15) return 'text-blue-600 dark:text-blue-400';
+    if (score >= 10) return 'text-yellow-600 dark:text-yellow-400';
     return 'text-red-600 dark:text-red-400';
   };
 
   const getProgressColor = (score: number) => {
-    if (score <= 5) return 'bg-green-500';
-    if (score <= 10) return 'bg-blue-500';
-    if (score <= 15) return 'bg-yellow-500';
+    if (score >= 20) return 'bg-green-500';
+    if (score >= 15) return 'bg-blue-500';
+    if (score >= 10) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
@@ -130,7 +130,7 @@ export function PageScoreBreakdown({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 px-6 pb-6">
           {/* Page Title */}
           <div className="text-sm text-muted-foreground truncate">
             {pageTitle}
@@ -157,7 +157,7 @@ export function PageScoreBreakdown({
           <div className="flex items-start gap-2 p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
             <Icon name="Info" size={14} className="text-blue-500 mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Lower scores indicate higher quality pages. A score of 0 means excellent community engagement.
+              Higher scores indicate higher quality pages. A score of 100 means excellent community engagement.
             </p>
           </div>
 

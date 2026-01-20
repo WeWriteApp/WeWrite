@@ -1,14 +1,15 @@
 /**
  * Risk Score Badge Component
  *
- * Displays a color-coded badge indicating user risk level.
+ * Displays a color-coded badge indicating user trust level.
  * Used in admin users table and user detail views.
+ * Note: HIGHER scores = MORE TRUSTED (100 = trusted, 0 = suspicious)
  *
- * Risk Levels:
- * - 0-30:  Green  (Low risk - Allow)
- * - 31-60: Yellow (Medium risk - Soft challenge)
- * - 61-85: Orange (High risk - Hard challenge)
- * - 86-100: Red   (Critical risk - Block)
+ * Trust Levels:
+ * - 75-100: Green  (Trusted - Allow)
+ * - 50-74:  Yellow (Medium - Soft challenge)
+ * - 25-49:  Orange (Suspicious - Hard challenge)
+ * - 0-24:   Red    (Very Suspicious - Block)
  *
  * @see app/services/RiskScoringService.ts
  */
@@ -36,16 +37,18 @@ interface RiskScoreBadgeProps {
   className?: string;
 }
 
+// Trust score thresholds (higher = more trusted)
 const RISK_THRESHOLDS = {
-  ALLOW: 30,
-  SOFT_CHALLENGE: 60,
-  HARD_CHALLENGE: 85,
+  ALLOW: 75,           // 75-100: Trusted
+  SOFT_CHALLENGE: 50,  // 50-74: Medium
+  HARD_CHALLENGE: 25,  // 25-49: Suspicious
 };
 
 function scoreToLevel(score: number): RiskLevel {
-  if (score <= RISK_THRESHOLDS.ALLOW) return 'allow';
-  if (score <= RISK_THRESHOLDS.SOFT_CHALLENGE) return 'soft_challenge';
-  if (score <= RISK_THRESHOLDS.HARD_CHALLENGE) return 'hard_challenge';
+  // Higher scores = more trusted
+  if (score >= RISK_THRESHOLDS.ALLOW) return 'allow';
+  if (score >= RISK_THRESHOLDS.SOFT_CHALLENGE) return 'soft_challenge';
+  if (score >= RISK_THRESHOLDS.HARD_CHALLENGE) return 'hard_challenge';
   return 'block';
 }
 
@@ -59,30 +62,30 @@ function levelToConfig(level: RiskLevel): {
     case 'allow':
       return {
         variant: 'success-secondary',
-        label: 'Low',
+        label: 'Trusted',
         icon: 'ShieldCheck',
-        description: 'No suspicious activity detected. User can proceed without challenges.',
+        description: 'Account appears legitimate. User can proceed without challenges.',
       };
     case 'soft_challenge':
       return {
         variant: 'warning-secondary',
         label: 'Medium',
         icon: 'ShieldAlert',
-        description: 'Some risk signals detected. User may see invisible CAPTCHA challenges.',
+        description: 'Some verification needed. User may see invisible CAPTCHA challenges.',
       };
     case 'hard_challenge':
       return {
         variant: 'destructive-secondary',
-        label: 'High',
+        label: 'Suspicious',
         icon: 'Shield',
-        description: 'Multiple risk signals detected. User will see visible CAPTCHA challenges.',
+        description: 'Multiple suspicious signals detected. User will see visible CAPTCHA challenges.',
       };
     case 'block':
       return {
         variant: 'destructive-secondary',
-        label: 'Critical',
+        label: 'Very Suspicious',
         icon: 'ShieldX',
-        description: 'High-risk activity detected. User actions may be blocked pending review.',
+        description: 'Account likely automated or spam. User actions may be blocked pending review.',
       };
   }
 }
@@ -140,13 +143,13 @@ export function RiskScoreBadge({
           <div className="space-y-1">
             <div className="font-semibold flex items-center gap-1">
               <Icon name={config.icon} size={14} />
-              Risk Level: {config.label} ({score}/100)
+              Trust Level: {config.label} ({score}/100)
             </div>
             <p className="text-xs text-muted-foreground">
               {config.description}
             </p>
             <p className="text-xs text-muted-foreground border-t pt-1 mt-1">
-              Score based on bot detection, account trust, IP reputation, and activity patterns.
+              Higher scores = more trusted. Based on bot detection, account age, IP reputation, and activity patterns.
             </p>
           </div>
         </TooltipContent>
@@ -156,7 +159,8 @@ export function RiskScoreBadge({
 }
 
 /**
- * Inline risk indicator for compact spaces
+ * Inline trust indicator for compact spaces
+ * Higher scores = more trusted (green), lower = suspicious (red)
  */
 export function RiskIndicator({
   score,
@@ -171,6 +175,7 @@ export function RiskIndicator({
 
   const level = scoreToLevel(score);
 
+  // Colors based on trust level: green = trusted, red = suspicious
   const colorClasses: Record<RiskLevel, string> = {
     allow: 'text-green-600 dark:text-green-400',
     soft_challenge: 'text-yellow-600 dark:text-yellow-400',

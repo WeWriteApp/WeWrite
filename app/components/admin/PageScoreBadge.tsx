@@ -3,13 +3,13 @@
  *
  * Displays a color-coded badge indicating page quality level.
  * Used in admin page lists and page detail views.
- * Note: LOWER scores = BETTER quality (opposite of risk scoring)
+ * Note: HIGHER scores = BETTER quality (100 = excellent, 0 = poor)
  *
  * Quality Levels:
- * - 0-25:  Green  (Excellent - well-connected, community-engaged)
- * - 26-50: Blue   (Good - some engagement)
- * - 51-75: Yellow (Fair - limited community connection)
- * - 76-100: Red   (Poor - isolated or low-quality)
+ * - 75-100: Green  (Excellent - well-connected, community-engaged)
+ * - 50-74:  Blue   (Good - some engagement)
+ * - 25-49:  Yellow (Fair - limited community connection)
+ * - 0-24:   Red    (Poor - isolated or low-quality)
  *
  * @see app/services/PageScoringService.ts
  */
@@ -142,7 +142,7 @@ export function PageScoreBadge({
               {config.description}
             </p>
             <p className="text-xs text-muted-foreground border-t pt-1 mt-1">
-              Lower scores = better quality. Based on link patterns and community engagement.
+              Higher scores = better quality. Based on link patterns and community engagement.
             </p>
             {onClick && (
               <p className="text-xs text-primary">Click for detailed breakdown</p>

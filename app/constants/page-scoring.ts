@@ -7,17 +7,17 @@
  * - Activity feed filtering
  * - API documentation
  *
- * Note: Lower scores = BETTER quality (opposite of risk scoring)
+ * Note: Higher scores = BETTER quality (100 = excellent, 0 = poor)
  */
 
 /**
- * Page score thresholds (lower = better)
+ * Page score thresholds (higher = better)
  */
 export const PAGE_SCORE_THRESHOLDS = {
-  EXCELLENT: 25,  // 0-25: Well-connected, community-engaged
-  GOOD: 50,       // 26-50: Some engagement
-  FAIR: 75,       // 51-75: Limited community connection
-  POOR: 100       // 76-100: Isolated or low-quality
+  EXCELLENT: 75,  // 75-100: Well-connected, community-engaged
+  GOOD: 50,       // 50-74: Some engagement
+  FAIR: 25,       // 25-49: Limited community connection
+  POOR: 0         // 0-24: Isolated or low-quality
 } as const;
 
 /**
@@ -28,25 +28,25 @@ export const PAGE_SCORE_LEVELS = {
     label: 'Excellent',
     color: 'green',
     description: 'Well-connected, community-engaged page',
-    range: '0-25'
+    range: '75-100'
   },
   good: {
     label: 'Good',
     color: 'blue',
     description: 'Some community engagement',
-    range: '26-50'
+    range: '50-74'
   },
   fair: {
     label: 'Fair',
     color: 'yellow',
     description: 'Limited community connection',
-    range: '51-75'
+    range: '25-49'
   },
   poor: {
     label: 'Poor',
     color: 'red',
     description: 'Isolated or potentially low-quality',
-    range: '76-100'
+    range: '0-24'
   }
 } as const;
 
@@ -54,7 +54,7 @@ export const PAGE_SCORE_LEVELS = {
  * Page score factor information for documentation
  * Used in admin UI breakdown component
  *
- * Each factor contributes 0-25 points (lower = better)
+ * Each factor contributes 0-25 points (higher = better)
  * Total max score: 100 (4 factors x 25 points)
  */
 export const PAGE_SCORE_FACTOR_INFO = {
@@ -62,28 +62,28 @@ export const PAGE_SCORE_FACTOR_INFO = {
     icon: 'ExternalLink',
     label: 'External Link Ratio',
     description: 'Ratio of external links to internal links. High external without internal is a spam signal.',
-    scoreExplanation: '0 = No external links or balanced ratio. 25 = Only external links with no internal links.',
+    scoreExplanation: '25 = No external links or balanced ratio. 0 = Only external links with no internal links.',
     maxScore: 25
   },
   internalUserLinks: {
     icon: 'Users',
     label: 'Links to Other Users',
     description: 'Internal links to pages owned by OTHER users (not your own). Shows community engagement.',
-    scoreExplanation: '0 = 5+ links to other users\' pages. 25 = No links to other users\' content.',
+    scoreExplanation: '25 = 5+ links to other users\' pages. 0 = No links to other users\' content.',
     maxScore: 25
   },
   showAuthorLinks: {
     icon: 'UserCheck',
     label: 'Author Attribution',
     description: 'Links with "Show Author" enabled, crediting the page creator.',
-    scoreExplanation: '0 = 3+ links with author attribution. 25 = No author attribution links.',
+    scoreExplanation: '25 = 3+ links with author attribution. 0 = No author attribution links.',
     maxScore: 25
   },
   backlinks: {
     icon: 'Link2',
     label: 'Backlinks Received',
     description: 'Other pages linking TO this page. Indicates valuable, reference-worthy content.',
-    scoreExplanation: '0 = 5+ other pages link to this. 25 = No other pages link to this.',
+    scoreExplanation: '25 = 5+ other pages link to this. 0 = No other pages link to this.',
     maxScore: 25
   }
 } as const;
@@ -121,12 +121,12 @@ export const BACKLINKS_SCORING = {
 } as const;
 
 /**
- * Helper function to get page score level from score
+ * Helper function to get page score level from score (higher = better)
  */
 export function getPageScoreLevelFromScore(score: number): keyof typeof PAGE_SCORE_LEVELS {
-  if (score <= PAGE_SCORE_THRESHOLDS.EXCELLENT) return 'excellent';
-  if (score <= PAGE_SCORE_THRESHOLDS.GOOD) return 'good';
-  if (score <= PAGE_SCORE_THRESHOLDS.FAIR) return 'fair';
+  if (score >= PAGE_SCORE_THRESHOLDS.EXCELLENT) return 'excellent';
+  if (score >= PAGE_SCORE_THRESHOLDS.GOOD) return 'good';
+  if (score >= PAGE_SCORE_THRESHOLDS.FAIR) return 'fair';
   return 'poor';
 }
 

@@ -2,15 +2,15 @@
  * Risk Scoring Service
  *
  * Central risk assessment engine that combines multiple signals to calculate
- * a risk score (0-100) for actions and users.
+ * a trust score (0-100) for actions and users.
  *
- * RISK SCORE THRESHOLDS:
- * - 0-30:  ALLOW     - No challenge required
- * - 31-60: SOFT      - Invisible Turnstile challenge
- * - 61-85: HARD      - Visible Turnstile challenge required
- * - 86-100: BLOCK    - Action blocked, logged for review
+ * TRUST SCORE THRESHOLDS (higher = more trusted):
+ * - 75-100: ALLOW     - No challenge required (trusted)
+ * - 50-74:  SOFT      - Invisible Turnstile challenge
+ * - 25-49:  HARD      - Visible Turnstile challenge required
+ * - 0-24:   BLOCK     - Action blocked, logged for review
  *
- * RISK FACTORS:
+ * TRUST FACTORS (higher = more trusted):
  * - Bot detection confidence (from BotDetectionService)
  * - IP reputation
  * - Account age & trust level
@@ -44,13 +44,13 @@ export type ActionType =
 
 export interface RiskFactors {
   botDetection: {
-    score: number;      // 0-100 (higher = more risky)
+    score: number;      // 0-100 (higher = more trusted/human)
     confidence: number; // 0-1
     reasons: string[];
     category?: string;
   };
   ipReputation: {
-    score: number;      // 0-100 (higher = more risky)
+    score: number;      // 0-100 (higher = cleaner IP)
     isProxy: boolean;
     isVpn: boolean;
     isTor: boolean;
@@ -59,8 +59,7 @@ export interface RiskFactors {
     threatLevel?: 'none' | 'low' | 'medium' | 'high';
   };
   accountTrust: {
-    score: number;      // 0-100 (higher = more trusted = lower risk)
-    riskScore: number;  // 0-100 (higher = more risky) - inverted trust score for display
+    score: number;      // 0-100 (higher = more trusted)
     accountAge: number; // days
     emailVerified: boolean;
     hasActivity: boolean;
@@ -69,19 +68,19 @@ export interface RiskFactors {
     pwaSpoof?: boolean; // True if PWA claimed but never verified + no content (bot farm indicator)
   };
   behavioral: {
-    score: number;      // 0-100 (higher = more risky)
+    score: number;      // 0-100 (higher = more trusted/normal)
     sessionDuration: number; // seconds
     interactions: number;
     suspiciousPatterns: string[];
   };
   velocity: {
-    score: number;      // 0-100 (higher = more risky)
+    score: number;      // 0-100 (higher = normal rate)
     recentActions: number;
     threshold: number;
     exceededLimit: boolean;
   };
   contentBehavior: {
-    score: number;      // 0-100 (higher = more risky)
+    score: number;      // 0-100 (higher = good content patterns)
     pageCount: number;
     hasExternalLinks: boolean;
     externalLinkCount: number;
@@ -90,7 +89,7 @@ export interface RiskFactors {
     suspiciousPatterns: string[];
   };
   financialTrust: {
-    score: number;      // 0-100 (higher = more risky, 0 = highly trusted paying user)
+    score: number;      // 0-100 (higher = paying user, more trusted)
     hasActiveSubscription: boolean;
     subscriptionAmountCents: number;
     hasAllocatedToOthers: boolean;  // Key trust signal: spending money to support others
@@ -135,14 +134,15 @@ export interface RiskAssessmentInput {
 // Configuration
 // ============================================================================
 
+// Trust score thresholds (higher = more trusted)
 const RISK_THRESHOLDS = {
-  ALLOW: 30,
-  SOFT_CHALLENGE: 60,
-  HARD_CHALLENGE: 85,
-  BLOCK: 100
+  ALLOW: 75,           // 75-100: Trusted
+  SOFT_CHALLENGE: 50,  // 50-74: Medium
+  HARD_CHALLENGE: 25,  // 25-49: Suspicious
+  BLOCK: 0             // 0-24: Very suspicious
 };
 
-// Risk factor importance multipliers
+// Trust factor importance multipliers
 // Higher importance = factor counts more in the weighted average
 // Financial trust is 3x because paying users are extremely unlikely to be bots
 export const RISK_FACTOR_IMPORTANCE: Record<string, number> = {
@@ -188,11 +188,11 @@ export class RiskScoringService {
   private static CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   /**
-   * Calculate comprehensive risk score for an action
+   * Calculate comprehensive trust score for an action
    *
-   * IMPORTANT: All risk factors use 0-100 scale where HIGHER = MORE RISKY
+   * IMPORTANT: All factors use 0-100 scale where HIGHER = MORE TRUSTED
    * The overall score is a weighted average based on RISK_FACTOR_IMPORTANCE
-   * Financial trust has 2x importance because paying users are unlikely to be bots
+   * Financial trust has 3x importance because paying users are unlikely to be bots
    */
   static async assessRisk(input: RiskAssessmentInput): Promise<RiskAssessment> {
     const factors: RiskFactors = {
@@ -205,19 +205,18 @@ export class RiskScoringService {
       financialTrust: await this.assessFinancialTrust(input.userId)
     };
 
-    // Calculate weighted average of all risk scores
-    // Note: accountTrust.riskScore is used (already inverted from trust score)
+    // Calculate weighted average of all trust scores (higher = more trusted)
     // Financial trust has 3x importance because paying users are unlikely to be bots
-    const weightedRiskScore =
+    const weightedTrustScore =
       factors.botDetection.score * RISK_FACTOR_IMPORTANCE.botDetection +
       factors.ipReputation.score * RISK_FACTOR_IMPORTANCE.ipReputation +
-      factors.accountTrust.riskScore * RISK_FACTOR_IMPORTANCE.accountTrust +
+      factors.accountTrust.score * RISK_FACTOR_IMPORTANCE.accountTrust +
       factors.behavioral.score * RISK_FACTOR_IMPORTANCE.behavioral +
       factors.velocity.score * RISK_FACTOR_IMPORTANCE.velocity +
       factors.contentBehavior.score * RISK_FACTOR_IMPORTANCE.contentBehavior +
       factors.financialTrust.score * RISK_FACTOR_IMPORTANCE.financialTrust;
 
-    const score = Math.min(100, Math.max(0, Math.round(weightedRiskScore / TOTAL_IMPORTANCE_WEIGHT)));
+    const score = Math.min(100, Math.max(0, Math.round(weightedTrustScore / TOTAL_IMPORTANCE_WEIGHT)));
     const level = this.scoreToLevel(score);
     const reasons = this.collectReasons(factors);
 
@@ -240,7 +239,7 @@ export class RiskScoringService {
   }
 
   /**
-   * Quick risk check without full assessment (for high-volume endpoints)
+   * Quick trust check without full assessment (for high-volume endpoints)
    */
   static async quickRiskCheck(input: {
     userId?: string;
@@ -253,28 +252,29 @@ export class RiskScoringService {
       ? BotDetectionService.detectBot(input.userAgent)
       : { isBot: false, confidence: 0 };
 
-    // If clearly a bot, short-circuit
+    // If clearly a bot, short-circuit with low trust
     if (botResult.isBot && botResult.confidence > 0.8) {
       return {
-        score: 90,
+        score: 10,  // Very low trust
         level: 'block',
         shouldChallenge: false // Block instead of challenge
       };
     }
 
-    // Quick account age check
-    let accountScore = 50; // Default to medium risk
+    // Quick account age check - higher = more trusted
+    let accountTrustScore = 50; // Default to medium
     if (input.userId) {
       const userData = await this.getCachedUserData(input.userId);
       if (userData?.createdAt) {
         const ageInDays = this.getAccountAgeDays(userData.createdAt);
-        accountScore = ageInDays > ACCOUNT_AGE_THRESHOLDS.TRUSTED ? 20 : ageInDays > ACCOUNT_AGE_THRESHOLDS.REGULAR ? 40 : 60;
+        accountTrustScore = ageInDays > ACCOUNT_AGE_THRESHOLDS.TRUSTED ? 80 : ageInDays > ACCOUNT_AGE_THRESHOLDS.REGULAR ? 60 : 40;
       }
     }
 
-    const score = Math.round(
-      botResult.confidence * 100 * 0.5 + accountScore * 0.5
-    );
+    // Bot trust score: high confidence bot = low trust
+    const botTrustScore = Math.round((1 - botResult.confidence) * 100);
+
+    const score = Math.round(botTrustScore * 0.5 + accountTrustScore * 0.5);
     const level = this.scoreToLevel(score);
 
     return {
@@ -285,7 +285,7 @@ export class RiskScoringService {
   }
 
   /**
-   * Get risk level for a user (for display in admin)
+   * Get trust level for a user (for display in admin)
    *
    * Uses weighted average based on RISK_FACTOR_IMPORTANCE
    * Financial trust has 3x importance because paying users are unlikely to be bots
@@ -297,27 +297,27 @@ export class RiskScoringService {
     lastAssessment?: Date;
   }> {
     const factors: RiskFactors = {
-      botDetection: { score: 0, confidence: 0, reasons: [] },
+      botDetection: { score: 100, confidence: 0, reasons: [] }, // Default to trusted (no bot info)
       ipReputation: await this.assessIPRisk(undefined), // Will use cached/default
       accountTrust: await this.assessAccountTrust(userId),
-      behavioral: { score: 0, suspiciousPatterns: [], sessionDuration: 0, interactions: 0 },
+      behavioral: { score: 100, suspiciousPatterns: [], sessionDuration: 0, interactions: 0 }, // Default to trusted
       velocity: await this.assessVelocityRisk({ action: 'create_page', userId }),
       contentBehavior: await this.assessContentBehavior(userId),
       financialTrust: await this.assessFinancialTrust(userId)
     };
 
-    // Weighted average of all risk scores
+    // Weighted average of all trust scores (higher = more trusted)
     // Financial trust has 3x importance because paying users are unlikely to be bots
-    const weightedRiskScore =
+    const weightedTrustScore =
       factors.botDetection.score * RISK_FACTOR_IMPORTANCE.botDetection +
       factors.ipReputation.score * RISK_FACTOR_IMPORTANCE.ipReputation +
-      factors.accountTrust.riskScore * RISK_FACTOR_IMPORTANCE.accountTrust +
+      factors.accountTrust.score * RISK_FACTOR_IMPORTANCE.accountTrust +
       factors.behavioral.score * RISK_FACTOR_IMPORTANCE.behavioral +
       factors.velocity.score * RISK_FACTOR_IMPORTANCE.velocity +
       factors.contentBehavior.score * RISK_FACTOR_IMPORTANCE.contentBehavior +
       factors.financialTrust.score * RISK_FACTOR_IMPORTANCE.financialTrust;
 
-    const score = Math.min(100, Math.max(0, Math.round(weightedRiskScore / TOTAL_IMPORTANCE_WEIGHT)));
+    const score = Math.min(100, Math.max(0, Math.round(weightedTrustScore / TOTAL_IMPORTANCE_WEIGHT)));
 
     // Get last assessment timestamp
     let lastAssessment: Date | undefined;
@@ -352,13 +352,14 @@ export class RiskScoringService {
 
   private static async assessBotRisk(input: RiskAssessmentInput): Promise<RiskFactors['botDetection']> {
     if (!input.userAgent) {
-      return { score: 30, confidence: 0, reasons: ['No user agent provided'] };
+      return { score: 70, confidence: 0, reasons: ['No user agent provided'] };
     }
 
     const result = BotDetectionService.detectBot(input.userAgent, input.fingerprint);
 
-    // Convert confidence (0-1) to risk score (0-100)
-    const score = Math.round(result.confidence * 100);
+    // Convert confidence (0-1) to trust score (0-100)
+    // High bot confidence = low trust
+    const score = Math.round((1 - result.confidence) * 100);
 
     return {
       score,
@@ -372,7 +373,7 @@ export class RiskScoringService {
     // Default response for when IP is not available
     if (!ip) {
       return {
-        score: 20, // Low default risk
+        score: 80, // High default trust (no IP doesn't mean risky)
         isProxy: false,
         isVpn: false,
         isTor: false,
@@ -393,7 +394,12 @@ export class RiskScoringService {
 
         // Cache valid for 24 hours
         if (cacheAge < 24 * 60 * 60 * 1000) {
-          return cached.reputation as RiskFactors['ipReputation'];
+          // Invert old cached scores to new trust scores
+          const oldScore = cached.reputation?.score ?? 20;
+          return {
+            ...cached.reputation,
+            score: 100 - oldScore
+          } as RiskFactors['ipReputation'];
         }
       }
     } catch {
@@ -402,8 +408,9 @@ export class RiskScoringService {
 
     // For now, return default (external IP service integration in Phase 6)
     // This will be enhanced with IPQualityScore or AbuseIPDB
+    // Higher score = more trusted
     const reputation: RiskFactors['ipReputation'] = {
-      score: 20,
+      score: 80, // Default to trusted
       isProxy: false,
       isVpn: false,
       isTor: false,
@@ -411,9 +418,9 @@ export class RiskScoringService {
       threatLevel: 'none'
     };
 
-    // Detect common datacenter/proxy ranges (basic check)
+    // Detect common datacenter/proxy ranges (basic check) - reduce trust
     if (ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('172.')) {
-      reputation.score = 40;
+      reputation.score = 60; // Lower trust for datacenter IPs
       reputation.isDatacenter = true;
     }
 
@@ -421,11 +428,10 @@ export class RiskScoringService {
   }
 
   private static async assessAccountTrust(userId?: string): Promise<RiskFactors['accountTrust']> {
-    // No user = high risk
+    // No user = low trust
     if (!userId) {
       return {
-        score: 20, // Low trust score = high risk
-        riskScore: 80, // Inverted: 100 - 20 = 80 (high risk)
+        score: 20, // Low trust score
         accountAge: 0,
         emailVerified: false,
         hasActivity: false,
@@ -438,8 +444,7 @@ export class RiskScoringService {
 
     if (!userData) {
       return {
-        score: 20,
-        riskScore: 80, // Inverted: high risk for unknown user
+        score: 20, // Low trust for unknown user
         accountAge: 0,
         emailVerified: false,
         hasActivity: false,
@@ -501,16 +506,13 @@ export class RiskScoringService {
     const pwaStatus = await this.checkPWAStatus(userId);
     let pwaSpoof = false;
     if (pwaStatus.hasPWAInstall && !pwaStatus.hasPWAVerified && contentCount === 0) {
-      // Reduce trust score (which increases risk score)
+      // Reduce trust score
       trustScore = Math.max(0, trustScore - 15);
       pwaSpoof = true;
     }
 
-    const riskScore = 100 - trustScore;
-
     return {
       score: trustScore,
-      riskScore, // Inverted for risk display (higher trust = lower risk)
       accountAge,
       emailVerified,
       hasActivity,
@@ -522,19 +524,19 @@ export class RiskScoringService {
   }
 
   /**
-   * Assess content behavior risk for a user
+   * Assess content behavior trust for a user
    *
-   * Spammy indicators (increase risk):
-   * - Only 1 page created
-   * - Pages contain external links
-   *
-   * Good indicators (decrease risk):
+   * Good indicators (increase trust):
    * - Multiple pages
    * - Internal links to other WeWrite pages (interconnection)
    * - Being linked TO by other pages (backlinks)
+   *
+   * Suspicious indicators (decrease trust):
+   * - Only 1 page created
+   * - Pages contain external links without internal links
    */
   private static async assessContentBehavior(userId?: string): Promise<RiskFactors['contentBehavior']> {
-    // No user = moderate risk
+    // No user = moderate trust
     if (!userId) {
       return {
         score: 50,
@@ -548,7 +550,7 @@ export class RiskScoringService {
     }
 
     const suspiciousPatterns: string[] = [];
-    let score = 0;
+    let trustScore = 50; // Start at medium trust
 
     try {
       // Get user's pages
@@ -609,56 +611,55 @@ export class RiskScoringService {
       const hasExternalLinks = externalLinkCount > 0;
       const hasInternalLinks = internalLinkCount > 0;
 
-      // Risk scoring logic:
+      // Trust scoring logic (higher = more trusted):
 
-      // Only 1 page is suspicious (+30 risk)
-      if (pageCount === 1) {
-        score += 30;
+      // Multiple pages is GOOD behavior (+15 trust for 2+, +25 for 5+)
+      if (pageCount >= 5) {
+        trustScore += 25;
+      } else if (pageCount >= 2) {
+        trustScore += 15;
+      } else if (pageCount === 1) {
+        // Only 1 page is suspicious (-20 trust)
+        trustScore -= 20;
         suspiciousPatterns.push('Only 1 page created');
-      } else if (pageCount === 0) {
-        score += 20; // No pages yet - some risk
+      } else {
+        // No pages yet - lower trust
+        trustScore -= 15;
         suspiciousPatterns.push('No pages created');
       }
 
-      // External links are suspicious (+15 risk per link, max +45)
+      // Internal links are GOOD behavior (+10 trust per link, max +25)
+      if (internalLinkCount > 0) {
+        const internalBonus = Math.min(25, internalLinkCount * 10);
+        trustScore += internalBonus;
+      }
+
+      // Being linked TO by others is GOOD behavior (+15 trust)
+      if (totalBacklinks > 0) {
+        trustScore += 15;
+      }
+
+      // External links reduce trust (-10 trust per link, max -30)
       if (externalLinkCount > 0) {
-        const externalRisk = Math.min(45, externalLinkCount * 15);
-        score += externalRisk;
+        const externalPenalty = Math.min(30, externalLinkCount * 10);
+        trustScore -= externalPenalty;
         suspiciousPatterns.push(`${externalLinkCount} external link${externalLinkCount > 1 ? 's' : ''}`);
       }
 
       // HIGH EXTERNAL / LOW INTERNAL RATIO is very suspicious
       // This is a strong spam indicator: spammers add external links but don't engage with the community
       if (externalLinkCount > 0 && internalLinkCount === 0) {
-        // External links but NO internal links = very suspicious
-        score += 35;
+        // External links but NO internal links = very suspicious (-25 trust)
+        trustScore -= 25;
         suspiciousPatterns.push('External links without any internal links');
       } else if (externalLinkCount > internalLinkCount * 2 && externalLinkCount >= 2) {
-        // More than 2x external links vs internal links = suspicious
-        score += 20;
+        // More than 2x external links vs internal links = suspicious (-15 trust)
+        trustScore -= 15;
         suspiciousPatterns.push('High external-to-internal link ratio');
       }
 
-      // Internal links are GOOD behavior (-10 risk per link, min 0)
-      if (internalLinkCount > 0) {
-        const internalBonus = Math.min(30, internalLinkCount * 10);
-        score = Math.max(0, score - internalBonus);
-      }
-
-      // Multiple pages is GOOD behavior (-15 risk for 2+, -25 for 5+)
-      if (pageCount >= 5) {
-        score = Math.max(0, score - 25);
-      } else if (pageCount >= 2) {
-        score = Math.max(0, score - 15);
-      }
-
-      // Being linked TO by others is GOOD behavior (-20 risk)
-      if (totalBacklinks > 0) {
-        score = Math.max(0, score - 20);
-      }
-
       return {
-        score: Math.min(100, Math.max(0, score)),
+        score: Math.min(100, Math.max(0, trustScore)),
         pageCount,
         hasExternalLinks,
         externalLinkCount,
@@ -667,9 +668,9 @@ export class RiskScoringService {
         suspiciousPatterns
       };
     } catch (error) {
-      // On error, return moderate risk
+      // On error, return moderate trust
       return {
-        score: 30,
+        score: 50,
         pageCount: 0,
         hasExternalLinks: false,
         externalLinkCount: 0,
@@ -683,11 +684,11 @@ export class RiskScoringService {
   /**
    * Assess financial trust for a user
    *
-   * HIGHEST TRUST SIGNALS (dramatically reduce risk):
+   * HIGHEST TRUST SIGNALS (dramatically increase trust):
    * - Has active subscription (paying customer)
    * - Has allocated money to other writers (supporting the platform)
    *
-   * GOOD TRUST SIGNALS (reduce risk):
+   * GOOD TRUST SIGNALS (increase trust):
    * - Has earnings (legitimate creator)
    * - Has payout setup (committed to platform)
    *
@@ -697,10 +698,10 @@ export class RiskScoringService {
    * - Legitimate users often have financial relationships
    */
   private static async assessFinancialTrust(userId?: string): Promise<RiskFactors['financialTrust']> {
-    // No user = high risk (no financial trust)
+    // No user = low trust (no financial trust)
     if (!userId) {
       return {
-        score: 70, // High risk for no user
+        score: 30, // Low trust for no user
         hasActiveSubscription: false,
         subscriptionAmountCents: 0,
         hasAllocatedToOthers: false,
@@ -715,7 +716,7 @@ export class RiskScoringService {
 
     const trustIndicators: string[] = [];
     const riskIndicators: string[] = [];
-    let score = 50; // Start at medium risk
+    let trustScore = 50; // Start at medium trust
 
     try {
       // Get user data for basic financial info
@@ -724,7 +725,7 @@ export class RiskScoringService {
       // Check for Stripe connected account (payout setup)
       const hasPayoutSetup = !!userData?.stripeConnectedAccountId;
       if (hasPayoutSetup) {
-        score -= 10;
+        trustScore += 10;
         trustIndicators.push('Payout account setup');
       }
 
@@ -744,12 +745,12 @@ export class RiskScoringService {
             subscriptionAmountCents = subData?.amount || 0;
 
             // MAJOR trust signal - paying customer
-            score -= 30; // Significant risk reduction
+            trustScore += 30; // Significant trust boost
             trustIndicators.push(`Active subscription ($${(subscriptionAmountCents / 100).toFixed(2)}/mo)`);
 
             // Higher subscription = even more trust
             if (subscriptionAmountCents >= 2000) { // $20+/mo
-              score -= 10;
+              trustScore += 10;
               trustIndicators.push('Premium subscriber');
             }
           }
@@ -779,7 +780,7 @@ export class RiskScoringService {
           });
 
           // MAJOR trust signal - actively supporting other writers
-          score -= 25; // Significant risk reduction
+          trustScore += 25; // Significant trust boost
           trustIndicators.push(`Allocated $${(totalAllocatedCents / 100).toFixed(2)} to ${allocationsSnapshot.size} writer(s)`);
         }
       } catch {
@@ -806,21 +807,21 @@ export class RiskScoringService {
           });
 
           // Good trust signal - legitimate creator
-          score -= 15;
+          trustScore += 15;
           trustIndicators.push(`Earned $${(totalEarningsCents / 100).toFixed(2)} from supporters`);
         }
       } catch {
         // Ignore earnings check errors
       }
 
-      // Add risk indicators for accounts with no financial activity
+      // Reduce trust for accounts with no financial activity
       if (!hasActiveSubscription && !hasAllocatedToOthers && !hasEarnings && !hasPayoutSetup) {
         riskIndicators.push('No financial activity');
-        score += 10; // Slight increase in risk
+        trustScore -= 10; // Slight decrease in trust
       }
 
       return {
-        score: Math.min(100, Math.max(0, score)),
+        score: Math.min(100, Math.max(0, trustScore)),
         hasActiveSubscription,
         subscriptionAmountCents,
         hasAllocatedToOthers,
@@ -832,7 +833,7 @@ export class RiskScoringService {
         riskIndicators
       };
     } catch (error) {
-      // On error, return moderate risk
+      // On error, return moderate trust
       return {
         score: 50,
         hasActiveSubscription: false,
@@ -851,7 +852,7 @@ export class RiskScoringService {
   private static assessBehavioralRisk(sessionData?: RiskAssessmentInput['sessionData']): RiskFactors['behavioral'] {
     if (!sessionData) {
       return {
-        score: 30, // Medium-low risk when no session data
+        score: 70, // Medium-high trust when no session data (can't evaluate)
         sessionDuration: 0,
         interactions: 0,
         suspiciousPatterns: []
@@ -859,34 +860,34 @@ export class RiskScoringService {
     }
 
     const suspiciousPatterns: string[] = [];
-    let score = 0;
+    let trustScore = 100; // Start at full trust
 
     // Very short session with high activity = suspicious
     if (sessionData.duration < 5 && sessionData.pageViews > 10) {
       suspiciousPatterns.push('Rapid page navigation');
-      score += 40;
+      trustScore -= 40;
     }
 
     // No interactions after significant session time = suspicious
     if (sessionData.duration > 30 && sessionData.interactions === 0) {
       suspiciousPatterns.push('No user interactions detected');
-      score += 30;
+      trustScore -= 30;
     }
 
     // Extremely high page views = suspicious
     if (sessionData.pageViews > 100 && sessionData.duration < 300) {
       suspiciousPatterns.push('Excessive page views');
-      score += 50;
+      trustScore -= 50;
     }
 
     // Perfect behavior (possible automation)
     if (sessionData.interactions > 0 && sessionData.interactions === sessionData.pageViews) {
       suspiciousPatterns.push('Uniform interaction pattern');
-      score += 20;
+      trustScore -= 20;
     }
 
     return {
-      score: Math.min(100, score),
+      score: Math.max(0, trustScore),
       sessionDuration: sessionData.duration,
       interactions: sessionData.interactions,
       suspiciousPatterns
@@ -932,7 +933,7 @@ export class RiskScoringService {
         );
       } else {
         return {
-          score: 30,
+          score: 70, // Medium-high trust when can't check
           recentActions: 0,
           threshold,
           exceededLimit: false
@@ -942,9 +943,9 @@ export class RiskScoringService {
       const snapshot = await getDocs(q);
       recentActions = snapshot.size;
     } catch {
-      // If we can't check velocity, assume low risk
+      // If we can't check velocity, assume medium trust
       return {
-        score: 20,
+        score: 80, // High trust when can't check
         recentActions: 0,
         threshold,
         exceededLimit: false
@@ -954,20 +955,20 @@ export class RiskScoringService {
     const exceededLimit = recentActions >= threshold;
     const utilizationRatio = recentActions / threshold;
 
-    // Calculate score based on utilization
-    let score = 0;
+    // Calculate trust score based on utilization (higher = more trusted/normal)
+    let trustScore = 100;
     if (exceededLimit) {
-      score = 100;
+      trustScore = 0; // Rate limit exceeded = no trust
     } else if (utilizationRatio > 0.8) {
-      score = 70;
+      trustScore = 30;
     } else if (utilizationRatio > 0.5) {
-      score = 40;
+      trustScore = 60;
     } else if (utilizationRatio > 0.2) {
-      score = 20;
+      trustScore = 80;
     }
 
     return {
-      score,
+      score: trustScore,
       recentActions,
       threshold,
       exceededLimit
@@ -979,9 +980,10 @@ export class RiskScoringService {
   // ============================================================================
 
   private static scoreToLevel(score: number): RiskLevel {
-    if (score <= RISK_THRESHOLDS.ALLOW) return 'allow';
-    if (score <= RISK_THRESHOLDS.SOFT_CHALLENGE) return 'soft_challenge';
-    if (score <= RISK_THRESHOLDS.HARD_CHALLENGE) return 'hard_challenge';
+    // Higher scores = more trusted
+    if (score >= RISK_THRESHOLDS.ALLOW) return 'allow';
+    if (score >= RISK_THRESHOLDS.SOFT_CHALLENGE) return 'soft_challenge';
+    if (score >= RISK_THRESHOLDS.HARD_CHALLENGE) return 'hard_challenge';
     return 'block';
   }
 

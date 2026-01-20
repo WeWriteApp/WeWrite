@@ -67,7 +67,8 @@ interface RiskAssessmentSectionProps {
   preCalculatedScore?: number;
 }
 
-// Calculate a client-side risk score based on user data
+// Calculate a client-side trust score based on user data
+// Higher = more trusted
 function calculateClientRiskScore(userData: {
   createdAt?: any;
   emailVerified?: boolean;
@@ -76,46 +77,46 @@ function calculateClientRiskScore(userData: {
   isAdmin?: boolean;
   lastLogin?: any;
 }): number {
-  let score = 50; // Start at medium risk
+  let trustScore = 50; // Start at medium trust
 
-  // Account age reduces risk
+  // Account age increases trust
   if (userData.createdAt) {
     const createdDate = userData.createdAt?.toDate?.() || new Date(userData.createdAt);
     const ageInDays = Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (ageInDays > 90) score -= 30;
-    else if (ageInDays > 30) score -= 20;
-    else if (ageInDays > 7) score -= 10;
-    else score += 10;
+    if (ageInDays > 90) trustScore += 30;
+    else if (ageInDays > 30) trustScore += 20;
+    else if (ageInDays > 7) trustScore += 10;
+    else trustScore -= 10;
   } else {
-    score += 10;
+    trustScore -= 10;
   }
 
-  // Email verification reduces risk
+  // Email verification increases trust
   if (userData.emailVerified) {
-    score -= 15;
+    trustScore += 15;
   } else {
-    score += 5;
+    trustScore -= 5;
   }
 
   // Content creation shows engagement
   if (userData.totalPages !== undefined) {
-    if (userData.totalPages > 50) score -= 15;
-    else if (userData.totalPages > 10) score -= 10;
-    else if (userData.totalPages > 0) score -= 5;
-    else score += 5;
+    if (userData.totalPages > 50) trustScore += 15;
+    else if (userData.totalPages > 10) trustScore += 10;
+    else if (userData.totalPages > 0) trustScore += 5;
+    else trustScore -= 5;
   }
 
   // Subscription shows commitment
   if (userData.financial?.hasSubscription) {
-    score -= 10;
+    trustScore += 10;
   }
 
   // Admin users are trusted
   if (userData.isAdmin) {
-    score -= 20;
+    trustScore += 20;
   }
 
-  return Math.max(0, Math.min(100, score));
+  return Math.max(0, Math.min(100, trustScore));
 }
 
 function scoreToLevel(score: number): RiskLevel {
@@ -123,7 +124,7 @@ function scoreToLevel(score: number): RiskLevel {
 }
 
 // Use shared RISK_FACTOR_INFO from constants
-// NOTE: All scores displayed are RISK scores (0-100, higher = more risky)
+// NOTE: All scores displayed are TRUST scores (0-100, higher = more trusted)
 
 export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssessmentSectionProps) {
   const [loading, setLoading] = useState(false);
@@ -195,8 +196,8 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs">
                 <p className="text-xs">
-                  Risk Score measures the likelihood of spam/bot activity based on bot detection,
-                  IP reputation, account behavior, and activity patterns. Lower is better.
+                  Trust Score measures account legitimacy based on bot detection,
+                  IP reputation, account behavior, and activity patterns. Higher is better.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -214,18 +215,18 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
             value={displayScore}
             className="h-2"
             indicatorClassName={
-              displayScore <= 30
+              displayScore >= 75
                 ? 'bg-green-500'
-                : displayScore <= 60
+                : displayScore >= 50
                 ? 'bg-yellow-500'
-                : displayScore <= 85
+                : displayScore >= 25
                 ? 'bg-orange-500'
                 : 'bg-red-500'
             }
           />
           <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>Low Risk</span>
-            <span>High Risk</span>
+            <span>Suspicious</span>
+            <span>Trusted</span>
           </div>
         </div>
       )}
@@ -233,18 +234,15 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
       {/* Factor breakdown */}
       {data?.factors && (
         <div className="space-y-2 pt-2 border-t border-border">
-          <div className="text-xs font-medium text-muted-foreground">Risk Factors</div>
-          <p className="text-[10px] text-muted-foreground -mt-1">Lower is better. Score = average of all factors.</p>
+          <div className="text-xs font-medium text-muted-foreground">Trust Factors</div>
+          <p className="text-[10px] text-muted-foreground -mt-1">Higher is better. Score = weighted average of all factors.</p>
           <div className="space-y-1.5">
             {Object.entries(data.factors).map(([key, value]) => {
               const info = RISK_FACTOR_INFO[key as keyof typeof RISK_FACTOR_INFO];
               if (!info || typeof value !== 'object') return null;
 
-              // For accountTrust, use riskScore (inverted) instead of trust score
-              // All other factors already display as risk scores
-              const factorScore = key === 'accountTrust'
-                ? ((value as any).riskScore ?? (100 - ((value as any).score ?? 0)))
-                : ((value as any).score ?? 0);
+              // All factors now use trust scores (higher = more trusted)
+              const factorScore = (value as any).score ?? 0;
 
               return (
                 <TooltipProvider key={key}>
@@ -264,11 +262,11 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
                           <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full ${
-                                factorScore <= 30
+                                factorScore >= 75
                                   ? 'bg-green-500'
-                                  : factorScore <= 60
+                                  : factorScore >= 50
                                   ? 'bg-yellow-500'
-                                  : factorScore <= 85
+                                  : factorScore >= 25
                                   ? 'bg-orange-500'
                                   : 'bg-red-500'
                               }`}
@@ -393,25 +391,25 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
         <details className="group">
           <summary className="text-[10px] text-muted-foreground cursor-pointer flex items-center gap-1 hover:text-foreground">
             <Icon name="Info" size={10} />
-            <span>How risk scoring works</span>
+            <span>How trust scoring works</span>
             <Icon name="ChevronRight" size={10} className="group-open:rotate-90 transition-transform" />
           </summary>
           <div className="mt-2 text-[10px] text-muted-foreground space-y-2 pl-3 border-l border-border">
-            <p className="font-medium text-foreground">Risk Score = Weighted average of all factors (0-100)</p>
+            <p className="font-medium text-foreground">Trust Score = Weighted average of all factors (0-100, higher = more trusted)</p>
             <p>Factors marked with <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-normal">3x</Badge> count triple in the calculation (financial trust is weighted 3x because bots don&apos;t pay).</p>
 
             <div className="space-y-1">
-              <p className="font-medium">Risk Levels:</p>
+              <p className="font-medium">Trust Levels:</p>
               <ul className="space-y-0.5 ml-2">
-                <li><span className="text-green-600 font-medium">0-30 (Allow)</span>: Trusted user, no challenges</li>
-                <li><span className="text-yellow-600 font-medium">31-60 (Soft Challenge)</span>: Invisible CAPTCHA check</li>
-                <li><span className="text-orange-600 font-medium">61-85 (Hard Challenge)</span>: Visible CAPTCHA required</li>
-                <li><span className="text-red-600 font-medium">86-100 (Block)</span>: Action blocked entirely</li>
+                <li><span className="text-green-600 font-medium">75-100 (Trusted)</span>: Legitimate user, no challenges</li>
+                <li><span className="text-yellow-600 font-medium">50-74 (Medium)</span>: Invisible CAPTCHA check</li>
+                <li><span className="text-orange-600 font-medium">25-49 (Suspicious)</span>: Visible CAPTCHA required</li>
+                <li><span className="text-red-600 font-medium">0-24 (Very Suspicious)</span>: Action blocked entirely</li>
               </ul>
             </div>
 
             <div className="space-y-1">
-              <p className="font-medium">7 Risk Factors Analyzed:</p>
+              <p className="font-medium">7 Trust Factors Analyzed:</p>
               <ol className="space-y-0.5 ml-2 list-decimal list-inside">
                 <li><strong>Bot Detection</strong>: Browser fingerprint, automation signals</li>
                 <li><strong>IP Reputation</strong>: Proxy/VPN/TOR detection, known bad IPs</li>
@@ -424,7 +422,7 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
             </div>
 
             <div className="space-y-1">
-              <p className="font-medium">Trust Signals (Lower Risk):</p>
+              <p className="font-medium">Trust Signals (Higher Score):</p>
               <ul className="space-y-0.5 ml-2 text-green-700 dark:text-green-400">
                 <li>+ Active paid subscription</li>
                 <li>+ Allocates money to other writers</li>
@@ -436,7 +434,7 @@ export function RiskAssessmentSection({ userId, preCalculatedScore }: RiskAssess
             </div>
 
             <div className="space-y-1">
-              <p className="font-medium">Risk Signals (Higher Risk):</p>
+              <p className="font-medium">Suspicious Signals (Lower Score):</p>
               <ul className="space-y-0.5 ml-2 text-red-700 dark:text-red-400">
                 <li>- External links without internal links</li>
                 <li>- High external-to-internal link ratio</li>
