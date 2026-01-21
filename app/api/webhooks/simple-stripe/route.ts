@@ -10,7 +10,7 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { db } from '../../../firebase/database/core';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { calculateTokensForAmount, determineTierFromAmount } from '../../../utils/subscriptionTiers';
 import { getCollectionName } from "../../../utils/environmentConfig";
 
