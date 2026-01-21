@@ -457,7 +457,8 @@ const LinkNode: React.FC<LinkNodeProps> = ({
     // Check if external link should be rendered as plain text (no click functionality)
     // This happens when the author does NOT have an active subscription
     // Note: Grandfathering was removed - all external links now require active subscription
-    const shouldRenderAsPlainText = authorHasSubscription === false;
+    // SECURITY: Use !== true so undefined defaults to disabled (secure by default)
+    const shouldRenderAsPlainText = authorHasSubscription !== true;
 
     // If external link should be disabled (author has no subscription, not grandfathered)
     // The link still looks like a link but is non-interactive
