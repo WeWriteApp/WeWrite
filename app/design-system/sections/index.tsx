@@ -39,6 +39,7 @@ import { TableSection } from './TableSection';
 import { TabsSection } from './TabsSection';
 import { TextareaSection } from './TextareaSection';
 import { TextSelectionMenuSection } from './TextSelectionMenuSection';
+import { ToastSection } from './ToastSection';
 import { TooltipSection } from './TooltipSection';
 import { TurnstileSection } from './TurnstileSection';
 import { TypographySection } from './TypographySection';
@@ -88,6 +89,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'tabs', label: 'Tabs', component: TabsSection },
   { id: 'textarea', label: 'Textarea', component: TextareaSection },
   { id: 'text-selection-menu', label: 'Text Selection Menu', component: TextSelectionMenuSection },
+  { id: 'toast', label: 'Toast', component: ToastSection },
   { id: 'tooltip', label: 'Tooltip', component: TooltipSection },
   { id: 'turnstile', label: 'Turnstile (Spam Prevention)', component: TurnstileSection },
   { id: 'typography', label: 'Typography', component: TypographySection },

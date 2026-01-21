@@ -7,8 +7,7 @@ import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
 import { getPageTitle } from "../../utils/pageUtils";
 import { LinkMigrationHelper } from "../../types/linkNode";
-import { useToast } from "../ui/use-toast";
-import { ToastAction } from "../ui/toast";
+import { toast } from "../ui/use-toast";
 
 // Type definitions
 interface LinkNodeProps {
@@ -45,8 +44,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({
   isPageOwner = false,
   ...attributes
 }) => {
-  const { toast } = useToast();
-
   // Check if we have Slate.js attributes (for editor mode) or not (for viewer mode)
   const hasSlateAttributes = attributes && Object.keys(attributes).length > 0;
 
@@ -474,18 +471,13 @@ const LinkNode: React.FC<LinkNodeProps> = ({
         toast({
           title: "External link unavailable",
           description: "This author doesn't have an active subscription. External links are a paid feature.",
-          variant: "default",
           ...(isPageOwner ? {
-            action: (
-              <ToastAction
-                altText="Upgrade to subscription"
-                onClick={() => {
-                  window.location.href = '/settings/subscription';
-                }}
-              >
-                Upgrade
-              </ToastAction>
-            )
+            action: {
+              label: "Upgrade",
+              onClick: () => {
+                window.location.href = '/settings/subscription';
+              }
+            }
           } : {})
         });
       };

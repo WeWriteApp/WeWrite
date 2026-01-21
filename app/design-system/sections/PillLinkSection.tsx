@@ -5,34 +5,23 @@ import { Icon } from '@/components/ui/Icon';
 import PillLink from '../../components/utils/PillLink';
 import { UsernameBadge } from '../../components/ui/UsernameBadge';
 import { ComponentShowcase, StateDemo } from './shared';
-import { useToast } from '../../components/ui/use-toast';
-import { ToastAction } from '../../components/ui/toast';
+import { toast } from '../../components/ui/use-toast';
 
 export function PillLinkSection({ id }: { id: string }) {
-  const { toast } = useToast();
-
   // Handler for disabled external link clicks - demonstrates the toast message
   const handleDisabledExternalLinkClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast({
-      title: "External link unavailable",
+    toast("External link unavailable", {
       description: "This author doesn't have an active subscription. External links are a paid feature.",
-      variant: "default",
-      action: (
-        <ToastAction
-          altText="Upgrade to subscription"
-          onClick={() => {
-            // In real usage this would navigate to /settings/subscription
-            toast({
-              title: "Demo Mode",
-              description: "In production, this would navigate to subscription settings.",
-            });
-          }}
-        >
-          Upgrade
-        </ToastAction>
-      )
+      action: {
+        label: "Upgrade",
+        onClick: () => {
+          toast("Demo Mode", {
+            description: "In production, this would navigate to subscription settings.",
+          });
+        }
+      }
     });
   };
 
@@ -318,7 +307,7 @@ export function PillLinkSection({ id }: { id: string }) {
                 href="https://example.com"
                 disabled={true}
                 disabledReason="External links are not supported for users without an active subscription"
-                onClick={handleDisabledExternalLinkClick}
+                customOnClick={handleDisabledExternalLinkClick}
               >
                 External Docs
               </PillLink>
@@ -328,7 +317,7 @@ export function PillLinkSection({ id }: { id: string }) {
             <p className="text-sm text-amber-800 dark:text-amber-200">
               <strong>Implementation Note:</strong> The <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">disabled</code> prop for external links
               renders the link as plain text with <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">decoration-dotted</code> underline and <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">cursor-not-allowed</code>.
-              A native <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">title</code> attribute provides a tooltip on hover, and clicking shows a toast explaining external links require a subscription.
+              Uses <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SimpleTooltip</code> (secondary variant) on hover, and clicking/tapping shows a toast explaining external links require a subscription.
             </p>
           </div>
         </div>

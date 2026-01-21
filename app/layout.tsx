@@ -34,6 +34,7 @@ import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
 import UILabelTooltipOverlay from "./components/utils/UILabelTooltipOverlay"
+import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.getwewrite.app'),
@@ -281,6 +282,8 @@ export default function RootLayout({
                                     <GlobalDrawerRenderer />
                                     {/* UI label tooltips for admin debugging */}
                                     <UILabelTooltipOverlay />
+                                    {/* Toast notifications */}
+                                    <Toaster richColors position="bottom-right" />
                                   </SessionAuthInitializer>
                                 </GlobalDrawerProvider>
                               </PreviousRouteProvider>

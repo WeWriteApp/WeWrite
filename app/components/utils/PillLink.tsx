@@ -354,8 +354,9 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
   // Disabled external link styling - render as plain text with dotted underline
   // This is a completely different appearance from normal pills
+  // IMPORTANT: These styles must completely override any pill styles
   const disabledExternalLinkStyles = disabled && isExternalLinkType
-    ? 'inline text-foreground font-normal underline decoration-dotted decoration-muted-foreground/50 cursor-not-allowed hover:no-underline hover:scale-100 active:scale-100 hover:shadow-none bg-transparent border-none rounded-none px-0 py-0 my-0'
+    ? 'inline text-foreground font-normal underline decoration-dotted decoration-muted-foreground/50 underline-offset-2 cursor-not-allowed bg-transparent border-0 shadow-none rounded-none p-0 m-0 hover:bg-transparent hover:border-0 hover:shadow-none active:bg-transparent active:scale-100'
     : '';
 
   // Regular disabled link styling (for non-external links, if ever needed)
@@ -372,6 +373,16 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   if (isExternalLinkType) {
     // Disabled external links render as plain text with dotted underline
     if (disabled) {
+      // Handle click/tap - show toast on mobile since tooltips don't work well
+      const handleDisabledClick = (e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Call custom onClick if provided (for toast message)
+        if (customOnClick) {
+          customOnClick(e as React.MouseEvent);
+        }
+      };
+
       return (
         <SimpleTooltip
           content={disabledReason || "External links are not available"}
@@ -380,18 +391,19 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         >
           <span
             ref={ref as React.Ref<HTMLSpanElement>}
-            {...otherProps}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Call custom onClick if provided (for toast message)
-              if (customOnClick) {
-                customOnClick(e);
-              }
-            }}
-            className={`${disabledExternalLinkStyles} ${className}`.trim()}
+            onClick={handleDisabledClick}
+            onTouchEnd={handleDisabledClick}
+            className={disabledExternalLinkStyles}
             role="link"
             aria-disabled="true"
+            style={{
+              // Inline styles as backup to ensure no border/background
+              background: 'transparent',
+              border: 'none',
+              boxShadow: 'none',
+              padding: 0,
+              margin: 0
+            }}
           >
             {formattedDisplayTitle}
           </span>
