@@ -6,7 +6,7 @@ import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
 import { getPageTitle } from "../../utils/pageUtils";
-import { LinkMigrationHelper, isPageGrandfatheredForExternalLinks } from "../../types/linkNode";
+import { LinkMigrationHelper } from "../../types/linkNode";
 import { useToast } from "../ui/use-toast";
 import { ToastAction } from "../ui/toast";
 
@@ -457,14 +457,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({
     // Truncate the display text for better UI
     const truncatedDisplayText = truncateExternalLinkText(finalDisplayText, href, 50);
 
-    // Check if this page is grandfathered for external links
-    const isGrandfathered = isPageGrandfatheredForExternalLinks(pageCreatedAt);
-
     // Check if external link should be rendered as plain text (no click functionality)
-    // This happens when:
-    // 1. The page is NOT grandfathered (created after feature launch)
-    // 2. AND the author does NOT have an active subscription
-    const shouldRenderAsPlainText = !isGrandfathered && authorHasSubscription === false;
+    // This happens when the author does NOT have an active subscription
+    // Note: Grandfathering was removed - all external links now require active subscription
+    const shouldRenderAsPlainText = authorHasSubscription === false;
 
     // If external link should be disabled (author has no subscription, not grandfathered)
     // The link still looks like a link but is non-interactive
