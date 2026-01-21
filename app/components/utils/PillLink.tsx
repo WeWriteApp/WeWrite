@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { usePillStyle, PILL_STYLES } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
 import PillLinkContextMenu from "./PillLinkContextMenu";
+import { SimpleTooltip } from "../ui/tooltip";
 import { getPageById } from "../../utils/apiClient";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
@@ -38,6 +39,8 @@ interface PillLinkProps {
   isSuggestion?: boolean; // New prop for link suggestions
   clickable?: boolean;
   isEditing?: boolean; // New prop to indicate if we're in edit mode
+  disabled?: boolean; // Link is disabled (looks like a link but non-interactive)
+  disabledReason?: string; // Reason why the link is disabled (for tooltips)
   onClick?: (e: React.MouseEvent) => void;
   customOnClick?: (e: React.MouseEvent) => void;
   onEditLink?: () => void;
@@ -66,6 +69,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   isSuggestion = false,
   clickable = true,
   isEditing = false, // Default to false (view mode)
+  disabled = false, // Default to false (link is clickable)
+  disabledReason,
   onClick: customOnClickFromOnClick,
   customOnClick: customOnClickProp,
   onEditLink,
@@ -347,13 +352,53 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
     ? 'pill-text truncate max-w-full' // Container styles: single-line with ellipsis at container boundary
     : 'pill-text'; // Text styles: allow natural wrapping
 
+  // Disabled external link styling - render as plain text with dotted underline
+  // This is a completely different appearance from normal pills
+  const disabledExternalLinkStyles = disabled && isExternalLinkType
+    ? 'inline text-foreground font-normal underline decoration-dotted decoration-muted-foreground/50 cursor-not-allowed hover:no-underline hover:scale-100 active:scale-100 hover:shadow-none bg-transparent border-none rounded-none px-0 py-0 my-0'
+    : '';
+
+  // Regular disabled link styling (for non-external links, if ever needed)
+  const disabledStyles = disabled && !isExternalLinkType
+    ? 'opacity-50 cursor-not-allowed hover:no-underline'
+    : '';
+
   // Use different styling for suggestions vs normal pill links
   const baseStyles = isSuggestion
     ? `inline-flex items-center my-0.5 px-2 py-0.5 text-sm font-medium text-foreground bg-transparent border border-dotted border-neutral-15 rounded-lg hover:bg-neutral-5 transition-colors cursor-pointer ${className}`.trim()
-    : `${getPillStyleClasses()} ${className}`.trim();
+    : `${getPillStyleClasses()} ${disabledStyles} ${className}`.trim();
 
   // External link with confirmation modal
   if (isExternalLinkType) {
+    // Disabled external links render as plain text with dotted underline
+    if (disabled) {
+      return (
+        <SimpleTooltip
+          content={disabledReason || "External links are not available"}
+          variant="secondary"
+          side="top"
+        >
+          <span
+            ref={ref as React.Ref<HTMLSpanElement>}
+            {...otherProps}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Call custom onClick if provided (for toast message)
+              if (customOnClick) {
+                customOnClick(e);
+              }
+            }}
+            className={`${disabledExternalLinkStyles} ${className}`.trim()}
+            role="link"
+            aria-disabled="true"
+          >
+            {formattedDisplayTitle}
+          </span>
+        </SimpleTooltip>
+      );
+    }
+
     return (
       <>
         <a

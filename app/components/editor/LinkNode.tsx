@@ -466,19 +466,20 @@ const LinkNode: React.FC<LinkNodeProps> = ({
     // 2. AND the author does NOT have an active subscription
     const shouldRenderAsPlainText = !isGrandfathered && authorHasSubscription === false;
 
-    // If external link should be plain text (author has no subscription, not grandfathered)
+    // If external link should be disabled (author has no subscription, not grandfathered)
+    // The link still looks like a link but is non-interactive
     if (shouldRenderAsPlainText) {
-      // Handle click for page owner - show upgrade prompt
-      const handlePlainTextClick = (e: React.MouseEvent) => {
+      // Handle click - show message that external links require subscription
+      const handleDisabledLinkClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (isPageOwner) {
-          // Show upgrade toast for page owner
-          toast({
-            title: "External links require a subscription",
-            description: "Activate your subscription to add clickable external links.",
-            variant: "default",
+        // Show toast explaining why the link is disabled
+        toast({
+          title: "External link unavailable",
+          description: "This author doesn't have an active subscription. External links are a paid feature.",
+          variant: "default",
+          ...(isPageOwner ? {
             action: (
               <ToastAction
                 altText="Upgrade to subscription"
@@ -489,23 +490,28 @@ const LinkNode: React.FC<LinkNodeProps> = ({
                 Upgrade
               </ToastAction>
             )
-          });
-        }
-        // For readers, do nothing - just prevent default
+          } : {})
+        });
       };
 
+      // Render as a disabled PillLink - looks like a link but is non-interactive
       return (
         <span
           {...wrapperProps}
           className="inline-block"
         >
-          <span
-            className={`text-muted-foreground ${isPageOwner ? 'cursor-pointer hover:underline' : ''}`}
-            onClick={handlePlainTextClick}
-            title={isPageOwner ? 'Click to learn how to activate external links' : undefined}
+          <PillLink
+            href={href}
+            isPublic={true}
+            className="external-link"
+            isEditing={isEditing}
+            onEditLink={isEditing ? onEditLink : undefined}
+            onClick={handleDisabledLinkClick}
+            disabled={true}
+            disabledReason="External links are not supported for users without an active subscription"
           >
             {truncatedDisplayText}
-          </span>
+          </PillLink>
           <span style={{ display: 'none' }}>{children}</span>
         </span>
       );
