@@ -73,6 +73,8 @@ export interface Page {
     backlinks: number;
   };
   pageScoreUpdatedAt?: string;
+  // External link paywall - whether the page author has an active subscription
+  authorHasActiveSubscription?: boolean;
 }
 
 // Page version types

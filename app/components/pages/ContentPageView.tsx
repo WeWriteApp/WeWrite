@@ -2187,6 +2187,10 @@ export default function ContentPageView({
                               setLinkModalEditingLink={setLinkModalEditingLink}
                               linkModalSelectedText={linkModalSelectedText}
                               setLinkModalSelectedText={setLinkModalSelectedText}
+                              // External link paywall context
+                              authorHasSubscription={page?.authorHasActiveSubscription}
+                              pageCreatedAt={page?.createdAt}
+                              isPageOwner={user?.uid === page?.userId}
                             />
 
                             {/* Dense mode toggle below content - only show in view mode (hidden in print) */}

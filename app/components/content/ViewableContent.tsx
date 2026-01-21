@@ -37,6 +37,10 @@ interface ViewableContentProps {
   onRenderComplete?: () => void;
   lineMode?: string;
   className?: string;
+  // External link paywall context
+  authorHasSubscription?: boolean;
+  pageCreatedAt?: string | Date | null;
+  isPageOwner?: boolean;
 }
 
 /**
@@ -52,7 +56,10 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
   isSearch = false,
   onRenderComplete,
   lineMode = LINE_MODES.NORMAL,
-  className = ''
+  className = '',
+  authorHasSubscription,
+  pageCreatedAt,
+  isPageOwner
 }) => {
   // Guard against missing provider in static/unauthenticated contexts
   const { lineFeaturesEnabled = false } = useLineSettings() ?? {};
@@ -72,6 +79,9 @@ const ViewableContent: React.FC<ViewableContentProps> = ({
         viewMode="normal"
         isEditing={false}
         lineMode={effectiveMode}
+        authorHasSubscription={authorHasSubscription}
+        pageCreatedAt={pageCreatedAt}
+        isPageOwner={isPageOwner}
       />
     </div>
   );

@@ -70,7 +70,12 @@ interface ContentDisplayProps {
   showLineNumbers?: boolean;
   isSearch?: boolean;
   onRenderComplete?: () => void;
-  
+
+  // External link paywall context (for viewing mode)
+  authorHasSubscription?: boolean;
+  pageCreatedAt?: string | Date | null;
+  isPageOwner?: boolean;
+
   // Common props
   className?: string;
 }
@@ -111,6 +116,9 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
   showLineNumbers = true,
   isSearch = false,
   onRenderComplete,
+  authorHasSubscription,
+  pageCreatedAt,
+  isPageOwner,
   className = ''
 }) => {
   // Defensive defaults so logged-out/static views never crash if context is unavailable
@@ -175,6 +183,9 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
         onRenderComplete={onRenderComplete}
         lineMode={effectiveMode}
         className={className}
+        authorHasSubscription={authorHasSubscription}
+        pageCreatedAt={pageCreatedAt}
+        isPageOwner={isPageOwner}
       />
     );
   }
