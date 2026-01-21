@@ -10,7 +10,7 @@ import {
   ANIMATION_PRESETS,
   AnimationPreset,
 } from '../../components/ui/AnimatedStack';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 export function AnimationsSection({ id }: { id: string }) {
   // Demo states
@@ -179,11 +179,8 @@ export function AnimationsSection({ id }: { id: string }) {
       </StateDemo>
 
       {/* Code Examples */}
-      <StateDemo label="Code Usage">
-        <div className="w-full space-y-4">
-          <div className="wewrite-card p-4 bg-muted/30">
-            <p className="text-xs font-medium text-muted-foreground mb-2">AnimatedStack (multiple items)</p>
-            <pre className="text-xs overflow-x-auto">
+      <CollapsibleDocs type="usage">
+        <DocsCodeBlock label="AnimatedStack (multiple items)">
 {`import { AnimatedStack, AnimatedStackItem } from '@/components/ui/AnimatedStack';
 
 <AnimatedStack gap={12} preset="default">
@@ -193,12 +190,9 @@ export function AnimationsSection({ id }: { id: string }) {
     </AnimatedStackItem>
   ))}
 </AnimatedStack>`}
-            </pre>
-          </div>
+        </DocsCodeBlock>
 
-          <div className="wewrite-card p-4 bg-muted/30">
-            <p className="text-xs font-medium text-muted-foreground mb-2">AnimatedPresenceItem (single toggle)</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="AnimatedPresenceItem (single toggle)">
 {`import { AnimatedPresenceItem } from '@/components/ui/AnimatedStack';
 
 <AnimatedPresenceItem
@@ -209,12 +203,9 @@ export function AnimationsSection({ id }: { id: string }) {
 >
   <ErrorBanner message="Something went wrong" />
 </AnimatedPresenceItem>`}
-            </pre>
-          </div>
+        </DocsCodeBlock>
 
-          <div className="wewrite-card p-4 bg-muted/30">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Direct Framer Motion usage</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="Direct Framer Motion usage">
 {`import { AnimatePresence, motion } from 'framer-motion';
 
 <AnimatePresence>
@@ -230,13 +221,11 @@ export function AnimationsSection({ id }: { id: string }) {
     </motion.div>
   )}
 </AnimatePresence>`}
-            </pre>
-          </div>
-        </div>
-      </StateDemo>
+        </DocsCodeBlock>
+      </CollapsibleDocs>
 
       {/* Available Presets Reference */}
-      <StateDemo label="Available Presets">
+      <CollapsibleDocs type="api" title="Available Presets">
         <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {(Object.entries(ANIMATION_PRESETS) as [AnimationPreset, typeof ANIMATION_PRESETS[AnimationPreset]][]).map(
             ([name, config]) => (
@@ -249,7 +238,7 @@ export function AnimationsSection({ id }: { id: string }) {
             )
           )}
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

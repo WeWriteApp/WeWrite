@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { StatsCard, StatsCardHeader } from '@/components/ui/StatsCard';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs } from './shared';
 
 /**
  * PageStats Design System Documentation
@@ -193,7 +193,7 @@ export function PageStatsSection({ id }: { id: string }) {
       </StateDemo>
 
       {/* Props Reference */}
-      <StateDemo label="Props Reference">
+      <CollapsibleDocs type="props">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -268,10 +268,10 @@ export function PageStatsSection({ id }: { id: string }) {
             </tbody>
           </table>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
 
       {/* Usage Guidelines */}
-      <StateDemo label="Usage Guidelines">
+      <CollapsibleDocs type="guidelines">
         <div className="w-full space-y-3">
           <div className="wewrite-card bg-green-500/10 border-green-500/20">
             <h4 className="font-semibold mb-2 flex items-center gap-2">
@@ -297,7 +297,7 @@ export function PageStatsSection({ id }: { id: string }) {
             </ul>
           </div>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsNote } from './shared';
 
 export function ColorTokenReferenceSection({ id }: { id: string }) {
   return (
@@ -100,13 +100,12 @@ export function ColorTokenReferenceSection({ id }: { id: string }) {
               <code className="text-muted-foreground">bg-neutral-alpha-5</code>
             </div>
           </div>
-          <div className="wewrite-card p-4 bg-muted/30 mt-3">
-            <p className="text-sm font-medium mb-2">Solid vs Alpha - When to use which:</p>
+          <DocsNote variant="tip" title="Solid vs Alpha - When to use which:">
             <div className="text-sm space-y-1">
               <p><strong className="text-success">Solid:</strong> Card backgrounds, buttons, chips - opaque fills that cover content</p>
               <p><strong className="text-primary">Alpha:</strong> Hover states, overlays, glassmorphism - transparent effects</p>
             </div>
-          </div>
+          </DocsNote>
         </div>
 
         {/* Semantic Colors */}
@@ -136,22 +135,19 @@ export function ColorTokenReferenceSection({ id }: { id: string }) {
         </div>
 
         {/* Common Patterns */}
-        <div className="space-y-3">
-          <h4 className="font-medium text-sm">Common Patterns</h4>
-          <div className="wewrite-card p-4 space-y-3 bg-muted/30">
-            <div className="text-sm space-y-2">
-              <p><strong>Solid buttons (primary/success/error):</strong> <code className="bg-muted px-1 rounded">bg-primary hover:alpha-10 active:alpha-15</code></p>
-              <p><strong>Secondary buttons:</strong> <code className="bg-muted px-1 rounded">bg-neutral-solid-10 hover:alpha-10 active:alpha-15</code></p>
-              <p><strong>Outline buttons:</strong> <code className="bg-muted px-1 rounded">border border-neutral-alpha-20 hover:bg-neutral-alpha-5</code></p>
-              <p><strong>Ghost buttons:</strong> <code className="bg-muted px-1 rounded">hover:bg-neutral-alpha-5 active:bg-neutral-alpha-10</code></p>
-              <p><strong>Cards:</strong> <code className="bg-muted px-1 rounded">bg-card border border-border</code></p>
-              <p><strong>Active chips:</strong> <code className="bg-muted px-1 rounded">bg-primary-10 text-primary</code></p>
-              <p><strong>Inactive chips:</strong> <code className="bg-muted px-1 rounded">bg-neutral-solid-10 text-foreground</code></p>
-              <p><strong>Success-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-success-10 hover:success-alpha-10</code></p>
-              <p><strong>Destructive-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-error-10 hover:error-alpha-10</code></p>
-            </div>
+        <CollapsibleDocs type="guidelines" title="Common Patterns">
+          <div className="text-sm space-y-2">
+            <p><strong>Solid buttons (primary/success/error):</strong> <code className="bg-muted px-1 rounded">bg-primary hover:alpha-10 active:alpha-15</code></p>
+            <p><strong>Secondary buttons:</strong> <code className="bg-muted px-1 rounded">bg-neutral-solid-10 hover:alpha-10 active:alpha-15</code></p>
+            <p><strong>Outline buttons:</strong> <code className="bg-muted px-1 rounded">border border-neutral-alpha-20 hover:bg-neutral-alpha-5</code></p>
+            <p><strong>Ghost buttons:</strong> <code className="bg-muted px-1 rounded">hover:bg-neutral-alpha-5 active:bg-neutral-alpha-10</code></p>
+            <p><strong>Cards:</strong> <code className="bg-muted px-1 rounded">bg-card border border-border</code></p>
+            <p><strong>Active chips:</strong> <code className="bg-muted px-1 rounded">bg-primary-10 text-primary</code></p>
+            <p><strong>Inactive chips:</strong> <code className="bg-muted px-1 rounded">bg-neutral-solid-10 text-foreground</code></p>
+            <p><strong>Success-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-success-10 hover:success-alpha-10</code></p>
+            <p><strong>Destructive-secondary hover:</strong> <code className="bg-muted px-1 rounded">bg-error-10 hover:error-alpha-10</code></p>
           </div>
-        </div>
+        </CollapsibleDocs>
       </div>
     </ComponentShowcase>
   );

@@ -4,7 +4,7 @@ import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import PillLink from '../../components/utils/PillLink';
 import { UsernameBadge } from '../../components/ui/UsernameBadge';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 import { toast } from '../../components/ui/use-toast';
 
 export function PillLinkSection({ id }: { id: string }) {
@@ -266,8 +266,8 @@ export function PillLinkSection({ id }: { id: string }) {
         </table>
       </div>
 
-      <StateDemo label="Style Configuration">
-        <div className="wewrite-card p-4 bg-muted/30">
+      <CollapsibleDocs type="notes">
+        <div>
           <h4 className="font-medium mb-2">Available Styles</h4>
           <p className="text-sm text-muted-foreground mb-3">
             Users can change their preferred pill style in Settings via <code className="bg-muted px-1 rounded">PillStyleContext</code>.
@@ -279,7 +279,7 @@ export function PillLinkSection({ id }: { id: string }) {
             <li>• <code className="bg-muted px-1 rounded">underlined</code> - Always underlined text</li>
           </ul>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
 
       <StateDemo label="Special States">
         <div className="flex flex-wrap gap-2">
@@ -290,38 +290,39 @@ export function PillLinkSection({ id }: { id: string }) {
       </StateDemo>
 
       <StateDemo label="Disabled External Links (Paywall)">
-        <div className="wewrite-card p-4 bg-muted/30">
-          <p className="text-sm text-muted-foreground mb-4">
-            When a page author doesn't have an active subscription, their external links are rendered as plain text with a dotted underline.
-            The link data is preserved in the document, but clicking shows a toast explaining the limitation.
-            <strong className="block mt-2">Hover to see the tooltip, click to see the toast message!</strong>
-          </p>
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Enabled (subscriber)</span>
-              <PillLink href="https://example.com" clickable={false}>External Docs</PillLink>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Disabled (no subscription)</span>
-              <PillLink
-                href="https://example.com"
-                disabled={true}
-                disabledReason="External links are not supported for users without an active subscription"
-                customOnClick={handleDisabledExternalLinkClick}
-              >
-                External Docs
-              </PillLink>
-            </div>
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Enabled (subscriber)</span>
+            <PillLink href="https://example.com" clickable={false}>External Docs</PillLink>
           </div>
-          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              <strong>Implementation Note:</strong> The <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">disabled</code> prop for external links
-              renders the link as plain text with <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">decoration-dotted</code> underline and <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">cursor-not-allowed</code>.
-              Uses <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SimpleTooltip</code> (secondary variant) on hover, and clicking/tapping shows a toast explaining external links require a subscription.
-            </p>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Disabled (no subscription)</span>
+            <PillLink
+              href="https://example.com"
+              disabled={true}
+              disabledReason="External links are not supported for users without an active subscription"
+              customOnClick={handleDisabledExternalLinkClick}
+            >
+              External Docs
+            </PillLink>
           </div>
         </div>
       </StateDemo>
+
+      <CollapsibleDocs type="notes" title="Disabled Links Implementation">
+        <p className="text-sm text-muted-foreground mb-4">
+          When a page author doesn't have an active subscription, their external links are rendered as plain text with a dotted underline.
+          The link data is preserved in the document, but clicking shows a toast explaining the limitation.
+          <strong className="block mt-2">Hover to see the tooltip, click to see the toast message!</strong>
+        </p>
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            <strong>Implementation Note:</strong> The <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">disabled</code> prop for external links
+            renders the link as plain text with <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">decoration-dotted</code> underline and <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">cursor-not-allowed</code>.
+            Uses <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">SimpleTooltip</code> (secondary variant) on hover, and clicking/tapping shows a toast explaining external links require a subscription.
+          </p>
+        </div>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

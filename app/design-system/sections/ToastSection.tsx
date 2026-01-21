@@ -4,7 +4,7 @@ import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../../components/ui/button';
 import { toast } from '../../components/ui/use-toast';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock, DocsNote } from './shared';
 
 export function ToastSection({ id }: { id: string }) {
   return (
@@ -145,18 +145,12 @@ export function ToastSection({ id }: { id: string }) {
         </p>
       </StateDemo>
 
-      <StateDemo label="Usage">
-        <div className="w-full space-y-4">
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Import</p>
-            <pre className="text-xs overflow-x-auto">
+      <CollapsibleDocs type="usage">
+        <DocsCodeBlock label="Import">
 {`import { toast } from '@/components/ui/use-toast';`}
-            </pre>
-          </div>
+        </DocsCodeBlock>
 
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Basic Usage</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="Basic Usage">
 {`// Helper methods (recommended)
 toast.success("Success message");
 toast.error("Error message");
@@ -188,12 +182,9 @@ toast.promise(fetchData(), {
   success: "Data loaded!",
   error: "Failed to load"
 });`}
-            </pre>
-          </div>
+        </DocsCodeBlock>
 
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Dismiss Programmatically</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="Dismiss Programmatically">
 {`const toastId = toast.loading("Processing...");
 
 // Later...
@@ -201,17 +192,15 @@ toast.dismiss(toastId); // Dismiss specific toast
 
 // Or dismiss all
 toast.dismiss();`}
-            </pre>
-          </div>
-        </div>
-      </StateDemo>
+        </DocsCodeBlock>
+      </CollapsibleDocs>
 
-      <StateDemo label="Toast vs Alert Guidelines">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+      <CollapsibleDocs type="guidelines" title="Toast vs Alert">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="wewrite-card p-4 border-l-4 border-l-green-500">
             <h4 className="font-semibold mb-2 text-green-600 dark:text-green-400">Use Toast For:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>Brief confirmations ("Saved", "Copied")</li>
+              <li>Brief confirmations (&quot;Saved&quot;, &quot;Copied&quot;)</li>
               <li>Background operation results</li>
               <li>Non-blocking notifications</li>
               <li>Transient status updates</li>
@@ -227,7 +216,7 @@ toast.dismiss();`}
             </ul>
           </div>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { UsernameBadge } from '../../components/ui/UsernameBadge';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 export function UsernameBadgeSection({ id }: { id: string }) {
   return (
@@ -195,23 +195,23 @@ export function UsernameBadgeSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="API Integration">
-        <div className="wewrite-card p-4 bg-muted/30">
-          <p className="text-sm text-muted-foreground mb-2">
+      <CollapsibleDocs type="api">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
             <strong>Simplified Props:</strong> Only <code className="bg-muted px-1 rounded">tier</code> is needed now. APIs pre-compute the effective tier.
           </p>
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground">
             <strong>Auto-fetch:</strong> If tier is not provided, the component fetches it from <code className="bg-muted px-1 rounded">/api/users/full-profile</code>.
           </p>
-          <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
+          <DocsCodeBlock label="Usage Examples">
 {`// Minimal usage (tier auto-fetched)
 <UsernameBadge userId="abc" username="jamie" />
 
 // With pre-fetched tier
 <UsernameBadge userId="abc" username="jamie" tier="tier2" />`}
-          </pre>
+          </DocsCodeBlock>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Icon } from '../../components/ui/Icon';
 import { LoadingState, SkeletonLine, SkeletonCard } from '../../components/ui/LoadingState';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 export function LoadingStatesSection({ id }: { id: string }) {
   return (
@@ -119,9 +119,8 @@ export function LoadingStatesSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Code Usage">
-        <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-          <pre className="text-xs overflow-x-auto">
+      <CollapsibleDocs type="usage">
+        <DocsCodeBlock label="Loading state usage">
 {`// Default loader (PulseLoader) - always use default style
 <Icon name="Loader" size={24} />
 
@@ -140,9 +139,8 @@ export function LoadingStatesSection({ id }: { id: string }) {
 // Skeleton placeholders
 <SkeletonLine width="w-3/4" />
 <SkeletonCard />`}
-          </pre>
-        </div>
-      </StateDemo>
+        </DocsCodeBlock>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

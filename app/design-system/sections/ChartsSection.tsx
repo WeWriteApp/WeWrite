@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsNote } from './shared';
 import SimpleSparkline from '@/components/utils/SimpleSparkline';
 import { Sparkline as BarSparkline } from '@/components/ui/sparkline';
 import { Sparkline as AdminSparkline, SparklineWithLabel } from '@/components/admin/Sparkline';
@@ -130,16 +130,16 @@ export function ChartsSection({ id }: { id: string }) {
       </StateDemo>
 
       {/* Usage notes */}
-      <StateDemo label="Usage Recommendations">
-        <div className="w-full text-sm text-muted-foreground space-y-2 p-4 rounded-lg border border-border bg-muted/30">
+      <CollapsibleDocs type="guidelines">
+        <div className="w-full text-sm text-muted-foreground space-y-2">
           <p><strong>SimpleSparkline</strong> - Best for activity/engagement trends, 24-hour data. Lightweight SVG.</p>
           <p><strong>ui/Sparkline</strong> - Best for discrete values, handles zero values well. Lightweight SVG.</p>
           <p><strong>admin/Sparkline</strong> - Best for admin dashboards with trend indicators. Uses Recharts (heavier).</p>
-          <p className="pt-2 text-warning-foreground border-t border-border mt-2">
-            <strong>Consolidation opportunity:</strong> Consider unifying the bar chart implementations (ui vs admin) to reduce bundle size.
-          </p>
         </div>
-      </StateDemo>
+        <DocsNote variant="warning" title="Consolidation opportunity">
+          Consider unifying the bar chart implementations (ui vs admin) to reduce bundle size.
+        </DocsNote>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

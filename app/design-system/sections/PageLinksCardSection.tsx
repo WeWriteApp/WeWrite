@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { AnimatedPresenceItem, AnimatedHorizontalPresence } from '@/components/ui/AnimatedStack';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 /**
  * PageLinksCard Design System Documentation
@@ -169,7 +169,7 @@ export function PageLinksCardSection({ id }: { id: string }) {
       </StateDemo>
 
       {/* Props Reference */}
-      <StateDemo label="Props Reference">
+      <CollapsibleDocs type="props">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -250,14 +250,13 @@ export function PageLinksCardSection({ id }: { id: string }) {
             </tbody>
           </table>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
 
       {/* Filter Pattern */}
-      <StateDemo label="Filter Button Pattern">
-        <div className="w-full space-y-3">
-          <div className="wewrite-card bg-muted/30">
-            <p className="text-sm mb-3">Standard filter button implementation:</p>
-            <pre className="text-xs bg-background/50 p-3 rounded-md overflow-x-auto">
+      <CollapsibleDocs type="usage" title="Filter Button Pattern">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Standard filter button implementation:</p>
+          <DocsCodeBlock>
 {`const [showFiltersRow, setShowFiltersRow] = useState(false);
 
 const filterButton = (
@@ -280,10 +279,9 @@ const filterButton = (
   subheader={<FilterRow show={showFiltersRow} />}
   ...
 />`}
-            </pre>
-          </div>
+          </DocsCodeBlock>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

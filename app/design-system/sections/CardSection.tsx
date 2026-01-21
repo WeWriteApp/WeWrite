@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 /**
  * Card Design System Documentation
@@ -103,16 +103,14 @@ export function CardSection({ id }: { id: string }) {
       </StateDemo>
 
       {/* Usage Guidelines */}
-      <StateDemo label="Usage">
-        <div className="w-full">
-          <div className="wewrite-card bg-muted/30 text-sm space-y-2">
-            <p><strong>Default:</strong> Just use <code>.wewrite-card</code></p>
-            <p><strong>Edge-to-edge content:</strong> Add <code>wewrite-card-no-padding</code></p>
-            <p><strong>Floating UI:</strong> Add <code>wewrite-floating</code></p>
-            <p><strong>Fixed headers:</strong> Combine <code>wewrite-card-sharp</code> + <code>wewrite-card-border-bottom</code></p>
-          </div>
+      <CollapsibleDocs type="usage">
+        <div className="text-sm space-y-2">
+          <p><strong>Default:</strong> Just use <code>.wewrite-card</code></p>
+          <p><strong>Edge-to-edge content:</strong> Add <code>wewrite-card-no-padding</code></p>
+          <p><strong>Floating UI:</strong> Add <code>wewrite-floating</code></p>
+          <p><strong>Fixed headers:</strong> Combine <code>wewrite-card-sharp</code> + <code>wewrite-card-border-bottom</code></p>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

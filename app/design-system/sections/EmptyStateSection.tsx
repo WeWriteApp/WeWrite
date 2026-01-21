@@ -2,7 +2,7 @@
 
 import React from 'react';
 import EmptyState from '../../components/ui/EmptyState';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 export function EmptyStateSection({ id }: { id: string }) {
   return (
@@ -139,7 +139,45 @@ export function EmptyStateSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Props">
+      <CollapsibleDocs type="usage">
+        <DocsCodeBlock label="Import">
+{`import EmptyState from '@/components/ui/EmptyState';`}
+        </DocsCodeBlock>
+
+        <DocsCodeBlock label="Basic Usage">
+{`<EmptyState
+  icon="Inbox"
+  title="No messages"
+  description="When you receive messages, they'll appear here."
+/>`}
+        </DocsCodeBlock>
+
+        <DocsCodeBlock label="With Action Button">
+{`<EmptyState
+  icon="FileText"
+  title="No pages yet"
+  description="Create your first page to get started."
+  action={{
+    label: "Create Page",
+    onClick: () => handleCreate(),
+    variant: 'outline' // optional
+  }}
+/>`}
+        </DocsCodeBlock>
+
+        <DocsCodeBlock label="Size Variants">
+{`// Small - for compact spaces
+<EmptyState size="sm" icon="Tags" title="No tags" description="..." />
+
+// Medium (default) - standard usage
+<EmptyState size="md" icon="Inbox" title="No messages" description="..." />
+
+// Large - for primary empty states
+<EmptyState size="lg" icon="Folder" title="No projects" description="..." />`}
+        </DocsCodeBlock>
+      </CollapsibleDocs>
+
+      <CollapsibleDocs type="props">
         <div className="space-y-2 text-sm w-full">
           <div className="flex gap-2 items-center">
             <code className="px-2 py-1 bg-muted rounded text-xs">icon: IconName</code>
@@ -166,7 +204,7 @@ export function EmptyStateSection({ id }: { id: string }) {
             <span className="text-muted-foreground">- Optional. Additional CSS classes</span>
           </div>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

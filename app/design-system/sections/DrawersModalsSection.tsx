@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '../../components/ui/drawer';
 import { SideDrawer, SideDrawerContent, SideDrawerHeader, SideDrawerBody, SideDrawerFooter, SideDrawerTitle, SideDrawerDescription } from '../../components/ui/side-drawer';
 import { AdaptiveModal } from '../../components/ui/adaptive-modal';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock, DocsNote } from './shared';
 
 export function DrawersModalsSection({ id }: { id: string }) {
   const [showAdaptiveModal, setShowAdaptiveModal] = useState(false);
@@ -51,9 +51,8 @@ export function DrawersModalsSection({ id }: { id: string }) {
             Open AdaptiveModal
           </Button>
 
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Usage</p>
-            <pre className="text-xs overflow-x-auto">
+          <CollapsibleDocs type="usage">
+            <DocsCodeBlock label="Import and Usage">
 {`import { AdaptiveModal } from '@/components/ui/adaptive-modal';
 
 <AdaptiveModal
@@ -69,8 +68,8 @@ export function DrawersModalsSection({ id }: { id: string }) {
     {/* Your content here */}
   </div>
 </AdaptiveModal>`}
-            </pre>
-          </div>
+            </DocsCodeBlock>
+          </CollapsibleDocs>
         </div>
       </StateDemo>
 

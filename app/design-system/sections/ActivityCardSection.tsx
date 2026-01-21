@@ -4,7 +4,7 @@ import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../../components/ui/button';
 import { CompositionBar } from '../../components/payments/CompositionBar';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 export function ActivityCardSection({ id }: { id: string }) {
   return (
@@ -73,30 +73,28 @@ export function ActivityCardSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Section Descriptions">
-        <div className="wewrite-card p-4 max-w-2xl">
-          <ul className="text-sm text-muted-foreground space-y-2">
-            <li>
-              <strong className="text-foreground">Header Section:</strong> Page title (PillLink), action verb (created/edited/renamed), author (UsernameBadge with subscription tier), and relative timestamp with full date tooltip.
-            </li>
-            <li>
-              <strong className="text-foreground">Diff Section:</strong> Inner card with different styling per mode:
-              <ul className="ml-4 mt-1 space-y-1">
-                <li>• <strong>Light mode:</strong> Outlined with <code className="bg-muted px-1 rounded">border-border</code></li>
-                <li>• <strong>Dark mode:</strong> Filled with <code className="bg-muted px-1 rounded">bg-neutral-alpha-dark-10</code> (additive white overlay)</li>
-                <li>• <strong>DiffStats:</strong> Character count changes (+X / -Y format) positioned at top right</li>
-                <li>• <strong>DiffPreview:</strong> Context text with green additions and red strikethrough deletions</li>
-              </ul>
-            </li>
-            <li>
-              <strong className="text-foreground">Allocation Section:</strong> Token allocation slider and controls for supporting the page author. Only shown when viewing other users' pages.
-            </li>
-            <li>
-              <strong className="text-foreground">Restore Section (conditional):</strong> Button to restore page to this version. Only shown on version history pages when user owns the page.
-            </li>
-          </ul>
-        </div>
-      </StateDemo>
+      <CollapsibleDocs type="notes" title="Section Descriptions">
+        <ul className="text-sm text-muted-foreground space-y-2">
+          <li>
+            <strong className="text-foreground">Header Section:</strong> Page title (PillLink), action verb (created/edited/renamed), author (UsernameBadge with subscription tier), and relative timestamp with full date tooltip.
+          </li>
+          <li>
+            <strong className="text-foreground">Diff Section:</strong> Inner card with different styling per mode:
+            <ul className="ml-4 mt-1 space-y-1">
+              <li>• <strong>Light mode:</strong> Outlined with <code className="bg-muted px-1 rounded">border-border</code></li>
+              <li>• <strong>Dark mode:</strong> Filled with <code className="bg-muted px-1 rounded">bg-neutral-alpha-dark-10</code> (additive white overlay)</li>
+              <li>• <strong>DiffStats:</strong> Character count changes (+X / -Y format) positioned at top right</li>
+              <li>• <strong>DiffPreview:</strong> Context text with green additions and red strikethrough deletions</li>
+            </ul>
+          </li>
+          <li>
+            <strong className="text-foreground">Allocation Section:</strong> Token allocation slider and controls for supporting the page author. Only shown when viewing other users' pages.
+          </li>
+          <li>
+            <strong className="text-foreground">Restore Section (conditional):</strong> Button to restore page to this version. Only shown on version history pages when user owns the page.
+          </li>
+        </ul>
+      </CollapsibleDocs>
 
       <StateDemo label="Diff Styling Reference">
         <div className="flex flex-wrap gap-4">
@@ -115,9 +113,8 @@ export function ActivityCardSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Code Usage">
-        <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-          <pre className="text-xs overflow-x-auto">
+      <CollapsibleDocs type="usage">
+        <DocsCodeBlock label="Code Usage">
 {`<ActivityCard
   activity={{
     pageId: "abc123",
@@ -132,9 +129,8 @@ export function ActivityCardSection({ id }: { id: string }) {
   isCarousel={false}
   compactLayout={false}
 />`}
-          </pre>
-        </div>
-      </StateDemo>
+        </DocsCodeBlock>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

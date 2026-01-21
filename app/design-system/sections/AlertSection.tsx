@@ -6,7 +6,7 @@ import { Alert, AlertTitle, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { ConfirmationModal, AlertModal, PromptModal } from '../../components/utils/UnifiedModal';
 import { useConfirmation } from '../../hooks/useConfirmation';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock, DocsNote } from './shared';
 
 export function AlertSection({ id }: { id: string }) {
   // Demo states for modals
@@ -154,22 +154,16 @@ export function AlertSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="useConfirmation Hook Usage">
-        <div className="w-full space-y-4">
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Step 1: Import and Initialize</p>
-            <pre className="text-xs overflow-x-auto">
+      <CollapsibleDocs type="usage" title="useConfirmation Hook">
+        <DocsCodeBlock label="Step 1: Import and Initialize">
 {`import { useConfirmation } from '@/hooks/useConfirmation';
 import { ConfirmationModal } from '@/components/utils/UnifiedModal';
 
 // In your component:
 const { confirmationState, confirm, closeConfirmation } = useConfirmation();`}
-            </pre>
-          </div>
+        </DocsCodeBlock>
 
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Step 2: Use confirm() (returns Promise&lt;boolean&gt;)</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="Step 2: Use confirm() (returns Promise<boolean>)">
 {`// Generic confirmation
 const handleDelete = async () => {
   const confirmed = await confirm({
@@ -190,12 +184,9 @@ const handleDelete = async () => {
 const confirmed = await confirmDelete("this item");
 const confirmed = await confirmLogout();
 const confirmed = await confirmCancelSubscription();`}
-            </pre>
-          </div>
+        </DocsCodeBlock>
 
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Step 3: Render the Modal</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="Step 3: Render the Modal">
 {`// In your JSX (typically near the end of the component):
 <ConfirmationModal
   isOpen={confirmationState.isOpen}
@@ -207,10 +198,8 @@ const confirmed = await confirmCancelSubscription();`}
   cancelText={confirmationState.cancelText}
   type={confirmationState.variant}
 />`}
-            </pre>
-          </div>
-        </div>
-      </StateDemo>
+        </DocsCodeBlock>
+      </CollapsibleDocs>
 
       <StateDemo label="Modal Variants">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
@@ -237,48 +226,39 @@ const confirmed = await confirmCancelSubscription();`}
         </div>
       </StateDemo>
 
-      <StateDemo label="Modal Patterns: Dialog vs Adaptive">
-        <div className="w-full space-y-4">
-          <div className="wewrite-card p-4 border-l-4 border-l-blue-500 bg-blue-500/5">
-            <div className="flex items-center gap-2 mb-2">
-              <Icon name="Info" size={16} className="text-blue-500" />
-              <h4 className="font-semibold text-blue-700 dark:text-blue-400">Key Pattern: Centered Dialogs for Alerts</h4>
-            </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              All alert/confirmation modals (ConfirmationModal, AlertModal, PromptModal, ActionModal) are <strong>always centered</strong> on screen, on both mobile and desktop. They never appear as bottom drawers.
+      <CollapsibleDocs type="guidelines" title="Dialog vs Adaptive Modal">
+        <DocsNote variant="info" title="Key Pattern: Centered Dialogs for Alerts">
+          All alert/confirmation modals (ConfirmationModal, AlertModal, PromptModal, ActionModal) are <strong>always centered</strong> on screen, on both mobile and desktop. They never appear as bottom drawers.
+        </DocsNote>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="wewrite-card p-4">
+            <h4 className="font-semibold mb-2 text-green-600 dark:text-green-400">Use Centered Dialog For:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>Confirmations (delete, cancel, logout)</li>
+              <li>Alerts (success, error, warning)</li>
+              <li>Simple prompts (single input)</li>
+              <li>Quick actions (2-4 buttons)</li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              Use: <code className="bg-muted px-1 rounded">UnifiedModal</code> components
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="wewrite-card p-4">
-              <h4 className="font-semibold mb-2 text-green-600 dark:text-green-400">Use Centered Dialog For:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>Confirmations (delete, cancel, logout)</li>
-                <li>Alerts (success, error, warning)</li>
-                <li>Simple prompts (single input)</li>
-                <li>Quick actions (2-4 buttons)</li>
-              </ul>
-              <p className="text-xs text-muted-foreground mt-2 italic">
-                Use: <code className="bg-muted px-1 rounded">UnifiedModal</code> components
-              </p>
-            </div>
-            <div className="wewrite-card p-4">
-              <h4 className="font-semibold mb-2 text-amber-600 dark:text-amber-400">Use Adaptive Modal For:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>Complex forms with many fields</li>
-                <li>Settings panels</li>
-                <li>Content selection (lists, grids)</li>
-                <li>Multi-step workflows</li>
-              </ul>
-              <p className="text-xs text-muted-foreground mt-2 italic">
-                Use: <code className="bg-muted px-1 rounded">Modal</code> or <code className="bg-muted px-1 rounded">AdaptiveModal</code>
-              </p>
-            </div>
+          <div className="wewrite-card p-4">
+            <h4 className="font-semibold mb-2 text-amber-600 dark:text-amber-400">Use Adaptive Modal For:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>Complex forms with many fields</li>
+              <li>Settings panels</li>
+              <li>Content selection (lists, grids)</li>
+              <li>Multi-step workflows</li>
+            </ul>
+            <p className="text-xs text-muted-foreground mt-2 italic">
+              Use: <code className="bg-muted px-1 rounded">Modal</code> or <code className="bg-muted px-1 rounded">AdaptiveModal</code>
+            </p>
           </div>
+        </div>
 
-          <div className="wewrite-card p-4 bg-muted/30 max-w-2xl">
-            <p className="text-sm font-medium mb-2">Component Usage</p>
-            <pre className="text-xs overflow-x-auto">
+        <DocsCodeBlock label="Component Usage">
 {`// UnifiedModal uses Dialog component internally (always centered)
 // For alerts/confirmations, use UnifiedModal or its wrappers:
 
@@ -294,10 +274,8 @@ import { ConfirmationModal } from '@/components/utils/UnifiedModal';
 />
 
 // For complex forms/content, use Modal or AdaptiveModal instead`}
-            </pre>
-          </div>
-        </div>
-      </StateDemo>
+        </DocsCodeBlock>
+      </CollapsibleDocs>
 
       {/* Rendered Modals */}
       <ConfirmationModal

@@ -121,7 +121,7 @@ export default function DesignSystemPage() {
         <Tabs value={activeSection} onValueChange={handleTabClick}>
           <TabsList
             id="design-system-tabs"
-            className="overflow-x-auto w-full border-b-0 px-4 md:px-6 h-[52px]"
+            className="overflow-x-auto overflow-y-hidden w-full border-b-0 px-4 md:px-6 h-[52px] flex-nowrap"
             style={{
               scrollbarWidth: 'none', // Firefox
               msOverflowStyle: 'none', // IE/Edge

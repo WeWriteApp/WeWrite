@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../../components/ui/button';
-import { ComponentShowcase, StateDemo } from './shared';
+import { ComponentShowcase, StateDemo, CollapsibleDocs } from './shared';
 
 /**
  * Static mock of the text selection menu for design system display.
@@ -142,41 +142,49 @@ export function TextSelectionMenuSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
-      <StateDemo label="Props & Behavior">
-        <div className="wewrite-card p-4 max-w-2xl">
-          <h4 className="font-medium mb-2">Key Props</h4>
-          <ul className="text-sm text-muted-foreground space-y-1 mb-4">
-            <li><code className="bg-muted px-1 rounded">canEdit</code> - When true, shows edit-mode menu (Link instead of Copy/Share)</li>
-            <li><code className="bg-muted px-1 rounded">enableCopy</code> - Enable/disable Copy button (view mode only)</li>
-            <li><code className="bg-muted px-1 rounded">enableShare</code> - Enable/disable Share button (view mode only)</li>
-            <li><code className="bg-muted px-1 rounded">enableAddToPage</code> - Enable/disable Add to Page button (both modes)</li>
-            <li><code className="bg-muted px-1 rounded">selectedText</code> - The currently selected text</li>
-            <li><code className="bg-muted px-1 rounded">position</code> - Screen coordinates for menu placement</li>
-          </ul>
+      <CollapsibleDocs type="props">
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Key Props</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li><code className="bg-muted px-1 rounded">canEdit</code> - When true, shows edit-mode menu (Link instead of Copy/Share)</li>
+              <li><code className="bg-muted px-1 rounded">enableCopy</code> - Enable/disable Copy button (view mode only)</li>
+              <li><code className="bg-muted px-1 rounded">enableShare</code> - Enable/disable Share button (view mode only)</li>
+              <li><code className="bg-muted px-1 rounded">enableAddToPage</code> - Enable/disable Add to Page button (both modes)</li>
+              <li><code className="bg-muted px-1 rounded">selectedText</code> - The currently selected text</li>
+              <li><code className="bg-muted px-1 rounded">position</code> - Screen coordinates for menu placement</li>
+            </ul>
+          </div>
 
-          <h4 className="font-medium mb-2">Button Actions</h4>
-          <ul className="text-sm text-muted-foreground space-y-1 mb-4">
-            <li><strong>Copy:</strong> Copies text to clipboard with attribution metadata</li>
-            <li><strong>Share:</strong> Creates a shareable URL with text highlight anchor</li>
-            <li><strong>Link:</strong> Opens LinkEditorModal to search and link to pages/users</li>
-            <li><strong>Add to:</strong> Opens modal to append quoted text to existing or new page</li>
-          </ul>
+          <div>
+            <h4 className="font-medium mb-2">Button Actions</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li><strong>Copy:</strong> Copies text to clipboard with attribution metadata</li>
+              <li><strong>Share:</strong> Creates a shareable URL with text highlight anchor</li>
+              <li><strong>Link:</strong> Opens LinkEditorModal to search and link to pages/users</li>
+              <li><strong>Add to:</strong> Opens modal to append quoted text to existing or new page</li>
+            </ul>
+          </div>
 
-          <h4 className="font-medium mb-2">Positioning</h4>
-          <ul className="text-sm text-muted-foreground space-y-1 mb-4">
-            <li>Menu appears above the selection, centered horizontally</li>
-            <li>Clamped to viewport edges with 12px padding</li>
-            <li>Horizontal scrolling with chevron indicators for overflow</li>
-          </ul>
+          <div>
+            <h4 className="font-medium mb-2">Positioning</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>Menu appears above the selection, centered horizontally</li>
+              <li>Clamped to viewport edges with 12px padding</li>
+              <li>Horizontal scrolling with chevron indicators for overflow</li>
+            </ul>
+          </div>
 
-          <h4 className="font-medium mb-2">Styling</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>Uses <code className="bg-muted px-1 rounded">wewrite-card wewrite-floating</code> for glassmorphic effect</li>
-            <li>Ghost variant buttons with icon + text labels</li>
-            <li>Fixed position, rendered via portal to document.body for modals</li>
-          </ul>
+          <div>
+            <h4 className="font-medium mb-2">Styling</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>Uses <code className="bg-muted px-1 rounded">wewrite-card wewrite-floating</code> for glassmorphic effect</li>
+              <li>Ghost variant buttons with icon + text labels</li>
+              <li>Fixed position, rendered via portal to document.body for modals</li>
+            </ul>
+          </div>
         </div>
-      </StateDemo>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

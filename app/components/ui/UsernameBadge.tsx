@@ -296,6 +296,32 @@ export function UsernameBadge({
   );
 
   if (variant === 'pill') {
+    // Inactive users get a grey pill style similar to deleted pages
+    if (isInactive) {
+      return (
+        <>
+          <Link
+            href={`/u/${userId}`}
+            onClick={handleClick}
+            className={cn(
+              "inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out",
+              "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400",
+              "hover:bg-neutral-300 dark:hover:bg-neutral-600",
+              "px-2 py-0.5 no-underline hover:no-underline",
+              className
+            )}
+            title={getTooltipText()}
+          >
+            {wrappedContent}
+          </Link>
+          <SubscriptionTiersModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         <PillLink
@@ -322,7 +348,7 @@ export function UsernameBadge({
         href={`/u/${userId}`}
         onClick={handleClick}
         className={cn(
-          "username-badge-link inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit no-underline",
+          "username-badge-link inline-flex items-center gap-1 rounded-md transition-colors w-fit no-underline",
           isInactive
             ? "hover:bg-primary/5 text-muted-foreground"
             : "hover:bg-primary/10 text-primary",
