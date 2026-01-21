@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getUserSubscriptionServer } from '../../firebase/subscription-server';
 import { getDocumentOptimized, trackFirestoreRead } from '../../utils/firestoreOptimizer';
+import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
 // EMERGENCY COST OPTIMIZATION: Aggressive subscription caching
 const subscriptionCache = new Map<string, { data: any; timestamp: number }>();
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
           id: 'inactive',
           status: 'inactive',
           amount: 0,
-          tier: null,
+          tier: 'inactive',  // Use 'inactive' string, not null, for consistent badge display
           stripeSubscriptionId: null
         }
       };
@@ -102,7 +103,10 @@ export async function GET(request: NextRequest) {
       const inactiveResponse = {
         hasSubscription: false,
         status: 'inactive',
-        fullData: subscription
+        fullData: {
+          ...subscription,
+          tier: 'inactive'  // Ensure tier is always 'inactive' for consistent badge display
+        }
       };
 
       // EMERGENCY COST OPTIMIZATION: Cache inactive response too
@@ -117,6 +121,13 @@ export async function GET(request: NextRequest) {
     // Determine if subscription is truly active (not canceled, past_due, etc.)
     const isActive = subscription.status === 'active' || subscription.status === 'trialing';
 
+    // Compute the effective tier using centralized logic
+    const effectiveTier = getEffectiveTier(
+      subscription.amount ?? null,
+      subscription.tier ?? null,
+      subscription.status ?? null
+    );
+
     // Return the subscription data in the expected format
     const activeResponse = {
       hasSubscription: isActive,
@@ -124,7 +135,10 @@ export async function GET(request: NextRequest) {
       amount: isActive ? subscription.amount : 0, // Only show amount if active
       tokens: (subscription as any).tokens,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-      fullData: subscription
+      fullData: {
+        ...subscription,
+        tier: effectiveTier  // Always include computed tier for consistent badge display
+      }
     };
     // Log full response for debugging
     if (enableDebugLogging) {

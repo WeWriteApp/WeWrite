@@ -128,6 +128,12 @@ const AutoLinkedUrl: React.FC<{
   // Check if external link should be disabled (secure by default)
   const shouldDisable = authorHasSubscription !== true;
 
+  // Filter out underline-related classes from parent - we control our own underline styling
+  const filteredClassName = className
+    .split(' ')
+    .filter(c => !['underline', 'no-underline', 'underline-offset-2', 'underline-offset-4'].includes(c))
+    .join(' ');
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -154,10 +160,10 @@ const AutoLinkedUrl: React.FC<{
     <>
       <button
         onClick={handleClick}
-        className={`${className} ${shouldDisable
-          ? 'text-muted-foreground cursor-not-allowed border-b border-dotted border-muted-foreground no-underline'
-          : 'text-primary underline underline-offset-2 cursor-pointer'
-        } break-words bg-transparent border-none p-0 m-0 font-inherit text-inherit text-left inline`.trim()}
+        className={`${filteredClassName} ${shouldDisable
+          ? 'text-muted-foreground cursor-not-allowed border-b border-dotted border-muted-foreground border-t-0 border-l-0 border-r-0 no-underline'
+          : 'text-primary underline underline-offset-2 cursor-pointer border-none'
+        } break-words bg-transparent p-0 m-0 font-inherit text-left inline`.trim()}
       >
         {displayText}
       </button>

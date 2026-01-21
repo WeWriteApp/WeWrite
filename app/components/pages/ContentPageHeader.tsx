@@ -995,7 +995,6 @@ export default function ContentPageHeader({
                         username={username}
                         tier={authorSubscription.tier}
                         size="sm"
-                        className="text-xs overflow-hidden text-ellipsis"
                       />
                     </div>
                   </div>
