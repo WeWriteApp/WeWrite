@@ -64,6 +64,7 @@ import { usePillStyle } from "../../contexts/PillStyleContext";
 import { Icon } from "@/components/ui/Icon";
 import Modal from "../ui/modal";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
+import { toast } from "../ui/use-toast";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import type { TextViewProps } from "../../types/components";
@@ -113,17 +114,39 @@ const ANIMATION_CONSTANTS = {
 /**
  * AutoLinkedUrl - Renders auto-detected URLs with external link confirmation modal
  * This ensures pasted/typed plain text URLs get the same security treatment as proper links
+ * Includes paywall logic matching LinkNode - external links require author subscription
  */
 const AutoLinkedUrl: React.FC<{
   href: string;
   displayText: string;
   className?: string;
-}> = ({ href, displayText, className = '' }) => {
+  authorHasSubscription?: boolean;
+  isPageOwner?: boolean;
+}> = ({ href, displayText, className = '', authorHasSubscription, isPageOwner }) => {
   const [showModal, setShowModal] = useState(false);
+
+  // Check if external link should be disabled (secure by default)
+  const shouldDisable = authorHasSubscription !== true;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (shouldDisable) {
+      // Show toast instead of modal - matches LinkNode behavior
+      toast({
+        title: "External link unavailable",
+        description: "This author doesn't have an active subscription. External links are a paid feature.",
+        ...(isPageOwner ? {
+          action: {
+            label: "Upgrade",
+            onClick: () => { window.location.href = '/settings/subscription'; }
+          }
+        } : {})
+      });
+      return;
+    }
+
     setShowModal(true);
   };
 
@@ -131,23 +154,33 @@ const AutoLinkedUrl: React.FC<{
     <>
       <button
         onClick={handleClick}
-        className={`${className} text-primary underline underline-offset-2 break-words cursor-pointer bg-transparent border-none p-0 m-0 font-inherit text-inherit text-left inline`.trim()}
+        className={`${className} ${shouldDisable
+          ? 'text-muted-foreground cursor-not-allowed border-b border-dotted border-muted-foreground no-underline'
+          : 'text-primary underline underline-offset-2 cursor-pointer'
+        } break-words bg-transparent border-none p-0 m-0 font-inherit text-inherit text-left inline`.trim()}
       >
         {displayText}
       </button>
-      <ExternalLinkPreviewModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        url={href}
-        displayText={displayText}
-      />
+      {!shouldDisable && (
+        <ExternalLinkPreviewModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          url={href}
+          displayText={displayText}
+        />
+      )}
     </>
   );
 };
 
 // Helper: linkify plain text segments (for legacy bios/raw text)
-// Now uses ExternalLinkPreviewModal for security
-const renderLinkifiedText = (text: string, className = ''): React.ReactNode[] | null => {
+// Now uses ExternalLinkPreviewModal for security and includes paywall context
+const renderLinkifiedText = (
+  text: string,
+  className = '',
+  authorHasSubscription?: boolean,
+  isPageOwner?: boolean
+): React.ReactNode[] | null => {
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
   const segments: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -172,6 +205,8 @@ const renderLinkifiedText = (text: string, className = ''): React.ReactNode[] | 
         href={href}
         displayText={rawUrl}
         className={className}
+        authorHasSubscription={authorHasSubscription}
+        isPageOwner={isPageOwner}
       />
     );
 
@@ -853,7 +888,7 @@ export const RenderContent = (props: {
               );
             }
 
-            const linkifiedSegments = renderLinkifiedText(child.text, className.trim());
+            const linkifiedSegments = renderLinkifiedText(child.text, className.trim(), authorHasSubscription, isPageOwner);
             if (linkifiedSegments) {
               return (
                 <React.Fragment key={i}>
@@ -1070,7 +1105,7 @@ const SimpleParagraphNode = (props: {
         );
       }
 
-      const linkifiedSegments = renderLinkifiedText(child.text, className.trim());
+      const linkifiedSegments = renderLinkifiedText(child.text, className.trim(), authorHasSubscription, isPageOwner);
       if (linkifiedSegments) {
         return (
           <React.Fragment key={i}>
@@ -1120,7 +1155,7 @@ const SimpleParagraphNode = (props: {
               if (nodeToRender.italic) className += ' italic';
               if (nodeToRender.underline) className += ' underline';
 
-              const linkifiedSegments = renderLinkifiedText(nodeToRender.text, className.trim());
+              const linkifiedSegments = renderLinkifiedText(nodeToRender.text, className.trim(), authorHasSubscription, isPageOwner);
               if (linkifiedSegments) {
                 return (
                   <React.Fragment key={`${i}-${grandchildIndex}`}>
