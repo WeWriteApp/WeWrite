@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
+import { getAdminFirestore } from '../../firebase/admin';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const alt = 'WeWrite User Profile';
 export const size = {
@@ -20,72 +21,31 @@ interface UserData {
 
 async function fetchUserData(username: string): Promise<UserData | null> {
   try {
-    // Use Firebase REST API directly to bypass Vercel bot protection
+    // Use Firebase Admin SDK for direct database access
+    // This bypasses security rules and doesn't require authentication
+    const db = getAdminFirestore();
+
     // Query users collection where username matches
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-cee96';
+    const usersSnapshot = await db.collection('users')
+      .where('username', '==', username)
+      .limit(1)
+      .get();
 
-    // First, query by username field
-    const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
-
-    const queryBody = {
-      structuredQuery: {
-        from: [{ collectionId: 'users' }],
-        where: {
-          fieldFilter: {
-            field: { fieldPath: 'username' },
-            op: 'EQUAL',
-            value: { stringValue: username }
-          }
-        },
-        limit: 1
-      }
-    };
-
-    const response = await fetch(queryUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(queryBody),
-      signal: AbortSignal.timeout(5000)
-    });
-
-    if (!response.ok) {
-      console.warn(`Firebase REST API returned ${response.status} for user ${username}`);
+    if (usersSnapshot.empty) {
+      console.warn(`User ${username} not found for OG image`);
       return null;
     }
 
-    const results = await response.json();
-
-    // Check if we got any results
-    if (!results || !results[0] || !results[0].document) {
-      return null;
-    }
-
-    const doc = results[0].document;
-    const fields = doc.fields;
-
-    // Helper to extract Firestore field values
-    const getValue = (field: any): any => {
-      if (!field) return undefined;
-      if (field.stringValue !== undefined) return field.stringValue;
-      if (field.integerValue !== undefined) return parseInt(field.integerValue);
-      if (field.doubleValue !== undefined) return field.doubleValue;
-      if (field.booleanValue !== undefined) return field.booleanValue;
-      return undefined;
-    };
-
-    // Extract user ID from document path
-    const docPath = doc.name;
-    const uid = docPath.split('/').pop();
+    const userDoc = usersSnapshot.docs[0];
+    const data = userDoc.data();
 
     return {
-      uid: uid || '',
-      username: getValue(fields.username) || username,
-      bio: getValue(fields.bio),
-      totalPages: getValue(fields.totalPages),
-      publicPages: getValue(fields.publicPages),
-      profilePicture: getValue(fields.profilePicture),
+      uid: userDoc.id,
+      username: data.username || username,
+      bio: data.bio,
+      totalPages: data.totalPages,
+      publicPages: data.publicPages,
+      profilePicture: data.profilePicture,
     };
   } catch (error) {
     console.warn(`Error fetching user data for OG image ${username}:`, error);

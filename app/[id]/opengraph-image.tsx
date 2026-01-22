@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
+import { getAdminFirestore } from '../firebase/admin';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const alt = 'WeWrite Page';
 export const size = {
@@ -146,57 +147,26 @@ interface OGPageData {
 
 async function fetchPageData(pageId: string): Promise<OGPageData | null> {
   try {
-    // Use Firebase REST API directly to bypass Vercel bot protection
-    // This avoids the 429 rate limit issues when calling our own API
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-cee96';
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/pages/${pageId}`;
+    // Use Firebase Admin SDK for direct database access
+    // This bypasses security rules and doesn't require authentication
+    const db = getAdminFirestore();
+    const pageDoc = await db.collection('pages').doc(pageId).get();
 
-    const response = await fetch(firestoreUrl, {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      signal: AbortSignal.timeout(5000)
-    });
-
-    if (!response.ok) {
-      console.warn(`Firebase REST API returned ${response.status} for page ${pageId}`);
+    if (!pageDoc.exists) {
+      console.warn(`Page ${pageId} not found for OG image`);
       return null;
     }
 
-    const firestoreDoc = await response.json();
-
-    // Parse Firestore document format
-    if (!firestoreDoc.fields) {
+    const data = pageDoc.data();
+    if (!data) {
       return null;
     }
-
-    const fields = firestoreDoc.fields;
-
-    // Helper to extract Firestore field values
-    const getValue = (field: any): any => {
-      if (!field) return undefined;
-      if (field.stringValue !== undefined) return field.stringValue;
-      if (field.integerValue !== undefined) return parseInt(field.integerValue);
-      if (field.doubleValue !== undefined) return field.doubleValue;
-      if (field.booleanValue !== undefined) return field.booleanValue;
-      if (field.arrayValue !== undefined) {
-        return (field.arrayValue.values || []).map(getValue);
-      }
-      if (field.mapValue !== undefined) {
-        const result: any = {};
-        for (const [key, val] of Object.entries(field.mapValue.fields || {})) {
-          result[key] = getValue(val);
-        }
-        return result;
-      }
-      return undefined;
-    };
 
     return {
-      title: getValue(fields.title),
-      content: getValue(fields.content),
-      username: getValue(fields.username),
-      authorUsername: getValue(fields.authorUsername),
+      title: data.title,
+      content: data.content,
+      username: data.username,
+      authorUsername: data.authorUsername,
     };
   } catch (error) {
     console.warn(`Error fetching page data for OG image ${pageId}:`, error);
@@ -206,25 +176,10 @@ async function fetchPageData(pageId: string): Promise<OGPageData | null> {
 
 async function fetchSponsorCount(pageId: string): Promise<number> {
   try {
-    // Use Firebase REST API to count sponsors
-    // Query the pledges subcollection for this page
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-cee96';
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/pages/${pageId}/pledges`;
-
-    const response = await fetch(firestoreUrl, {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      signal: AbortSignal.timeout(3000)
-    });
-
-    if (!response.ok) {
-      return 0;
-    }
-
-    const data = await response.json();
-    // Count documents in the pledges subcollection
-    return data.documents ? data.documents.length : 0;
+    // Use Firebase Admin SDK for direct database access
+    const db = getAdminFirestore();
+    const pledgesSnapshot = await db.collection('pages').doc(pageId).collection('pledges').get();
+    return pledgesSnapshot.size;
   } catch {
     return 0;
   }
