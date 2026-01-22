@@ -20,25 +20,73 @@ interface UserData {
 
 async function fetchUserData(username: string): Promise<UserData | null> {
   try {
-    // Get base URL - always use production URL when in production
-    const baseUrl = process.env.VERCEL_ENV === 'production'
-      ? 'https://www.getwewrite.app'
-      : (process.env.NEXT_PUBLIC_BASE_URL ||
-         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
+    // Use Firebase REST API directly to bypass Vercel bot protection
+    // Query users collection where username matches
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-cee96';
 
-    const response = await fetch(`${baseUrl}/api/users/profile?username=${encodeURIComponent(username)}`, {
+    // First, query by username field
+    const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+
+    const queryBody = {
+      structuredQuery: {
+        from: [{ collectionId: 'users' }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: 'username' },
+            op: 'EQUAL',
+            value: { stringValue: username }
+          }
+        },
+        limit: 1
+      }
+    };
+
+    const response = await fetch(queryUrl, {
+      method: 'POST',
       headers: {
-        'User-Agent': 'WeWrite-OG-Generator/1.0'
+        'Content-Type': 'application/json'
       },
+      body: JSON.stringify(queryBody),
       signal: AbortSignal.timeout(5000)
     });
 
     if (!response.ok) {
+      console.warn(`Firebase REST API returned ${response.status} for user ${username}`);
       return null;
     }
 
-    const data = await response.json();
-    return data.data || data;
+    const results = await response.json();
+
+    // Check if we got any results
+    if (!results || !results[0] || !results[0].document) {
+      return null;
+    }
+
+    const doc = results[0].document;
+    const fields = doc.fields;
+
+    // Helper to extract Firestore field values
+    const getValue = (field: any): any => {
+      if (!field) return undefined;
+      if (field.stringValue !== undefined) return field.stringValue;
+      if (field.integerValue !== undefined) return parseInt(field.integerValue);
+      if (field.doubleValue !== undefined) return field.doubleValue;
+      if (field.booleanValue !== undefined) return field.booleanValue;
+      return undefined;
+    };
+
+    // Extract user ID from document path
+    const docPath = doc.name;
+    const uid = docPath.split('/').pop();
+
+    return {
+      uid: uid || '',
+      username: getValue(fields.username) || username,
+      bio: getValue(fields.bio),
+      totalPages: getValue(fields.totalPages),
+      publicPages: getValue(fields.publicPages),
+      profilePicture: getValue(fields.profilePicture),
+    };
   } catch (error) {
     console.warn(`Error fetching user data for OG image ${username}:`, error);
     return null;

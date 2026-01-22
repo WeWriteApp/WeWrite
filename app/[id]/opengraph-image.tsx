@@ -146,26 +146,58 @@ interface OGPageData {
 
 async function fetchPageData(pageId: string): Promise<OGPageData | null> {
   try {
-    // Get base URL - always use production URL when in production
-    const baseUrl = process.env.VERCEL_ENV === 'production'
-      ? 'https://www.getwewrite.app'
-      : (process.env.NEXT_PUBLIC_BASE_URL ||
-         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
+    // Use Firebase REST API directly to bypass Vercel bot protection
+    // This avoids the 429 rate limit issues when calling our own API
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-cee96';
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/pages/${pageId}`;
 
-    const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
+    const response = await fetch(firestoreUrl, {
       headers: {
-        'User-Agent': 'WeWrite-OG-Generator/1.0'
+        'Content-Type': 'application/json'
       },
       signal: AbortSignal.timeout(5000)
     });
 
     if (!response.ok) {
+      console.warn(`Firebase REST API returned ${response.status} for page ${pageId}`);
       return null;
     }
 
-    const data = await response.json();
-    // Extract pageData from the response wrapper
-    return data.pageData || data;
+    const firestoreDoc = await response.json();
+
+    // Parse Firestore document format
+    if (!firestoreDoc.fields) {
+      return null;
+    }
+
+    const fields = firestoreDoc.fields;
+
+    // Helper to extract Firestore field values
+    const getValue = (field: any): any => {
+      if (!field) return undefined;
+      if (field.stringValue !== undefined) return field.stringValue;
+      if (field.integerValue !== undefined) return parseInt(field.integerValue);
+      if (field.doubleValue !== undefined) return field.doubleValue;
+      if (field.booleanValue !== undefined) return field.booleanValue;
+      if (field.arrayValue !== undefined) {
+        return (field.arrayValue.values || []).map(getValue);
+      }
+      if (field.mapValue !== undefined) {
+        const result: any = {};
+        for (const [key, val] of Object.entries(field.mapValue.fields || {})) {
+          result[key] = getValue(val);
+        }
+        return result;
+      }
+      return undefined;
+    };
+
+    return {
+      title: getValue(fields.title),
+      content: getValue(fields.content),
+      username: getValue(fields.username),
+      authorUsername: getValue(fields.authorUsername),
+    };
   } catch (error) {
     console.warn(`Error fetching page data for OG image ${pageId}:`, error);
     return null;
@@ -174,16 +206,16 @@ async function fetchPageData(pageId: string): Promise<OGPageData | null> {
 
 async function fetchSponsorCount(pageId: string): Promise<number> {
   try {
-    // Get base URL - always use production URL when in production
-    const baseUrl = process.env.VERCEL_ENV === 'production'
-      ? 'https://www.getwewrite.app'
-      : (process.env.NEXT_PUBLIC_BASE_URL ||
-         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
+    // Use Firebase REST API to count sponsors
+    // Query the pledges subcollection for this page
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-cee96';
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/pages/${pageId}/pledges`;
 
-    const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
+    const response = await fetch(firestoreUrl, {
       headers: {
-        'User-Agent': 'WeWrite-OG-Generator/1.0'
-      }
+        'Content-Type': 'application/json'
+      },
+      signal: AbortSignal.timeout(3000)
     });
 
     if (!response.ok) {
@@ -191,7 +223,8 @@ async function fetchSponsorCount(pageId: string): Promise<number> {
     }
 
     const data = await response.json();
-    return data.sponsorCount || 0;
+    // Count documents in the pledges subcollection
+    return data.documents ? data.documents.length : 0;
   } catch {
     return 0;
   }

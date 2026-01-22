@@ -282,8 +282,21 @@ export default function RootLayout({
                                     <GlobalDrawerRenderer />
                                     {/* UI label tooltips for admin debugging */}
                                     <UILabelTooltipOverlay />
-                                    {/* Toast notifications */}
-                                    <Toaster richColors position="bottom-right" />
+                                    {/* Toast notifications - theme="system" for auto dark/light mode */}
+                                    <Toaster
+                                      richColors
+                                      position="bottom-right"
+                                      theme="system"
+                                      toastOptions={{
+                                        classNames: {
+                                          toast: 'dark:bg-neutral-900 dark:border-neutral-800',
+                                          title: 'dark:text-neutral-100',
+                                          description: 'dark:text-neutral-400',
+                                          actionButton: 'dark:bg-primary dark:text-primary-foreground',
+                                          cancelButton: 'dark:bg-neutral-800 dark:text-neutral-400',
+                                        }
+                                      }}
+                                    />
                                   </SessionAuthInitializer>
                                 </GlobalDrawerProvider>
                               </PreviousRouteProvider>

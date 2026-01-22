@@ -1600,17 +1600,8 @@ export default function ContentPageView({
 
       // Keep isEditing true - ALWAYS edit mode
 
-      // Show success feedback to user
-      try {
-        const { toast } = await import('../../components/ui/use-toast');
-        toast({
-          title: "Page Saved",
-          description: "Your changes have been saved successfully.",
-          variant: "default"
-        });
-      } catch (toastError) {
-        console.error('Error showing success toast (non-fatal):', toastError);
-      }
+      // NOTE: Success toast removed - AutoSaveIndicator below the editor provides
+      // sufficient visual feedback for save state (redundant feedback removed)
 
       // Update saved refs to the VALUES THAT WERE ACTUALLY SAVED
       // IMPORTANT: Use contentToSave/titleToSave (captured at save start), NOT current state
