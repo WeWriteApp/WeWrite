@@ -266,6 +266,11 @@ const FilteredSearchResults = forwardRef(({
           filteredPages = filteredPages.filter(page => page.id !== currentPageId);
         }
 
+        // Apply editableOnly filter if specified (only show pages user can edit)
+        if (editableOnly) {
+          filteredPages = filteredPages.filter(page => page.userId === user.uid);
+        }
+
         setPages(filteredPages);
         setUsers(userResults);
         setGroups(groupResults);
@@ -304,6 +309,11 @@ const FilteredSearchResults = forwardRef(({
         // Filter out current page if specified
         if (currentPageId) {
           filteredPages = filteredPages.filter(page => page.id !== currentPageId);
+        }
+
+        // Apply editableOnly filter if specified (only show pages user can edit)
+        if (editableOnly) {
+          filteredPages = filteredPages.filter(page => page.userId === user.uid);
         }
 
         const limitedPages = maxResults ? filteredPages.slice(0, maxResults) : filteredPages;
