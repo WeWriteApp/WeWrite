@@ -8,11 +8,14 @@
  * - Twitter may cache images aggressively
  *
  * This file mirrors the opengraph-image.tsx but ensures Twitter compatibility.
+ * Uses Node.js runtime with Firebase Admin SDK for direct database access
+ * (avoids API calls that get blocked by Vercel Security Checkpoint).
  */
 
 import { ImageResponse } from 'next/og';
+import { getAdminFirestore } from '../firebase/admin';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const alt = 'WeWrite Page';
 export const size = {
@@ -87,30 +90,31 @@ interface TwitterPageData {
   content?: string | any[];
   username?: string;
   authorUsername?: string;
-  sponsorCount?: number;
 }
 
 async function fetchPageData(pageId: string): Promise<TwitterPageData | null> {
   try {
-    // Always use production URL for consistent OG images
-    const baseUrl = process.env.VERCEL_ENV === 'production'
-      ? 'https://www.getwewrite.app'
-      : (process.env.NEXT_PUBLIC_BASE_URL ||
-         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
+    // Use Firebase Admin SDK for direct database access
+    // This bypasses Vercel Security Checkpoint and doesn't require authentication
+    const db = getAdminFirestore();
+    const pageDoc = await db.collection('pages').doc(pageId).get();
 
-    const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
-      headers: {
-        'User-Agent': 'WeWrite-Twitter-OG-Generator/1.0'
-      },
-      signal: AbortSignal.timeout(5000)
-    });
-
-    if (!response.ok) {
+    if (!pageDoc.exists) {
+      console.warn(`Page ${pageId} not found for Twitter image`);
       return null;
     }
 
-    const data = await response.json();
-    return data.pageData || data;
+    const data = pageDoc.data();
+    if (!data) {
+      return null;
+    }
+
+    return {
+      title: data.title,
+      content: data.content,
+      username: data.username,
+      authorUsername: data.authorUsername,
+    };
   } catch (error) {
     console.warn(`Error fetching page data for Twitter image ${pageId}:`, error);
     return null;
@@ -119,23 +123,10 @@ async function fetchPageData(pageId: string): Promise<TwitterPageData | null> {
 
 async function fetchSponsorCount(pageId: string): Promise<number> {
   try {
-    const baseUrl = process.env.VERCEL_ENV === 'production'
-      ? 'https://www.getwewrite.app'
-      : (process.env.NEXT_PUBLIC_BASE_URL ||
-         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'));
-
-    const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
-      headers: {
-        'User-Agent': 'WeWrite-Twitter-OG-Generator/1.0'
-      }
-    });
-
-    if (!response.ok) {
-      return 0;
-    }
-
-    const data = await response.json();
-    return data.sponsorCount || 0;
+    // Use Firebase Admin SDK for direct database access
+    const db = getAdminFirestore();
+    const pledgesSnapshot = await db.collection('pages').doc(pageId).collection('pledges').get();
+    return pledgesSnapshot.size;
   } catch {
     return 0;
   }

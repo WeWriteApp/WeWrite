@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
-import { getCollectionNameAsync } from '../../../utils/environmentConfig';
+import { getCollectionNameAsync, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { isUserAdmin } from '../../../utils/adminSecurity';
 
@@ -154,8 +154,19 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
           const userData = userDoc.data();
           // Only use username field, never displayName or email
           username = userData?.username || null;
-          // Get subscription status for external link paywall
-          authorHasActiveSubscription = userData?.subscriptionStatus === 'active';
+        }
+
+        // Get subscription status from subscription subcollection (source of truth)
+        // The webhook updates users/{userId}/subscriptions/current, not the user document
+        const { parentPath, subCollectionName } = getSubCollectionPath(
+          PAYMENT_COLLECTIONS.USERS,
+          processedPageData.userId,
+          PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+        );
+        const subscriptionDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
+        if (subscriptionDoc.exists) {
+          const subscriptionData = subscriptionDoc.data();
+          authorHasActiveSubscription = subscriptionData?.status === 'active';
         }
 
         // If still no username, fall back to a safe identifier
@@ -168,12 +179,17 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       }
     } else if (processedPageData.userId) {
       // Username doesn't need refresh, but we still need subscription status
+      // Read from subscription subcollection (source of truth)
       try {
-        const usersCollection = await getCollectionNameAsync('users');
-        const userDoc = await db.collection(usersCollection).doc(processedPageData.userId).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          authorHasActiveSubscription = userData?.subscriptionStatus === 'active';
+        const { parentPath, subCollectionName } = getSubCollectionPath(
+          PAYMENT_COLLECTIONS.USERS,
+          processedPageData.userId,
+          PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+        );
+        const subscriptionDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
+        if (subscriptionDoc.exists) {
+          const subscriptionData = subscriptionDoc.data();
+          authorHasActiveSubscription = subscriptionData?.status === 'active';
         }
       } catch (error) {
         // Non-fatal: we'll default to undefined which will be treated as unknown
