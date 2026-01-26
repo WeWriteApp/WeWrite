@@ -183,6 +183,14 @@ import {
   Code2,
   Cloud,
   SlidersHorizontal,
+  Video,
+  Camera,
+  Mic,
+  Volume2,
+  PlayCircle,
+  StopCircle,
+  RectangleHorizontal,
+  RectangleVertical,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -257,7 +265,8 @@ export type IconName =
   | "Printer" | "MailWarning" | "Coins" | "LayoutGrid" | "Grid2X2" | "EyeOff"
   | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand"
   | "GitCompare" | "Loader2" | "Cpu" | "Briefcase" | "Brain" | "Music" | "Plane" | "Figma" | "Code2" | "Cloud"
-  | "SlidersHorizontal";
+  | "SlidersHorizontal" | "Video" | "Camera" | "Mic" | "Volume2" | "PlayCircle" | "StopCircle"
+  | "RectangleHorizontal" | "RectangleVertical";
 
 // Icon props interface
 export interface IconProps {
@@ -511,9 +520,45 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Code2: Code2,
   Cloud: Cloud,
   SlidersHorizontal: SlidersHorizontal,
+  Video: Video,
+  Camera: Camera,
+  Mic: Mic,
+  Volume2: Volume2,
+  PlayCircle: PlayCircle,
+  StopCircle: StopCircle,
+  RectangleHorizontal: RectangleHorizontal,
+  RectangleVertical: RectangleVertical,
 };
 
-// Unified Icon Component
+/**
+ * Icon Component - Unified icon system using Lucide React
+ *
+ * @example
+ * ```tsx
+ * <Icon name="Video" size={20} className="text-primary" />
+ * <Icon name="Camera" size={24} weight="fill" />
+ * ```
+ *
+ * **Available Icons:**
+ * - Run `bun run icons:list` to see all available icons
+ * - Common icons: Home, User, Settings, Mail, Search, Calendar, Video, Camera, etc.
+ *
+ * **Adding New Icons:**
+ * If you need an icon that doesn't exist:
+ * 1. Import it from 'lucide-react' at the top of this file
+ * 2. Add it to the iconMap object below
+ * 3. Add it to the IconName type union
+ * 4. TypeScript will ensure type safety across the codebase
+ *
+ * **Icon Library:**
+ * Browse all available icons at https://lucide.dev/icons
+ *
+ * @param name - Icon name from the IconName type
+ * @param size - Icon size in pixels (default: 24)
+ * @param className - Additional CSS classes
+ * @param weight - Icon weight (use "fill" for solid icons)
+ * @param color - Icon color (defaults to currentColor)
+ */
 export const Icon = forwardRef<HTMLSpanElement, IconProps>(
   (
     {
@@ -561,7 +606,17 @@ export const Icon = forwardRef<HTMLSpanElement, IconProps>(
     const LucideIcon = iconMap[name];
 
     if (!LucideIcon) {
-      console.warn(`Icon "${name}" not found in icon map`);
+      if (process.env.NODE_ENV === 'development') {
+        console.error(
+          `Icon "${name}" not found in icon map.\n\n` +
+          `To fix this:\n` +
+          `1. Import the icon from 'lucide-react' in Icon.tsx\n` +
+          `2. Add it to the iconMap object\n` +
+          `3. Add it to the IconName type union\n\n` +
+          `Available icons: ${Object.keys(iconMap).sort().join(', ')}\n\n` +
+          `Browse all Lucide icons: https://lucide.dev/icons`
+        );
+      }
       return (
         <span
           ref={ref}
@@ -574,6 +629,7 @@ export const Icon = forwardRef<HTMLSpanElement, IconProps>(
           onClick={onClick}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
+          title={process.env.NODE_ENV === 'development' ? `Missing icon: ${name}` : undefined}
         >
           <span className="text-xs text-gray-400">?</span>
         </span>

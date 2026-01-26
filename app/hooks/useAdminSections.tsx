@@ -5,13 +5,45 @@
  *
  * Single source of truth for admin menu sections.
  * Used by both mobile drawer and desktop sidebar navigation.
+ *
+ * ## Adding New Sections
+ *
+ * When adding new admin sections:
+ * 1. Add the section to the ADMIN_SECTIONS array below
+ * 2. Icon names MUST exist in app/components/ui/Icon.tsx iconMap
+ * 3. Use createIconComponent() wrapper for consistency
+ * 4. Run `bun run icons:list` to see all available icons
+ * 5. If an icon doesn't exist, add it to Icon.tsx first (see Icon.tsx JSDoc)
+ *
+ * ## Icon Validation
+ *
+ * - Icon names are type-checked via the IconName type
+ * - If you use an unmapped icon, you'll see "?" in the UI
+ * - In development, the console will show available icons and instructions
+ * - Browse all icons: https://lucide.dev/icons
+ *
+ * @example
+ * ```tsx
+ * {
+ *   id: 'my-feature',
+ *   title: 'My Feature',
+ *   icon: createIconComponent('Video'), // Must exist in Icon.tsx
+ *   href: '/admin/my-feature',
+ *   description: 'Description of my feature'
+ * }
+ * ```
  */
 
 import React, { useMemo, useEffect, useState } from 'react';
 import { Icon, IconName } from '@/components/ui/Icon';
 import { useAdminData } from '../providers/AdminDataProvider';
 
-// Icon wrapper components for admin sections
+/**
+ * Creates an icon component wrapper for admin sections
+ *
+ * @param name - Icon name from IconName type (must exist in Icon.tsx iconMap)
+ * @returns React component that renders the icon with standard admin styling
+ */
 const createIconComponent = (name: IconName) => {
   const IconComponent = ({ className }: { className?: string }) => (
     <Icon name={name} size={20} className={className} />
@@ -111,6 +143,13 @@ const ADMIN_SECTIONS: AdminSection[] = [
     icon: createIconComponent('Share2'),
     href: '/admin/opengraph-images',
     description: 'Social sharing previews'
+  },
+  {
+    id: 'marketing-videos',
+    title: 'Marketing Videos',
+    icon: createIconComponent('Video'),
+    href: '/admin/marketing-videos',
+    description: 'Create videos with Remotion'
   },
   // Developer tools
   {

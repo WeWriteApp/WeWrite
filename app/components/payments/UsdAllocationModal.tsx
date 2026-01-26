@@ -200,14 +200,14 @@ export function UsdAllocationModal({
       });
     }
 
-    // Other pages (light neutral - matches allocation bar) - SECOND
+    // Other pages (subtle muted background - adapts to light/dark theme) - SECOND
     if (otherPagesCents > 0) {
       segments.push({
         id: 'other',
         value: otherPagesCents,
         label: 'Other allocations',
-        color: 'stroke-neutral-alpha-15',
-        bgColor: 'bg-neutral-alpha-15',
+        color: 'stroke-muted',
+        bgColor: 'bg-muted',
         textColor: 'text-muted-foreground',
       });
     }
@@ -243,7 +243,7 @@ export function UsdAllocationModal({
       hashId="allocation-details"
       analyticsId="allocation_details_modal"
     >
-      <DialogContent className="max-w-md max-h-[90vh]" showCloseButton>
+      <DialogContent className="max-w-md max-h-[85dvh] sm:max-h-[90vh]" showCloseButton>
         <DialogHeader>
           <DialogTitle>
             {isUserAllocation ? `Allocate to ${username}` : 'Page Allocation Details'}

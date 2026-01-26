@@ -53,10 +53,17 @@ const COLOR_MAP: Record<string, string> = {
   'fill-purple-500': '#a855f7',
   'stroke-purple-500': '#a855f7',
   'bg-purple-500': '#a855f7',
-  // Muted
+  // Muted (semantic colors for subtle backgrounds)
+  'fill-muted': 'var(--muted)',
+  'stroke-muted': 'var(--muted)',
+  'bg-muted': 'var(--muted)',
   'fill-muted-foreground': 'var(--muted-foreground)',
   'stroke-muted-foreground': 'var(--muted-foreground)',
   'bg-muted-foreground': 'var(--muted-foreground)',
+  // Neutral alpha colors (theme-aware overlays)
+  'fill-neutral-alpha-15': 'var(--neutral-alpha-15)',
+  'stroke-neutral-alpha-15': 'var(--neutral-alpha-15)',
+  'bg-neutral-alpha-15': 'var(--neutral-alpha-15)',
 };
 
 /**
