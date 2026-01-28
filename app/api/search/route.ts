@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BigQuery } from "@google-cloud/bigquery";
-import { searchUsers, getUserGroupMemberships, getGroupsData } from "../../firebase/database";
+import { searchUsers as searchUsersFirestore } from "../../firebase/database";
 import { getCollectionName, COLLECTIONS } from "../../utils/environmentConfig";
-import { cacheHelpers, CACHE_TTL } from "../../utils/serverCache";
+import { cacheHelpers } from "../../utils/serverCache";
 import { searchCache } from "../../utils/searchCache";
 import { trackFirebaseRead } from "../../utils/costMonitor";
+import {
+  isTypesenseConfigured,
+  searchPages as typesenseSearchPages,
+  searchUsers as typesenseSearchUsers,
+} from "../../lib/typesense";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -28,59 +32,6 @@ interface SearchResponse {
   totalResults: number;
   hasMore: boolean;
   searchTime: number;
-}
-
-let bigquery: BigQuery | null = null;
-
-// Only try to initialize BigQuery if we have credentials
-const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
-
-// In development environment, don't try to use BigQuery to avoid connection errors
-if (process.env.NODE_ENV === 'development') {
-  // Leave bigquery as null to use Firestore fallback
-} else if (credentialsEnvVar) {
-  try {
-    // First try to handle it as regular JSON
-    let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
-
-    // Check if it might be HTML content (bad response)
-    if (jsonString.includes('<!DOCTYPE') || jsonString.includes('<html')) {
-      throw new Error('Invalid credentials format: Contains HTML content');
-    }
-
-    // Check if the string starts with eyJ - a common Base64 JSON start pattern
-    if (credentialsEnvVar.startsWith('eyJ') ||
-        process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true') {
-      // Try to decode as Base64
-      try {
-        const buffer = Buffer.from(credentialsEnvVar, 'base64');
-        jsonString = buffer.toString('utf-8');
-      } catch (decodeError) {
-        // Continue with the original string if decoding fails
-      }
-    }
-
-    const credentials = JSON.parse(jsonString);
-    bigquery = new BigQuery({
-      projectId: credentials.project_id,
-      credentials});
-  } catch (error) {
-    // BigQuery initialization failed - will use Firestore fallback
-  }
-}
-
-// Test BigQuery connection
-async function testBigQueryConnection() {
-  if (!bigquery) {
-    return false;
-  }
-
-  try {
-    const [datasets] = await bigquery.getDatasets();
-    return true;
-  } catch (error) {
-    return false;
-  }
 }
 
 /**
@@ -361,6 +312,11 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           }
 
           const data = doc.data();
+
+          // Skip private pages (isPublic === false) for non-owners
+          if (data.isPublic === false) {
+            return;
+          }
           const pageTitle = data.title || 'Untitled';
           const normalizedTitle = pageTitle.toLowerCase();
 
@@ -578,86 +534,110 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // CRITICAL FIX: Always use Firestore fallback for better reliability
-    // BigQuery can be unreliable in production, so prioritize Firestore
+    // Try Typesense first, fall back to Firestore if it fails
+    const useTypesense = isTypesenseConfigured();
 
-    // For unauthenticated users, return only public content
-    if (!userId) {
+    const cachedResult = await cacheHelpers.getSearchResults(cacheKey, async () => {
+      let pages: any[] = [];
+      let users: any[] = [];
+      let source = "unknown";
 
-      try {
-        // Search for pages in Firestore
-        const pages = await searchPagesInFirestore(null, searchTerm, [], null);
+      // PRIMARY: Try Typesense search
+      if (useTypesense) {
+        try {
+          // Build filter for Typesense
+          let filterBy = '';
+          if (filterByUserId) {
+            filterBy = `authorId:=${filterByUserId}`;
+          } else if (!userId) {
+            // Unauthenticated users can only see public pages
+            filterBy = 'isPublic:=true';
+          }
+          // For authenticated users without filterByUserId, show all accessible pages
+          // (their own + public pages) - Typesense will return both
 
-        // Search for users if we have a search term
-        let users = [];
+          // Search pages
+          const pagesResult = await typesenseSearchPages(searchTerm, {
+            perPage: 50,
+            filterBy: filterBy || undefined,
+            includeFields: ['id', 'title', 'authorId', 'authorUsername', 'isPublic', 'lastModified', 'content'],
+          });
+
+          pages = pagesResult.hits.map(hit => ({
+            id: hit.document.id,
+            title: hit.document.title,
+            type: 'page',
+            isOwned: hit.document.authorId === userId,
+            isEditable: hit.document.authorId === userId,
+            userId: hit.document.authorId,
+            username: hit.document.authorUsername || null,
+            isPublic: hit.document.isPublic,
+            lastModified: hit.document.lastModified
+              ? new Date(hit.document.lastModified * 1000).toISOString()
+              : null,
+            isContentMatch: hit.highlight?.content ? true : false,
+          }));
+
+          // Search users if we have a search term
+          if (searchTerm && searchTerm.trim().length > 1) {
+            try {
+              const usersResult = await typesenseSearchUsers(searchTerm, {
+                perPage: 5,
+                includeFields: ['id', 'username', 'displayName', 'photoURL'],
+              });
+
+              users = usersResult.hits.map(hit => ({
+                id: hit.document.id,
+                username: hit.document.username || "Anonymous",
+                photoURL: hit.document.photoURL || null,
+                type: 'user',
+              }));
+            } catch (userError) {
+              // User search failed, continue with empty users
+              users = [];
+            }
+          }
+
+          source = "typesense_primary";
+        } catch (typesenseError) {
+          console.error('[Search] Typesense search failed, falling back to Firestore:', typesenseError);
+          // Fall through to Firestore fallback
+        }
+      }
+
+      // FALLBACK: Use Firestore if Typesense failed or isn't configured
+      if (pages.length === 0 && source !== "typesense_primary") {
+        pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
+
         if (searchTerm && searchTerm.trim().length > 1) {
           try {
-            const { searchUsers } = await import('../../firebase/database');
-            users = await searchUsers(searchTerm, 5);
-
-            // Format users for the response
-            users = users.map(user => ({
+            const firestoreUsers = await searchUsersFirestore(searchTerm, 5);
+            users = firestoreUsers.map(user => ({
               id: user.id,
-              username: user.username || "Anonymous", // Fixed: Use user.username instead of session.username
+              username: user.username || "Anonymous",
               photoURL: user.photoURL || null,
-              type: 'user'
+              type: 'user',
             }));
           } catch (userError) {
-            users = []; // Ensure users is always an array
+            users = [];
           }
         }
 
-        return NextResponse.json({
-          pages: pages || [],
-          users: users || [],
-          source: "unauthenticated_search"
-        }, { status: 200 });
-      } catch (error) {
-        return NextResponse.json({
-          pages: [],
-          users: [],
-          error: 'Search temporarily unavailable',
-          source: "unauthenticated_search_error"
-        }, { status: 200 }); // Return 200 to prevent breaking the UI
-      }
-    }
+        // Track database reads for cost monitoring (Firestore fallback)
+        const estimatedReads = Math.max((pages?.length || 0) * 2, 50);
+        trackFirebaseRead('pages', 'search', estimatedReads, 'api-search-pages');
 
-    // For authenticated users, use Firestore search directly with caching
-    const cachedResult = await cacheHelpers.getSearchResults(cacheKey, async () => {
-      // Search for pages in Firestore
-      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
-
-      // Search for users if we have a search term
-      let users = [];
-      if (searchTerm && searchTerm.trim().length > 1) {
-        try {
-          const { searchUsers } = await import('../../firebase/database');
-          users = await searchUsers(searchTerm, 5);
-
-          // Format users for the response
-          users = users.map(user => ({
-            id: user.id,
-            username: user.username || "Anonymous", // Fixed: Use user.username instead of session.username
-            photoURL: user.photoURL || null,
-            type: 'user'
-          }));
-        } catch (userError) {
-          users = []; // Ensure users is always an array
+        if (users && users.length > 0) {
+          trackFirebaseRead('users', 'search', users.length, 'api-search-users');
         }
-      }
 
-      // Track database reads for cost monitoring
-      const estimatedReads = Math.max((pages?.length || 0) * 2, 50); // Estimate search complexity
-      trackFirebaseRead('pages', 'search', estimatedReads, 'api-search-pages');
-
-      if (users && users.length > 0) {
-        trackFirebaseRead('users', 'search', users.length, 'api-search-users');
+        source = "firestore_fallback";
       }
 
       return {
         pages: pages || [],
         users: users || [],
-        source: "firestore_primary",
+        source,
         searchTerm: searchTerm,
         userId: userId,
         timestamp: new Date().toISOString()
