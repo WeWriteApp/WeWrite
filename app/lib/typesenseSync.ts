@@ -56,6 +56,8 @@ interface SyncPageData {
   lastModified?: string;
   createdAt?: string;
   deleted?: boolean;
+  groupId?: string;
+  visibility?: string;
 }
 
 /**
@@ -69,7 +71,7 @@ export async function syncPageToTypesenseServer(pageData: SyncPageData): Promise
       return { success: true, action: 'skipped', error: 'Typesense not configured' };
     }
 
-    const { pageId, title, content, authorId, authorUsername, isPublic, alternativeTitles, lastModified, createdAt, deleted } = pageData;
+    const { pageId, title, content, authorId, authorUsername, isPublic, alternativeTitles, lastModified, createdAt, deleted, groupId, visibility } = pageData;
 
     if (!pageId) {
       return { success: false, error: 'pageId is required' };
@@ -99,6 +101,17 @@ export async function syncPageToTypesenseServer(pageData: SyncPageData): Promise
       return { success: true, action: 'skipped' };
     }
 
+    // Skip indexing for private pages entirely
+    if (visibility === 'private') {
+      // Remove from Typesense if it was previously indexed
+      try {
+        await client.collections(collectionName).documents(pageId).delete();
+      } catch {
+        // Ignore if not found
+      }
+      return { success: true, action: 'skipped_private' };
+    }
+
     // Extract text content from Slate.js format
     const textContent = extractTextFromContent(content);
 
@@ -118,6 +131,8 @@ export async function syncPageToTypesenseServer(pageData: SyncPageData): Promise
       createdAt: createdAtUnix,
       lastModified: lastModifiedUnix,
       alternativeTitles: alternativeTitles || [],
+      ...(groupId && { groupId }),
+      ...(visibility && { visibility }),
     };
 
     // Upsert to Typesense (creates or updates)

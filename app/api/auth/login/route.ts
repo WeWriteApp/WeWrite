@@ -102,13 +102,14 @@ export async function POST(request: NextRequest) {
       environment: getEnvironmentType()
     });
 
-    // Validate required fields
-    if (!emailOrUsername || !password) {
-      return createErrorResponse('Email/username and password are required');
-    }
-
     // Check if we should use dev auth system
     const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    const isQuickLogin = useDevAuth && (body as any).quickLogin === true;
+
+    // Validate required fields (skip password check for dev quick login)
+    if (!emailOrUsername || (!password && !isQuickLogin)) {
+      return createErrorResponse('Email/username and password are required');
+    }
 
     if (useDevAuth) {
       console.log('[Auth] Using dev auth system (local development only)');
@@ -116,13 +117,13 @@ export async function POST(request: NextRequest) {
       // In development mode, first check against known test accounts
       const testAccountsArray = Object.values(DEV_TEST_USERS);
 
-      // Find account by email or username, then validate password from env var
+      // Find account by email or username
       const account = testAccountsArray.find(acc =>
         (acc.email === emailOrUsername || acc.username === emailOrUsername)
       );
 
-      // Validate password if account found
-      const passwordValid = account && validateDevTestPassword(password);
+      // Quick login: skip password for predefined test accounts in dev mode
+      const passwordValid = isQuickLogin ? true : (account && validateDevTestPassword(password));
 
       if (account && passwordValid) {
         // Create signed session cookie for predefined test account

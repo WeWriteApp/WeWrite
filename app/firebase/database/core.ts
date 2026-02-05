@@ -109,7 +109,8 @@ export interface CreatePageData {
   content?: string;
   userId: string;
   username?: string;
-  // Groups functionality removed
+  groupId?: string;
+  visibility?: 'public' | 'private';
   location?: string | null;
   fundraisingGoal?: number;
   isReply?: boolean;
@@ -123,7 +124,7 @@ export interface PageUpdateData {
   content: string;
   userId: string;
   username?: string;
-  // Groups functionality removed
+  groupId?: string;
 }
 
 export interface PageStats {

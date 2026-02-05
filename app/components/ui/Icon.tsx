@@ -575,6 +575,17 @@ export const Icon = forwardRef<HTMLSpanElement, IconProps>(
     ref
   ) => {
     // Special handling for loaders (PulseLoader default, GridLoader alternative)
+    //
+    // IMPORTANT DESIGN RULE: The Loader icon renders a PulseLoader which has its
+    // own built-in animation. NEVER wrap it in animate-spin or any other spinning
+    // container. Spinning is handled at the atomic level (inside PulseLoader),
+    // not at the molecular level (parent container). If you need a spinning icon,
+    // use a different Lucide icon (e.g. Loader2) — but prefer this PulseLoader
+    // for all standard loading states.
+    //
+    // WRONG: <Icon name="Loader" className="animate-spin" />
+    // RIGHT: <Icon name="Loader" />
+    //
     if (name === "Loader") {
       // Default to subtle neutral-alpha-30 color if no color or className with text color is specified
       const hasTextColorClass = className?.includes('text-');

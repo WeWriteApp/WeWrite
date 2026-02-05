@@ -21,6 +21,7 @@ import { useEarnings } from '../../contexts/EarningsContext';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { buildNewPageUrl } from '../../utils/pageId';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 // ============================================================================
 // CONSTANTS
@@ -204,6 +205,7 @@ function SidebarContent({
   const showContent = isExpanded || isHovering;
   const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
   const isUserAdmin = user?.isAdmin === true;
+  const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
   // Settings warning status
   const criticalSettingsStatus = (() => {
@@ -229,6 +231,7 @@ function SidebarContent({
     'following': { icon: 'Heart', label: 'Following', href: '/following' },
     'recents': { icon: 'Clock', label: 'Recents', href: '/recents' },
     'invite': { icon: 'UserPlus', label: 'Invite Friends', href: '/invite' },
+    ...(isFeatureEnabled('groups') ? { 'groups': { icon: 'Users', label: 'Groups', href: '/groups' } } : {}),
     'profile': { icon: 'User', label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
     'settings': { icon: 'Settings', label: 'Settings', href: '/settings' },
     ...(isUserAdmin ? { 'admin': { icon: 'Shield', label: 'Admin', href: '/admin' } } : {}),
@@ -261,6 +264,7 @@ function SidebarContent({
     if (item.label === 'Home' && (pathname === '/' || pathname === '/home' || pathname === '')) return true;
     if (pathname === item.href) return true;
     if (item.label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) return true;
+    if (item.label === 'Groups' && (pathname.startsWith('/groups') || pathname.startsWith('/g/'))) return true;
     if (item.label === 'Settings' && pathname.startsWith('/settings')) return true;
     if (item.label === 'Admin' && pathname.startsWith('/admin')) return true;
     return false;

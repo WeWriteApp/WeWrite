@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import RandomPages from '../components/features/RandomPages';
@@ -283,86 +284,81 @@ export default function RandomPagesPage() {
 
   return (
     <NavPageLayout>
-      {/* Page Header with Controls */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">Random Pages</h1>
-          </div>
+      <PageHeader
+        title="Random Pages"
+        actions={
+          <>
+            {/* Desktop Controls */}
+            <div className="hidden sm:flex items-center gap-2">
+              <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
+                <SegmentedControlList className="h-9">
+                  <SegmentedControlTrigger value="cards" className="text-xs px-3 gap-1.5">
+                    <Icon name="Square" size={14} />
+                    <span>Detailed</span>
+                  </SegmentedControlTrigger>
+                  <SegmentedControlTrigger value="list" className="text-xs px-3 gap-1.5">
+                    <Icon name="LayoutGrid" size={14} />
+                    <span>Dense</span>
+                  </SegmentedControlTrigger>
+                  <SegmentedControlTrigger value="graph" className="text-xs px-3 gap-1.5">
+                    <Icon name="Network" size={14} />
+                    <span>Graph</span>
+                  </SegmentedControlTrigger>
+                </SegmentedControlList>
+              </SegmentedControl>
 
-          {/* Desktop Controls */}
-          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-            {/* View Mode Segmented Control */}
-            <SegmentedControl value={viewMode} onValueChange={handleViewModeChange}>
-              <SegmentedControlList className="h-9">
-                <SegmentedControlTrigger value="cards" className="text-xs px-3 gap-1.5">
-                  <Icon name="Square" size={14} />
-                  <span>Detailed</span>
-                </SegmentedControlTrigger>
-                <SegmentedControlTrigger value="list" className="text-xs px-3 gap-1.5">
-                  <Icon name="LayoutGrid" size={14} />
-                  <span>Dense</span>
-                </SegmentedControlTrigger>
-                <SegmentedControlTrigger value="graph" className="text-xs px-3 gap-1.5">
-                  <Icon name="Network" size={14} />
-                  <span>Graph</span>
-                </SegmentedControlTrigger>
-              </SegmentedControlList>
-            </SegmentedControl>
+              <Button
+                variant="secondary"
+                onClick={handleShuffle}
+                className="flex items-center gap-2 rounded-2xl h-8 px-3"
+              >
+                <Icon name="Shuffle" size={16} />
+                <span>Shuffle</span>
+              </Button>
 
-            {/* Shuffle Button */}
-            <Button
-              variant="secondary"
-              onClick={handleShuffle}
-              className="flex items-center gap-2 rounded-2xl h-8 px-3"
-            >
-              <Icon name="Shuffle" size={16} />
-              <span>Shuffle</span>
-            </Button>
+              <RandomPagesFilterDrawer
+                excludeOwnPages={excludeOwnPages}
+                onExcludeOwnToggle={handleExcludeOwnToggle}
+                denseMode={denseMode}
+                onDenseModeToggle={handleDenseModeToggle}
+                lineFeaturesEnabled={lineFeaturesEnabled}
+                filterMode={filterMode}
+                onFilterModeChange={handleFilterModeChange}
+                excludeUsername={excludeUsername}
+                includeUsername={includeUsername}
+                onUsernameChange={handleUsernameChange}
+                onApplyFilter={applyUsernameFilter}
+              />
+            </div>
 
-            {/* Filter Drawer/Modal */}
-            <RandomPagesFilterDrawer
-              excludeOwnPages={excludeOwnPages}
-              onExcludeOwnToggle={handleExcludeOwnToggle}
-              denseMode={denseMode}
-              onDenseModeToggle={handleDenseModeToggle}
-              lineFeaturesEnabled={lineFeaturesEnabled}
-              filterMode={filterMode}
-              onFilterModeChange={handleFilterModeChange}
-              excludeUsername={excludeUsername}
-              includeUsername={includeUsername}
-              onUsernameChange={handleUsernameChange}
-              onApplyFilter={applyUsernameFilter}
-            />
-          </div>
-
-          {/* Mobile: Only filter and shuffle buttons in header */}
-          <div className="flex sm:hidden items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={handleShuffle}
-              className="flex items-center gap-2 rounded-2xl h-8 px-3"
-            >
-              <Icon name="Shuffle" size={16} />
-            </Button>
-            <RandomPagesFilterDrawer
-              excludeOwnPages={excludeOwnPages}
-              onExcludeOwnToggle={handleExcludeOwnToggle}
-              denseMode={denseMode}
-              onDenseModeToggle={handleDenseModeToggle}
-              lineFeaturesEnabled={lineFeaturesEnabled}
-              filterMode={filterMode}
-              onFilterModeChange={handleFilterModeChange}
-              excludeUsername={excludeUsername}
-              includeUsername={includeUsername}
-              onUsernameChange={handleUsernameChange}
-              onApplyFilter={applyUsernameFilter}
-            />
-          </div>
-        </div>
-
+            {/* Mobile: Only filter and shuffle buttons in header */}
+            <div className="flex sm:hidden items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={handleShuffle}
+                className="flex items-center gap-2 rounded-2xl h-8 px-3"
+              >
+                <Icon name="Shuffle" size={16} />
+              </Button>
+              <RandomPagesFilterDrawer
+                excludeOwnPages={excludeOwnPages}
+                onExcludeOwnToggle={handleExcludeOwnToggle}
+                denseMode={denseMode}
+                onDenseModeToggle={handleDenseModeToggle}
+                lineFeaturesEnabled={lineFeaturesEnabled}
+                filterMode={filterMode}
+                onFilterModeChange={handleFilterModeChange}
+                excludeUsername={excludeUsername}
+                includeUsername={includeUsername}
+                onUsernameChange={handleUsernameChange}
+                onApplyFilter={applyUsernameFilter}
+              />
+            </div>
+          </>
+        }
+      >
         {/* Mobile: Full-width View Mode Switcher */}
-        <div className="sm:hidden">
+        <div className="sm:hidden mt-4">
           <SegmentedControl value={viewMode} onValueChange={handleViewModeChange} className="w-full">
             <SegmentedControlList className="h-10 w-full grid grid-cols-3">
               <SegmentedControlTrigger value="cards" className="text-sm gap-1.5">
@@ -380,7 +376,7 @@ export default function RandomPagesPage() {
             </SegmentedControlList>
           </SegmentedControl>
         </div>
-      </div>
+      </PageHeader>
 
       {/* Random Pages Content */}
       <div className="min-h-[600px]">

@@ -15,9 +15,15 @@ export default function FeatureFlagsPage() {
   const [lineNumbersGlobal, setLineNumbersGlobal] = useState(false);
   const [onboardingEnabled, setOnboardingEnabled] = useState(false);
   const [onboardingGlobal, setOnboardingGlobal] = useState(false);
+  const [groupsEnabled, setGroupsEnabled] = useState(false);
+  const [groupsGlobal, setGroupsGlobal] = useState(false);
+  const [privatePagesEnabled, setPrivatePagesEnabled] = useState(false);
+  const [privatePagesGlobal, setPrivatePagesGlobal] = useState(false);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [enabledUsers, setEnabledUsers] = useState<number | null>(null);
   const [onboardingEnabledUsers, setOnboardingEnabledUsers] = useState<number | null>(null);
+  const [groupsEnabledUsers, setGroupsEnabledUsers] = useState<number | null>(null);
+  const [privatePagesEnabledUsers, setPrivatePagesEnabledUsers] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const enabledFraction =
     totalUsers && totalUsers > 0
@@ -26,6 +32,14 @@ export default function FeatureFlagsPage() {
   const onboardingEnabledFraction =
     totalUsers && totalUsers > 0
       ? `${onboardingEnabledUsers ?? 0}/${totalUsers}`
+      : "—";
+  const groupsEnabledFraction =
+    totalUsers && totalUsers > 0
+      ? `${groupsEnabledUsers ?? 0}/${totalUsers}`
+      : "—";
+  const privatePagesEnabledFraction =
+    totalUsers && totalUsers > 0
+      ? `${privatePagesEnabledUsers ?? 0}/${totalUsers}`
       : "—";
 
   useEffect(() => {
@@ -49,6 +63,8 @@ export default function FeatureFlagsPage() {
       if (res.ok && data?.flags) {
         setLineNumbersEnabled(Boolean(data.flags.line_numbers));
         setOnboardingEnabled(Boolean(data.flags.onboarding_tutorial));
+        setGroupsEnabled(Boolean(data.flags.groups));
+        setPrivatePagesEnabled(Boolean(data.flags.private_pages));
       }
       const summaryRes = await fetch("/api/feature-flags?summary=1", { credentials: "include" });
       const summaryData = await summaryRes.json();
@@ -63,6 +79,20 @@ export default function FeatureFlagsPage() {
       if (onboardingSummaryRes.ok && onboardingSummaryData?.summary) {
         setOnboardingEnabledUsers(onboardingSummaryData.summary.enabledCount ?? null);
         setOnboardingGlobal(Boolean(onboardingSummaryData.summary.defaultEnabled));
+      }
+      // Load groups summary
+      const groupsSummaryRes = await fetch("/api/feature-flags?summary=1&flag=groups", { credentials: "include" });
+      const groupsSummaryData = await groupsSummaryRes.json();
+      if (groupsSummaryRes.ok && groupsSummaryData?.summary) {
+        setGroupsEnabledUsers(groupsSummaryData.summary.enabledCount ?? null);
+        setGroupsGlobal(Boolean(groupsSummaryData.summary.defaultEnabled));
+      }
+      // Load private pages summary
+      const privatePagesSummaryRes = await fetch("/api/feature-flags?summary=1&flag=private_pages", { credentials: "include" });
+      const privatePagesSummaryData = await privatePagesSummaryRes.json();
+      if (privatePagesSummaryRes.ok && privatePagesSummaryData?.summary) {
+        setPrivatePagesEnabledUsers(privatePagesSummaryData.summary.enabledCount ?? null);
+        setPrivatePagesGlobal(Boolean(privatePagesSummaryData.summary.defaultEnabled));
       }
     } catch (err) {
       console.warn("[FeatureFlagsPage] Failed to load flag data", err);
@@ -90,6 +120,18 @@ export default function FeatureFlagsPage() {
         } else {
           setOnboardingGlobal(enabled);
         }
+      } else if (flagName === "groups") {
+        if (scope === "user") {
+          setGroupsEnabled(enabled);
+        } else {
+          setGroupsGlobal(enabled);
+        }
+      } else if (flagName === "private_pages") {
+        if (scope === "user") {
+          setPrivatePagesEnabled(enabled);
+        } else {
+          setPrivatePagesGlobal(enabled);
+        }
       }
       // Refresh summary after change
       await loadFlags();
@@ -104,6 +146,10 @@ export default function FeatureFlagsPage() {
   const handleLineNumbersGlobalToggle = (checked: boolean) => updateFlag("line_numbers", "global", checked);
   const handleOnboardingPersonalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "user", checked);
   const handleOnboardingGlobalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "global", checked);
+  const handleGroupsPersonalToggle = (checked: boolean) => updateFlag("groups", "user", checked);
+  const handleGroupsGlobalToggle = (checked: boolean) => updateFlag("groups", "global", checked);
+  const handlePrivatePagesPersonalToggle = (checked: boolean) => updateFlag("private_pages", "user", checked);
+  const handlePrivatePagesGlobalToggle = (checked: boolean) => updateFlag("private_pages", "global", checked);
 
   if (isLoading || !user) {
     return (
@@ -188,6 +234,72 @@ export default function FeatureFlagsPage() {
               <p className="text-xs text-muted-foreground">New users see tutorial</p>
             </div>
             <Switch checked={onboardingGlobal} onCheckedChange={handleOnboardingGlobalToggle} disabled={saving} className="shrink-0" />
+          </div>
+        </div>
+      </div>
+
+      {/* Groups Feature Flag */}
+      <div className="wewrite-card space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold">Groups</h2>
+            <p className="text-sm text-muted-foreground">
+              Enabled for: {groupsEnabledFraction} users
+            </p>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for me</p>
+              <p className="text-xs text-muted-foreground">Personal override</p>
+            </div>
+            <Switch checked={groupsEnabled} onCheckedChange={handleGroupsPersonalToggle} disabled={saving} className="shrink-0" />
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for all users</p>
+              <p className="text-xs text-muted-foreground">Enables group creation and management</p>
+            </div>
+            <Switch checked={groupsGlobal} onCheckedChange={handleGroupsGlobalToggle} disabled={saving} className="shrink-0" />
+          </div>
+        </div>
+      </div>
+
+      {/* Private Pages Feature Flag */}
+      <div className="wewrite-card space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold">Private Pages</h2>
+            <p className="text-sm text-muted-foreground">
+              Enabled for: {privatePagesEnabledFraction} users
+            </p>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for me</p>
+              <p className="text-xs text-muted-foreground">Personal override</p>
+            </div>
+            <Switch checked={privatePagesEnabled} onCheckedChange={handlePrivatePagesPersonalToggle} disabled={saving} className="shrink-0" />
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Enable for all users</p>
+              <p className="text-xs text-muted-foreground">Allows pages to be marked private within groups</p>
+            </div>
+            <Switch checked={privatePagesGlobal} onCheckedChange={handlePrivatePagesGlobalToggle} disabled={saving} className="shrink-0" />
           </div>
         </div>
       </div>

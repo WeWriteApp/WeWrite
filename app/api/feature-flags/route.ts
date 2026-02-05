@@ -10,6 +10,8 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   line_numbers: false,
   onboarding_tutorial: false,
   ui_labels: false,
+  groups: false,
+  private_pages: false,
 };
 
 const COLLECTION_DEFAULTS = 'featureFlags';
@@ -110,6 +112,15 @@ export async function GET(request: NextRequest) {
       ...defaults,
       ...overrides,
     };
+
+    // Auto-enable groups and private_pages for admin users
+    if (userId) {
+      const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
+      if (userDoc.exists && userDoc.data()?.isAdmin === true) {
+        mergedFlags.groups = true;
+        mergedFlags.private_pages = true;
+      }
+    }
 
     return NextResponse.json({
       success: true,

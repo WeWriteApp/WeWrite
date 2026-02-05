@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { SegmentedControl, SegmentedControlContent, SegmentedControlList, SegmentedControlTrigger } from '../components/ui/segmented-control';
@@ -88,27 +89,19 @@ export default function FollowingPage() {
 
   return (
     <NavPageLayout>
-      {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold">Following</h1>
-          </div>
-              
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Button
-                  variant="secondary"
-                  onClick={() => router.push('/search')}
-                  className="flex items-center gap-2 rounded-2xl h-8 px-3"
-                >
-                  <Icon name="Search" size={16} />
-                  <span className="hidden sm:inline">Search Writers</span>
-                </Button>
-              </div>
-            </div>
-            
-      </div>
+      <PageHeader
+        title="Following"
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => router.push('/search')}
+            className="flex items-center gap-2 rounded-2xl h-8 px-3"
+          >
+            <Icon name="Search" size={16} />
+            <span className="hidden sm:inline">Search Writers</span>
+          </Button>
+        }
+      />
 
       {/* Following Content with Segmented Control */}
       <div className="min-h-[600px]">

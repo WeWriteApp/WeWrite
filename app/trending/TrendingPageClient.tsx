@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
+import NavPageLayout from '../components/layout/NavPageLayout';
 import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
 import Link from 'next/link';
@@ -122,12 +124,8 @@ export default function TrendingPageClient() {
   }, []);
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-center mb-6">
-        <h1 className="text-2xl font-bold">
-          Trending Pages
-        </h1>
-      </div>
+    <NavPageLayout>
+      <PageHeader title="Trending Pages" />
 
       {loading ? (
         <div className="flex justify-center items-center py-12">
@@ -279,6 +277,6 @@ export default function TrendingPageClient() {
           </div>
         </>
       )}
-    </div>
+    </NavPageLayout>
   );
 }

@@ -8,6 +8,11 @@
 /* Import allocation bar animations */
 @import './styles/allocation-bar-animations.css';
 
+/* Fix Safari zoom causing SVG icon strokes to appear thicker */
+svg.lucide {
+  transform: translateZ(0);
+}
+
 /* Hide 3D force graph library navigation info overlay */
 .scene-nav-info {
   display: none !important;

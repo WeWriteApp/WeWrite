@@ -29,6 +29,10 @@ interface LoadingStateProps {
  *
  * A standardized loading state component with multiple visual variants.
  * Use this for consistent loading states across the app.
+ *
+ * DESIGN RULE: The Loader icon (PulseLoader) has its own built-in animation.
+ * Never wrap it in animate-spin or any spinning container. Spinning is handled
+ * at the atomic level (inside PulseLoader), not at the molecular level.
  */
 export function LoadingState({
   message,

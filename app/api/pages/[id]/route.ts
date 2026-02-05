@@ -95,7 +95,7 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
       };
     }
 
-    // Check access permissions - all pages are now accessible
+    // Check access permissions
     const isOwner = userId && pageData?.userId === userId;
 
     // Allow development and preview access for debugging
@@ -105,6 +105,29 @@ async function fetchPageDirectly(pageId: string, userId: string | null, request:
 
     // Check if user is admin using centralized adminSecurity module
     const isAdmin = userId ? await isUserAdmin(userId) : false;
+
+    // Private group pages: check membership
+    if (pageData?.visibility === 'private' && pageData?.groupId) {
+      if (!isOwner && !isAdmin) {
+        // Check group membership
+        let isMember = false;
+        if (userId) {
+          try {
+            const groupsCollection = await getCollectionNameAsync('groups');
+            const groupDoc = await db.collection(groupsCollection).doc(pageData.groupId).get();
+            if (groupDoc.exists) {
+              const memberIds: string[] = groupDoc.data()?.memberIds || [];
+              isMember = memberIds.includes(userId);
+            }
+          } catch {
+            // Fail closed - deny access
+          }
+        }
+        if (!isMember) {
+          return { error: 'Page not found' };
+        }
+      }
+    }
 
     // Content validation and conversion (read-only, no database writes)
     let processedPageData = { ...pageData };

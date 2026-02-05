@@ -34,6 +34,9 @@ export * from './search';
 // User operations
 export * from './users';
 
+// Group operations
+export * from './groups';
+
 // Analytics data layer (Firestore operations for analytics aggregations)
 export * from './analyticsDataLayer';
 

@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { InlineError } from '../components/ui/InlineError';
 import { getRecentlyViewedPageIds } from '../utils/recentSearches';
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 /**
  * Recently Viewed Page Component
@@ -107,13 +108,10 @@ export default function RecentsPage() {
 
   return (
     <NavPageLayout>
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Recently Viewed</h1>
-        <p className="text-muted-foreground">
-          Pages you've viewed recently
-        </p>
-      </div>
+      <PageHeader
+        title="Recently Viewed"
+        description="Pages you've viewed recently"
+      />
 
           {/* Content */}
           {loading ? (

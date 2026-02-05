@@ -142,7 +142,21 @@ function generatePersonSchema(data) {
   };
 }
 
-// Groups functionality removed
+/**
+ * Generates schema.org markup for a Group/Organization
+ */
+function generateGroupSchema(data: any) {
+  const { name, description, url, memberCount } = data;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: name || 'Group',
+    description: description || '',
+    url: url || '',
+    ...(memberCount && { numberOfEmployees: { '@type': 'QuantitativeValue', value: memberCount } }),
+  };
+}
 
 /**
  * Generates schema.org markup for a WebPage

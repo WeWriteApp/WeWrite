@@ -108,6 +108,14 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Skip private group pages for non-members
+      if (pageData.visibility === 'private' && pageData.groupId) {
+        if (!userId || pageData.userId !== userId) {
+          // Non-owner: skip private pages (group membership not checked in batch for performance)
+          continue;
+        }
+      }
+
       // Get author information (use cached username first)
       let authorUsername = pageData.username || null;
 

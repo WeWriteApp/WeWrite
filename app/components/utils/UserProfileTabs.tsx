@@ -200,8 +200,8 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
     return "desc";
   });
 
-  // Groups feature has been removed - no longer needed
-  // const groupsEnabled = useFeatureFlag('groups', user?.email);
+  // Groups feature flag
+  const groupsEnabled = false; // Will be enabled via FeatureFlagContext when groups are active
 
   // Analytics tracking
   const { trackSortingInteraction, trackInteractionEvent, events } = useWeWriteAnalytics();
@@ -321,7 +321,8 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
     // Add external links tab for all users
     tabs.push("external-links");
 
-    // Groups tab removed - groups feature has been completely removed
+    // Groups tab - conditionally shown behind feature flag
+    // Will be added when groups feature is fully enabled
     // Following tab removed - now available in sidebar
 
     return tabs;

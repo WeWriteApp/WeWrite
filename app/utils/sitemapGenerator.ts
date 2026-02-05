@@ -52,8 +52,11 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
       const data = doc.data()
       const pageId = doc.id
       
-      // Skip private pages if not including them
+      // Skip private pages and private group pages
       if (!includePrivate && data.isPublic === false) {
+        return
+      }
+      if (data.visibility === 'private') {
         return
       }
 
@@ -203,7 +206,7 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
   }
 }
 
-// Note: generateGroupsSitemap was removed - groups functionality has been deprecated
+// Groups sitemap excluded - group pages are indexed as individual pages
 
 export async function generateSitemapIndex(): Promise<string> {
   // Use www.getwewrite.app as the canonical domain

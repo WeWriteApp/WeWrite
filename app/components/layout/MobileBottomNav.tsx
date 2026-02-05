@@ -27,6 +27,7 @@ import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 import NavDragLayer from './NavDragLayer';
 import { shouldShowNavigation } from '../../constants/layout';
 import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 // Helper function to detect iOS devices
 const isIOSDevice = (): boolean => {
@@ -63,6 +64,7 @@ export default function MobileBottomNav() {
   const { trackNavigationEvent } = useWeWriteAnalytics();
   const { handleNavigationFocus } = useNavigationPreloader();
   const { openDrawer, isGlobalDrawerActive, drawerConfig } = useGlobalDrawer();
+  const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
   // Detect touch device for DnD backend
   const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window;
@@ -375,6 +377,13 @@ export default function MobileBottomNav() {
       ariaLabel: 'Invite Friends',
       label: 'Invite',
     },
+    groups: {
+      icon: 'Users',
+      onClick: () => { handleClose(); navigateIfNeeded('groups', '/groups'); },
+      isActive: isRouteActive('/groups') || pathname?.startsWith('/g/') || false,
+      ariaLabel: 'Groups',
+      label: 'Groups',
+    },
   };
 
   // Don't render for: unauthenticated users, content pages, or edit mode
@@ -382,11 +391,15 @@ export default function MobileBottomNav() {
   if (isContentPage) return null;
   if (isEditMode) return null;
 
-  // Filter function for admin visibility
-  const filterAdminIfNotAllowed = (id: string) => !(id === 'admin' && !user?.isAdmin);
-  
-  const toolbarItems = getToolbarItems().filter(filterAdminIfNotAllowed);
-  const overflowItems = getOverflowItems().filter(filterAdminIfNotAllowed);
+  // Filter function for conditional nav items
+  const filterConditionalItems = (id: string) => {
+    if (id === 'admin' && !user?.isAdmin) return false;
+    if (id === 'groups' && !isFeatureEnabled('groups')) return false;
+    return true;
+  };
+
+  const toolbarItems = getToolbarItems().filter(filterConditionalItems);
+  const overflowItems = getOverflowItems().filter(filterConditionalItems);
 
   // More button (not draggable) - matches increased height for better tap targets
   const MoreButton = () => (

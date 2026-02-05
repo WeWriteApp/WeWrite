@@ -198,10 +198,10 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
       };
     });
 
-    // Filter out deleted pages in application code to avoid composite index requirement
+    // Filter out deleted pages and private group pages
     const filteredPages = pages
-      .filter(page => page.deleted !== true) // Filter deleted pages in code
-      // All pages are now public - no visibility filtering needed
+      .filter(page => page.deleted !== true)
+      .filter(page => page.visibility !== 'private') // Exclude private group pages from feed
       .slice(0, limitCount);
 
     // Return pages without subscription data - client will fetch this using getBatchUserData

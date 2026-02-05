@@ -31,15 +31,13 @@ interface MapPagesQuery {
 /**
  * GET /api/map-pages - Optimized endpoint for fetching pages with location data
  *
- * This endpoint is specifically designed for map views and only returns pages
- * that have location data, making it much more efficient than the general
- * /api/pages endpoint.
- *
  * Query parameters:
  * - userId: Filter to pages by specific user
  * - global: If true, fetch all public pages (ignores userId)
  * - limit: Maximum number of pages to return (default 50)
  * - bounds: Viewport bounds as JSON (north, south, east, west)
+ * - hideInactive: If true, hide pages from users without active subscriptions (default true)
+ * - hideUnverified: If true, hide pages from unverified users (default true)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -50,6 +48,8 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const isGlobal = searchParams.get('global') === 'true';
+    const hideInactive = searchParams.get('hideInactive') !== 'false'; // default true
+    const hideUnverified = searchParams.get('hideUnverified') !== 'false'; // default true
 
     // For non-global (user-specific) queries, authentication is required
     if (!isGlobal && !currentUserId) {
@@ -79,11 +79,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Either global=true or userId parameter is required' }, { status: 400 });
     }
 
-    console.log('🗺️ MAP-PAGES API - Request:', {
-      currentUserId,
-      query
-    });
-
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
@@ -91,9 +86,6 @@ export async function GET(request: NextRequest) {
 
     if (query.global) {
       // Global query: fetch all public pages with location data
-      console.log('🗺️ MAP-PAGES API - Querying all public pages');
-
-      // Query public pages, sorted by lastModified
       const publicPagesQuery = db.collection(getCollectionName('pages'))
         .where('isPublic', '==', true)
         .orderBy('lastModified', 'desc')
@@ -101,36 +93,93 @@ export async function GET(request: NextRequest) {
 
       const publicPagesSnapshot = await publicPagesQuery.get();
 
-      console.log('🗺️ MAP-PAGES API - Found public pages:', publicPagesSnapshot.size);
+      // Collect candidate pages and their user IDs
+      const candidatePages: Array<{ docId: string; data: any }> = [];
+      const userIds = new Set<string>();
 
       publicPagesSnapshot.forEach(doc => {
-        if (mapPages.length >= limit) return;
-
         const data = doc.data();
 
-        // Skip deleted pages
         if (data.deleted === true) return;
+        if (!data.location || typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') return;
 
-        // Skip pages without valid location data
-        if (!data.location || typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') {
-          return;
-        }
-
-        // Apply viewport bounds filter if provided
+        // Apply viewport bounds filter
         if (bounds) {
           const { lat, lng } = data.location;
           if (lat < bounds.south || lat > bounds.north) return;
-          // Handle wrap-around for longitude
           if (bounds.west <= bounds.east) {
             if (lng < bounds.west || lng > bounds.east) return;
           } else {
-            // Bounds cross the antimeridian
             if (lng < bounds.west && lng > bounds.east) return;
           }
         }
 
+        candidatePages.push({ docId: doc.id, data });
+        if (data.userId) userIds.add(data.userId);
+      });
+
+      // Batch-fetch user data for subscription/verification filtering
+      const needsUserLookup = (hideInactive || hideUnverified) && userIds.size > 0;
+      const userStatusMap = new Map<string, { hasActiveSubscription: boolean; emailVerified: boolean }>();
+
+      if (needsUserLookup) {
+        const userIdArray = Array.from(userIds);
+        const usersCollectionName = getCollectionName('users');
+
+        // Firestore 'in' queries limited to 30 items
+        for (let i = 0; i < userIdArray.length; i += 30) {
+          const batch = userIdArray.slice(i, i + 30);
+
+          // Fetch user docs
+          const userDocs = await db.collection(usersCollectionName)
+            .where('__name__', 'in', batch)
+            .get();
+
+          const userDataMap = new Map<string, any>();
+          userDocs.forEach(doc => userDataMap.set(doc.id, doc.data()));
+
+          // Fetch subscriptions in parallel
+          const subPromises = batch.map(async (userId) => {
+            try {
+              const subDoc = await db.collection(usersCollectionName)
+                .doc(userId)
+                .collection('subscriptions')
+                .doc('current')
+                .get();
+              return { userId, subscription: subDoc.exists ? subDoc.data() : null };
+            } catch {
+              return { userId, subscription: null };
+            }
+          });
+
+          const subResults = await Promise.all(subPromises);
+
+          for (const { userId, subscription } of subResults) {
+            const userData = userDataMap.get(userId);
+            const hasActiveSubscription = subscription?.status === 'active' || subscription?.status === 'trialing';
+            const emailVerified = userData?.emailVerified === true;
+            userStatusMap.set(userId, { hasActiveSubscription, emailVerified });
+          }
+        }
+      }
+
+      // Apply filters and build final results
+      for (const { docId, data } of candidatePages) {
+        if (mapPages.length >= limit) break;
+
+        const userId = data.userId;
+        if (userId && needsUserLookup) {
+          const status = userStatusMap.get(userId);
+
+          // Always show current user's own pins
+          if (userId !== currentUserId) {
+            if (hideInactive && status && !status.hasActiveSubscription) continue;
+            if (hideUnverified && status && !status.emailVerified) continue;
+          }
+        }
+
         mapPages.push({
-          id: doc.id,
+          id: docId,
           title: data.title || 'Untitled',
           location: {
             lat: data.location.lat,
@@ -141,30 +190,20 @@ export async function GET(request: NextRequest) {
           userId: data.userId,
           lastModified: data.lastModified || data.createdAt || new Date().toISOString()
         });
-      });
+      }
     } else {
-      // User-specific query (original behavior)
-      console.log('🗺️ MAP-PAGES API - Querying all pages for user:', query.userId);
-
+      // User-specific query (original behavior - no subscription filter)
       const userPagesQuery = db.collection(getCollectionName('pages'))
         .where('userId', '==', query.userId);
 
       const userPagesSnapshot = await userPagesQuery.get();
 
-      console.log('🗺️ MAP-PAGES API - Found total pages:', userPagesSnapshot.size);
-
       userPagesSnapshot.forEach(doc => {
         const data = doc.data();
 
-        // Skip deleted pages
         if (data.deleted === true) return;
+        if (!data.location || typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') return;
 
-        // Skip pages without location data
-        if (!data.location || typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') {
-          return;
-        }
-
-        // Access control: only return pages user can access
         const canAccess = data.userId === currentUserId;
         if (!canAccess) return;
 
@@ -182,18 +221,8 @@ export async function GET(request: NextRequest) {
         });
       });
 
-      // Sort by last modified (most recent first) for user queries
       mapPages.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
     }
-
-    console.log('🗺️ MAP-PAGES API - Final results:', {
-      totalPagesWithLocation: mapPages.length,
-      samplePages: mapPages.slice(0, 3).map(p => ({
-        id: p.id,
-        title: p.title,
-        username: p.username
-      }))
-    });
 
     return NextResponse.json({
       success: true,

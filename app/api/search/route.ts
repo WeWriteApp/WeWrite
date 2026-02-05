@@ -313,8 +313,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
           const data = doc.data();
 
-          // Skip private pages (isPublic === false) for non-owners
+          // Skip private pages for non-owners
           if (data.isPublic === false) {
+            return;
+          }
+          // Skip private group pages from search results
+          if (data.visibility === 'private') {
             return;
           }
           const pageTitle = data.title || 'Untitled';

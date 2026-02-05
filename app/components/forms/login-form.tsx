@@ -123,6 +123,31 @@ export function LoginForm() {
     setWarning('');
   }, []);
 
+  // Dev quick login - skip password entirely for predefined test accounts
+  const handleDevQuickLogin = async (email: string) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ emailOrUsername: email, password: '', quickLogin: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.user) {
+        clearAttempts();
+        window.location.href = '/home?_auth=' + Date.now();
+      } else {
+        setError(data.error || 'Quick login failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Quick login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -193,6 +218,7 @@ export function LoginForm() {
   const isLockedOut = countdown !== null && countdown > 0;
 
   return (
+    <>
     <div className="w-full max-w-md mx-auto space-y-6">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
@@ -327,13 +353,27 @@ export function LoginForm() {
         </Button>
       </div>
 
-      {/* Only show test account info in development */}
-      {getEnvironmentType() === 'development' && (
-        <div className="text-xs text-muted-foreground text-center space-y-1">
-          <p>Test accounts for development:</p>
-          <p>jamie@wewrite.app • test@wewrite.app</p>
-        </div>
-      )}
     </div>
+
+    {/* Dev Quick Login - separate card below the real auth UI */}
+    {getEnvironmentType() === 'development' && (
+      <div className="w-full max-w-md mx-auto mt-6 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4 space-y-3">
+        <div className="text-center">
+          <p className="text-sm font-medium text-muted-foreground">Dev Quick Login</p>
+          <p className="text-xs text-muted-foreground/70">No password required</p>
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" className="flex-1 text-xs" disabled={isLoading}
+            onClick={() => handleDevQuickLogin('jamie@wewrite.app')}>
+            jamie (admin)
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="flex-1 text-xs" disabled={isLoading}
+            onClick={() => handleDevQuickLogin('test@wewrite.app')}>
+            test (admin)
+          </Button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

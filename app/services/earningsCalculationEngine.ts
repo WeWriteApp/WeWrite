@@ -21,6 +21,7 @@ import {
 import { getCollectionName } from '../utils/environmentConfig';
 import { formatUsdCents } from '../utils/formatCurrency';
 import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
+import { getGroupFundDistribution, distributeAmongMembers, saveGroupEarningsRecord, type GroupEarningsRecord } from './groupEarningsService';
 
 export interface UserEarnings {
   userId: string;
@@ -113,6 +114,9 @@ export class EarningsCalculationEngine {
       let totalNetEarnings = 0;
       let totalUnallocatedFunds = 0;
 
+      // Track group earnings for saving after processing
+      const groupEarningsMap = new Map<string, GroupEarningsRecord>();
+
       // Process each user's allocations
       for (const snapshot of userSnapshots) {
         // Calculate unallocated funds (use it or lose it)
@@ -124,9 +128,65 @@ export class EarningsCalculationEngine {
           totalAllocations += allocation.amount;
 
           if (allocation.pageId) {
-            // Allocation to a page - find the page author
+            // Allocation to a page - check if it belongs to a group
+            const groupId = await this.getPageGroupId(allocation.pageId);
             const pageAuthor = await this.getPageAuthor(allocation.pageId);
-            if (pageAuthor) {
+
+            if (groupId) {
+              // Group page: distribute among group members per fund distribution
+              const fundDistribution = await getGroupFundDistribution(groupId);
+
+              if (fundDistribution && Object.keys(fundDistribution).length > 0) {
+                const distributions = distributeAmongMembers(allocation.amount, fundDistribution);
+
+                for (const dist of distributions) {
+                  await this.addToUserEarnings(userEarnings, dist.userId, {
+                    ...allocation,
+                    amount: dist.amount,
+                  }, snapshot.userId);
+                }
+
+                // Track page earnings under the page author (full amount for reporting)
+                if (pageAuthor) {
+                  await this.addToPageEarnings(pageEarnings, allocation.pageId, pageAuthor, allocation, snapshot.userId);
+                }
+
+                // Accumulate group earnings record
+                const key = `${groupId}_${month}`;
+                if (!groupEarningsMap.has(key)) {
+                  groupEarningsMap.set(key, {
+                    groupId,
+                    month,
+                    totalAllocationsReceived: 0,
+                    distributions: distributions.map((d) => ({
+                      userId: d.userId,
+                      percentage: fundDistribution[d.userId] || 0,
+                      amount: 0,
+                    })),
+                    pageEarnings: [],
+                    calculatedAt: new Date(),
+                  });
+                }
+                const groupRecord = groupEarningsMap.get(key)!;
+                groupRecord.totalAllocationsReceived += allocation.amount;
+                groupRecord.pageEarnings.push({
+                  pageId: allocation.pageId,
+                  amount: allocation.amount,
+                });
+                // Update member distribution amounts
+                for (const dist of distributions) {
+                  const existing = groupRecord.distributions.find((d) => d.userId === dist.userId);
+                  if (existing) {
+                    existing.amount += dist.amount;
+                  }
+                }
+              } else if (pageAuthor) {
+                // Group exists but no fund distribution set - fall back to page author
+                await this.addToUserEarnings(userEarnings, pageAuthor, allocation, snapshot.userId);
+                await this.addToPageEarnings(pageEarnings, allocation.pageId, pageAuthor, allocation, snapshot.userId);
+              }
+            } else if (pageAuthor) {
+              // Non-group page: earnings go directly to page author
               await this.addToUserEarnings(userEarnings, pageAuthor, allocation, snapshot.userId);
               await this.addToPageEarnings(pageEarnings, allocation.pageId, pageAuthor, allocation, snapshot.userId);
             }
@@ -135,6 +195,11 @@ export class EarningsCalculationEngine {
             await this.addToUserEarnings(userEarnings, allocation.recipientUserId, allocation, snapshot.userId);
           }
         }
+      }
+
+      // Save group earnings records
+      for (const record of groupEarningsMap.values()) {
+        await saveGroupEarningsRecord(record);
       }
 
       // Calculate platform fees and net earnings
@@ -293,6 +358,19 @@ export class EarningsCalculationEngine {
       return null;
     } catch (error) {
       console.error(`❌ [EARNINGS ENGINE] Error getting page author for ${pageId}:`, error);
+      return null;
+    }
+  }
+
+  private async getPageGroupId(pageId: string): Promise<string | null> {
+    try {
+      const pageDoc = await getDoc(doc(db, getCollectionName('pages'), pageId));
+      if (pageDoc.exists()) {
+        return pageDoc.data().groupId || null;
+      }
+      return null;
+    } catch (error) {
+      console.error(`❌ [EARNINGS ENGINE] Error getting page groupId for ${pageId}:`, error);
       return null;
     }
   }

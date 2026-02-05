@@ -542,7 +542,7 @@ export async function PUT(request: NextRequest) {
     }
 
     body = await request.json();
-    const { id, title, content, location, groupId, customDate, replyType, markAsSaved, replyTo, replyToTitle, replyToUsername, batchWithGroup } = body;
+    const { id, title, content, location, groupId, customDate, replyType, markAsSaved, replyTo, replyToTitle, replyToUsername, batchWithGroup, encrypted } = body;
 
 
     logger.info('Page save request', {
@@ -720,30 +720,36 @@ export async function PUT(request: NextRequest) {
     }
 
     if (content !== undefined) {
-      // CRITICAL FIX: Ensure content is never stored as JSON string
-      // This prevents the malformed JSON content bug we just fixed
-      let validatedContent = content;
+      // Encrypted content: store the blob as-is (ciphertext + iv + version)
+      if (encrypted === true && content && typeof content === 'object' && content.ciphertext && content.iv) {
+        updateData.content = content;
+        updateData.encrypted = true;
+      } else {
+        // CRITICAL FIX: Ensure content is never stored as JSON string
+        // This prevents the malformed JSON content bug we just fixed
+        let validatedContent = content;
 
-      if (typeof content === 'string') {
-        try {
-          // If content is a JSON string, parse it to get the proper structure
-          const parsed = JSON.parse(content);
-          if (Array.isArray(parsed)) {
-            validatedContent = parsed;
-          } else {
-            // Convert non-array JSON to paragraph structure
-            validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(parsed) }] }];
+        if (typeof content === 'string') {
+          try {
+            // If content is a JSON string, parse it to get the proper structure
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed)) {
+              validatedContent = parsed;
+            } else {
+              // Convert non-array JSON to paragraph structure
+              validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(parsed) }] }];
+            }
+          } catch (e) {
+            // If it's not valid JSON, treat as plain text
+            validatedContent = [{ type: "paragraph", children: [{ text: content }] }];
           }
-        } catch (e) {
-          // If it's not valid JSON, treat as plain text
-          validatedContent = [{ type: "paragraph", children: [{ text: content }] }];
+        } else if (!Array.isArray(content)) {
+          // Ensure content is always an array
+          validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(content) }] }];
         }
-      } else if (!Array.isArray(content)) {
-        // Ensure content is always an array
-        validatedContent = [{ type: "paragraph", children: [{ text: JSON.stringify(content) }] }];
-      }
 
-      updateData.content = validatedContent;
+        updateData.content = validatedContent;
+      }
     }
 
     if (groupId !== undefined) {

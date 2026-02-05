@@ -48,7 +48,9 @@ export interface Page {
   linkedPageIds?: string[];
   version?: number;
   currentVersion?: string;
-  // Groups functionality removed
+  groupId?: string;
+  visibility?: 'public' | 'private';
+  isPublic?: boolean;
   description?: string;
   fundraisingGoal?: number;
   isReply?: boolean;
@@ -84,7 +86,7 @@ export interface PageVersion {
   createdAt: string | Timestamp;
   userId: string;
   username?: string;
-  // Groups functionality removed
+  groupId?: string;
   previousVersionId?: string;
 }
 
@@ -109,15 +111,13 @@ export interface EditorChild {
 
 export type EditorContent = EditorNode[];
 
-// Groups functionality removed
-
 // Activity types
 export interface Activity {
   id: string;
   type: ActivityType;
   userId: string;
   pageId?: string;
-  // Groups functionality removed
+  groupId?: string;
   timestamp: string | Timestamp;
   metadata?: Record<string, any>;
 }

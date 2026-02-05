@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from "react";
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '../providers/AuthProvider';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from "next/link";
@@ -932,27 +933,29 @@ function LeaderboardContent() {
   return (
     <NavPageLayout maxWidth="2xl">
       {/* Header with Calendar Toggle */}
-      <div className="flex items-center justify-between mb-4 px-4">
-        <div className="flex items-center gap-3">
-          <Icon name="Trophy" size={24} className="text-yellow-500" />
-          <h1 className="text-xl font-bold tracking-tight">Leaderboards</h1>
-        </div>
-        <button
-          onClick={() => setShowMonthSelector(!showMonthSelector)}
-          className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
-            showMonthSelector 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-muted hover:bg-muted/80"
-          )}
-          aria-label="Select month"
-        >
-          <Icon name="Calendar" size={16} />
-          <span className="text-sm font-medium">
-            {selectedMonth === getCurrentMonth() ? 'This month' : formatMonth(selectedMonth)}
-          </span>
-        </button>
-      </div>
+      <PageHeader
+        title="Leaderboards"
+        icon="Trophy"
+        iconClassName="text-yellow-500"
+        className="mb-4 px-4"
+        actions={
+          <button
+            onClick={() => setShowMonthSelector(!showMonthSelector)}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
+              showMonthSelector
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted hover:bg-muted/80"
+            )}
+            aria-label="Select month"
+          >
+            <Icon name="Calendar" size={16} />
+            <span className="text-sm font-medium">
+              {selectedMonth === getCurrentMonth() ? 'This month' : formatMonth(selectedMonth)}
+            </span>
+          </button>
+        }
+      />
 
       {/* Month Selector (collapsible) */}
       {showMonthSelector && (

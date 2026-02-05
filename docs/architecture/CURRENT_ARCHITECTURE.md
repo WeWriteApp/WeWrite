@@ -107,6 +107,26 @@ WeWrite's innovative **"Use It or Lose It"** system encourages user engagement:
 - `recentEdits` - Recent page modifications
 - `pageVersions` - Page version history (see [PAGE_DATA_AND_VERSIONS.md](PAGE_DATA_AND_VERSIONS.md))
 
+#### Groups System (feature-flagged)
+- `groups` - Group documents (name, slug, visibility, members, fund distribution)
+- `groups/{id}/members/{userId}` - Member subcollection (role, join date)
+- `groupInvitations` - Pending/accepted/declined invitations
+- `groupEarnings` - Monthly group earnings distribution records
+- Pages reference groups via optional `groupId` and `visibility` fields
+- Fund distribution splits allocations to group page among members by percentage
+- Private group pages excluded from feed, search, sitemap, and SSR content
+- See [GROUPS_SYSTEM.md](../features/GROUPS_SYSTEM.md) for details
+
+#### Encryption (feature-flagged)
+- `userKeys/{userId}` - RSA public key + encrypted private key + recovery key hash
+- `groups/{groupId}/keys/{userId}` - Wrapped AES group key per member
+- Client-side AES-256-GCM encryption, RSA-OAEP key wrapping, PBKDF2 passcode derivation
+- See [PRIVATE_PAGES_SYSTEM.md](../features/PRIVATE_PAGES_SYSTEM.md) for details
+
+#### Feature Flags
+- `featureFlags/defaults` - Global flag defaults
+- `featureFlagOverrides/{userId}` - Per-user flag overrides
+
 ### Data Consistency
 - **Atomic Transactions**: Critical operations use Firestore transactions
 - **Balance Reconciliation**: Regular balance validation against earnings

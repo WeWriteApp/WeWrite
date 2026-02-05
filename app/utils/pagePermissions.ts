@@ -12,7 +12,8 @@ export interface User {
 
 export interface Page {
   userId?: string;
-  // Groups functionality removed
+  groupId?: string;
+  visibility?: 'public' | 'private';
   [key: string]: any;
 }
 
@@ -32,8 +33,17 @@ export const canUserEditPage = (
     return false;
   }
 
-  // Only the page owner can edit
-  return page.userId && user.uid === page.userId;
+  // Page owner can always edit
+  if (page.userId && user.uid === page.userId) {
+    return true;
+  }
+
+  // Group members can edit group pages
+  if (page.groupId && userGroups) {
+    return Boolean(userGroups[page.groupId]);
+  }
+
+  return false;
 };
 
 /**

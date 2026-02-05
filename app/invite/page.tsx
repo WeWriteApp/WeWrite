@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
@@ -188,15 +189,10 @@ export default function InviteFriendsPage() {
 
   return (
     <NavPageLayout>
-      {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-3xl font-bold">Invite Friends</h1>
-        </div>
-        <p className="text-muted-foreground text-lg">
-          Share WeWrite with friends and earn 30% of the payout fee when they cash out their earnings.
-        </p>
-      </div>
+      <PageHeader
+        title="Invite Friends"
+        description="Share WeWrite with friends and earn 30% of the payout fee when they cash out their earnings."
+      />
 
       {/* Stats Cards - fit to page width */}
       <div className="mb-8">

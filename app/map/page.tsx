@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../components/ui/drawer';
+import { AdaptiveModal } from '../components/ui/adaptive-modal';
+import { Switch } from '../components/ui/switch';
+import { Label } from '../components/ui/label';
 import { useAuth } from '../providers/AuthProvider';
 import NavPageLayout from '../components/layout/NavPageLayout';
 import { Button } from '../components/ui/button';
@@ -128,6 +131,35 @@ function MapPageContent() {
   // Share button state
   const [shareSuccess, setShareSuccess] = useState(false);
 
+  // Filter state - persisted in localStorage
+  const [hideInactive, setHideInactive] = useState(true);
+  const [hideUnverified, setHideUnverified] = useState(true);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Load filter preferences from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('map-filter-prefs');
+      if (saved) {
+        const prefs = JSON.parse(saved);
+        if (typeof prefs.hideInactive === 'boolean') setHideInactive(prefs.hideInactive);
+        if (typeof prefs.hideUnverified === 'boolean') setHideUnverified(prefs.hideUnverified);
+      }
+    } catch {}
+  }, []);
+
+  // Save filter preferences to localStorage
+  const updateFilterPref = useCallback((key: 'hideInactive' | 'hideUnverified', value: boolean) => {
+    if (key === 'hideInactive') setHideInactive(value);
+    else setHideUnverified(value);
+    try {
+      const saved = localStorage.getItem('map-filter-prefs');
+      const prefs = saved ? JSON.parse(saved) : {};
+      prefs[key] = value;
+      localStorage.setItem('map-filter-prefs', JSON.stringify(prefs));
+    } catch {}
+  }, []);
+
   // Parse initial viewport from URL params (for shared links)
   const initialViewport = React.useMemo(() => {
     const lat = searchParams.get('lat');
@@ -153,6 +185,7 @@ function MapPageContent() {
       setError(null);
 
       let url = `/api/map-pages?global=true&limit=${PAGE_LIMIT}`;
+      url += `&hideInactive=${hideInactive}&hideUnverified=${hideUnverified}`;
       if (bounds) {
         url += `&bounds=${encodeURIComponent(JSON.stringify(bounds))}`;
       }
@@ -178,9 +211,9 @@ function MapPageContent() {
     } finally {
       setLoading(false);
     }
-  }, []); // Works for both logged-in and logged-out users
+  }, [hideInactive, hideUnverified]);
 
-  // Initial fetch - works for all users
+  // Refetch when filters change
   useEffect(() => {
     fetchMapPages();
   }, [fetchMapPages]);
@@ -643,19 +676,33 @@ function MapPageContent() {
           </div>
         )}
 
-        {/* Share Button - top right */}
+        {/* Top right buttons - Filter + Share */}
         {mapReady && (
-          <button
-            onClick={handleShare}
-            className="absolute top-4 right-4 z-10 flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
-            aria-label="Share map view"
-          >
-            {shareSuccess ? (
-              <Icon name="Check" size={20} className="text-green-600" />
-            ) : (
-              <Icon name="Share2" size={20} />
-            )}
-          </button>
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+            <button
+              onClick={() => setIsFilterModalOpen(true)}
+              className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-full border shadow-lg transition-colors",
+                (!hideInactive || !hideUnverified)
+                  ? "bg-primary/10 border-primary text-primary"
+                  : "bg-background border-border hover:bg-muted"
+              )}
+              aria-label="Map filters"
+            >
+              <Icon name="SlidersHorizontal" size={20} />
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
+              aria-label="Share map view"
+            >
+              {shareSuccess ? (
+                <Icon name="Check" size={20} className="text-green-600" />
+              ) : (
+                <Icon name="Share2" size={20} />
+              )}
+            </button>
+          </div>
         )}
 
         {/* Bottom Page Cards - Carousel with peeking cards */}
@@ -795,6 +842,49 @@ function MapPageContent() {
 
         </div>
       </div>
+
+      {/* Filter Modal */}
+      <AdaptiveModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        title="Map Filters"
+        subtitle="Customize which pins appear on the map"
+        showCloseButton
+      >
+        <div className="space-y-4 p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="map-hide-inactive" className="text-sm font-medium">
+                Hide inactive subscribers
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Only show pins from users with active subscriptions
+              </p>
+            </div>
+            <Switch
+              id="map-hide-inactive"
+              checked={hideInactive}
+              onCheckedChange={(checked) => updateFilterPref('hideInactive', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="map-hide-unverified" className="text-sm font-medium">
+                Hide unverified users
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Only show pins from users with verified emails
+              </p>
+            </div>
+            <Switch
+              id="map-hide-unverified"
+              checked={hideUnverified}
+              onCheckedChange={(checked) => updateFilterPref('hideUnverified', checked)}
+            />
+          </div>
+        </div>
+      </AdaptiveModal>
 
       {/* New Pin Drawer - using proper Drawer component, no overlay to see pin */}
       <Drawer open={showNewPinDrawer && !!newPinLocation} onOpenChange={(open) => !open && cancelNewPin()}>

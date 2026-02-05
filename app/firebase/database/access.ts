@@ -53,7 +53,39 @@ export const checkPageAccess = async (pageData: PageData | null, userId: string 
     };
   }
 
-  // All pages are now public by default - simplified access model
+  // Private group pages: check group membership
+  if (pageData.visibility === 'private' && pageData.groupId) {
+    if (!userId) {
+      console.log('🔍 checkPageAccess: Private group page, anonymous user denied');
+      return {
+        hasAccess: false,
+        error: "Page not found"
+      };
+    }
+
+    // Check group membership via the group's memberIds array
+    try {
+      const { getGroupById } = await import('./groups');
+      const group = await getGroupById(pageData.groupId);
+      if (group && group.memberIds.includes(userId)) {
+        console.log('🔍 checkPageAccess: Group member accessing private page');
+        return {
+          hasAccess: true,
+          reason: "group_member"
+        };
+      }
+    } catch (error) {
+      console.error('🔍 checkPageAccess: Error checking group membership:', error);
+    }
+
+    console.log('🔍 checkPageAccess: Non-member denied access to private group page');
+    return {
+      hasAccess: false,
+      error: "Page not found"
+    };
+  }
+
+  // All other pages are public by default
   console.log('🔍 checkPageAccess: Page access granted');
   return {
     hasAccess: true,
@@ -69,8 +101,22 @@ export const canUserEditPage = async (pageData: PageData | null, userId: string 
     return false;
   }
 
-  // Only page owner can edit
-  return pageData.userId === userId;
+  // Page owner can always edit
+  if (pageData.userId === userId) {
+    return true;
+  }
+
+  // Group members can edit group pages
+  if (pageData.groupId) {
+    try {
+      const { isGroupMember } = await import('./groups');
+      return await isGroupMember(pageData.groupId, userId);
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
 };
 
 /**

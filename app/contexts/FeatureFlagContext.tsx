@@ -24,6 +24,8 @@ const DEFAULT_FLAGS: FeatureFlagMap = {
   line_numbers: false,
   onboarding_tutorial: false,
   ui_labels: false,
+  groups: false,
+  private_pages: false,
 };
 
 const STORAGE_KEY = 'wewrite_feature_flags';

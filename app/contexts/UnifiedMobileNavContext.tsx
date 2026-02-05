@@ -15,6 +15,7 @@ const DEFAULT_UNIFIED_ORDER = [
   'following',     // overflow
   'recents',       // overflow
   'invite',        // overflow - invite friends
+  'groups',        // overflow (only shown if groups feature enabled)
   'map',           // overflow - before settings
   'settings',      // overflow
   'admin',         // overflow (only shown if user is admin)

@@ -255,7 +255,6 @@ export function useSettingsSections(): {
   const { needsUsername } = useUsernameStatus();
   const emailVerificationStatus = useEmailVerificationStatus();
   const deletedPages = useDeletedPagesCount();
-
   const sections = useMemo(() => {
     return BASE_SECTIONS.map((section): SettingsSectionWithStatus => {
       let statusIndicator: React.ReactNode = null;

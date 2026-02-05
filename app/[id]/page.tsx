@@ -115,6 +115,11 @@ export async function generateMetadata({
     const result = await getPageData(id, userId);
 
     if (result.status === 'success' && result.pageData) {
+      // Skip detailed metadata for private pages to avoid information leaks
+      if (result.pageData.visibility === 'private') {
+        return { title: 'Private Page' };
+      }
+
       const title = result.pageData.title || 'Untitled';
       // Use proper text extraction for better meta descriptions
       const fullText = extractTextContent(result.pageData.content);
@@ -255,8 +260,8 @@ export default async function ContentPage({
 
   return (
     <>
-      {/* Server-rendered content for SEO crawlers */}
-      {pageData && (
+      {/* Server-rendered content for SEO crawlers (skip for private pages) */}
+      {pageData && pageData.visibility !== 'private' && (
         <ServerContentForSEO
           title={pageData.title || 'Untitled'}
           content={pageData.content}

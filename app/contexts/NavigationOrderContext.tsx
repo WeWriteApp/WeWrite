@@ -33,6 +33,7 @@ const DEFAULT_SIDEBAR_ORDER = [
   'following',
   'recents',
   'invite',
+  'groups',
   'notifications',
   'profile',
   'settings',

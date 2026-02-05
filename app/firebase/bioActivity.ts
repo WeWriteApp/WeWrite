@@ -14,7 +14,7 @@ import {
   type QuerySnapshot
 } from "firebase/firestore";
 import { rtdb } from "./rtdb";
-import { ref, get } from "firebase/database";
+import { ref, get, push, set } from "firebase/database";
 import { hasContentChanged } from "../utils/diffService";
 import { getCollectionName } from "../utils/environmentConfig";
 
@@ -29,8 +29,6 @@ interface BioActivityData {
   content: string;
   previousContent: string;
 }
-
-// Groups functionality removed
 
 /**
  * Records a bio edit activity in Firestore
@@ -125,8 +123,23 @@ export const recordGroupAboutEditActivity = async (
       return null;
     }
 
-    // Groups functionality removed
-    return null;
+    const groupData = groupSnapshot.val();
+    const groupName = groupData?.name || 'Unknown Group';
+
+    // Record the activity
+    const activityRef = ref(rtdb, 'activities');
+    const newActivityRef = push(activityRef);
+    await set(newActivityRef, {
+      type: 'group_about_edit',
+      groupId,
+      groupName,
+      editorId,
+      editorUsername,
+      isPublic,
+      timestamp: Date.now(),
+    });
+
+    return newActivityRef.key;
   } catch (error) {
     console.error("Error recording group about edit activity:", error);
     return null;

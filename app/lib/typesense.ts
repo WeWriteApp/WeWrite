@@ -139,6 +139,9 @@ export interface TypesensePageDocument {
   createdAt: number; // Unix timestamp for sorting
   lastModified: number; // Unix timestamp for sorting
   alternativeTitles?: string[];
+  // Group fields
+  groupId?: string;
+  visibility?: string;
   // Optional metadata
   wordCount?: number;
   hasLocation?: boolean;
@@ -178,6 +181,8 @@ export const getPagesCollectionSchema = (): CollectionCreateSchema => {
       { name: 'createdAt', type: 'int64', facet: false },
       { name: 'lastModified', type: 'int64', facet: false },
       { name: 'alternativeTitles', type: 'string[]', facet: false, optional: true },
+      { name: 'groupId', type: 'string', facet: true, optional: true },
+      { name: 'visibility', type: 'string', facet: true, optional: true },
       { name: 'wordCount', type: 'int32', facet: false, optional: true },
       { name: 'hasLocation', type: 'bool', facet: true, optional: true },
     ],
