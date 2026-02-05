@@ -15,7 +15,7 @@
  * 5. Principle of Least Privilege: No default allow-all rules, explicit permissions
  *
  * 🔒 Collection Security Summary:
- * - Pages: Owner access, all pages are public by default
+ * - Pages: Owner access, private pages (isPublic=false) restricted to owner only
  * - Users: Authenticated read, owner-only write, UID immutability
  * - Admin Collections: Super restricted access for feature flags and admin users
  * - Privacy-Sensitive Data: Owner/admin access only for sensitive information
@@ -79,15 +79,15 @@ service cloud.firestore {
       return isOwner(userId) || isDevelopmentTestUser(userId);
     }
 
-    // Pages collection - Core content with simplified public access
+    // Pages collection - Core content with visibility controls
     match /pages/{pageId} {
-      // Reading rules: All pages are now public by default
+      // Reading rules: Respect isPublic field for private pages
       allow read: if
         // Page owner can always read their own pages (requires auth)
         (isAuthenticated() && resource.data.userId == request.auth.uid) ||
 
-        // All pages are now public and readable by everyone (no auth required)
-        true;
+        // Public pages (isPublic == true) or pages without isPublic field (backwards compat)
+        (resource.data.isPublic == true || !resource.data.keys().hasAny(['isPublic']));
 
       // Writing rules: Only page owner can modify, with data validation
       allow create: if (isAuthenticated() || isDevelopmentTestUser(request.resource.data.userId)) &&
@@ -122,8 +122,9 @@ service cloud.firestore {
           // Page owner can always read their own page versions (requires auth)
           (isAuthenticated() && get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid) ||
 
-          // All page versions are now public and readable by everyone
-          true;
+          // Public page versions (parent page isPublic == true or no isPublic field)
+          (get(/databases/$(database)/documents/pages/$(pageId)).data.isPublic == true ||
+           !get(/databases/$(database)/documents/pages/$(pageId)).data.keys().hasAny(['isPublic']));
 
         allow write: if (isAuthenticated() || isDevelopmentTestUser(get(/databases/$(database)/documents/pages/$(pageId)).data.userId)) &&
           (get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid ||
@@ -144,13 +145,13 @@ service cloud.firestore {
 
     // Environment-specific pages collections (DEV_pages, PREVIEW_pages, etc.)
     match /{envPages}/{pageId} {
-      // Reading rules: All pages are now public by default
+      // Reading rules: Respect isPublic field for private pages
       allow read: if (envPages.matches('.*pages') || envPages == 'pages') && (
         // Page owner can always read their own pages (requires auth)
         (isAuthenticated() && resource.data.userId == request.auth.uid) ||
 
-        // All pages are now public and readable by everyone (no auth required)
-        true
+        // Public pages (isPublic == true) or pages without isPublic field (backwards compat)
+        (resource.data.isPublic == true || !resource.data.keys().hasAny(['isPublic']))
       );
 
       // Writing rules: Only page owner can modify, with data validation
@@ -190,8 +191,9 @@ service cloud.firestore {
           // Page owner can always read their own page versions (requires auth)
           (isAuthenticated() && get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.userId == request.auth.uid) ||
 
-          // All page versions are now public and readable by everyone
-          true
+          // Public page versions (parent page isPublic == true or no isPublic field)
+          (get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.isPublic == true ||
+           !get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.keys().hasAny(['isPublic']))
         );
 
         allow write: if (envVersions.matches('.*versions') || envVersions == 'versions') &&
@@ -211,6 +213,95 @@ service cloud.firestore {
         allow write: if (envFollowers.matches('.*followers') || envFollowers == 'followers') &&
           (isAuthenticated() || isDevelopmentTestUser(followerId)) &&
           (request.auth.uid == followerId || isDevelopmentTestUser(followerId));
+      }
+    }
+
+    // Groups collection - Collaborative writing spaces
+    match /groups/{groupId} {
+      // Helper functions for group membership
+      function isGroupMember() {
+        return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+      }
+
+      function isGroupAdmin() {
+        let member = get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        return member != null && member.data.role in ['owner', 'admin'];
+      }
+
+      function isGroupOwner() {
+        let member = get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+        return member != null && member.data.role == 'owner';
+      }
+
+      // Reading rules: Public groups are visible to all, private groups only to members
+      allow read: if
+        resource.data.isPublic == true ||
+        (isAuthenticated() && isGroupMember());
+
+      // Creating groups: Only authenticated users with subscription
+      allow create: if isAuthenticated();
+
+      // Updating groups: Only admins and owners
+      allow update: if isAuthenticated() && isGroupAdmin();
+
+      // Deleting groups: Only owners
+      allow delete: if isAuthenticated() && isGroupOwner();
+
+      // Group members subcollection
+      match /members/{memberId} {
+        // Members can read the membership list
+        allow read: if isAuthenticated() && isGroupMember();
+
+        // Only admins can add/modify members
+        allow create: if isAuthenticated() && (isGroupAdmin() || memberId == request.auth.uid);
+        allow update: if isAuthenticated() && isGroupAdmin();
+        allow delete: if isAuthenticated() && (isGroupAdmin() || memberId == request.auth.uid);
+      }
+    }
+
+    // Environment-specific groups collections (DEV_groups, PREVIEW_groups)
+    match /{envGroups}/{groupId} {
+      // Helper functions for group membership (environment-specific)
+      function isEnvGroupMember() {
+        return exists(/databases/$(database)/documents/$(envGroups)/$(groupId)/members/$(request.auth.uid));
+      }
+
+      function isEnvGroupAdmin() {
+        let member = get(/databases/$(database)/documents/$(envGroups)/$(groupId)/members/$(request.auth.uid));
+        return member != null && member.data.role in ['owner', 'admin'];
+      }
+
+      function isEnvGroupOwner() {
+        let member = get(/databases/$(database)/documents/$(envGroups)/$(groupId)/members/$(request.auth.uid));
+        return member != null && member.data.role == 'owner';
+      }
+
+      allow read: if (envGroups.matches('.*groups') || envGroups == 'groups') && (
+        resource.data.isPublic == true ||
+        (isAuthenticated() && isEnvGroupMember())
+      );
+
+      allow create: if (envGroups.matches('.*groups') || envGroups == 'groups') && isAuthenticated();
+
+      allow update: if (envGroups.matches('.*groups') || envGroups == 'groups') &&
+        isAuthenticated() && isEnvGroupAdmin();
+
+      allow delete: if (envGroups.matches('.*groups') || envGroups == 'groups') &&
+        isAuthenticated() && isEnvGroupOwner();
+
+      // Environment-specific group members subcollection
+      match /members/{memberId} {
+        allow read: if (envGroups.matches('.*groups') || envGroups == 'groups') &&
+          isAuthenticated() && isEnvGroupMember();
+
+        allow create: if (envGroups.matches('.*groups') || envGroups == 'groups') &&
+          isAuthenticated() && (isEnvGroupAdmin() || memberId == request.auth.uid);
+
+        allow update: if (envGroups.matches('.*groups') || envGroups == 'groups') &&
+          isAuthenticated() && isEnvGroupAdmin();
+
+        allow delete: if (envGroups.matches('.*groups') || envGroups == 'groups') &&
+          isAuthenticated() && (isEnvGroupAdmin() || memberId == request.auth.uid);
       }
     }
 

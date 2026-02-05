@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from 'react';
-import { Player } from '@remotion/player';
+import { useState, useCallback } from 'react';
+import { Player, PlayerRef } from '@remotion/player';
 import { DonateToEveryPage } from './compositions/DonateToEveryPage';
 import { BuildYourGraph } from './compositions/BuildYourGraph';
 import { LandingPageHero } from './compositions/LandingPageHero';
 import { UseCaseWriter } from './compositions/UseCaseWriter';
 import { UseCaseReader } from './compositions/UseCaseReader';
+import { MasterComposition, calculateMasterDuration, SceneConfig } from './compositions/MasterComposition';
+import { AnimatedBlobs, WeWriteLogo, Device3D } from './compositions/SharedComponents';
+import { RemixableTimeline } from './components/RemixableTimeline';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../../components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 import { BRAND_COLORS, DIMENSIONS, TIMINGS } from './compositions/constants';
 
 interface CompositionInfo {
@@ -111,6 +115,15 @@ const COMPOSITIONS: CompositionInfo[] = [
   },
 ];
 
+// Default scene order for the master composition
+const DEFAULT_SCENES: SceneConfig[] = [
+  { id: 'hero', name: 'Landing Page Hero', Component: LandingPageHero, category: 'Landing Page' },
+  { id: 'donate', name: 'Donate to Every Page', Component: DonateToEveryPage, category: 'Features' },
+  { id: 'graph', name: 'Build Your Graph', Component: BuildYourGraph, category: 'Features' },
+  { id: 'writer', name: 'For Writers', Component: UseCaseWriter, category: 'Use Cases' },
+  { id: 'reader', name: 'For Readers', Component: UseCaseReader, category: 'Use Cases' },
+];
+
 const LayerTypeIcon = ({ type }: { type: string }) => {
   switch (type) {
     case 'background':
@@ -133,6 +146,8 @@ const LayerTypeIcon = ({ type }: { type: string }) => {
  */
 export default function MarketingVideosPage() {
   const [expandedCompositions, setExpandedCompositions] = useState<Set<string>>(new Set());
+  const [scenes, setScenes] = useState<SceneConfig[]>(DEFAULT_SCENES);
+  const [currentFrame, setCurrentFrame] = useState(0);
 
   const toggleComposition = (id: string) => {
     setExpandedCompositions(prev => {
@@ -146,15 +161,174 @@ export default function MarketingVideosPage() {
     });
   };
 
+  const handleScenesChange = useCallback((newScenes: SceneConfig[]) => {
+    setScenes(newScenes);
+  }, []);
+
+  const totalDuration = calculateMasterDuration(scenes.length);
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Marketing Videos</h1>
         <p className="text-muted-foreground text-sm">
-          All compositions with layer breakdowns and timelines
+          Video compositions and reusable components built with Remotion
         </p>
       </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="combined" className="w-full">
+        <TabsList>
+          <TabsTrigger value="combined">
+            <Icon name="PlayCircle" size={16} className="mr-2" />
+            Combined Video
+          </TabsTrigger>
+          <TabsTrigger value="compositions">
+            <Icon name="Film" size={16} className="mr-2" />
+            Individual Scenes
+          </TabsTrigger>
+          <TabsTrigger value="components">
+            <Icon name="Package" size={16} className="mr-2" />
+            Video Components
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Combined Video Tab */}
+        <TabsContent value="combined" className="space-y-6">
+          {/* Header */}
+          <div className="wewrite-card p-6">
+            <div className="flex items-start gap-3">
+              <Icon name="Sparkles" size={20} className="text-primary mt-0.5" />
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-2">Master Marketing Video</h2>
+                <p className="text-sm text-muted-foreground">
+                  All video compositions combined into a single marketing video with smooth transitions.
+                  Drag and drop scenes in the timeline below to customize the order.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Video Player */}
+          <div className="wewrite-card p-6 space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Preview</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setScenes(DEFAULT_SCENES)}
+                    disabled={JSON.stringify(scenes) === JSON.stringify(DEFAULT_SCENES)}
+                  >
+                    <Icon name="RotateCcw" size={14} className="mr-2" />
+                    Reset Order
+                  </Button>
+                </div>
+              </div>
+
+              {/* Horizontal Preview */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon name="RectangleHorizontal" size={16} className="text-muted-foreground" />
+                  <span className="text-sm font-medium">Horizontal (16:9)</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {totalDuration} frames • {(totalDuration / 30).toFixed(1)}s
+                  </span>
+                </div>
+                <div className="bg-background border border-border rounded-lg overflow-hidden">
+                  <Player
+                    component={MasterComposition}
+                    durationInFrames={totalDuration}
+                    fps={30}
+                    compositionWidth={DIMENSIONS.horizontal.width}
+                    compositionHeight={DIMENSIONS.horizontal.height}
+                    inputProps={{ orientation: 'horizontal', scenes }}
+                    style={{
+                      width: '100%',
+                      aspectRatio: '16/9',
+                    }}
+                    controls
+                    loop
+                    onFrameUpdate={setCurrentFrame}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Remixable Timeline */}
+          <div className="wewrite-card p-6">
+            <RemixableTimeline
+              scenes={scenes}
+              onScenesChange={handleScenesChange}
+              currentFrame={currentFrame}
+              totalDuration={totalDuration}
+            />
+          </div>
+
+          {/* Export & Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Export Options */}
+            <div className="wewrite-card p-6">
+              <div className="flex items-start gap-3">
+                <Icon name="Download" size={20} className="text-primary mt-0.5" />
+                <div className="space-y-3 text-sm flex-1">
+                  <p className="font-medium text-foreground">Export Options</p>
+                  <div className="space-y-2">
+                    <Button variant="outline" size="sm" className="w-full" disabled>
+                      <Icon name="Download" size={14} className="mr-2" />
+                      Export Horizontal (1920×1080)
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full" disabled>
+                      <Icon name="Download" size={14} className="mr-2" />
+                      Export Vertical (1080×1920)
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Export functionality coming soon. Videos will render at 30fps with your custom scene order.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Technical Details */}
+            <div className="wewrite-card p-6">
+              <div className="flex items-start gap-3">
+                <Icon name="Info" size={20} className="text-primary mt-0.5" />
+                <div className="space-y-3 text-sm flex-1">
+                  <p className="font-medium text-foreground">Technical Details</p>
+                  <div className="space-y-2 text-muted-foreground">
+                    <div className="flex justify-between">
+                      <span>Total Scenes:</span>
+                      <span className="font-mono">{scenes.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Duration:</span>
+                      <span className="font-mono">{(totalDuration / 30).toFixed(2)}s</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Frame Rate:</span>
+                      <span className="font-mono">30 fps</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Transition:</span>
+                      <span className="font-mono">0.67s cross-fade</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Dimensions:</span>
+                      <span className="font-mono">1920×1080 / 1080×1920</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Video Compositions Tab */}
+        <TabsContent value="compositions" className="space-y-8">
 
       {/* Compositions Gallery */}
       <div className="space-y-12">
@@ -374,6 +548,174 @@ export default function MarketingVideosPage() {
           </div>
         </div>
       </div>
+        </TabsContent>
+
+        {/* Video Components Tab */}
+        <TabsContent value="components" className="space-y-8">
+          {/* Animated Blobs Component */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">AnimatedBlobs</h2>
+              <p className="text-sm text-muted-foreground">Animated gradient blobs that move smoothly throughout the video</p>
+            </div>
+            <div className="wewrite-card p-6 space-y-4">
+              <div className="bg-black rounded-lg overflow-hidden relative" style={{ height: '300px' }}>
+                <Player
+                  component={() => (
+                    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
+                      <AnimatedBlobs colors={[BRAND_COLORS.primary, BRAND_COLORS.purple, BRAND_COLORS.green]} />
+                    </div>
+                  )}
+                  durationInFrames={150}
+                  fps={30}
+                  compositionWidth={800}
+                  compositionHeight={300}
+                  style={{ width: '100%', height: '100%' }}
+                  loop
+                  autoPlay
+                />
+              </div>
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">Props:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li><code className="text-xs bg-muted px-1 py-0.5 rounded">colors: string[]</code> - Array of color values for each blob</li>
+                  <li><code className="text-xs bg-muted px-1 py-0.5 rounded">positions?: Array</code> - Optional custom positions for blobs</li>
+                </ul>
+                <div className="mt-3 p-3 bg-muted/30 rounded text-xs font-mono">
+                  {`<AnimatedBlobs\n  colors={[BRAND_COLORS.primary, BRAND_COLORS.purple]}\n/>`}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* WeWrite Logo Component */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">WeWriteLogo</h2>
+              <p className="text-sm text-muted-foreground">WeWrite logo with fade-in animation</p>
+            </div>
+            <div className="wewrite-card p-6 space-y-4">
+              <div className="bg-black rounded-lg overflow-hidden relative" style={{ height: '200px' }}>
+                <Player
+                  component={() => (
+                    <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
+                      <AnimatedBlobs colors={[BRAND_COLORS.primary]} positions={[{ top: '-100px', left: '-100px' }]} />
+                      <WeWriteLogo />
+                    </div>
+                  )}
+                  durationInFrames={150}
+                  fps={30}
+                  compositionWidth={800}
+                  compositionHeight={200}
+                  style={{ width: '100%', height: '100%' }}
+                  loop
+                  autoPlay
+                />
+              </div>
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">Props:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li><code className="text-xs bg-muted px-1 py-0.5 rounded">isVertical?: boolean</code> - Adjusts sizing for vertical videos</li>
+                </ul>
+                <div className="mt-3 p-3 bg-muted/30 rounded text-xs font-mono">
+                  {`<WeWriteLogo isVertical={false} />`}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Device3D Component */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">Device3D</h2>
+              <p className="text-sm text-muted-foreground">3D iPhone-style device mockup with entrance animation and tilt effect</p>
+            </div>
+            <div className="wewrite-card p-6 space-y-4">
+              <div className="bg-gradient-to-br from-black via-gray-900 to-black rounded-lg overflow-hidden" style={{ height: '500px' }}>
+                <Player
+                  component={() => (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #000 0%, #111 50%, #000 100%)' }}>
+                      <Device3D isVertical={false}>
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-purple/20 flex items-center justify-center">
+                          <div className="text-white text-center p-8">
+                            <div className="text-4xl font-bold mb-2">WeWrite</div>
+                            <div className="text-sm opacity-70">Your content here</div>
+                          </div>
+                        </div>
+                      </Device3D>
+                    </div>
+                  )}
+                  durationInFrames={150}
+                  fps={30}
+                  compositionWidth={800}
+                  compositionHeight={500}
+                  style={{ width: '100%', height: '100%' }}
+                  loop
+                  autoPlay
+                />
+              </div>
+              <div className="space-y-2 text-sm">
+                <p className="font-medium">Props:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li><code className="text-xs bg-muted px-1 py-0.5 rounded">isVertical?: boolean</code> - Adjusts device dimensions</li>
+                  <li><code className="text-xs bg-muted px-1 py-0.5 rounded">children?: ReactNode</code> - Content to display inside device screen</li>
+                  <li><code className="text-xs bg-muted px-1 py-0.5 rounded">frame?: number</code> - Current animation frame</li>
+                </ul>
+                <div className="mt-3 p-3 bg-muted/30 rounded text-xs font-mono">
+                  {`<Device3D isVertical={false}>\n  <YourContent />\n</Device3D>`}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Constants Reference */}
+          <div className="wewrite-card p-6">
+            <div className="flex items-start gap-3">
+              <Icon name="Settings" size={20} className="text-primary mt-0.5" />
+              <div className="space-y-3 text-sm flex-1">
+                <p className="font-medium text-foreground">Shared Constants</p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-medium text-foreground text-xs mb-2">BRAND_COLORS</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: BRAND_COLORS.primary }} />
+                        <span className="text-xs">primary: {BRAND_COLORS.primary}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: BRAND_COLORS.purple }} />
+                        <span className="text-xs">purple: {BRAND_COLORS.purple}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: BRAND_COLORS.green }} />
+                        <span className="text-xs">green: {BRAND_COLORS.green}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: BRAND_COLORS.orange }} />
+                        <span className="text-xs">orange: {BRAND_COLORS.orange}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-xs mb-2">DIMENSIONS</p>
+                    <div className="space-y-1 text-muted-foreground">
+                      <p className="text-xs">Horizontal: {DIMENSIONS.horizontal.width}×{DIMENSIONS.horizontal.height} (16:9)</p>
+                      <p className="text-xs">Vertical: {DIMENSIONS.vertical.width}×{DIMENSIONS.vertical.height} (9:16)</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-xs mb-2">TIMINGS</p>
+                    <div className="space-y-1 text-muted-foreground">
+                      <p className="text-xs">Total duration: {TIMINGS.totalDuration} frames</p>
+                      <p className="text-xs">FPS: {TIMINGS.fps}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

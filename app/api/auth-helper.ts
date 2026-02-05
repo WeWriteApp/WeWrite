@@ -123,7 +123,8 @@ export async function getUserEmailFromId(userId: string): Promise<string | null>
  * @returns The user ID or null if not authenticated
  */
 export async function getUserIdFromRequest(request: NextRequest): Promise<string | null> {
-  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development';
+  // Only log auth debug when explicitly enabled (not just in development, to reduce console spam)
+  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true';
 
   // SIMPLIFIED: Only use the simple session cookie - no complex Firebase verification
   const simpleSessionUserId = await trySimpleUserSessionCookie(request);

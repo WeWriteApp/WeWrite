@@ -144,7 +144,9 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
     const { shouldForceProductionFromContext } = require('./adminRequestContext');
     const forceProduction = shouldForceProductionFromContext();
     if (forceProduction) {
-      console.log('[Environment Config] Using production via adminRequestContext');
+      if (process.env.DEBUG_VERBOSE === 'true') {
+        console.log('[Environment Config] Using production via adminRequestContext');
+      }
       return true;
     }
   } catch (e) {
@@ -167,8 +169,10 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
         const nextUrl = headersList.get('next-url') || '';
         const referer = headersList.get('referer') || '';
 
-        // Debug: Log all header values for troubleshooting
-        console.log(`[Environment Config] Checking admin route - pathname: "${pathname}", next-url: "${nextUrl}", referer: "${referer}"`);
+        // Debug: Log all header values for troubleshooting (only when verbose debugging enabled)
+        if (process.env.DEBUG_VERBOSE === 'true') {
+          console.log(`[Environment Config] Checking admin route - pathname: "${pathname}", next-url: "${nextUrl}", referer: "${referer}")`);
+        }
 
         // Allow if the request is to an admin API route
         // Check pathname (set by middleware), next-url (set by Next.js), and referer
@@ -180,14 +184,18 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
         // This is the most reliable check for browser-initiated requests
         const isFromAdminPage = referer.includes('/admin/') || referer.includes('/admin');
 
-        console.log(`[Environment Config] isAdminApiRoute: ${isAdminApiRoute}, isFromAdminPage: ${isFromAdminPage}`);
+        if (process.env.DEBUG_VERBOSE === 'true') {
+          console.log(`[Environment Config] isAdminApiRoute: ${isAdminApiRoute}, isFromAdminPage: ${isFromAdminPage}`);
+        }
 
         if (!isAdminApiRoute && !isFromAdminPage) {
           console.warn('[Environment Config] ⚠️ SECURITY: X-Force-Production-Data header ignored for non-admin route');
           return false;
         }
 
-        console.log('[Environment Config] ✓ Force production data header accepted for admin route');
+        if (process.env.DEBUG_VERBOSE === 'true') {
+          console.log('[Environment Config] ✓ Force production data header accepted for admin route');
+        }
       }
       return forceProduction;
     } catch (error) {
@@ -228,7 +236,9 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
 export const getCollectionName = (baseName: string): string => {
   // Check if we should force production collections via header
   if (shouldUseProductionCollections()) {
-    console.log(`[Environment Config] Using production collection for ${baseName} due to X-Force-Production-Data header`);
+    if (process.env.DEBUG_VERBOSE === 'true') {
+      console.log(`[Environment Config] Using production collection for ${baseName} due to X-Force-Production-Data header`);
+    }
     return baseName; // Return base collection name (production data)
   }
 
@@ -243,13 +253,17 @@ export const getCollectionNameAsync = async (baseName: string): Promise<string> 
   // Check if we should force production collections via header
   const forceProduction = await shouldUseProductionCollectionsAsync();
   if (forceProduction) {
-    console.log(`[Environment Config] Using production collection "${baseName}" (forced via header)`);
+    if (process.env.DEBUG_VERBOSE === 'true') {
+      console.log(`[Environment Config] Using production collection "${baseName}" (forced via header)`);
+    }
     return baseName; // Return base collection name (production data)
   }
 
   const prefix = getEnvironmentPrefix();
   const collectionName = `${prefix}${baseName}`;
-  console.log(`[Environment Config] Using collection "${collectionName}" (env prefix: "${prefix}")`);
+  if (process.env.DEBUG_VERBOSE === 'true') {
+    console.log(`[Environment Config] Using collection "${collectionName}" (env prefix: "${prefix}")`);
+  }
   return collectionName;
 };
 
@@ -391,6 +405,7 @@ export const COLLECTIONS = {
   // Core application collections
   USERS: 'users',
   PAGES: 'pages',
+  GROUPS: 'groups',
   ACTIVITIES: 'activities',
   CONFIG: 'config',
 

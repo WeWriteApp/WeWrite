@@ -11,7 +11,6 @@ export type InvitationStatus = 'pending' | 'accepted' | 'declined';
 export interface Group {
   id: string;
   name: string;
-  slug: string;
   description?: string;
   visibility: GroupVisibility;
   ownerId: string;

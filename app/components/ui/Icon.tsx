@@ -191,6 +191,17 @@ import {
   StopCircle,
   RectangleHorizontal,
   RectangleVertical,
+  Package,
+  BarChart2,
+  CalendarDays,
+  Columns3,
+  FileCode,
+  FileQuestion,
+  Gauge,
+  GitBranch,
+  LayoutTemplate,
+  LogIn,
+  Server,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -266,7 +277,9 @@ export type IconName =
   | "Layers" | "Hash" | "PanelLeftClose" | "PanelLeft" | "PanelRight" | "MousePointer" | "Hand"
   | "GitCompare" | "Loader2" | "Cpu" | "Briefcase" | "Brain" | "Music" | "Plane" | "Figma" | "Code2" | "Cloud"
   | "SlidersHorizontal" | "Video" | "Camera" | "Mic" | "Volume2" | "PlayCircle" | "StopCircle"
-  | "RectangleHorizontal" | "RectangleVertical";
+  | "RectangleHorizontal" | "RectangleVertical" | "Package"
+  | "BarChart2" | "CalendarDays" | "Columns3" | "FileCode" | "FileQuestion"
+  | "Gauge" | "GitBranch" | "LayoutTemplate" | "LogIn" | "Server";
 
 // Icon props interface
 export interface IconProps {
@@ -528,6 +541,17 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   StopCircle: StopCircle,
   RectangleHorizontal: RectangleHorizontal,
   RectangleVertical: RectangleVertical,
+  Package: Package,
+  BarChart2: BarChart2,
+  CalendarDays: CalendarDays,
+  Columns3: Columns3,
+  FileCode: FileCode,
+  FileQuestion: FileQuestion,
+  Gauge: Gauge,
+  GitBranch: GitBranch,
+  LayoutTemplate: LayoutTemplate,
+  LogIn: LogIn,
+  Server: Server,
 };
 
 /**

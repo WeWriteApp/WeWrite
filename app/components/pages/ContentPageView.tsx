@@ -117,6 +117,7 @@ interface Page {
   replyType?: 'agree' | 'disagree' | 'neutral';
   replyToTitle?: string | null;
   replyToUsername?: string | null;
+  isPublic?: boolean;
 }
 
 const extractReplyType = (content: any): 'agree' | 'disagree' | 'neutral' => {
@@ -2103,6 +2104,12 @@ export default function ContentPageView({
               pageId={pageId}
               isNewPage={isNewPageMode && page?.isNewPage}
               onBack={isNewPageMode && page?.isNewPage ? handleCancel : undefined}
+              isPublic={page?.isPublic ?? true}
+              onVisibilityChange={(newIsPublic) => {
+                if (page) {
+                  setPage({ ...page, isPublic: newIsPublic });
+                }
+              }}
           />
 
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}

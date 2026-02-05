@@ -1,0 +1,15 @@
+{
+  "skills": [
+    {
+      "name": "remotion-best-practices",
+      "description": "Best practices for Remotion - Video creation in React",
+      "source": "remotion-dev/skills",
+      "path": ".claude/skills/remotion",
+      "version": "main",
+      "metadata": {
+        "tags": ["remotion", "video", "react", "animation", "composition"]
+      }
+    }
+  ],
+  "version": "1.0.0"
+}

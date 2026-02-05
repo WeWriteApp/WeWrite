@@ -200,6 +200,8 @@ function SidebarContent({
   const emailVerificationStatus = useEmailVerificationStatus();
   const { handleButtonPress, isNavigatingTo, targetRoute } = useOptimisticNavigation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { isEnabled } = useFeatureFlags();
+  const groupsEnabled = isEnabled('groups');
 
   // Computed states
   const showContent = isExpanded || isHovering;
@@ -233,6 +235,7 @@ function SidebarContent({
     'invite': { icon: 'UserPlus', label: 'Invite Friends', href: '/invite' },
     ...(isFeatureEnabled('groups') ? { 'groups': { icon: 'Users', label: 'Groups', href: '/groups' } } : {}),
     'profile': { icon: 'User', label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
+    ...(groupsEnabled ? { 'groups': { icon: 'Users', label: 'Groups', href: '/groups' } } : {}),
     'settings': { icon: 'Settings', label: 'Settings', href: '/settings' },
     ...(isUserAdmin ? { 'admin': { icon: 'Shield', label: 'Admin', href: '/admin' } } : {}),
   };
@@ -266,6 +269,7 @@ function SidebarContent({
     if (item.label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) return true;
     if (item.label === 'Groups' && (pathname.startsWith('/groups') || pathname.startsWith('/g/'))) return true;
     if (item.label === 'Settings' && pathname.startsWith('/settings')) return true;
+    if (item.label === 'Groups' && pathname.startsWith('/groups')) return true;
     if (item.label === 'Admin' && pathname.startsWith('/admin')) return true;
     return false;
   };

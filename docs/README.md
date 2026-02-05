@@ -39,7 +39,6 @@ These READMEs live alongside the code they document:
 | [FIREBASE_REST_API_ARCHITECTURE](./firebase/FIREBASE_REST_API_ARCHITECTURE.md) | **Start here for auth** - Hybrid REST/Admin |
 | [AUTHENTICATION_ARCHITECTURE](./firebase/AUTHENTICATION_ARCHITECTURE.md) | Environment-specific auth |
 | [SESSION_MANAGEMENT_ARCHITECTURE](./auth/SESSION_MANAGEMENT_ARCHITECTURE.md) | Session handling |
-| [ADMIN_ACCOUNT_SETUP](./auth/ADMIN_ACCOUNT_SETUP.md) | Admin setup |
 
 ### Payments & Allocations
 | Doc | Description |
@@ -85,7 +84,6 @@ These READMEs live alongside the code they document:
 |-----|-------------|
 | [FIREBASE_OPTIMIZATION_GUIDE](./firebase/FIREBASE_OPTIMIZATION_GUIDE.md) | Performance/cost |
 | [COLLECTION_NAMING_STANDARDS](./firebase/COLLECTION_NAMING_STANDARDS.md) | Data layout |
-| [MIGRATION_GUIDE](./firebase/MIGRATION_GUIDE.md) | Migration guide |
 
 ### Performance & Logging
 | Doc | Description |
@@ -104,7 +102,6 @@ These READMEs live alongside the code they document:
 ### Security
 | Doc | Description |
 |-----|-------------|
-| [SECURITY_AUDIT_REPORT](./security/SECURITY_AUDIT_REPORT.md) | Security posture |
 | [USERNAME_SECURITY_GUIDELINES](./security/USERNAME_SECURITY_GUIDELINES.md) | Identity security |
 
 ### Maintenance
@@ -114,14 +111,19 @@ These READMEs live alongside the code they document:
 | [LEGACY_CODE_CLEANUP_GUIDE](./maintenance/LEGACY_CODE_CLEANUP_GUIDE.md) | Cleanup patterns |
 | [RECENT_CHANGES_SUMMARY](./maintenance/RECENT_CHANGES_SUMMARY.md) | Recent changes |
 
+### Plans & Roadmaps
+| Doc | Description |
+|-----|-------------|
+| [CSS_REFACTORING](./plans/CSS_REFACTORING.md) | CSS system consolidation plan |
+| [PRIVATE_PAGES](./plans/PRIVATE_PAGES.md) | Private pages for subscribers |
+| [GROUPS](./plans/GROUPS.md) | Group collaboration spaces |
+| [MULTI_CURRENCY](./plans/MULTI_CURRENCY.md) | Multi-currency & cryptocurrency support |
+
 ### Legal
 | Doc | Description |
 |-----|-------------|
 | [Privacy Policy](./legal/PRIVACY_POLICY.md) | Privacy |
 | [Terms of Service](./legal/TERMS_OF_SERVICE.md) | Terms |
-
-### Archive
-Historical docs for completed migrations and deprecated systems: `archive/`
 
 ---
 
@@ -129,20 +131,22 @@ Historical docs for completed migrations and deprecated systems: `archive/`
 
 ```
 docs/
-├── architecture/    # System architecture (11 docs)
-├── auth/            # Authentication & sessions (2 docs)
-├── deployment/      # Deployment & ops (9 docs)
-├── editor/          # Editor features (11 docs)
-├── features/        # Feature systems (8 docs)
-├── firebase/        # Firebase patterns (8 docs)
-├── legal/           # Legal documents (2 docs)
-├── maintenance/     # Code maintenance (10 docs)
-├── payments/        # Payments & allocations (21 docs)
-├── performance/     # Performance & logging (6 docs)
-├── search/          # Search system (6 docs)
-├── security/        # Security (7 docs)
-├── ui/              # UI & design (22 docs)
-└── archive/         # Historical docs
+├── architecture/    # System architecture
+├── auth/            # Authentication & sessions
+├── components/      # Component documentation
+├── deployment/      # Deployment & ops
+├── editor/          # Editor features
+├── features/        # Feature systems
+├── firebase/        # Firebase patterns
+├── legal/           # Legal documents
+├── maintenance/     # Code maintenance
+├── payments/        # Payments & allocations
+├── performance/     # Performance & logging
+├── plans/           # Feature roadmaps and plans
+├── search/          # Search system
+├── security/        # Security
+├── seo/             # SEO documentation
+└── ui/              # UI & design
 ```
 
 ---

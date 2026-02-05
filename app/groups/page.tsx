@@ -132,7 +132,7 @@ export default function GroupsPage() {
         onClose={() => setShowCreateModal(false)}
         onCreated={(newGroup) => {
           setGroups((prev) => [newGroup, ...prev]);
-          router.push(`/g/${newGroup.slug}`);
+          router.push(`/g/${newGroup.id}`);
         }}
       />
     </NavPageLayout>

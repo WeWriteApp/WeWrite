@@ -14,7 +14,7 @@ interface GroupCardProps {
 
 export function GroupCard({ group, className }: GroupCardProps) {
   return (
-    <Link href={`/g/${group.slug}`}>
+    <Link href={`/g/${group.id}`}>
       <Card className={className}>
         <CardHeader>
           <div className="flex items-center justify-between">

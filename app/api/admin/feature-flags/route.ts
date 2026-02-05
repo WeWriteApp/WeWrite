@@ -8,6 +8,10 @@ type FeatureFlagMap = Record<string, boolean>;
 
 const DEFAULT_FLAGS: FeatureFlagMap = {
   line_numbers: false,
+  onboarding_tutorial: false,
+  ui_labels: false,
+  private_pages: false,
+  groups: false,
 };
 
 const COLLECTION_DEFAULTS = 'featureFlags';

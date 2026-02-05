@@ -20,12 +20,34 @@ import { Button } from "../ui/button";
  * @param {Function} props.onVisibilityChange - Function to call when visibility changes
  * @param {boolean} props.disabled - Whether the dropdown is disabled
  * @param {string} props.className - Additional CSS classes
+ * @param {'page' | 'group'} props.mode - Context mode (page or group)
+ * @param {boolean} props.compact - Show compact version (icon only)
  */
 export default function VisibilityDropdown({
   isPublic,
   onVisibilityChange,
   disabled = false,
-  className = ""}) {
+  className = "",
+  mode = "page",
+  compact = false
+}) {
+  const labels = {
+    page: {
+      public: "Public",
+      private: "Private",
+      publicDesc: "Anyone can find and view this page",
+      privateDesc: "Only you can view this page",
+    },
+    group: {
+      public: "Public",
+      private: "Private",
+      publicDesc: "Anyone can find and view this group",
+      privateDesc: "Only members can access this group",
+    },
+  };
+
+  const currentLabels = labels[mode] || labels.page;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -40,9 +62,11 @@ export default function VisibilityDropdown({
           ) : (
             <Icon name="Lock" size={16} className="text-amber-500" />
           )}
-          <span className="text-sm font-medium">
-            {isPublic ? "Public Group" : "Private Group"}
-          </span>
+          {!compact && (
+            <span className="text-sm font-medium">
+              {isPublic ? currentLabels.public : currentLabels.private}
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -53,9 +77,9 @@ export default function VisibilityDropdown({
           <div className="flex items-center gap-2 flex-1">
             <Icon name="Globe" size={16} className="text-green-500 flex-shrink-0" />
             <div className="flex flex-col">
-              <span className="font-medium">Public</span>
+              <span className="font-medium">{currentLabels.public}</span>
               <span className="text-xs text-muted-foreground">
-                Anyone can find and view this group
+                {currentLabels.publicDesc}
               </span>
             </div>
           </div>
@@ -68,9 +92,9 @@ export default function VisibilityDropdown({
           <div className="flex items-center gap-2 flex-1">
             <Icon name="Lock" size={16} className="text-amber-500 flex-shrink-0" />
             <div className="flex flex-col">
-              <span className="font-medium">Private</span>
+              <span className="font-medium">{currentLabels.private}</span>
               <span className="text-xs text-muted-foreground">
-                Only members can access this group
+                {currentLabels.privateDesc}
               </span>
             </div>
           </div>

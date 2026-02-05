@@ -273,13 +273,14 @@ export const useUnifiedSearch = (
         searchTimeMs: data.performance?.searchTimeMs,
         pagesFound: data.performance?.pagesFound,
         usersFound: data.performance?.usersFound,
-        source: data.source
+        source: data.performance?.searchEngine || data.source
       });
 
       console.log(`✅ Unified search completed:`, {
         pages: uniquePages.length,
         users: uniqueUsers.length,
-        timeMs: data.performance?.searchTimeMs
+        timeMs: data.performance?.searchTimeMs,
+        engine: data.performance?.searchEngine || 'unknown'
       });
 
     } catch (error) {

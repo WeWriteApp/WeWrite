@@ -48,6 +48,8 @@ const TitleSettingsModal = dynamic(() => import('./TitleSettingsModal'), {
 });
 
 import AddToPageButton from '../utils/AddToPageButton';
+import VisibilityDropdown from '../utils/VisibilityDropdown';
+import { useSubscriberFeature } from '../../hooks/useSubscriberFeature';
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes
@@ -123,6 +125,10 @@ export interface ContentPageHeaderProps {
   onInsertLink?: () => void;
   /** Optional back handler override (used by /new to animate exit) */
   onBack?: () => void;
+  /** Whether the page is public (visibility) */
+  isPublic?: boolean;
+  /** Callback when visibility changes */
+  onVisibilityChange?: (isPublic: boolean) => void;
 }
 
 export default function ContentPageHeader({
@@ -150,7 +156,9 @@ export default function ContentPageHeader({
   titlePreFilled = false,
   onDelete,
   onInsertLink,
-  onBack
+  onBack,
+  isPublic = true,
+  onVisibilityChange
 }: ContentPageHeaderProps) {
 
   // Fetch subscription data for the page author
@@ -173,6 +181,10 @@ export default function ContentPageHeader({
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
+
+  // Private pages feature (subscribers only)
+  const { isAvailable: canUsePrivatePages } = useSubscriberFeature('private_pages');
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = React.useState(false);
 
   // Fetch subscription data for the page author
   React.useEffect(() => {
@@ -699,6 +711,30 @@ export default function ContentPageHeader({
     }
   };
 
+  // Handle visibility change
+  const handleVisibilityChange = async (newIsPublic: boolean) => {
+    if (!pageId || !onVisibilityChange || isUpdatingVisibility) return;
+
+    setIsUpdatingVisibility(true);
+    try {
+      const response = await fetch(`/api/pages/${pageId}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublic: newIsPublic }),
+      });
+
+      if (response.ok) {
+        onVisibilityChange(newIsPublic);
+      } else {
+        console.error('Failed to update visibility');
+      }
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
+  };
+
   // Logo/home click handler - for new pages, use onBack for slide-down dismiss
   const handleLogoClick = () => {
     if (isScrolled && !isEditing) {
@@ -982,11 +1018,11 @@ export default function ContentPageHeader({
 
               {/* Row 3: Byline - slides up and fades out when collapsed */}
               <div className={`transition-all duration-300 ease-out overflow-hidden ${
-                isScrolled && !isEditing 
-                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2' 
+                isScrolled && !isEditing
+                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2'
                   : 'opacity-100 max-h-[50px] mt-2 translate-y-0'
               }`}>
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-3">
                   <div className="text-sm text-muted-foreground">
                     <div className="flex items-center gap-1 justify-center">
                       <span className="whitespace-nowrap flex-shrink-0">by</span>
@@ -998,6 +1034,17 @@ export default function ContentPageHeader({
                       />
                     </div>
                   </div>
+
+                  {/* Visibility Toggle - only for page owners with the feature */}
+                  {canEdit && canUsePrivatePages && !isNewPage && pageId && (
+                    <VisibilityDropdown
+                      isPublic={isPublic}
+                      onVisibilityChange={handleVisibilityChange}
+                      disabled={isUpdatingVisibility}
+                      mode="page"
+                      compact={false}
+                    />
+                  )}
                 </div>
               </div>
             </div>

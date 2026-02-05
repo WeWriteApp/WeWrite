@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug: providedSlug, description, visibility } = body;
+    const { name, description, visibility } = body;
 
     if (!name) {
       return createErrorResponse('BAD_REQUEST', 'Name is required');
@@ -53,34 +53,6 @@ export async function POST(request: NextRequest) {
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
     const db = admin.firestore();
 
-    // Use provided slug or generate a random one
-    let slug = providedSlug;
-    if (!slug) {
-      slug = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
-    }
-
-    // Validate slug format
-    if (!/^[a-z0-9-]+$/.test(slug)) {
-      return createErrorResponse('BAD_REQUEST', 'Slug must contain only lowercase letters, numbers, and hyphens');
-    }
-
-    // Check slug uniqueness
-    const existingSnap = await db
-      .collection(getCollectionName('groups'))
-      .where('slug', '==', slug)
-      .where('deleted', '!=', true)
-      .limit(1)
-      .get();
-
-    if (!existingSnap.empty) {
-      // If auto-generated, retry with a new random slug
-      if (!providedSlug) {
-        slug = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
-      } else {
-        return createErrorResponse('BAD_REQUEST', 'This slug is already taken');
-      }
-    }
-
     // Get user info
     const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const username = userDoc.exists ? userDoc.data()?.username || '' : '';
@@ -88,7 +60,6 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const groupData = {
       name,
-      slug,
       description: description || '',
       visibility: visibility || 'public',
       ownerId: userId,

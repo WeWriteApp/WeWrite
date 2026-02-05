@@ -36,7 +36,6 @@ import type {
  */
 export async function createGroup(data: {
   name: string;
-  slug: string;
   description?: string;
   visibility: GroupVisibility;
   ownerId: string;
@@ -46,7 +45,6 @@ export async function createGroup(data: {
     const now = new Date().toISOString();
     const groupData: Omit<Group, 'id'> = {
       name: data.name,
-      slug: data.slug,
       description: data.description || '',
       visibility: data.visibility,
       ownerId: data.ownerId,
@@ -96,27 +94,6 @@ export async function getGroupById(groupId: string): Promise<Group | null> {
 }
 
 /**
- * Get a group by slug
- */
-export async function getGroupBySlug(slug: string): Promise<Group | null> {
-  try {
-    const q = query(
-      collection(db, getCollectionName('groups')),
-      where('slug', '==', slug),
-      where('deleted', '!=', true),
-      limit(1)
-    );
-    const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const docSnap = snap.docs[0];
-    return { id: docSnap.id, ...docSnap.data() } as Group;
-  } catch (error) {
-    console.error('[Groups] Error getting group by slug:', error);
-    return null;
-  }
-}
-
-/**
  * Update a group
  */
 export async function updateGroup(groupId: string, data: Partial<Group>): Promise<boolean> {
@@ -157,14 +134,6 @@ export async function getUserGroups(userId: string): Promise<Group[]> {
     console.error('[Groups] Error getting user groups:', error);
     return [];
   }
-}
-
-/**
- * Check if slug is already taken
- */
-export async function isSlugTaken(slug: string): Promise<boolean> {
-  const group = await getGroupBySlug(slug);
-  return group !== null;
 }
 
 // ─── Members ───────────────────────────────────────────────────────

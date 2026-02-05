@@ -17,12 +17,17 @@ const DEFAULT_UNIFIED_ORDER = [
   'invite',        // overflow - invite friends
   'groups',        // overflow (only shown if groups feature enabled)
   'map',           // overflow - before settings
+  'groups',        // overflow (only shown if groups feature flag enabled)
   'settings',      // overflow
   'admin',         // overflow (only shown if user is admin)
 ];
 
 // Number of items shown in the always-visible toolbar (not including More button)
 const TOOLBAR_SIZE = 4;
+
+// Version number - increment this to force smart merge of new items
+// This ensures new navigation items appear in the right position for existing users
+const MOBILE_NAV_VERSION = 2; // Bumped from 1 to 2 for groups addition
 
 interface UnifiedMobileNavContextType {
   // Single unified order - first TOOLBAR_SIZE items are in toolbar, rest in overflow
@@ -57,35 +62,76 @@ export function UnifiedMobileNavProvider({ children }: UnifiedMobileNavProviderP
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('wewrite-unified-mobile-order');
-      
+      const savedVersion = localStorage.getItem('wewrite-unified-mobile-version');
+      const currentVersion = MOBILE_NAV_VERSION.toString();
+      const versionChanged = savedVersion !== currentVersion;
+
+      // Helper to merge new items at their correct positions
+      const mergeNewItems = (existing: string[], defaults: string[]): string[] => {
+        const existingSet = new Set(existing);
+        const newItems = defaults.filter(item => !existingSet.has(item));
+        if (newItems.length === 0) return existing;
+
+        const result = [...existing];
+        for (const newItem of newItems) {
+          const defaultIndex = defaults.indexOf(newItem);
+          // Find the best insertion point based on surrounding items in defaults
+          let insertIndex = result.length;
+          for (let i = defaultIndex - 1; i >= 0; i--) {
+            const prevItem = defaults[i];
+            const prevIndex = result.indexOf(prevItem);
+            if (prevIndex !== -1) {
+              insertIndex = prevIndex + 1;
+              break;
+            }
+          }
+          result.splice(insertIndex, 0, newItem);
+        }
+        console.log('📦 Merged new mobile nav items:', newItems);
+        return result;
+      };
+
       if (saved) {
         try {
-          const parsed = JSON.parse(saved);
+          let parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
             // Check for duplicates
             const hasDuplicates = new Set(parsed).size !== parsed.length;
             if (hasDuplicates) {
               console.log('🧹 Duplicates found in stored order, using defaults');
               localStorage.removeItem('wewrite-unified-mobile-order');
+              localStorage.removeItem('wewrite-unified-mobile-version');
               return;
             }
-            
+
             // Filter out 'new' if present (migrating from old format)
-            const filtered = parsed.filter((id: string) => id !== 'new');
-            
-            // Ensure all required items exist
-            const allItems = new Set(filtered);
-            const missingItems = DEFAULT_UNIFIED_ORDER.filter(id => !allItems.has(id));
-            
-            // Add any missing items at the end
-            const complete = [...filtered, ...missingItems];
-            
-            setUnifiedOrder(complete);
+            parsed = parsed.filter((id: string) => id !== 'new');
+
+            // If version changed, use smart merge to add new items at correct positions
+            if (versionChanged) {
+              parsed = mergeNewItems(parsed, DEFAULT_UNIFIED_ORDER);
+              localStorage.setItem('wewrite-unified-mobile-order', JSON.stringify(parsed));
+            } else {
+              // Still ensure all required items exist (legacy behavior)
+              const allItems = new Set(parsed);
+              const missingItems = DEFAULT_UNIFIED_ORDER.filter(id => !allItems.has(id));
+              if (missingItems.length > 0) {
+                parsed = mergeNewItems(parsed, DEFAULT_UNIFIED_ORDER);
+              }
+            }
+
+            setUnifiedOrder(parsed);
           }
         } catch (error) {
           console.error('Failed to parse stored order:', error);
           localStorage.removeItem('wewrite-unified-mobile-order');
+          localStorage.removeItem('wewrite-unified-mobile-version');
         }
+      }
+
+      // Save the current version
+      if (versionChanged) {
+        localStorage.setItem('wewrite-unified-mobile-version', currentVersion);
       }
     }
   }, []);
@@ -127,6 +173,7 @@ export function UnifiedMobileNavProvider({ children }: UnifiedMobileNavProviderP
     setUnifiedOrder(DEFAULT_UNIFIED_ORDER);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wewrite-unified-mobile-order');
+      localStorage.removeItem('wewrite-unified-mobile-version');
     }
   }, []);
 
@@ -135,6 +182,7 @@ export function UnifiedMobileNavProvider({ children }: UnifiedMobileNavProviderP
     setUnifiedOrder(DEFAULT_UNIFIED_ORDER);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('wewrite-unified-mobile-order');
+      localStorage.removeItem('wewrite-unified-mobile-version');
     }
   }, []);
 

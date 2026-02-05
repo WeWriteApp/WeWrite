@@ -80,11 +80,13 @@ export async function syncPageToTypesenseServer(pageData: SyncPageData): Promise
     const client = getAdminClient();
     const collectionName = getTypesenseCollectionName(TYPESENSE_COLLECTIONS.PAGES);
 
-    // If page is deleted, remove from Typesense
-    if (deleted) {
+    // If page is deleted or private, remove from Typesense
+    // Private pages (isPublic === false) should not be searchable
+    if (deleted || isPublic === false) {
       try {
         await client.collections(collectionName).documents(pageId).delete();
-        console.log(`[Typesense Sync Server] Deleted page ${pageId} from collection`);
+        const reason = deleted ? 'deleted' : 'private';
+        console.log(`[Typesense Sync Server] Removed page ${pageId} from collection (${reason})`);
         return { success: true, action: 'deleted' };
       } catch (deleteError: any) {
         if (deleteError.httpStatus === 404) {

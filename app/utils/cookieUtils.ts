@@ -14,6 +14,9 @@ import { cookies } from 'next/headers';
 // Configuration
 // =============================================================================
 
+// Track if we've already warned about missing cookie secret (to avoid spam)
+let cookieSecretWarned = false;
+
 /**
  * Get the cookie signing secret from environment
  * Falls back to a default in development only
@@ -24,7 +27,11 @@ function getCookieSecret(): string {
   if (!secret) {
     if (process.env.NODE_ENV === 'development') {
       // Development-only fallback - NOT for production
-      console.warn('[Cookie Utils] COOKIE_SIGNING_SECRET not set, using development fallback');
+      // Only warn once to avoid console spam
+      if (!cookieSecretWarned) {
+        console.warn('[Cookie Utils] COOKIE_SIGNING_SECRET not set, using development fallback');
+        cookieSecretWarned = true;
+      }
       return 'dev-cookie-secret-not-for-production';
     }
     // In production, we'll use a hash of other secrets as fallback

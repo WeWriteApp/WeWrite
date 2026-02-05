@@ -36,9 +36,14 @@ const DEFAULT_SIDEBAR_ORDER = [
   'groups',
   'notifications',
   'profile',
+  'groups',        // groups after profile (only shown if feature flag enabled)
   'settings',
   'admin'
 ];
+
+// Version number - increment this to force all users to get the new default order
+// This is useful when adding new navigation items that should appear for everyone
+const NAV_ORDER_VERSION = 2; // Bumped from 1 to 2 for groups addition
 
 interface NavigationOrderContextType {
   // Mobile toolbar order
@@ -80,9 +85,41 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
     if (typeof window !== 'undefined') {
       const savedMobileOrder = localStorage.getItem('wewrite-mobile-nav-order');
       const savedSidebarOrder = localStorage.getItem('wewrite-sidebar-nav-order');
-      
+      const savedVersion = localStorage.getItem('wewrite-nav-order-version');
+      const currentVersion = NAV_ORDER_VERSION.toString();
+
       // Helper to check for duplicates
       const hasDuplicates = (arr: string[]) => new Set(arr).size !== arr.length;
+
+      // Helper to merge new items into existing order
+      // Adds any items from defaults that are missing from saved order
+      const mergeNewItems = (saved: string[], defaults: string[]): string[] => {
+        const savedSet = new Set(saved);
+        const newItems = defaults.filter(item => !savedSet.has(item));
+        if (newItems.length > 0) {
+          // Insert new items at their default positions
+          const result = [...saved];
+          for (const newItem of newItems) {
+            const defaultIndex = defaults.indexOf(newItem);
+            // Find the best insertion point based on surrounding items
+            let insertIndex = result.length;
+            for (let i = defaultIndex - 1; i >= 0; i--) {
+              const prevItem = defaults[i];
+              const prevIndex = result.indexOf(prevItem);
+              if (prevIndex !== -1) {
+                insertIndex = prevIndex + 1;
+                break;
+              }
+            }
+            result.splice(insertIndex, 0, newItem);
+          }
+          return result;
+        }
+        return saved;
+      };
+
+      // Check if version changed - if so, merge new items into existing order
+      const versionChanged = savedVersion !== currentVersion;
       
       if (savedMobileOrder) {
         try {
@@ -149,23 +186,37 @@ export function NavigationOrderProvider({ children }: NavigationOrderProviderPro
       
       if (savedSidebarOrder) {
         try {
-          const parsed = JSON.parse(savedSidebarOrder);
+          let parsed = JSON.parse(savedSidebarOrder);
           if (Array.isArray(parsed) && parsed.length > 0) {
             // Check for duplicates in sidebar order
             if (hasDuplicates(parsed)) {
               console.log('🧹 Duplicates found in stored sidebar order, clearing cache and using defaults');
               localStorage.removeItem('wewrite-mobile-nav-order');
               localStorage.removeItem('wewrite-sidebar-nav-order');
+              localStorage.removeItem('wewrite-nav-order-version');
               setMobileOrder(DEFAULT_MOBILE_ORDER);
               setSidebarOrder(DEFAULT_SIDEBAR_ORDER);
               return;
             }
+
+            // If version changed, merge in any new items from defaults
+            if (versionChanged) {
+              console.log('📦 Nav order version changed, merging new items into sidebar order');
+              parsed = mergeNewItems(parsed, DEFAULT_SIDEBAR_ORDER);
+              localStorage.setItem('wewrite-sidebar-nav-order', JSON.stringify(parsed));
+            }
+
             // Keep 'new' item in sidebar since we want it on desktop
             setSidebarOrder(parsed);
           }
         } catch (error) {
           console.warn('Failed to parse saved sidebar nav order:', error);
         }
+      }
+
+      // Save the current version
+      if (versionChanged) {
+        localStorage.setItem('wewrite-nav-order-version', currentVersion);
       }
     }
   }, []);

@@ -25,6 +25,7 @@ export default function FeatureFlagsPage() {
   const [groupsEnabledUsers, setGroupsEnabledUsers] = useState<number | null>(null);
   const [privatePagesEnabledUsers, setPrivatePagesEnabledUsers] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const enabledFraction =
     totalUsers && totalUsers > 0
       ? `${enabledUsers ?? 0}/${totalUsers}`
@@ -52,9 +53,22 @@ export default function FeatureFlagsPage() {
         router.push("/");
         return;
       }
+      void loadCsrfToken();
       void loadFlags();
     }
   }, [isLoading, user, router]);
+
+  const loadCsrfToken = async () => {
+    try {
+      const res = await fetch("/api/auth/csrf-token", { credentials: "include" });
+      const data = await res.json();
+      if (res.ok && data?.token) {
+        setCsrfToken(data.token);
+      }
+    } catch (err) {
+      console.warn("[FeatureFlagsPage] Failed to load CSRF token", err);
+    }
+  };
 
   const loadFlags = async () => {
     try {
@@ -102,12 +116,21 @@ export default function FeatureFlagsPage() {
   const updateFlag = async (flagName: string, scope: "user" | "global", enabled: boolean) => {
     setSaving(true);
     try {
-      await fetch("/api/feature-flags", {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["X-CSRF-Token"] = csrfToken;
+      }
+      const res = await fetch("/api/feature-flags", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ flag: flagName, enabled, scope }),
       });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error("[FeatureFlagsPage] Failed to update flag:", data.error);
+        return;
+      }
       if (flagName === "line_numbers") {
         if (scope === "user") {
           setLineNumbersEnabled(enabled);

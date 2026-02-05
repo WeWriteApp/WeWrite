@@ -15,6 +15,7 @@ import Typesense from 'typesense';
 import type { Client as TypesenseClient } from 'typesense';
 import type { CollectionCreateSchema } from 'typesense/lib/Typesense/Collections';
 import { getEnvironmentPrefix, getEnvironmentType } from '../utils/environmentConfig';
+import { shouldForceProductionFromContext } from '../utils/adminRequestContext';
 
 // Typesense configuration from environment variables
 const TYPESENSE_HOST = process.env.NEXT_PUBLIC_TYPESENSE_HOST;
@@ -62,6 +63,22 @@ export const getTypesenseCollectionNames = () => {
     pages: getTypesenseCollectionName(TYPESENSE_COLLECTIONS.PAGES),
     users: getTypesenseCollectionName(TYPESENSE_COLLECTIONS.USERS),
   };
+};
+
+/**
+ * Get Typesense collection names with explicit environment control
+ * Used for admin pages that need to switch between dev and prod data
+ */
+export const getTypesenseCollectionNamesForEnv = (forceProduction: boolean) => {
+  // If forceProduction is true, use no prefix (production collections)
+  // Otherwise, use the standard getTypesenseCollectionName which checks NODE_ENV
+  if (forceProduction) {
+    return {
+      pages: TYPESENSE_COLLECTIONS.PAGES,
+      users: TYPESENSE_COLLECTIONS.USERS,
+    };
+  }
+  return getTypesenseCollectionNames();
 };
 
 /**
@@ -385,13 +402,18 @@ export const ensureCollectionsExist = async (): Promise<{ pages: boolean; users:
 
 /**
  * Get collection statistics
+ * Respects the admin request context - if called within withAdminContext
+ * and X-Force-Production-Data header is set, will return production stats
  */
 export const getCollectionStats = async (): Promise<{
   pages: { numDocuments: number; name: string } | null;
   users: { numDocuments: number; name: string } | null;
 }> => {
   const client = getAdminClient();
-  const collectionNames = getTypesenseCollectionNames();
+
+  // Check if we should force production data (from admin context)
+  const forceProduction = shouldForceProductionFromContext();
+  const collectionNames = getTypesenseCollectionNamesForEnv(forceProduction);
 
   let pagesStats = null;
   let usersStats = null;

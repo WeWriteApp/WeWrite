@@ -202,7 +202,10 @@ export async function GET(request: NextRequest) {
           return false;
         }
 
-        // All pages are now public - no visibility filtering needed
+        // Skip private pages (isPublic === false) unless it's the user's own page
+        if (page.isPublic === false && page.userId !== userId) {
+          return false;
+        }
 
         // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
         if (!includeOwn && page.userId === userId) {

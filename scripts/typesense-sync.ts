@@ -250,12 +250,22 @@ async function syncUsers() {
         const data = doc.data();
         if (!data.username) continue;
 
+        // Bio can be a string or Slate document - convert to text
+        let bioText = '';
+        if (data.bio) {
+          if (typeof data.bio === 'string') {
+            bioText = data.bio;
+          } else {
+            bioText = extractTextFromContent(data.bio);
+          }
+        }
+
         documents.push({
           id: doc.id,
           username: data.username,
           usernameLower: data.usernameLower || data.username.toLowerCase(),
           displayName: data.displayName || data.username,
-          bio: data.bio || '',
+          bio: bioText,
           photoURL: data.photoURL || '',
           createdAt: toUnixTimestamp(data.createdAt),
         });
