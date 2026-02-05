@@ -30,6 +30,7 @@ const USER_DATA_CACHE_MAX_AGE = 60 * 1000; // 1 minute for user-specific data
 // Critical resources to cache immediately
 const CRITICAL_RESOURCES = [
   '/',
+  '/offline',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
@@ -437,16 +438,33 @@ async function imageOptimizedStrategy(request, cacheName) {
 // Get offline fallback
 async function getOfflineFallback(request) {
   const url = new URL(request.url);
-  
-  // For page requests, return cached homepage or offline page
+
+  // For page requests, return the dedicated offline page
   if (request.destination === 'document') {
-    const cache = await caches.open(DYNAMIC_CACHE);
-    const cachedHome = await cache.match('/');
+    // Try to return the cached offline page first
+    const staticCache = await caches.open(STATIC_CACHE);
+    const cachedOffline = await staticCache.match('/offline');
+    if (cachedOffline) {
+      return cachedOffline;
+    }
+
+    // Fallback to cached homepage if offline page isn't cached
+    const dynamicCache = await caches.open(DYNAMIC_CACHE);
+    const cachedHome = await dynamicCache.match('/');
     if (cachedHome) {
       return cachedHome;
     }
+
+    // Last resort: return a basic HTML offline message
+    return new Response(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline - WeWrite</title><style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5;color:#333}div{text-align:center;padding:2rem}h1{margin-bottom:1rem}button{padding:0.75rem 1.5rem;font-size:1rem;cursor:pointer;border:none;border-radius:0.5rem;background:#000;color:#fff}</style></head><body><div><h1>You\'re offline</h1><p>Check your connection and try again.</p><button onclick="location.reload()">Retry</button></div></body></html>',
+      {
+        status: 503,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      }
+    );
   }
-  
+
   // For API requests, return empty response
   if (url.pathname.startsWith('/api/')) {
     return new Response(JSON.stringify({ error: 'Offline', cached: false }), {
@@ -454,7 +472,7 @@ async function getOfflineFallback(request) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  
+
   // Default offline response
   return new Response('Offline', { status: 503 });
 }

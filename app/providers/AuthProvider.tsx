@@ -331,6 +331,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Server logout API error - continue
       }
 
+      // Step 5: Clear service worker caches to prevent stale authenticated content
+      try {
+        const { clearAllServiceWorkerCaches } = await import('../components/performance/ServiceWorkerRegistration');
+        await clearAllServiceWorkerCaches();
+      } catch (swError) {
+        // Service worker cache clear error - continue
+      }
+
     } catch (error) {
       // Still clear local state even if everything fails
       setUser(null);

@@ -31,6 +31,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
+import { ServiceWorkerRegistration } from './components/performance/ServiceWorkerRegistration'
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
 import UILabelTooltipOverlay from "./components/utils/UILabelTooltipOverlay"
@@ -273,6 +274,7 @@ export default function RootLayout({
                                   <SessionAuthInitializer>
                                     <SessionMonitor />
                                     <AutomaticUpdateManager />
+                                    <ServiceWorkerRegistration />
                                     <ScrollRestorationDisabler />
                                     <GlobalLandingBlobs />
                                     <GlobalNavigation>
