@@ -10,6 +10,7 @@ interface ModernAuthLayoutProps {
   description?: string;
   showLogo?: boolean;
   showTerms?: boolean;
+  afterCard?: ReactNode;
 }
 
 export function ModernAuthLayout({
@@ -17,7 +18,8 @@ export function ModernAuthLayout({
   title,
   description,
   showLogo = true,
-  showTerms = true
+  showTerms = true,
+  afterCard
 }: ModernAuthLayoutProps) {
   // Note: Blob background is now rendered globally via GlobalLandingBlobs in root layout
   // This ensures blobs persist across page transitions between landing and auth pages
@@ -38,6 +40,8 @@ export function ModernAuthLayout({
           <div className="wewrite-card rounded-xl p-6 md:p-8">
             {children}
           </div>
+
+          {afterCard}
 
           {/* Terms and privacy policy below the card */}
           {showTerms && (

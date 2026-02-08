@@ -12,6 +12,39 @@ export function ColorTokenReferenceSection({ id }: { id: string }) {
       description="How to use color tokens in Tailwind classes throughout the codebase"
     >
       <div className="space-y-6">
+        {/* Critical Warning - OKLCH Opacity Syntax */}
+        <div className="p-4 bg-error-10 border border-error rounded-lg">
+          <h4 className="font-semibold text-error flex items-center gap-2 mb-2">
+            ⚠️ OKLCH Opacity Syntax Warning
+          </h4>
+          <div className="text-sm space-y-2">
+            <p>
+              <strong>DO NOT use Tailwind's arbitrary opacity syntax</strong> (slash notation) with our color tokens.
+              OKLCH colors don't support Tailwind's <code className="bg-error-10 px-1 rounded">color/opacity</code> modifier.
+            </p>
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <div className="p-2 bg-background rounded border border-error">
+                <p className="text-error font-medium mb-1">❌ Wrong (invisible/broken)</p>
+                <code className="text-xs block">bg-primary/10</code>
+                <code className="text-xs block">text-success/50</code>
+                <code className="text-xs block">ring-error/30</code>
+              </div>
+              <div className="p-2 bg-background rounded border border-success">
+                <p className="text-success font-medium mb-1">✓ Correct (use hyphen)</p>
+                <code className="text-xs block">bg-primary-10</code>
+                <code className="text-xs block">text-success-50</code>
+                <code className="text-xs block">ring-error-30</code>
+              </div>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              <strong>Why?</strong> Our colors use <code className="bg-muted px-1 rounded">oklch(var(--primary))</code> CSS variables.
+              Tailwind's <code className="bg-muted px-1 rounded">/10</code> syntax appends opacity to the color value, but OKLCH's
+              variable-based syntax breaks when modified. We define opacity variants explicitly in tailwind.config.ts
+              (e.g., <code className="bg-muted px-1 rounded">primary-10: "oklch(var(--primary) / 0.10)"</code>).
+            </p>
+          </div>
+        </div>
+
         {/* Primary/Accent Colors */}
         <div className="space-y-3">
           <h4 className="font-medium text-sm">Primary (Accent) Colors</h4>

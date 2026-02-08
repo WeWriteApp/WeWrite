@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { useSearchParams } from 'next/navigation';
-import { LoginForm } from "../../components/forms/login-form"
+import { LoginForm, DevQuickLogin } from "../../components/forms/login-form"
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout"
 import { Alert, AlertDescription } from "../../components/ui/alert";
 
@@ -15,7 +15,7 @@ function LoginContent() {
   const isSessionRevoked = message === 'session_revoked';
 
   return (
-    <ModernAuthLayout>
+    <ModernAuthLayout afterCard={<DevQuickLogin />}>
       {isPostingReply && (
         <Alert className="mb-4 bg-primary/10 border-theme-medium">
           <Icon name="AlertCircle" size={16} className="text-primary" />

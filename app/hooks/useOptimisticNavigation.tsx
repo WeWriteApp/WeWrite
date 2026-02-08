@@ -129,7 +129,6 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
 
     // Set navigation timeout to prevent stuck states
     navigationTimeoutRef.current = setTimeout(() => {
-      console.warn('Navigation timeout reached for:', targetRoute);
       setNavigationState({
         isNavigating: false,
         targetRoute: null,

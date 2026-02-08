@@ -1,9 +1,5 @@
 import React from "react"
 import "./globals.css"
-import "./utils/init-logger" // Initialize logging system early
-import "./utils/errorSuppression" // Initialize error suppression early
-import "./utils/detailedErrorLogging" // Initialize detailed error logging
-import "./utils/developmentErrorOverride" // Initialize enhanced React error messages
 import Script from 'next/script'
 import { UnifiedErrorBoundary } from "./components/utils/UnifiedErrorBoundary"
 import { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
@@ -250,12 +246,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
-        {/* Early Firebase error suppression - must run before any other scripts */}
-        <Script
-          src="/firebase-error-suppression.js"
-          strategy="beforeInteractive"
-          priority
-        />
         <UnifiedErrorBoundary>
           <GlobalErrorHandler />
           <ThemeProvider>

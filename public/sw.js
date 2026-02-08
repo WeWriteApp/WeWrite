@@ -13,7 +13,7 @@ if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
 
 // Cache version - increment this on major changes to force cache clear
 // The service worker will also check for updates on each page load
-const CACHE_VERSION = '2.3';
+const CACHE_VERSION = '2.4';
 
 const CACHE_NAME = `wewrite-v${CACHE_VERSION}`;
 const STATIC_CACHE = `wewrite-static-v${CACHE_VERSION}`;
@@ -168,21 +168,34 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Allowed cross-origin hosts that we can safely cache
+const ALLOWED_CROSS_ORIGIN_HOSTS = [
+  'fonts.googleapis.com',
+  'fonts.gstatic.com',
+];
+
 // Fetch event - implement caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
   }
-  
+
   // Skip chrome-extension and other non-http requests
   if (!url.protocol.startsWith('http')) {
     return;
   }
-  
+
+  // Skip cross-origin requests (except allowed hosts like Google Fonts)
+  // This prevents CSP violations when fetching external resources
+  if (url.origin !== self.location.origin &&
+      !ALLOWED_CROSS_ORIGIN_HOSTS.includes(url.host)) {
+    return;
+  }
+
   event.respondWith(handleRequest(request));
 });
 
@@ -248,6 +261,13 @@ async function handleRequest(request) {
     return await networkFirstWithFallback(request, DYNAMIC_CACHE);
 
   } catch (error) {
+    // Don't show offline fallback for CSP violations - let browser handle them
+    if (error.message && error.message.includes('Content Security Policy')) {
+      console.warn('Service Worker: CSP violation, letting browser handle:', request.url);
+      // Return a network error response instead of offline page
+      return new Response('CSP blocked', { status: 403, statusText: 'Forbidden' });
+    }
+
     console.error('Service Worker: Request failed:', error);
     return await getOfflineFallback(request);
   }
@@ -257,11 +277,11 @@ async function handleRequest(request) {
 async function cacheFirstStrategy(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cachedResponse = await cache.match(request);
-  
+
   if (cachedResponse) {
     return cachedResponse;
   }
-  
+
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
@@ -273,6 +293,12 @@ async function cacheFirstStrategy(request, cacheName) {
     }
     return networkResponse;
   } catch (error) {
+    // Check if this is a CSP violation - don't treat as offline
+    if (error.message && error.message.includes('Content Security Policy')) {
+      // Return a minimal response or let the browser handle it
+      console.warn('Service Worker: CSP blocked request:', request.url);
+      throw error; // Let browser handle it without offline fallback
+    }
     throw error;
   }
 }

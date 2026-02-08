@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { cn } from '../../lib/utils';
 import { getRecentSearches, clearRecentSearches, removeRecentSearch } from "../../utils/recentSearches";
+import { saveSearchQuery } from "../../utils/savedSearches";
 import { Button } from "../ui/button";
+import { toast } from "../ui/use-toast";
 import PillLink from "../utils/PillLink";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { getBatchUserData } from '../../utils/apiClient';
@@ -43,6 +46,8 @@ interface UserSubscriptionData {
 interface RecentSearchesProps {
   onSelect: (term: string) => void;
   userId?: string | null;
+  selectedIndex?: number;
+  onItemsChange?: (count: number) => void;
 }
 
 /**
@@ -50,11 +55,42 @@ interface RecentSearchesProps {
  *
  * Displays a list of recent searches with the ability to clear them or select one
  */
-export default function RecentSearches({ onSelect, userId = null }: RecentSearchesProps) {
+export default function RecentSearches({ onSelect, userId = null, selectedIndex = -1, onItemsChange }: RecentSearchesProps) {
   const [recentSearches, setRecentSearches] = useState<SearchResult[]>([]);
   const [searchResults, setSearchResults] = useState<Record<string, SearchResults>>({});
   const [userSubscriptionData, setUserSubscriptionData] = useState<Map<string, UserSubscriptionData>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const selectedItemRef = useRef<HTMLDivElement>(null);
+
+  // Notify parent of item count changes
+  useEffect(() => {
+    if (onItemsChange) {
+      onItemsChange(recentSearches.length);
+    }
+  }, [recentSearches.length, onItemsChange]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (selectedIndex >= 0 && selectedItemRef.current) {
+      selectedItemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }, [selectedIndex]);
+
+  // Listen for keyboard selection event from parent
+  useEffect(() => {
+    const handleSelectRecentSearch = (e: CustomEvent<{ index: number }>) => {
+      const index = e.detail.index;
+      if (index >= 0 && index < recentSearches.length) {
+        onSelect(recentSearches[index].term);
+      }
+    };
+
+    window.addEventListener('selectRecentSearch', handleSelectRecentSearch as EventListener);
+    return () => window.removeEventListener('selectRecentSearch', handleSelectRecentSearch as EventListener);
+  }, [recentSearches, onSelect]);
 
   // Load recent searches and their results (simplified approach)
   useEffect(() => {
@@ -190,8 +226,17 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
       </div>
 
       <div className="space-y-4">
-        {recentSearches.map((search, index) => (
-          <div key={`${search.term}-${index}`} className="space-y-2">
+        {recentSearches.map((search, index) => {
+          const isSelected = index === selectedIndex;
+          return (
+          <div
+            key={`${search.term}-${index}`}
+            ref={isSelected ? selectedItemRef : null}
+            className={cn(
+              "space-y-2 p-2 -mx-2 rounded-md transition-colors",
+              isSelected && "bg-black/5 dark:bg-white/5 outline outline-1 outline-black/10 dark:outline-white/10"
+            )}
+          >
             {/* Search term row */}
             <div className="flex items-center justify-between group">
               <div
@@ -200,24 +245,51 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
               >
                 <span className="font-medium">"{search.term}"</span>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const updatedSearches = await removeRecentSearch(search.term, userId);
-                    setRecentSearches(updatedSearches);
-                  } catch (error) {
-                    console.error('Error removing search:', error);
-                    // Fallback to local removal
-                    const newSearches = recentSearches.filter((_, i) => i !== index);
-                    setRecentSearches(newSearches);
-                  }
-                }}
-                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-              >
-                <Icon name="X" size={12} />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const saved = saveSearchQuery(search.term, userId);
+                    if (saved) {
+                      // Dispatch event to refresh saved searches
+                      window.dispatchEvent(new Event('savedSearchesUpdated'));
+                      toast({
+                        title: "Search saved",
+                        description: `"${search.term}" added to saved searches`,
+                      });
+                    } else {
+                      toast({
+                        title: "Already saved",
+                        description: `"${search.term}" is already in saved searches`,
+                      });
+                    }
+                  }}
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                  title="Save search"
+                >
+                  <Icon name="Pin" size={12} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const updatedSearches = await removeRecentSearch(search.term, userId);
+                      setRecentSearches(updatedSearches);
+                    } catch (error) {
+                      console.error('Error removing search:', error);
+                      // Fallback to local removal
+                      const newSearches = recentSearches.filter((_, i) => i !== index);
+                      setRecentSearches(newSearches);
+                    }
+                  }}
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                  title="Remove from recent"
+                >
+                  <Icon name="X" size={12} />
+                </Button>
+              </div>
             </div>
 
             {/* Horizontal carousel of results */}
@@ -275,7 +347,8 @@ export default function RecentSearches({ onSelect, userId = null }: RecentSearch
               )}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

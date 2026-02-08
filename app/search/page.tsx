@@ -10,6 +10,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { saveSearchQuery } from "../utils/savedSearches";
 import { addRecentSearch, addRecentSearchDebounced } from "../utils/recentSearches";
 import NavPageLayout from '../components/layout/NavPageLayout';
@@ -217,6 +218,7 @@ RealtimeSearchInput.displayName = 'RealtimeSearchInput';
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
@@ -233,6 +235,110 @@ const SearchPage = React.memo(() => {
 
   // Groups functionality removed
   const groupsEnabled = false;
+
+  // Keyboard navigation state
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const resultsCountRef = useRef(0);
+  const [recentSearchesCount, setRecentSearchesCount] = useState(0);
+
+  // Build flat results list for navigation (same order as SearchResultsDisplay)
+  const flatResultsUrls = useMemo(() => {
+    const urls: string[] = [];
+    if (results?.users) {
+      results.users.forEach(user => urls.push(`/user/${user.id}`));
+    }
+    if (results?.pages) {
+      results.pages.forEach(page => urls.push(`/${page.id}`));
+    }
+    return urls;
+  }, [results]);
+
+  // Update results count when results change
+  useEffect(() => {
+    resultsCountRef.current = flatResultsUrls.length;
+    // Reset selection when results change
+    setSelectedIndex(-1);
+  }, [flatResultsUrls]);
+
+  // Reset selection when switching between search results and recent searches
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [!!currentQuery]);
+
+  // Callback for RecentSearches to report count
+  const handleRecentSearchesChange = useCallback((count: number) => {
+    setRecentSearchesCount(count);
+  }, []);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Determine which list we're navigating
+      const hasQuery = !!currentQuery?.trim();
+      const itemCount = hasQuery ? resultsCountRef.current : recentSearchesCount;
+
+      // Only handle keyboard navigation when there are items
+      if (itemCount === 0) return;
+
+      // Don't interfere with typing in input fields (except for arrow keys)
+      const isInputFocused = document.activeElement?.tagName === 'INPUT' ||
+                            document.activeElement?.tagName === 'TEXTAREA';
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex(prev => {
+            const next = prev + 1;
+            return next >= itemCount ? 0 : next;
+          });
+          break;
+
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex(prev => {
+            const next = prev - 1;
+            return next < 0 ? itemCount - 1 : next;
+          });
+          break;
+
+        case 'Enter':
+          // Only navigate/select if an item is selected and we're not in an input
+          // (input has its own submit handler)
+          if (selectedIndex >= 0 && !isInputFocused) {
+            e.preventDefault();
+            if (hasQuery) {
+              // Navigate to search result
+              const url = flatResultsUrls[selectedIndex];
+              if (url) {
+                router.push(url);
+              }
+            } else {
+              // Select recent search - trigger the onSelect callback
+              // We need to get the term from RecentSearches, but we can use the index
+              // to trigger the selection via a custom event or ref
+              const recentSearchEvent = new CustomEvent('selectRecentSearch', {
+                detail: { index: selectedIndex }
+              });
+              window.dispatchEvent(recentSearchEvent);
+            }
+          }
+          break;
+
+        case 'Escape':
+          // Clear selection
+          setSelectedIndex(-1);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIndex, flatResultsUrls, router, currentQuery, recentSearchesCount]);
+
+  // Callback for SearchResultsDisplay to report count
+  const handleResultsChange = useCallback((count: number) => {
+    resultsCountRef.current = count;
+  }, []);
 
   // Get initial query from URL only once on mount
   const initialQuery = useMemo(() => {
@@ -525,7 +631,15 @@ const SearchPage = React.memo(() => {
           <RecentSearches
             onSelect={handleRecentSearchSelect}
             userId={userId}
+            selectedIndex={selectedIndex}
+            onItemsChange={handleRecentSearchesChange}
           />
+          {/* Keyboard navigation hint for recent searches */}
+          {recentSearchesCount > 0 && selectedIndex === -1 && (
+            <p className="text-xs text-muted-foreground/60 mt-2">
+              Use <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↑</kbd> <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↓</kbd> to navigate recent searches, <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to search
+            </p>
+          )}
         </>
       )}
 
@@ -545,6 +659,12 @@ const SearchPage = React.memo(() => {
                 </>
               )}
             </p>
+            {/* Keyboard navigation hint - only show when there are results and nothing selected */}
+            {!isLoading && flatResultsUrls.length > 0 && selectedIndex === -1 && (
+              <p className="text-xs text-muted-foreground/60 mt-0.5">
+                Use <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↑</kbd> <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↓</kbd> to navigate, <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to open
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -580,6 +700,8 @@ const SearchPage = React.memo(() => {
         userId={userId}
         error={error}
         searchStats={searchStats}
+        selectedIndex={selectedIndex}
+        onResultsChange={handleResultsChange}
       />
     </NavPageLayout>
   );

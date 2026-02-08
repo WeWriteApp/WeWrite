@@ -138,7 +138,6 @@ export function OptimisticNavigationProvider({ children }: OptimisticNavigationP
 
     // Set navigation timeout
     navigationTimeoutRef.current = setTimeout(() => {
-      console.warn('Navigation timeout reached for:', targetRoute);
       completeNavigation();
     }, maxDuration);
 

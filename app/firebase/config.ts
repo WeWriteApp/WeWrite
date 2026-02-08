@@ -4,7 +4,6 @@ import { getAuth, type Auth, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, type Firestore, connectFirestoreEmulator, initializeFirestore } from "firebase/firestore";
 import { getAnalytics, isSupported, logEvent, type Analytics } from "firebase/analytics";
 import { getDatabase, type Database } from "firebase/database";
-import { initializeErrorSuppression } from '../utils/errorSuppression';
 
 /**
  * Firebase Configuration & Initialization
@@ -66,9 +65,6 @@ const newConfig: FirebaseConfig = {
 // Initialize Firebase using environment-aware configuration
 // This maintains backward compatibility while supporting future multi-project architecture
 // Simplified Firebase config - no more environment-aware complexity
-
-// Initialize error suppression early
-initializeErrorSuppression();
 
 // Initialize Firebase with simple configuration
 export const app: FirebaseApp = initializeApp(newConfig);

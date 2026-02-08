@@ -34,6 +34,7 @@ import { PieChartSection } from './PieChartSection';
 import { PillLinkSection } from './PillLinkSection';
 import { RollingCounterSection } from './RollingCounterSection';
 import { SaveStatusSection } from './SaveStatusSection';
+import { SearchResultsSection } from './SearchResultsSection';
 import { SegmentedControlSection } from './SegmentedControlSection';
 import { ShinyButtonSection } from './ShinyButtonSection';
 import { TableSection } from './TableSection';
@@ -85,6 +86,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'pill-link', label: 'PillLink', component: PillLinkSection },
   { id: 'rolling-counter', label: 'Rolling Counter', component: RollingCounterSection },
   { id: 'save-status', label: 'Save Status', component: SaveStatusSection },
+  { id: 'search-results', label: 'Search Results', component: SearchResultsSection },
   { id: 'segmented-control', label: 'Segmented Control', component: SegmentedControlSection },
   { id: 'shiny-button', label: 'Shiny Button System', component: ShinyButtonSection },
   { id: 'table', label: 'Table', component: TableSection },
