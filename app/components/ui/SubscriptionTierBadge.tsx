@@ -83,10 +83,10 @@ export function SubscriptionTierBadge({
       case 'tier2':
         return {
           icon: (
-            <div className={`flex ${config.gap}`}>
+            <span className={`inline-flex ${config.gap}`}>
               <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-500" />
               <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-500" />
-            </div>
+            </span>
           ),
           tooltip: 'Advocate - $20/mo',
           color: 'text-yellow-500'
@@ -94,9 +94,9 @@ export function SubscriptionTierBadge({
       case 'tier3':
         return {
           icon: (
-            <div className={`flex ${config.gap} relative group cursor-pointer`}>
+            <span className={`inline-flex ${config.gap} relative group cursor-pointer`}>
               {/* Particles emitting outward from center */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
+              <span className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
                 {/* Emitting particles - using scale animation to expand outward */}
                 <span className="absolute w-1 h-1 bg-yellow-300/70 rounded-full particle-emit"
                      style={{
@@ -133,7 +133,7 @@ export function SubscriptionTierBadge({
                        animationDelay: '1.2s',
                        animationDuration: '2.6s',
                      } as React.CSSProperties}></span>
-              </div>
+              </span>
 
               {/* Main stars with glow effect */}
               <Icon name="Star" size={config.icon} weight="fill" className="text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] animate-pulse relative z-10" />
@@ -160,7 +160,7 @@ export function SubscriptionTierBadge({
                   }
                 }
               `}</style>
-            </div>
+            </span>
           ),
           tooltip: 'Champion - $30+/mo',
           color: 'text-yellow-400'

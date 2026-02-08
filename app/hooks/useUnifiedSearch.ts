@@ -276,12 +276,8 @@ export const useUnifiedSearch = (
         source: data.performance?.searchEngine || data.source
       });
 
-      console.log(`✅ Unified search completed:`, {
-        pages: uniquePages.length,
-        users: uniqueUsers.length,
-        timeMs: data.performance?.searchTimeMs,
-        engine: data.performance?.searchEngine || 'unknown'
-      });
+      const searchEngine = data.performance?.searchEngine || 'unknown';
+      console.log(`✅ Search completed [${searchEngine.toUpperCase()}]: ${uniquePages.length} pages, ${uniqueUsers.length} users in ${data.performance?.searchTimeMs}ms`);
 
     } catch (error) {
       // AbortError is expected when a new search cancels an old one - don't treat as error
