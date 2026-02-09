@@ -28,6 +28,7 @@ import { IconsSection } from './IconsSection';
 import { InlineErrorSection } from './InlineErrorSection';
 import { InputSection } from './InputSection';
 import { LoadingStatesSection } from './LoadingStatesSection';
+import { NotificationCardSection } from './NotificationCardSection';
 import { PageHeaderSection } from './PageHeaderSection';
 import { PageLinksCardSection } from './PageLinksCardSection';
 import { PieChartSection } from './PieChartSection';
@@ -79,6 +80,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'inline-error', label: 'Inline Error Cards', component: InlineErrorSection },
   { id: 'input', label: 'Input', component: InputSection },
   { id: 'loading-states', label: 'Loading States', component: LoadingStatesSection },
+  { id: 'notification-card', label: 'Notification Card', component: NotificationCardSection },
   { id: 'page-header', label: 'Page Header', component: PageHeaderSection },
   { id: 'page-links-card', label: 'Page Links Card', component: PageLinksCardSection },
   { id: 'page-stats', label: 'Page Stats', component: PageStatsSection },

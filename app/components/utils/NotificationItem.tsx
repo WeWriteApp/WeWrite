@@ -236,56 +236,44 @@ export default function NotificationItem({ notification }) {
     switch (notification.type) {
       case 'follow':
         return (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center mb-1">
-              <UserBadge uid={notification.sourceUserId} showUsername={true} />
-            </div>
-            <p className="text-sm text-foreground">
-              started following you
-            </p>
-          </div>
+          <p className="text-sm text-foreground leading-relaxed">
+            <UserBadge uid={notification.sourceUserId} showUsername={true} />
+            {' '}started following you
+          </p>
         );
 
       case 'link':
         return (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center mb-1">
-              <UserBadge uid={notification.sourceUserId} showUsername={true} />
-            </div>
-            <p className="text-sm text-foreground">
-              linked to your page{' '}
-              <span className="font-medium">
-                {notification.targetPageTitle || 'Untitled Page'}
-              </span>
-              {notification.sourcePageTitle && (
-                <>
-                  {' '}from{' '}
-                  <span className="font-medium">
-                    {notification.sourcePageTitle}
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
+          <p className="text-sm text-foreground leading-relaxed">
+            <UserBadge uid={notification.sourceUserId} showUsername={true} />
+            {' '}linked to your page{' '}
+            <span className="font-medium">
+              {notification.targetPageTitle || 'Untitled Page'}
+            </span>
+            {notification.sourcePageTitle && (
+              <>
+                {' '}from{' '}
+                <span className="font-medium">
+                  {notification.sourcePageTitle}
+                </span>
+              </>
+            )}
+          </p>
         );
 
       case 'append':
         return (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center mb-1">
-              <UserBadge uid={notification.sourceUserId} showUsername={true} />
-            </div>
-            <p className="text-sm text-foreground">
-              added your page{' '}
-              <span className="font-medium">
-                {notification.sourcePageTitle || 'Untitled Page'}
-              </span>
-              {' '}to{' '}
-              <span className="font-medium">
-                {notification.targetPageTitle || 'their page'}
-              </span>
-            </p>
-          </div>
+          <p className="text-sm text-foreground leading-relaxed">
+            <UserBadge uid={notification.sourceUserId} showUsername={true} />
+            {' '}added your page{' '}
+            <span className="font-medium">
+              {notification.sourcePageTitle || 'Untitled Page'}
+            </span>
+            {' '}to{' '}
+            <span className="font-medium">
+              {notification.targetPageTitle || 'their page'}
+            </span>
+          </p>
         );
 
       case 'email_verification':
@@ -657,28 +645,22 @@ export default function NotificationItem({ notification }) {
       default:
         // For unknown notification types, provide more context based on available data
         return (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center mb-1">
-              {notification.sourceUserId && (
+          <p className="text-sm text-foreground leading-relaxed">
+            {notification.sourceUserId && (
+              <>
                 <UserBadge uid={notification.sourceUserId} showUsername={true} />
-              )}
-            </div>
-            <p className="text-sm text-foreground">
-              {notification.sourceUserId ? 'took an action on your page' : 'Activity on your account'}
-              {notification.targetPageTitle && (
-                <>
-                  {' '}<span className="font-medium">
-                    {notification.targetPageTitle}
-                  </span>
-                </>
-              )}
-              {notification.type && (
-                <span className="text-xs ml-1 text-muted-foreground">
-                  (Unknown notification type: {notification.type})
+                {' '}
+              </>
+            )}
+            {notification.sourceUserId ? 'took an action on your page' : 'Activity on your account'}
+            {notification.targetPageTitle && (
+              <>
+                {' '}<span className="font-medium">
+                  {notification.targetPageTitle}
                 </span>
-              )}
-            </p>
-          </div>
+              </>
+            )}
+          </p>
         );
     }
   };
@@ -686,7 +668,7 @@ export default function NotificationItem({ notification }) {
   return (
     <div
       className={cn(
-        "wewrite-card relative cursor-pointer group",
+        "wewrite-card relative cursor-pointer group transition-all",
         notification.read ? "" : "ring-2 ring-primary/20"
       )}
       onClick={(e) => {
@@ -696,33 +678,34 @@ export default function NotificationItem({ notification }) {
         }
       }}
     >
-      <div className="flex justify-between items-start">
-        <div className="flex items-center flex-1">
-          {/* Notification type icon with unread indicator */}
-          <div className="flex-shrink-0 mr-3 flex items-center h-full relative">
-            {(() => {
-              const { icon, color } = getNotificationTypeIcon(notification.type);
-              return (
-                <div className="relative">
-                  <Icon name={icon} size={20} className={cn(color, isUnread ? 'opacity-100' : 'opacity-50')} />
-                  {/* Unread dot overlay */}
-                  {isUnread && (
-                    <div
-                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-background"
-                      style={{ backgroundColor: '#1768FF' }}
-                    />
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-          <div className="flex-1">
-            {renderNotificationContent()}
-          </div>
+      <div className="flex gap-3">
+        {/* Notification type icon with unread indicator */}
+        <div className="flex-shrink-0 pt-0.5">
+          {(() => {
+            const { icon, color } = getNotificationTypeIcon(notification.type);
+            return (
+              <div className="relative">
+                <Icon name={icon} size={20} className={cn(color, isUnread ? 'opacity-100' : 'opacity-50')} />
+                {/* Unread dot overlay */}
+                {isUnread && (
+                  <div
+                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-background"
+                    style={{ backgroundColor: '#1768FF' }}
+                  />
+                )}
+              </div>
+            );
+          })()}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-foreground opacity-70 whitespace-nowrap">
+        {/* Content area */}
+        <div className="flex-1 min-w-0">
+          {renderNotificationContent()}
+        </div>
+
+        {/* Timestamp and menu */}
+        <div className="flex-shrink-0 flex items-start gap-1">
+          <div className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">
             {notification.createdAt && (() => {
               try {
                 const date = new Date(notification.createdAt);
@@ -743,7 +726,7 @@ export default function NotificationItem({ notification }) {
                 variant="ghost"
                 size="sm"
                 onClick={toggleMenu}
-                className="h-8 w-8 p-0 opacity-70 hover:opacity-100"
+                className="h-7 w-7 p-0 opacity-70 hover:opacity-100 -mr-2"
               >
                 <Icon name="MoreVertical" size={16} />
               </Button>
@@ -754,7 +737,7 @@ export default function NotificationItem({ notification }) {
                 size="sm"
                 onClick={toggleMenu}
                 className={cn(
-                  "h-8 w-8 p-0 transition-opacity",
+                  "h-7 w-7 p-0 transition-opacity -mr-2",
                   showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-70 hover:opacity-100"
                 )}
               >

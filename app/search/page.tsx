@@ -238,8 +238,14 @@ const SearchPage = React.memo(() => {
 
   // Keyboard navigation state
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const selectedIndexRef = useRef(-1); // Keep ref in sync for event handlers
   const resultsCountRef = useRef(0);
   const [recentSearchesCount, setRecentSearchesCount] = useState(0);
+
+  // Keep selectedIndexRef in sync with selectedIndex state
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
 
   // Build flat results list for navigation (same order as SearchResultsDisplay)
   const flatResultsUrls = useMemo(() => {
@@ -270,19 +276,35 @@ const SearchPage = React.memo(() => {
     setRecentSearchesCount(count);
   }, []);
 
+  // Store flatResultsUrls in a ref for the event handler
+  const flatResultsUrlsRef = useRef<string[]>([]);
+  useEffect(() => {
+    flatResultsUrlsRef.current = flatResultsUrls;
+  }, [flatResultsUrls]);
+
+  // Store currentQuery in a ref for the event handler
+  const currentQueryRef = useRef<string>('');
+  useEffect(() => {
+    currentQueryRef.current = currentQuery;
+  }, [currentQuery]);
+
+  // Store recentSearchesCount in a ref for the event handler
+  const recentSearchesCountRef = useRef(0);
+  useEffect(() => {
+    recentSearchesCountRef.current = recentSearchesCount;
+  }, [recentSearchesCount]);
+
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Determine which list we're navigating
-      const hasQuery = !!currentQuery?.trim();
-      const itemCount = hasQuery ? resultsCountRef.current : recentSearchesCount;
+      // Use refs to get the latest values (avoids stale closure issues)
+      const currentSelectedIndex = selectedIndexRef.current;
+      const hasQuery = !!currentQueryRef.current?.trim();
+      const itemCount = hasQuery ? resultsCountRef.current : recentSearchesCountRef.current;
+      const urls = flatResultsUrlsRef.current;
 
       // Only handle keyboard navigation when there are items
       if (itemCount === 0) return;
-
-      // Don't interfere with typing in input fields (except for arrow keys)
-      const isInputFocused = document.activeElement?.tagName === 'INPUT' ||
-                            document.activeElement?.tagName === 'TEXTAREA';
 
       switch (e.key) {
         case 'ArrowDown':
@@ -302,26 +324,26 @@ const SearchPage = React.memo(() => {
           break;
 
         case 'Enter':
-          // Only navigate/select if an item is selected and we're not in an input
-          // (input has its own submit handler)
-          if (selectedIndex >= 0 && !isInputFocused) {
+          // Navigate/select if an item is selected
+          // This takes priority over the input's form submit when an item is highlighted
+          if (currentSelectedIndex >= 0) {
             e.preventDefault();
+            e.stopPropagation();
             if (hasQuery) {
               // Navigate to search result
-              const url = flatResultsUrls[selectedIndex];
+              const url = urls[currentSelectedIndex];
               if (url) {
                 router.push(url);
               }
             } else {
               // Select recent search - trigger the onSelect callback
-              // We need to get the term from RecentSearches, but we can use the index
-              // to trigger the selection via a custom event or ref
               const recentSearchEvent = new CustomEvent('selectRecentSearch', {
-                detail: { index: selectedIndex }
+                detail: { index: currentSelectedIndex }
               });
               window.dispatchEvent(recentSearchEvent);
             }
           }
+          // If no item is selected, let the input's form submit handler handle it
           break;
 
         case 'Escape':
@@ -331,9 +353,10 @@ const SearchPage = React.memo(() => {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIndex, flatResultsUrls, router, currentQuery, recentSearchesCount]);
+    // Use capture phase to intercept Enter before form submission
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [router]); // Minimal dependencies since we use refs for everything else
 
   // Callback for SearchResultsDisplay to report count
   const handleResultsChange = useCallback((count: number) => {
