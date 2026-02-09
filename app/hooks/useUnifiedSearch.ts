@@ -277,7 +277,11 @@ export const useUnifiedSearch = (
       });
 
       const searchEngine = data.performance?.searchEngine || 'unknown';
+      const typesenseError = data.performance?.typesenseError;
       console.log(`✅ Search completed [${searchEngine.toUpperCase()}]: ${uniquePages.length} pages, ${uniqueUsers.length} users in ${data.performance?.searchTimeMs}ms`);
+      if (typesenseError && searchEngine !== 'typesense') {
+        console.warn(`⚠️ Typesense failed, used Firestore fallback. Error: ${typesenseError}`);
+      }
 
     } catch (error) {
       // AbortError is expected when a new search cancels an old one - don't treat as error

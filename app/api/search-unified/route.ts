@@ -45,6 +45,7 @@ interface SearchPerformance {
   usersFound: number;
   maxResults?: number | string;
   searchEngine?: string;
+  typesenseError?: string;
 }
 
 interface PageSearchResult {
@@ -743,6 +744,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let searchSource = 'firestore';
 
     // Try Typesense first if enabled
+    let typesenseError: string | null = null;
     if (USE_TYPESENSE && isTypesenseConfigured()) {
       console.log(`[Search] Using Typesense for: "${searchTerm}"`);
       try {
@@ -757,10 +759,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         users = typesenseResults.users;
         searchSource = 'typesense';
         console.log(`[Search] Typesense returned ${pages.length} pages, ${users.length} users`);
-      } catch (typesenseError) {
-        console.error('[Search] Typesense failed, falling back to Firestore:', typesenseError instanceof Error ? typesenseError.message : 'Unknown error');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        typesenseError = errorMessage;
+        console.error('[Search] Typesense failed, falling back to Firestore:', errorMessage);
       }
     } else {
+      const reason = !USE_TYPESENSE ? 'disabled' : 'not configured';
+      typesenseError = `Typesense ${reason}`;
       console.log(`[Search] Typesense not available (USE_TYPESENSE=${USE_TYPESENSE}, configured=${isTypesenseConfigured()})`);
     }
 
@@ -848,7 +854,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         pagesFound: pagesWithUsernames?.length || 0,
         usersFound: users?.length || 0,
         maxResults: maxResults || 'unlimited',
-        searchEngine: searchSource
+        searchEngine: searchSource,
+        typesenseError: typesenseError || undefined
       }
     };
 
