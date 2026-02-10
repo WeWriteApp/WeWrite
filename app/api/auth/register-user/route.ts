@@ -10,6 +10,7 @@ import { NextRequest } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { syncUserToResend } from '../../../services/resendContactsService';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { verifyTurnstileToken, isTurnstileConfigured } from '../../../services/TurnstileVerificationService';
 
 interface RegisterUserRequest {
   uid: string;
@@ -18,6 +19,7 @@ interface RegisterUserRequest {
   idToken: string; // Firebase ID token for verification
   referredBy?: string; // User ID of the referrer
   referralSource?: string; // Landing page vertical (e.g., 'general', 'writers', 'journalism')
+  turnstileToken?: string; // Turnstile verification token
 }
 
 // Firebase project configuration
@@ -138,11 +140,47 @@ async function isUsernameTaken(username: string, idToken: string): Promise<boole
   }
 }
 
+// Helper to get client IP
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp;
+  }
+  return 'unknown';
+}
+
 // POST endpoint - Complete user registration
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { uid, email, username, idToken, referredBy, referralSource } = body as RegisterUserRequest;
+    const { uid, email, username, idToken, referredBy, referralSource, turnstileToken } = body as RegisterUserRequest;
+
+    // SECURITY: Verify Turnstile token if configured
+    if (isTurnstileConfigured()) {
+      const clientIp = getClientIp(request);
+
+      if (!turnstileToken) {
+        console.warn('[Register User] Registration attempt without Turnstile token', { ip: clientIp });
+        return createErrorResponse('BAD_REQUEST', 'Security verification required. Please complete the CAPTCHA.');
+      }
+
+      const turnstileResult = await verifyTurnstileToken({
+        token: turnstileToken,
+        remoteIp: clientIp,
+      });
+
+      if (!turnstileResult.success) {
+        console.warn('[Register User] Turnstile verification failed', {
+          ip: clientIp,
+          errors: turnstileResult.error_codes,
+        });
+        return createErrorResponse('BAD_REQUEST', 'Security verification failed. Please try again.');
+      }
+    }
 
     // Validate required fields
     if (!uid || !email || !username || !idToken) {

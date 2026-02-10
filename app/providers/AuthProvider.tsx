@@ -181,7 +181,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [setLoading, clearError, setUser, setError]);
 
   // Sign in (SIMPLIFIED)
-  const signIn = useCallback(async (emailOrUsername: string, password: string) => {
+  const signIn = useCallback(async (emailOrUsername: string, password: string, turnstileToken?: string) => {
     try {
       setLoading(true);
       clearError();
@@ -202,7 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             'Content-Type': 'application/json'
           },
           credentials: 'include',
-          body: JSON.stringify({ emailOrUsername, password })
+          body: JSON.stringify({ emailOrUsername, password, ...(turnstileToken ? { turnstileToken } : {}) })
         });
 
         if (loginResponse.ok) {

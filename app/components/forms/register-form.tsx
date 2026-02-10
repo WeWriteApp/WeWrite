@@ -21,6 +21,7 @@ import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 import { transferLoggedOutAllocationsToUser } from "../../utils/simulatedUsd"
 import { useAuth } from "../../providers/AuthProvider"
 import { isValidEmail } from '@/utils/validationPatterns'
+import { ChallengeWrapper, useChallengeToken } from '../auth/ChallengeWrapper'
 
 export function RegisterForm({
   className,
@@ -62,6 +63,15 @@ export function RegisterForm({
   const [copied, setCopied] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
+  // Turnstile challenge token
+  const {
+    token: turnstileToken,
+    isVerified: isTurnstileVerified,
+    handleVerified: handleTurnstileVerified,
+    handleError: handleTurnstileError,
+    handleExpired: handleTurnstileExpired,
+  } = useChallengeToken()
+
   // Resolve referral code (username or UID) to referrer info
   useEffect(() => {
     const resolveReferralCode = async () => {
@@ -94,8 +104,8 @@ export function RegisterForm({
     // Username is valid if it's at least 3 characters and available (not taken)
     const isUsernameValid = username.length >= 3 && isAvailable === true && !validationError
 
-    setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid)
-  }, [email, password, username, isAvailable, validationError])
+    setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid && isTurnstileVerified)
+  }, [email, password, username, isAvailable, validationError, isTurnstileVerified])
 
   // Username validation function (memoized to prevent infinite re-renders)
   const checkUsername = useCallback(
@@ -246,6 +256,8 @@ export function RegisterForm({
           // Use resolved UID from referrer info (supports both username and UID referral codes)
           ...(referrerInfo?.uid ? { referredBy: referrerInfo.uid } : {}),
           ...(referralSource ? { referralSource } : {}),
+          // Turnstile verification token for anti-spam
+          ...(turnstileToken ? { turnstileToken } : {}),
         })
       })
 
@@ -385,17 +397,24 @@ export function RegisterForm({
   }
 
   return (
-    <form
-      className={cn("flex flex-col gap-4", className)}
-      {...props}
-      onSubmit={handleSubmit}
-      name="wewrite-register"
-      action="https://www.getwewrite.app/auth/register"
-      method="POST"
+    <ChallengeWrapper
+      onVerified={handleTurnstileVerified}
+      onError={handleTurnstileError}
+      onExpired={handleTurnstileExpired}
+      riskLevel="soft_challenge"
+      action="register"
     >
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl font-bold">Create your account</h1>
-      </div>
+      <form
+        className={cn("flex flex-col gap-4", className)}
+        {...props}
+        onSubmit={handleSubmit}
+        name="wewrite-register"
+        action="https://www.getwewrite.app/auth/register"
+        method="POST"
+      >
+        <div className="flex flex-col items-center gap-1 text-center">
+          <h1 className="text-2xl font-bold">Create your account</h1>
+        </div>
 
       <div className="grid gap-4">
         <div className="grid gap-2">
@@ -573,6 +592,7 @@ export function RegisterForm({
       >
         Sign in with existing account
       </Button>
-    </form>
+      </form>
+    </ChallengeWrapper>
   )
 }

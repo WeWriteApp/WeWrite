@@ -16,7 +16,7 @@ export interface AuthState {
 
 export interface AuthContextValue extends AuthState {
   // Authentication actions
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, turnstileToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   

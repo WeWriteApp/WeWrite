@@ -18,6 +18,7 @@ import { DEV_TEST_USERS, validateDevTestPassword, verifyDevPassword } from '../.
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { authRateLimiter } from '../../../utils/rateLimiter';
 import { createSignedCookieValue, type SessionCookieData } from '../../../utils/cookieUtils';
+import { verifyTurnstileToken, isTurnstileConfigured } from '../../../services/TurnstileVerificationService';
 
 // Dev mode cookie options (only used when USE_DEV_AUTH=true in development)
 const DEV_SESSION_COOKIE_OPTIONS = {
@@ -31,6 +32,7 @@ const DEV_SESSION_COOKIE_OPTIONS = {
 interface LoginRequest {
   emailOrUsername: string;
   password: string;
+  turnstileToken?: string;
 }
 
 interface LoginResponse {
@@ -92,7 +94,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json() as LoginRequest;
-    const { emailOrUsername, password } = body;
+    const { emailOrUsername, password, turnstileToken } = body;
+
+    // SECURITY: Verify Turnstile token if configured
+    if (isTurnstileConfigured()) {
+      if (!turnstileToken) {
+        secureLogger.warn('[Auth] Login attempt without Turnstile token', { ip: clientIp });
+        return createErrorResponse('Security verification required. Please complete the CAPTCHA.', 400);
+      }
+
+      const turnstileResult = await verifyTurnstileToken({
+        token: turnstileToken,
+        remoteIp: clientIp,
+      });
+
+      if (!turnstileResult.success) {
+        secureLogger.warn('[Auth] Turnstile verification failed', {
+          ip: clientIp,
+          errors: turnstileResult.error_codes,
+        });
+        return createErrorResponse('Security verification failed. Please try again.', 400);
+      }
+    }
 
     // SECURITY: Use secure logging to prevent email exposure
     secureLogger.info('[Auth] Login attempt', {

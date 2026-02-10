@@ -12,6 +12,7 @@ import { InlineError } from '../ui/InlineError';
 import Link from 'next/link';
 import { getEnvironmentType } from '../../utils/environmentConfig';
 import { looksLikeEmail } from '@/utils/validationPatterns';
+import { ChallengeWrapper, useChallengeToken } from '../auth/ChallengeWrapper';
 
 // Constants for rate limiting
 const MAX_ATTEMPTS_BEFORE_WARNING = 3;
@@ -37,6 +38,15 @@ export function LoginForm() {
 
   const { signIn, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Turnstile challenge token
+  const {
+    token: turnstileToken,
+    isVerified: isTurnstileVerified,
+    handleVerified: handleTurnstileVerified,
+    handleError: handleTurnstileError,
+    handleExpired: handleTurnstileExpired,
+  } = useChallengeToken();
 
   // Load attempt data from localStorage on mount
   useEffect(() => {
@@ -147,7 +157,7 @@ export function LoginForm() {
       const trimmedEmailOrUsername = emailOrUsername.trim();
       const trimmedPassword = password.trim();
 
-      await signIn(trimmedEmailOrUsername, trimmedPassword);
+      await signIn(trimmedEmailOrUsername, trimmedPassword, turnstileToken || undefined);
       // Clear attempts on successful login
       clearAttempts();
 
@@ -193,13 +203,20 @@ export function LoginForm() {
   const isLockedOut = countdown !== null && countdown > 0;
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
-        <p className="text-muted-foreground">
-          Welcome back to WeWrite
-        </p>
-      </div>
+    <ChallengeWrapper
+      onVerified={handleTurnstileVerified}
+      onError={handleTurnstileError}
+      onExpired={handleTurnstileExpired}
+      riskLevel="soft_challenge"
+      action="login"
+    >
+      <div className="w-full max-w-md mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
+          <p className="text-muted-foreground">
+            Welcome back to WeWrite
+          </p>
+        </div>
 
       {/* Countdown Timer Alert */}
       {isLockedOut && countdown !== null && (
@@ -303,7 +320,7 @@ export function LoginForm() {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading || isLockedOut}
+          disabled={isLoading || isLockedOut || !isTurnstileVerified}
         >
           {isLoading ? 'Signing in...' : isLockedOut ? `Locked (${formatCountdown(countdown!)})` : 'Sign In'}
         </Button>
@@ -327,7 +344,8 @@ export function LoginForm() {
         </Button>
       </div>
 
-    </div>
+      </div>
+    </ChallengeWrapper>
   );
 }
 
