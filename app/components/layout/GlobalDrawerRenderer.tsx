@@ -265,10 +265,9 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
     return pathname === route;
   };
 
-  // Helper to navigate
+  // Helper to navigate - just push the route, don't call onClose as it conflicts with navigation
   const navigateIfNeeded = (id: string, route: string) => {
     if (pathname === route) return;
-    onClose();
     handleButtonPress(id, route);
   };
 

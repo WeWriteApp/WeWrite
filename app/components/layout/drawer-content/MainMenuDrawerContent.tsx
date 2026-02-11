@@ -101,8 +101,8 @@ function MainMenuList() {
       // Navigate to admin sub-menu
       navigateInDrawer('admin');
     } else if (item.route) {
-      // Close drawer and navigate to route
-      closeDrawer();
+      // Navigate to route - just push the new route, the hash will be replaced
+      // Don't call closeDrawer() as it manipulates history which conflicts with router.push
       router.push(item.route);
     }
   };

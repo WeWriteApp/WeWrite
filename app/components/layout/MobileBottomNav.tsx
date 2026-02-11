@@ -288,11 +288,11 @@ export default function MobileBottomNav() {
     <FixedPortal>
       <DockedToolbar
         className={cn(
-          "lg:hidden fixed-layer pointer-events-auto left-0 right-0",
+          "lg:hidden fixed pointer-events-auto left-0 right-0",
           "transition-all duration-300 ease-in-out",
           !shouldHideToolbar ? "translate-y-0" : "translate-y-full",
           "touch-manipulation",
-          "z-fixed-toolbar"
+          "z-[80]"
         )}
         style={{
           bottom: 0,
