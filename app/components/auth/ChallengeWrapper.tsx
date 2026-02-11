@@ -144,12 +144,14 @@ export function ChallengeWrapper({
     // If Turnstile not configured, allow through
     if (!isTurnstileConfigured()) {
       setState({ status: 'verified', token: '', error: null });
+      onVerified?.('');
       return;
     }
 
     // If allow level, skip challenge
     if (riskLevel === 'allow') {
       setState({ status: 'verified', token: '', error: null });
+      onVerified?.('');
       return;
     }
 
