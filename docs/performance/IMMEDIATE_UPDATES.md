@@ -16,8 +16,8 @@ This created a poor user experience where users would save changes and not see t
 
 ## Solution: Multi-Layer Cache Optimization
 
-### 1. Unified Cache TTL Reduction
-**File**: `app/utils/unifiedCache.ts`
+### 1. Server Cache TTL Reduction
+**File**: `app/utils/serverCache.ts`
 ```typescript
 const CACHE_TTL = {
   FAST: process.env.NODE_ENV === 'development' ? 5 * 1000 : 10 * 1000, // 5s dev, 10s prod
@@ -25,11 +25,11 @@ const CACHE_TTL = {
 }
 ```
 
-### 2. Page Cache TTL Reduction  
-**File**: `app/utils/pageCache.ts`
+### 2. Pages List Cache TTL Reduction
+**File**: `app/utils/pagesListCache.ts`
 ```typescript
 private readonly HOT_TTL = 10 * 1000;         // 10 seconds - IMMEDIATE UPDATES
-private readonly WARM_TTL = 30 * 1000;        // 30 seconds - FAST UPDATES  
+private readonly WARM_TTL = 30 * 1000;        // 30 seconds - FAST UPDATES
 private readonly COLD_TTL = 60 * 1000;        // 1 minute - QUICK UPDATES
 ```
 
@@ -148,8 +148,9 @@ Optimize CDN/edge caching while maintaining immediate updates for the page autho
 ## Critical Files for Immediate Updates
 
 ### Cache Configuration
-- `app/utils/unifiedCache.ts` - Main cache TTL settings
-- `app/utils/pageCache.ts` - Page-specific cache TTL
+- `app/utils/serverCache.ts` - Main cache TTL settings
+- `app/utils/pagesListCache.ts` - Page-specific cache TTL
+- `app/utils/globalCacheInvalidation.ts` - Cache invalidation utilities
 - `app/firebase/database/pages.ts` - Client-side fetch headers
 
 ### Cache Invalidation

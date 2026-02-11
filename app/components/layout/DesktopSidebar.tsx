@@ -2,14 +2,11 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Button } from "../ui/button";
 import { Icon } from '@/components/ui/Icon';
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
-import DraggableSidebarItem from './DraggableSidebarItem';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import MapEditor from "../editor/MapEditor";
@@ -72,6 +69,52 @@ export const EditorProvider: React.FC<{ children: React.ReactNode } & EditorCont
     {children}
   </EditorContext.Provider>
 );
+
+// ============================================================================
+// SIDEBAR ITEM COMPONENT
+// ============================================================================
+
+interface SidebarItemProps {
+  icon: string;
+  label: string;
+  href: string;
+  onClick: () => void;
+  onMouseEnter?: () => void;
+  isActive: boolean;
+  showContent: boolean;
+  children?: React.ReactNode;
+}
+
+function SidebarItem({
+  icon,
+  label,
+  onClick,
+  onMouseEnter,
+  isActive,
+  showContent,
+  children,
+}: SidebarItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      className={cn(
+        "relative flex items-center gap-3 rounded-lg transition-colors",
+        showContent ? "w-full h-10 px-3" : "w-10 h-10 justify-center",
+        isActive
+          ? "bg-accent/15 text-accent"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+      title={!showContent ? label : undefined}
+    >
+      <Icon name={icon as any} size={20} />
+      {showContent && (
+        <span className="text-sm font-medium whitespace-nowrap">{label}</span>
+      )}
+      {children}
+    </button>
+  );
+}
 
 // ============================================================================
 // SIDEBAR PROVIDER
@@ -193,7 +236,7 @@ function SidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
-  const { sidebarOrder, setSidebarOrder, resetSidebarOrder } = useNavigationOrder();
+  const { sidebarOrder } = useNavigationOrder();
   const { hasActiveSubscription } = useSubscription();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useEarnings();
@@ -235,25 +278,12 @@ function SidebarContent({
     'invite': { icon: 'UserPlus', label: 'Invite Friends', href: '/invite' },
     ...(isFeatureEnabled('groups') ? { 'groups': { icon: 'Users', label: 'Groups', href: '/groups' } } : {}),
     'profile': { icon: 'User', label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
-    ...(groupsEnabled ? { 'groups': { icon: 'Users', label: 'Groups', href: '/groups' } } : {}),
     'settings': { icon: 'Settings', label: 'Settings', href: '/settings' },
     ...(isUserAdmin ? { 'admin': { icon: 'Shield', label: 'Admin', href: '/admin' } } : {}),
   };
 
-  // Build ordered nav items
-  const allAvailableItems = Object.keys(navigationItemsConfig);
-  const completeSidebarOrder = [
-    ...sidebarOrder.filter(itemId => navigationItemsConfig[itemId]),
-    ...allAvailableItems.filter(itemId => !sidebarOrder.includes(itemId))
-  ];
-
-  const reorderCompleteItems = (dragIndex: number, hoverIndex: number) => {
-    const newOrder = [...completeSidebarOrder];
-    const draggedItem = newOrder[dragIndex];
-    newOrder.splice(dragIndex, 1);
-    newOrder.splice(hoverIndex, 0, draggedItem);
-    setSidebarOrder(newOrder.filter(itemId => navigationItemsConfig[itemId]));
-  };
+  // Build ordered nav items using canonical order
+  const orderedItems = sidebarOrder.filter(itemId => navigationItemsConfig[itemId]);
 
   const isNavItemActive = (item: { href: string; label: string }) => {
     if (!item.href) return false;
@@ -269,7 +299,6 @@ function SidebarContent({
     if (item.label === 'Profile' && user && pathname.startsWith(`/u/${user.uid}`)) return true;
     if (item.label === 'Groups' && (pathname.startsWith('/groups') || pathname.startsWith('/g/'))) return true;
     if (item.label === 'Settings' && pathname.startsWith('/settings')) return true;
-    if (item.label === 'Groups' && pathname.startsWith('/groups')) return true;
     if (item.label === 'Admin' && pathname.startsWith('/admin')) return true;
     return false;
   };
@@ -299,199 +328,171 @@ function SidebarContent({
   };
 
   // ============================================================================
-  // RENDER - Clean, simple structure
+  // RENDER
   // ============================================================================
 
   const sidebarContent = (
-    <DndProvider backend={HTML5Backend}>
-      <aside
-        className={cn(
-          // Base positioning
-          "hidden md:flex fixed left-0 top-0 h-screen flex-col",
-          "z-fixed-toolbar",
-          // Simple styling - NO wewrite-card to avoid hidden rules
-          "bg-background/80 backdrop-blur-md border-r border-border",
-          // Width transition
-          "transition-[width] duration-300 ease-out",
-          showContent ? "w-64" : "w-[72px]"
-        )}
-        style={{
-          top: 'var(--email-banner-height, 0px)',
-          height: 'calc(100vh - var(--email-banner-height, 0px))',
-        }}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-      >
-        {/*
-          SIMPLE LAYOUT:
-          - Fixed 16px padding on all sides
-          - Collapsed: 72px total width = 16px + 40px button + 16px
-          - This ensures buttons never touch edges and rounded corners are visible
-          - Nav section is scrollable when content overflows
-        */}
-        <div className="flex flex-col h-full p-4 overflow-hidden">
+    <aside
+      className={cn(
+        // Base positioning
+        "hidden md:flex fixed left-0 top-0 h-screen flex-col",
+        "z-fixed-toolbar",
+        // Simple styling
+        "bg-background/80 backdrop-blur-md border-r border-border",
+        // Width transition
+        "transition-[width] duration-300 ease-out",
+        showContent ? "w-64" : "w-[72px]"
+      )}
+      style={{
+        top: 'var(--email-banner-height, 0px)',
+        height: 'calc(100vh - var(--email-banner-height, 0px))',
+      }}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <div className="flex flex-col h-full p-4 overflow-hidden">
 
-          {/* Header */}
-          <div className="flex items-center h-10 mb-4">
-            <button
-              onClick={toggleExpanded}
+        {/* Header */}
+        <div className="flex items-center h-10 mb-4">
+          <button
+            onClick={toggleExpanded}
+            className={cn(
+              "h-10 w-10 flex items-center justify-center rounded-lg",
+              "text-foreground hover:bg-muted transition-colors"
+            )}
+            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            <Icon
+              name="ChevronRight"
+              size={20}
               className={cn(
-                "h-10 w-10 flex items-center justify-center rounded-lg",
-                "text-foreground hover:bg-muted transition-colors"
+                "transition-transform duration-300",
+                isExpanded && "rotate-180"
               )}
-              aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              <Icon
-                name="ChevronRight"
-                size={20}
-                className={cn(
-                  "transition-transform duration-300",
-                  isExpanded && "rotate-180"
-                )}
-              />
-            </button>
-            {showContent && (
-              <span className="ml-3 text-lg font-semibold whitespace-nowrap">
-                {isEditMode ? "Editor" : "WeWrite"}
-              </span>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
-            <div className={cn(
-              "flex flex-col gap-1",
-              !showContent && "items-center"
-            )}>
-              {completeSidebarOrder
-                .filter((itemId, i, arr) => arr.indexOf(itemId) === i)
-                .map((itemId, index) => {
-                  const item = navigationItemsConfig[itemId];
-                  if (!item) return null;
-
-                  const isActive = isNavItemActive(item);
-                  const isSettings = item.label === 'Settings';
-
-                  return (
-                    <DraggableSidebarItem
-                      key={itemId}
-                      id={itemId}
-                      icon={item.icon}
-                      label={item.label}
-                      href={item.href}
-                      onClick={() => handleNavItemClick(item)}
-                      onMouseEnter={() => handleNavigationHover(item.href)}
-                      isActive={isActive}
-                      index={index}
-                      moveItem={reorderCompleteItems}
-                      showContent={showContent}
-                    >
-                      {isSettings && criticalSettingsStatus && (
-                        <>
-                          {!showContent && (
-                            <WarningDot
-                              variant="warning"
-                              size="sm"
-                              position="top-right"
-                              offset={{ top: '-4px', right: '-4px' }}
-                            />
-                          )}
-                          {showContent && (
-                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse ml-auto" />
-                          )}
-                        </>
-                      )}
-                    </DraggableSidebarItem>
-                  );
-                })}
-            </div>
-
-            {/* Reset button - expanded only */}
-            {showContent && (
-              <div className="mt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={resetSidebarOrder}
-                  className="w-full text-xs text-muted-foreground"
-                >
-                  Reset to default
-                </Button>
-              </div>
-            )}
-
-            {/* Editor controls */}
-            {isEditMode && (
-              <div className="mt-4 pt-4 border-t border-border space-y-2">
-                <div className={cn("flex", !showContent && "justify-center")}>
-                  <MapEditor
-                    location={editorContext.location}
-                    onChange={editorContext.setLocation}
-                    compact={!showContent}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 mt-auto">
-                  <Button
-                    onClick={editorContext.onSave}
-                    disabled={editorContext.isSaving}
-                    variant="success"
-                    size={showContent ? "default" : "icon"}
-                  >
-                    <Icon name="Check" size={16} />
-                    {showContent && <span className="ml-2">{editorContext.isSaving ? "Saving..." : "Save"}</span>}
-                  </Button>
-                  <Button
-                    onClick={editorContext.onCancel}
-                    variant="secondary"
-                    size={showContent ? "default" : "icon"}
-                  >
-                    <Icon name="X" size={16} />
-                    {showContent && <span className="ml-2">Cancel</span>}
-                  </Button>
-                  {editorContext.onDelete && (
-                    <Button
-                      onClick={editorContext.onDelete}
-                      disabled={editorContext.isSaving}
-                      variant="destructive"
-                      size={showContent ? "default" : "icon"}
-                    >
-                      <Icon name="Trash2" size={16} />
-                      {showContent && <span className="ml-2">Delete</span>}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </nav>
-
-          {/* Footer - User/Logout */}
-          {!isEditMode && user && (
-            <div className={cn(
-              "pt-4 border-t border-border",
-              !showContent && "flex flex-col items-center"
-            )}>
-              {showContent && (
-                <div className="mb-2 text-sm font-medium text-foreground truncate">
-                  {sanitizeUsername(user.username, 'Loading...', 'User')}
-                </div>
-              )}
-              <Button
-                onClick={handleLogoutClick}
-                variant="destructive-ghost"
-                className={cn(
-                  "h-10",
-                  showContent ? "w-full justify-start" : "w-10 p-0"
-                )}
-                title={!showContent ? "Log out" : undefined}
-              >
-                <Icon name="LogOut" size={20} />
-                {showContent && <span className="ml-1">Log out</span>}
-              </Button>
-            </div>
+            />
+          </button>
+          {showContent && (
+            <span className="ml-3 text-lg font-semibold whitespace-nowrap">
+              {isEditMode ? "Editor" : "WeWrite"}
+            </span>
           )}
         </div>
-      </aside>
-    </DndProvider>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
+          <div className={cn(
+            "flex flex-col gap-1",
+            !showContent && "items-center"
+          )}>
+            {orderedItems.map((itemId) => {
+              const item = navigationItemsConfig[itemId];
+              if (!item) return null;
+
+              const isActive = isNavItemActive(item);
+              const isSettings = item.label === 'Settings';
+
+              return (
+                <SidebarItem
+                  key={itemId}
+                  icon={item.icon}
+                  label={item.label}
+                  href={item.href}
+                  onClick={() => handleNavItemClick(item)}
+                  onMouseEnter={() => handleNavigationHover(item.href)}
+                  isActive={isActive}
+                  showContent={showContent}
+                >
+                  {isSettings && criticalSettingsStatus && (
+                    <>
+                      {!showContent && (
+                        <WarningDot
+                          variant="warning"
+                          size="sm"
+                          position="top-right"
+                          offset={{ top: '-4px', right: '-4px' }}
+                        />
+                      )}
+                      {showContent && (
+                        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse ml-auto" />
+                      )}
+                    </>
+                  )}
+                </SidebarItem>
+              );
+            })}
+          </div>
+
+          {/* Editor controls */}
+          {isEditMode && (
+            <div className="mt-4 pt-4 border-t border-border space-y-2">
+              <div className={cn("flex", !showContent && "justify-center")}>
+                <MapEditor
+                  location={editorContext.location}
+                  onChange={editorContext.setLocation}
+                  compact={!showContent}
+                />
+              </div>
+              <div className="flex flex-col gap-2 mt-auto">
+                <Button
+                  onClick={editorContext.onSave}
+                  disabled={editorContext.isSaving}
+                  variant="success"
+                  size={showContent ? "default" : "icon"}
+                >
+                  <Icon name="Check" size={16} />
+                  {showContent && <span className="ml-2">{editorContext.isSaving ? "Saving..." : "Save"}</span>}
+                </Button>
+                <Button
+                  onClick={editorContext.onCancel}
+                  variant="secondary"
+                  size={showContent ? "default" : "icon"}
+                >
+                  <Icon name="X" size={16} />
+                  {showContent && <span className="ml-2">Cancel</span>}
+                </Button>
+                {editorContext.onDelete && (
+                  <Button
+                    onClick={editorContext.onDelete}
+                    disabled={editorContext.isSaving}
+                    variant="destructive"
+                    size={showContent ? "default" : "icon"}
+                  >
+                    <Icon name="Trash2" size={16} />
+                    {showContent && <span className="ml-2">Delete</span>}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </nav>
+
+        {/* Footer - User/Logout */}
+        {!isEditMode && user && (
+          <div className={cn(
+            "pt-4 border-t border-border",
+            !showContent && "flex flex-col items-center"
+          )}>
+            {showContent && (
+              <div className="mb-2 text-sm font-medium text-foreground truncate">
+                {sanitizeUsername(user.username, 'Loading...', 'User')}
+              </div>
+            )}
+            <Button
+              onClick={handleLogoutClick}
+              variant="destructive-ghost"
+              className={cn(
+                "h-10",
+                showContent ? "w-full justify-start" : "w-10 p-0"
+              )}
+              title={!showContent ? "Log out" : undefined}
+            >
+              <Icon name="LogOut" size={20} />
+              {showContent && <span className="ml-1">Log out</span>}
+            </Button>
+          </div>
+        )}
+      </div>
+    </aside>
   );
 
   return createPortal(sidebarContent, document.body);

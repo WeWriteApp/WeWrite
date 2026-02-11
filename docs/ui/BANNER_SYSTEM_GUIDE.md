@@ -6,7 +6,6 @@ WeWrite uses a unified banner system to show important notifications to users at
 
 > **Related Documentation**:
 > - [Header System](./HEADER_SYSTEM.md) - Header components that banners appear below
-> - [Settings Navigation System](./SETTINGS_NAVIGATION_SYSTEM.md) - Settings page patterns
 
 ## Banner Priority System
 

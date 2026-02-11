@@ -231,12 +231,17 @@ interface DrawerContentProps
    * This is required by Radix Dialog for accessibility.
    */
   accessibleTitle?: string
+  /**
+   * Hide the drag handle for a more immersive look.
+   * Note: swipe-to-dismiss still works if not disabled.
+   */
+  hideDragHandle?: boolean
 }
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
->(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, accessibleTitle = "Drawer", ...props }, ref) => {
+>(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, accessibleTitle = "Drawer", hideDragHandle = false, ...props }, ref) => {
   // Get open state from context for animations
   const { open } = React.useContext(DrawerContext)
 
@@ -447,7 +452,7 @@ const DrawerContent = React.forwardRef<
         className={cn(
           drawerVariants({ side }),
           // Extend background below to cover bounce overshoot
-          "after:absolute after:left-0 after:right-0 after:top-full after:h-32 after:bg-white/95 dark:after:bg-zinc-900/95",
+          "after:absolute after:left-0 after:right-0 after:top-full after:h-32 after:bg-background",
           // Apply className here so z-index classes work on the wrapper
           className
         )}
@@ -461,10 +466,9 @@ const DrawerContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
-            // Frosted glass effect: mostly opaque white with subtle blur
+            // Fully opaque background
             "flex flex-col h-full p-0 shadow-2xl border-subtle",
-            "bg-white/95 dark:bg-zinc-900/95",
-            "backdrop-blur-xl",
+            "bg-background",
             // Safe area support for bottom drawer
             "pb-safe",
             // Match the wrapper's rounded corners
@@ -494,9 +498,11 @@ const DrawerContent = React.forwardRef<
             }}
           >
             {/* Drag Handle - tighter spacing */}
-            <div className="flex justify-center pt-3 pb-1 px-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
-              <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full transition-all duration-200 hover:bg-muted-foreground/60 hover:w-12" />
-            </div>
+            {!hideDragHandle && (
+              <div className="flex justify-center pt-3 pb-1 px-4 flex-shrink-0 cursor-grab active:cursor-grabbing">
+                <div className="w-10 h-1.5 bg-muted-foreground/40 rounded-full transition-all duration-200 hover:bg-muted-foreground/60 hover:w-12" />
+              </div>
+            )}
 
             {/* Content */}
             <div

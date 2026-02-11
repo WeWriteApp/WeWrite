@@ -6,7 +6,6 @@ WeWrite uses a header system to provide consistent navigation and user experienc
 
 > **Related Documentation**:
 > - [Banner System Guide](./BANNER_SYSTEM_GUIDE.md) - Notification banners that appear below headers
-> - [Settings Navigation System](./SETTINGS_NAVIGATION_SYSTEM.md) - Settings page navigation patterns
 
 ## Header Types
 
@@ -229,6 +228,4 @@ interface ContentPageHeaderProps {
 ## Related Documentation
 
 - [Header Collapse Behavior](./HEADER_COLLAPSE_BEHAVIOR.md) - Collapse animations
-- [Settings Navigation System](./SETTINGS_NAVIGATION_SYSTEM.md) - Settings UX patterns
-- [Save Header System](./SAVE_HEADER_SYSTEM.md) - Save state in headers
 - [Banner System Guide](./BANNER_SYSTEM_GUIDE.md) - Banner positioning

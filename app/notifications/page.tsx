@@ -125,15 +125,18 @@ function NotificationsContent() {
           <NotificationListSkeleton count={5} />
         ) : filteredNotifications.length > 0 ? (
           <>
-            <AnimatedStack gap={16}>
-              {filteredNotifications.map(notification => (
-                <AnimatedStackItem key={notification.id}>
-                  <NotificationItem
-                    notification={notification}
-                  />
-                </AnimatedStackItem>
-              ))}
-            </AnimatedStack>
+            {/* px-1 gives room for card ring/shadow effects that would otherwise be clipped */}
+            <div className="px-1 -mx-1">
+              <AnimatedStack gap={16}>
+                {filteredNotifications.map(notification => (
+                  <AnimatedStackItem key={notification.id}>
+                    <NotificationItem
+                      notification={notification}
+                    />
+                  </AnimatedStackItem>
+                ))}
+              </AnimatedStack>
+            </div>
 
             {hasMore && filter === 'all' && (
               <div className="mt-6 flex justify-center">

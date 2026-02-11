@@ -49,17 +49,17 @@ const SideDrawer = React.forwardRef<HTMLDivElement, SideDrawerProps>(
           window.history.replaceState(null, '', newHash)
         }
 
-        // Lock body scroll
+        // Lock body scroll - simpler approach that works better on iOS
+        // Store scroll position to restore later
         const scrollY = window.scrollY
-        document.documentElement.style.overflow = 'hidden'
-        document.body.style.position = 'fixed'
-        document.body.style.top = `-${scrollY}px`
-        document.body.style.left = '0'
-        document.body.style.right = '0'
-        document.body.style.width = '100%'
-        document.body.style.overflow = 'hidden'
         document.body.setAttribute('data-side-drawer-open', 'true')
         document.body.setAttribute('data-scroll-y', String(scrollY))
+
+        // Just use overflow hidden on html - avoid position:fixed which breaks iOS touch scroll
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+        // Prevent pull-to-refresh on iOS
+        document.body.style.overscrollBehavior = 'none'
       } else {
         const wasLocked = document.body.getAttribute('data-side-drawer-open') === 'true'
         if (!wasLocked) return
@@ -69,21 +69,12 @@ const SideDrawer = React.forwardRef<HTMLDivElement, SideDrawerProps>(
           window.history.replaceState(null, '', newUrl)
         }
 
-        const storedScrollY = document.body.getAttribute('data-scroll-y')
-        const scrollY = storedScrollY ? parseInt(storedScrollY, 10) : 0
-
         // Unlock body scroll
         document.documentElement.style.overflow = ''
-        document.body.style.position = ''
-        document.body.style.top = ''
-        document.body.style.left = ''
-        document.body.style.right = ''
-        document.body.style.width = ''
         document.body.style.overflow = ''
+        document.body.style.overscrollBehavior = ''
         document.body.removeAttribute('data-side-drawer-open')
         document.body.removeAttribute('data-scroll-y')
-
-        window.scrollTo(0, scrollY)
       }
 
       const handlePopState = () => {
@@ -98,20 +89,12 @@ const SideDrawer = React.forwardRef<HTMLDivElement, SideDrawerProps>(
         const wasLocked = document.body.getAttribute('data-side-drawer-open') === 'true'
         if (!wasLocked) return
 
-        const storedScrollY = document.body.getAttribute('data-scroll-y')
-        const scrollY = storedScrollY ? parseInt(storedScrollY, 10) : 0
-
+        // Cleanup scroll lock
         document.documentElement.style.overflow = ''
-        document.body.style.position = ''
-        document.body.style.top = ''
-        document.body.style.left = ''
-        document.body.style.right = ''
-        document.body.style.width = ''
         document.body.style.overflow = ''
+        document.body.style.overscrollBehavior = ''
         document.body.removeAttribute('data-side-drawer-open')
         document.body.removeAttribute('data-scroll-y')
-
-        window.scrollTo(0, scrollY)
       }
     }, [open, hashId, onOpenChange])
 
@@ -184,6 +167,7 @@ const SideDrawerContent = React.forwardRef<
       {showOverlay && <SideDrawerOverlay />}
       <DialogPrimitive.Content
         ref={ref}
+        aria-describedby={undefined}
         className={cn(
           sideDrawerVariants({ side, size }),
           // Frosted glass effect
@@ -195,7 +179,9 @@ const SideDrawerContent = React.forwardRef<
         )}
         {...props}
       >
-        <div className="flex flex-col h-full">
+        {/* Visually hidden title for screen readers */}
+        <DialogPrimitive.Title className="sr-only">Menu</DialogPrimitive.Title>
+        <div className="flex flex-col h-full overflow-hidden">
           {children}
         </div>
       </DialogPrimitive.Content>
@@ -233,10 +219,10 @@ const SideDrawerHeader = ({
       <div className="flex-1">{children}</div>
       {showClose && (
         <DialogPrimitive.Close
-          className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground ml-4"
+          className="h-8 w-8 flex items-center justify-center flex-shrink-0 rounded-lg opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none ml-2"
           onClick={onClose}
         >
-          <Icon name="X" size={20} />
+          <Icon name="X" size={18} />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       )}
@@ -255,8 +241,11 @@ const SideDrawerBody = ({
   <div
     className={cn(
       "flex-1 overflow-y-auto px-6 py-4",
+      // iOS-specific scroll fixes
+      "overscroll-contain touch-pan-y",
       className
     )}
+    style={{ WebkitOverflowScrolling: 'touch' }}
     {...props}
   >
     {children}

@@ -386,30 +386,22 @@ html, body {
 }
 
 /* Skeuomorphic base - for light/secondary buttons */
+/* Simplified to avoid double-outline appearance */
 .shiny-skeuomorphic-base {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
-    0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   background-image: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.2) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(0, 0, 0, 0.03) 100%
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0) 100%
   );
 }
 
 .shiny-skeuomorphic-base:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.05),
-    0 2px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .shiny-skeuomorphic-base:active {
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.1),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 /* ============================================
@@ -493,22 +485,18 @@ html, body {
 
 /* ============================================
    OUTLINE BUTTON SHINY - Minimal skeuomorphic
+   Simplified to avoid double-outline appearance
    ============================================ */
 .button-outline-shiny-style {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .button-outline-shiny-style:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 .button-outline-shiny-style:active {
-  box-shadow:
-    inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .button-outline-shiny-style:disabled {
@@ -669,23 +657,17 @@ html, body {
 .badge-secondary-shiny-style {
   position: relative;
   overflow: hidden;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.03),
-    0 1px 2px rgba(0, 0, 0, 0.05);
+  /* Simplified to avoid double-outline appearance */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   background-image: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0) 50%,
-    rgba(0, 0, 0, 0.02) 100%
+    rgba(255, 255, 255, 0) 100%
   );
 }
 
 .badge-secondary-shiny-style:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.03),
-    0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* Destructive badge shiny style */
@@ -789,15 +771,12 @@ html, body {
 
 /* Outline badge shiny style - minimal skeuomorphic */
 .badge-outline-shiny-style {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.03);
+  /* Simplified to avoid double-outline appearance */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .badge-outline-shiny-style:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* Destructive-secondary badge shiny style - uses error tint for highlight and gradient */

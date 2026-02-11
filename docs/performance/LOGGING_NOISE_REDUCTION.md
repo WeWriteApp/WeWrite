@@ -49,8 +49,8 @@ Successfully implemented comprehensive logging noise reduction to maximize signa
   - User lookup and profile fetching messages
   - Cache and initialization messages
 
-### 4. Smart Request Logger
-**File:** `app/utils/request-logger.ts` (New)
+### 4. Smart Request Logging
+**File:** `app/utils/logger.ts`
 - **Deduplication:** Groups similar requests over 10-second windows
 - **Path normalization:** Treats `/api/users/profile?id=123` and `/api/users/profile?id=456` as same pattern
 - **Smart filtering:** Only shows every 10th occurrence of repetitive requests
@@ -122,12 +122,14 @@ import logger from './utils/logger';
 logger.force('info', 'Debug message that bypasses filtering');
 ```
 
-### View Cache Statistics
+### View Logs in Development
 ```typescript
 import logger from './utils/logger';
 
-console.log(logger.getCacheStats());
-// Shows deduplication statistics
+// Use the unified logger for consistent logging
+logger.info('Operation completed');
+logger.warn('Potential issue detected');
+logger.error('Error occurred', error);
 ```
 
 ## Result

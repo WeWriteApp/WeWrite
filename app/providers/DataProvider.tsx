@@ -6,6 +6,7 @@ import { auth } from "../firebase/config";
 import { useAuth } from './AuthProvider';
 import Cookies from 'js-cookie';
 import type { Page } from '../types/database';
+import { toast } from 'sonner';
 
 /**
  * Page data type - uses centralized Page type with partial fields
@@ -222,6 +223,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   // Handle errors from usePages with improved resilience
   const [errorVisible, setErrorVisible] = useState<boolean>(false);
   const [errorCount, setErrorCount] = useState<number>(0);
+  const toastIdRef = useRef<string | number | null>(null);
 
   useEffect(() => {
     if (error) {
@@ -235,12 +237,16 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       if (pages.length === 0) {
         setErrorVisible(true);
 
-        // Auto-hide error after 8 seconds (reduced from 10)
-        const hideErrorTimer = setTimeout(() => {
-          setErrorVisible(false);
-        }, 8000);
-
-        return () => clearTimeout(hideErrorTimer);
+        // Show error using Sonner toast with action buttons
+        toastIdRef.current = toast.error(error, {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onClick: () => resetLoading(),
+          },
+          onDismiss: () => setErrorVisible(false),
+          onAutoClose: () => setErrorVisible(false),
+        });
       } else {
         // We have data, so don't show the error prominently
         console.log("DataProvider: Error occurred but we have cached data, not showing error to user");
@@ -248,6 +254,11 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       }
     } else {
       setErrorVisible(false);
+      // Dismiss any existing toast
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current);
+        toastIdRef.current = null;
+      }
       // Reset error count on successful data load
       setErrorCount(0);
     }
@@ -369,36 +380,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   return (
     <DataContext.Provider value={value}>
       {children}
-
-      {/* Error Toast - Only shown when errorVisible is true */}
-      {errorVisible && error && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-destructive/10 text-destructive-foreground px-4 py-3 rounded-lg shadow-lg border-theme-medium max-w-md w-full">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium">{error}</p>
-              <div className="mt-2 flex space-x-2">
-                <button
-                  onClick={resetLoading}
-                  className="text-xs px-2 py-1 rounded bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-                >
-                  Retry
-                </button>
-                <button
-                  onClick={() => setErrorVisible(false)}
-                  className="text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-800 transition-colors"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </DataContext.Provider>
   );
 };

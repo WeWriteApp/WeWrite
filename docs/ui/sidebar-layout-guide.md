@@ -16,12 +16,12 @@ Sidebar Container (w-16 = 64px when collapsed)
 
 ### Key Components
 
-#### 1. UnifiedSidebar.tsx
+#### 1. DesktopSidebar.tsx
 ```tsx
 // Sidebar container
 <div className="w-16"> {/* 64px total width */}
   <nav className="px-2"> {/* 8px padding each side = 48px content width */}
-    <DraggableSidebarItem showContent={false} />
+    <SidebarItem showContent={false} />
   </nav>
 </div>
 ```
@@ -137,9 +137,8 @@ Sidebar Container (w-16 = 64px when collapsed)
 
 ## 📚 **Related Files**
 
-- `app/components/layout/UnifiedSidebar.tsx` - Main sidebar container
+- `app/components/layout/DesktopSidebar.tsx` - Main sidebar container
 - `app/components/ui/nav-button.tsx` - Button component with variants
-- `app/components/layout/DraggableSidebarItem.tsx` - Wrapper component
 - `app/globals.css` - Global styles (conflicting rules removed)
 
 ## 🎯 **Summary**

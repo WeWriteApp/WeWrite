@@ -13,7 +13,7 @@
 
 ### **Payments Balance: $3,000**
 - ✅ **This is YOUR money**
-- ✅ **Sources:** 7% platform fees + unallocated subscription funds
+- ✅ **Sources:** 10% platform fees + unallocated subscription funds
 - ✅ **Action:** Transfer to your business bank account anytime
 - ✅ **Growth:** Should grow steadily with platform revenue
 
