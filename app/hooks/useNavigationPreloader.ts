@@ -252,6 +252,10 @@ export function useNavigationPreloader() {
 
 /**
  * Hook for intelligent route prefetching based on user behavior
+ *
+ * PERFORMANCE: Selective prefetching re-enabled for high-traffic routes only.
+ * Uses Next.js router.prefetch() which only prefetches the route's JavaScript bundle,
+ * NOT the API data - so this doesn't cause excessive database reads.
  */
 export function useIntelligentPrefetch() {
   const { user } = useAuth();
@@ -259,7 +263,33 @@ export function useIntelligentPrefetch() {
 
   useEffect(() => {
     if (!user?.uid) return;
-    // Route-based prefetching disabled to prevent excessive database reads
-    return;
-  }, [user?.uid, router]);
+
+    // PERFORMANCE: Selective route prefetching for high-traffic routes
+    // router.prefetch only loads the JS bundle, not API data (safe for DB reads)
+    const HIGH_PRIORITY_ROUTES = [
+      '/',           // Home page
+      '/search',     // Search page
+      '/recents',    // Recently viewed
+    ];
+
+    // Stagger prefetches to avoid blocking the main thread
+    const timeouts: NodeJS.Timeout[] = [];
+
+    HIGH_PRIORITY_ROUTES.forEach((route, index) => {
+      timeouts.push(setTimeout(() => {
+        router.prefetch(route);
+      }, 1000 + (index * 500))); // Start after 1s, 500ms apart
+    });
+
+    // Also prefetch user's own profile page
+    if (user.username) {
+      timeouts.push(setTimeout(() => {
+        router.prefetch(`/u/${user.username}`);
+      }, 2500));
+    }
+
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [user?.uid, user?.username, router]);
 }

@@ -48,10 +48,11 @@ export const prefetchUserData = async (userId: string): Promise<void> => {
 
 const prefetchUserPages = async (userId: string): Promise<void> => {
   try {
+    // PERFORMANCE: Use equality filter instead of != to avoid full collection scan
     const pagesQuery = query(
       collection(db, getCollectionName('pages')),
       where('userId', '==', userId),
-      where('deleted', '!=', true),
+      where('deleted', '==', false),
       orderBy('lastModified', 'desc'),
       limit(20)
     );
@@ -93,10 +94,11 @@ const prefetchUserPages = async (userId: string): Promise<void> => {
 
 const prefetchRecentActivity = async (userId: string): Promise<void> => {
   try {
+    // PERFORMANCE: Use equality filter instead of != to avoid full collection scan
     const pagesQuery = query(
       collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
-      where('deleted', '!=', true),
+      where('deleted', '==', false),
       orderBy('lastModified', 'desc'),
       limit(10)
     );

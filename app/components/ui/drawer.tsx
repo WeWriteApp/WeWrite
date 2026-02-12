@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/Icon"
 import { cn } from "../../lib/utils"
 
 // Context to share open state with DrawerContent for animations
-const DrawerContext = React.createContext<{ open: boolean }>({ open: false })
+const DrawerContext = React.createContext<{ open: boolean; isClosing: boolean }>({ open: false, isClosing: false })
 
 /**
  * Custom Drawer Root that adds:
@@ -18,10 +18,32 @@ interface DrawerProps extends React.ComponentPropsWithoutRef<typeof DialogPrimit
   hashId?: string
   /** Analytics ID for tracking drawer open/close events */
   analyticsId?: string
+  /**
+   * Visual open state for controlling animations independently of mount state.
+   * When provided, this controls the animation direction (open/close) while
+   * the `open` prop controls whether the Dialog is mounted.
+   * This allows close animations to play before unmounting.
+   */
+  visualOpen?: boolean
 }
 
+/**
+ * Drawer Animation Timing Constants
+ *
+ * These values coordinate CSS animations with React lifecycle:
+ * - DRAWER_ANIMATION_DURATION: How long the CSS animation takes (matches tailwind.config.ts)
+ * - DRAWER_UNMOUNT_DELAY: How long to wait before unmounting (animation + buffer)
+ * - DRAWER_HISTORY_DELAY: How long to wait before history.go() (after unmount to prevent flash)
+ */
+const DRAWER_ANIMATION_DURATION = 300  // Must match drawer-slide-down in tailwind.config.ts
+const DRAWER_UNMOUNT_DELAY = 300       // Wait for animation before unmounting
+const DRAWER_HISTORY_DELAY = 350       // Wait for unmount before history.go() to prevent flash
+
 const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
-  ({ hashId, analyticsId, open, onOpenChange, children, ...props }, ref) => {
+  ({ hashId, analyticsId, open, onOpenChange, visualOpen, children, ...props }, ref) => {
+    // Use visualOpen if provided, otherwise fall back to open
+    // This allows controlling animation direction separately from mount state
+    const effectiveVisualOpen = visualOpen !== undefined ? visualOpen : (open ?? false)
     // Track previous hash to restore on close
     const previousHashRef = React.useRef<string>('')
     // Track if we've already checked the initial hash
@@ -164,7 +186,7 @@ const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
     }, [open, hashId, analyticsId, onOpenChange])
 
     return (
-      <DrawerContext.Provider value={{ open: open ?? false }}>
+      <DrawerContext.Provider value={{ open: effectiveVisualOpen, isClosing: !effectiveVisualOpen && (open ?? false) }}>
         <DialogPrimitive.Root open={open} onOpenChange={onOpenChange} {...props}>
           {children}
         </DialogPrimitive.Root>
@@ -200,6 +222,9 @@ const drawerVariants = cva(
   {
     variants: {
       side: {
+        // Use custom animations for both open and close
+        // animate-drawer-slide-up: bouncy entrance (0.4s)
+        // animate-drawer-slide-down: smooth exit (0.3s)
         bottom: "inset-x-0 bottom-0 rounded-t-3xl data-[state=open]:animate-drawer-slide-up data-[state=closed]:animate-drawer-slide-down",
       },
     },
@@ -413,6 +438,7 @@ const DrawerContent = React.forwardRef<
           setTimeout(() => {
             if (drawerRef.current) {
               drawerRef.current.style.transition = ''
+              drawerRef.current.style.transform = ''  // Clear transform so CSS classes can control it
             }
           }, 200)
         }
@@ -613,4 +639,8 @@ export {
   DrawerFooter,
   DrawerTitle,
   DrawerDescription,
+  // Animation timing constants
+  DRAWER_ANIMATION_DURATION,
+  DRAWER_UNMOUNT_DELAY,
+  DRAWER_HISTORY_DELAY,
 }

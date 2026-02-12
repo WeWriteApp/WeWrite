@@ -159,9 +159,17 @@ export async function verifyTurnstileFromRequest(
 }
 
 /**
- * Check if Turnstile is configured and available
+ * Check if Turnstile is configured and should be enforced
+ *
+ * Returns false in development mode to allow easier testing.
+ * Turnstile is only enforced in production.
  */
 export function isTurnstileConfigured(): boolean {
+  // Always bypass Turnstile in development mode
+  if (process.env.NODE_ENV === 'development') {
+    return false;
+  }
+
   return !!(
     process.env.TURNSTILE_SECRET_KEY &&
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY

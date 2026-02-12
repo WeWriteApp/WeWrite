@@ -156,11 +156,11 @@ export const useUnifiedSearch = (
       timestamp: Date.now()
     });
     
-    // Clean up old cache entries (keep only last 50)
-    if (searchCacheRef.current.size > 50) {
+    // PERFORMANCE: Clean up old cache entries (keep last 200 for better hit rate)
+    if (searchCacheRef.current.size > 200) {
       const entries = Array.from(searchCacheRef.current.entries());
       entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      const toDelete = entries.slice(0, entries.length - 50);
+      const toDelete = entries.slice(0, entries.length - 200);
       toDelete.forEach(([key]) => searchCacheRef.current.delete(key));
     }
   }, []);

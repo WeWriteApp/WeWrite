@@ -24,13 +24,13 @@
  * - #menu/admin/users           -> Admin sub-page (depth 3)
  */
 
-import React, { Suspense, lazy, useState, useCallback, useEffect } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
 import { useAuth } from '../../providers/AuthProvider';
 import { useUnifiedMobileNav } from '../../contexts/UnifiedMobileNavContext';
 import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
-import { Drawer, DrawerContent, DrawerHeader } from '../ui/drawer';
+import { Drawer, DrawerContent, DrawerHeader, DRAWER_ANIMATION_DURATION } from '../ui/drawer';
 import { DrawerNavigationStack, ANIMATION_DURATION } from '../ui/drawer-navigation-stack';
 import { Icon, IconName } from '@/components/ui/Icon';
 import { cn } from '../../lib/utils';
@@ -255,19 +255,21 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
     setIsPWAMode(isPWA());
   }, []);
 
-  // Helper to check if a route is active
-  const isRouteActive = (route: string, label?: string) => {
-    if (targetRoute) {
-      return isNavigatingTo(route);
-    }
-    if (label === 'Home' && (pathname === '/' || pathname === '/home' || pathname === '')) return true;
-    if (label === 'Profile' && user && pathname?.startsWith(`/u/${user.uid}`)) return true;
-    return pathname === route;
-  };
+  // When the drawer is open, NO toolbar items should be active
+  // Only the X (close) button should have active state
+  // This provides clear visual feedback that the drawer is in "menu mode"
+  const isRouteActive = () => false;
 
-  // Helper to navigate - just push the route, don't call onClose as it conflicts with navigation
+  // Helper to navigate and close the drawer
+  // Closes drawer first, then navigates (avoids history conflicts)
   const navigateIfNeeded = (id: string, route: string) => {
-    if (pathname === route) return;
+    if (pathname === route) {
+      // Already on this route, just close the drawer
+      onClose();
+      return;
+    }
+    // Close drawer and navigate
+    onClose();
     handleButtonPress(id, route);
   };
 
@@ -430,16 +432,69 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
 export function GlobalDrawerRenderer() {
   const { drawerConfig, closeDrawer, goToDrawerRoot, isGlobalDrawerActive, navigationDepth } = useGlobalDrawer();
   const { user, isLoading: authLoading } = useAuth();
-  const [isClosing, setIsClosing] = useState(false);
 
-  // Handle close with animation
+  /**
+   * Drawer Animation State
+   *
+   * Three pieces of state work together to enable smooth animations:
+   * - shouldRender: Controls whether the Radix Dialog is mounted
+   * - isOpen: Controls the visual animation direction (data-state="open" vs "closed")
+   * - cachedConfig: Preserves config during close animation so we don't unmount early
+   *
+   * The challenge: closeDrawer() sets drawerConfig.type=null immediately, which would
+   * cause the component to unmount before the animation plays. We solve this by:
+   * 1. Caching the config when opening
+   * 2. Using the cache during close animation
+   * 3. Clearing the cache only after animation completes
+   */
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [cachedConfig, setCachedConfig] = useState<typeof drawerConfig | null>(null);
+
+  /**
+   * Animation Effect
+   *
+   * Timeline when closing:
+   * 1. closeDrawer() called → drawerConfig.type becomes null
+   * 2. This effect runs → setIsOpen(false) triggers data-state="closed"
+   * 3. requestAnimationFrame ensures the state change is painted
+   * 4. CSS animation plays (DRAWER_ANIMATION_DURATION = 300ms)
+   * 5. After animation, shouldRender=false unmounts the component
+   * 6. GlobalDrawerProvider's history.go() runs 50ms later (DRAWER_HISTORY_DELAY)
+   */
+  useEffect(() => {
+    if (isGlobalDrawerActive && drawerConfig.type) {
+      // Opening: cache the config and start animation
+      setCachedConfig(drawerConfig);
+      setShouldRender(true);
+      setIsOpen(true);
+    } else if (shouldRender) {
+      // Closing: keep cached config, start close animation
+      setIsOpen(false);
+
+      // requestAnimationFrame ensures data-state="closed" is painted before
+      // we start the unmount timer. Without this, the component might unmount
+      // before the CSS animation has a chance to start.
+      let rafId: number;
+      let timerId: NodeJS.Timeout;
+
+      rafId = requestAnimationFrame(() => {
+        timerId = setTimeout(() => {
+          setShouldRender(false);
+          setCachedConfig(null);
+        }, DRAWER_ANIMATION_DURATION);
+      });
+
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timerId);
+      };
+    }
+  }, [isGlobalDrawerActive, drawerConfig, shouldRender]);
+
+  // Handle close - just call closeDrawer, the effect above handles animation
   const handleClose = useCallback(() => {
-    setIsClosing(true);
-    // Wait for animation then actually close
-    setTimeout(() => {
-      closeDrawer();
-      setIsClosing(false);
-    }, 300);
+    closeDrawer();
   }, [closeDrawer]);
 
   // Handle back navigation - uses browser history for proper state management
@@ -447,16 +502,19 @@ export function GlobalDrawerRenderer() {
     window.history.back();
   }, []);
 
-  // Don't render if not on mobile or no drawer is open
-  if (!isGlobalDrawerActive || !drawerConfig.type) {
+  // Use cached config during close animation so component stays rendered
+  const renderConfig = drawerConfig.type ? drawerConfig : cachedConfig;
+
+  // Don't render if not mounted (after close animation completes)
+  if (!shouldRender || !renderConfig?.type) {
     return null;
   }
 
   // Auth checks based on drawer type and subPath
-  if (drawerConfig.type === 'menu') {
+  if (renderConfig.type === 'menu') {
     // For menu type, check auth based on subPath
-    if (drawerConfig.subPath) {
-      const subPathRoot = drawerConfig.subPath.split('/')[0];
+    if (renderConfig.subPath) {
+      const subPathRoot = renderConfig.subPath.split('/')[0];
       if (subPathRoot === 'admin' && (!user?.isAdmin || authLoading)) {
         return null;
       }
@@ -466,10 +524,10 @@ export function GlobalDrawerRenderer() {
     }
   } else {
     // Legacy direct settings/admin types
-    if (drawerConfig.type === 'admin' && (!user?.isAdmin || authLoading)) {
+    if (renderConfig.type === 'admin' && (!user?.isAdmin || authLoading)) {
       return null;
     }
-    if (drawerConfig.type === 'settings' && (!user || authLoading)) {
+    if (renderConfig.type === 'settings' && (!user || authLoading)) {
       return null;
     }
   }
@@ -479,13 +537,13 @@ export function GlobalDrawerRenderer() {
   let backLabel: string | null = null;
   let height = '85vh';
 
-  if (drawerConfig.type === 'menu') {
-    if (!drawerConfig.subPath) {
+  if (renderConfig.type === 'menu') {
+    if (!renderConfig.subPath) {
       // #menu - Main menu root
       title = 'Menu';
       backLabel = null;
     } else {
-      const parts = drawerConfig.subPath.split('/');
+      const parts = renderConfig.subPath.split('/');
       const sectionType = parts[0]; // 'settings' or 'admin'
       const sectionSubPath = parts.slice(1).join('/'); // e.g., 'profile' or ''
 
@@ -514,15 +572,15 @@ export function GlobalDrawerRenderer() {
     }
   } else {
     // Legacy direct settings/admin types (shouldn't happen in new system)
-    const isSettings = drawerConfig.type === 'settings';
-    title = drawerConfig.subPath
-      ? formatSubPathTitle(drawerConfig.subPath)
+    const isSettings = renderConfig.type === 'settings';
+    title = renderConfig.subPath
+      ? formatSubPathTitle(renderConfig.subPath)
       : (isSettings ? 'Settings' : 'Admin Panel');
     height = isSettings ? '85vh' : '90vh';
-    backLabel = drawerConfig.subPath ? (isSettings ? 'Settings' : 'Admin') : null;
+    backLabel = renderConfig.subPath ? (isSettings ? 'Settings' : 'Admin') : null;
   }
 
-  const isMenu = drawerConfig.type === 'menu';
+  const isMenu = renderConfig.type === 'menu';
 
   // Show toolbar at depth 1 (main menu), hide at depth 2+ (sub-menus)
   const showToolbar = navigationDepth === 1;
@@ -533,10 +591,11 @@ export function GlobalDrawerRenderer() {
   return (
     <>
       {/* Full-screen overlay covers page content behind drawer */}
-      <FullScreenOverlay isOpen={!isClosing} onClick={handleClose} />
+      <FullScreenOverlay isOpen={isOpen} onClick={handleClose} />
 
       <Drawer
-        open={!isClosing}
+        open={shouldRender}
+        visualOpen={isOpen}
         onOpenChange={(open) => {
           if (!open) {
             handleClose();
@@ -552,21 +611,24 @@ export function GlobalDrawerRenderer() {
           className="z-[9999]"
           hideDragHandle={showToolbar}
         >
-          <MultiLevelDrawerHeader
-            title={title}
-            backLabel={backLabel}
-            onBack={handleBack}
-          />
+          {/* Only show header on subpages (when backLabel exists) for context */}
+          {backLabel !== null && (
+            <MultiLevelDrawerHeader
+              title={title}
+              backLabel={backLabel}
+              onBack={handleBack}
+            />
+          )}
 
           <DrawerNavigationStack
-            activeView={drawerConfig.subPath}
+            activeView={renderConfig.subPath}
             className="flex-1 min-h-0"
           >
             <DrawerNavigationStack.Root className="overflow-y-auto">
               <Suspense fallback={<DrawerLoadingFallback />}>
                 {isMenu ? (
                   <MainMenuDrawerContent isMenuView={true} />
-                ) : drawerConfig.type === 'settings' ? (
+                ) : renderConfig.type === 'settings' ? (
                   <SettingsDrawerContent isMenuView={true} />
                 ) : (
                   <AdminDrawerContent isMenuView={true} />
@@ -577,11 +639,11 @@ export function GlobalDrawerRenderer() {
             <DrawerNavigationStack.Detail className="overflow-y-auto pb-safe">
               <Suspense fallback={<DrawerLoadingFallback />}>
                 {isMenu ? (
-                  <MainMenuDrawerContent isMenuView={false} subPath={drawerConfig.subPath} />
-                ) : drawerConfig.type === 'settings' ? (
-                  <SettingsDrawerContent isMenuView={false} subPath={drawerConfig.subPath} />
+                  <MainMenuDrawerContent isMenuView={false} subPath={renderConfig.subPath} />
+                ) : renderConfig.type === 'settings' ? (
+                  <SettingsDrawerContent isMenuView={false} subPath={renderConfig.subPath} />
                 ) : (
-                  <AdminDrawerContent isMenuView={false} subPath={drawerConfig.subPath} />
+                  <AdminDrawerContent isMenuView={false} subPath={renderConfig.subPath} />
                 )}
               </Suspense>
             </DrawerNavigationStack.Detail>

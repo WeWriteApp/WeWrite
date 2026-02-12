@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import useUserPages from "../hooks/useUserPages";
 import { auth } from "../firebase/config";
 import { useAuth } from './AuthProvider';
@@ -145,7 +145,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         }
       }, 5000); // 5 seconds timeout for first recovery attempt
 
-      // Set a more reasonable timeout to force loading to complete after 20 seconds
+      // PERFORMANCE: Reduced timeout from 20s to 10s for faster perceived navigation
       loadingTimeoutRef.current = setTimeout(() => {
         console.warn("DataProvider: Loading timeout reached, forcing completion");
         setForceLoaded(true);
@@ -165,7 +165,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
           }
         });
         window.dispatchEvent(timeoutEvent);
-      }, 20000); // 20 seconds timeout - increased for better stability
+      }, 10000); // PERFORMANCE: Reduced from 20s to 10s
     } else {
       // Clear the timeouts if loading completes naturally
       if (loadingTimeoutRef.current) {
@@ -361,7 +361,11 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     }, 100);
   }, [pagesLoading, refreshPages]);
 
-  const value: DataContextType = {
+  // PERFORMANCE: Memoize dismissError callback to prevent unnecessary re-renders
+  const dismissError = useCallback(() => setErrorVisible(false), []);
+
+  // PERFORMANCE: Memoize context value to prevent unnecessary re-renders of consumers
+  const value: DataContextType = useMemo(() => ({
     loading: isAuthenticated ? loading : false, // Only show loading state for authenticated users
     pages,
     filtered,
@@ -374,8 +378,22 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     errorVisible, // Expose whether the error is visible
     resetLoading, // Expose the enhanced reset loading function
     recoveryAttempted, // Expose whether recovery has been attempted
-    dismissError: () => setErrorVisible(false) // Function to dismiss the error
-  };
+    dismissError // Function to dismiss the error
+  }), [
+    isAuthenticated,
+    loading,
+    pages,
+    filtered,
+    loadMorePages,
+    isMoreLoading,
+    hasMorePages,
+    forceLoaded,
+    error,
+    errorVisible,
+    resetLoading,
+    recoveryAttempted,
+    dismissError
+  ]);
 
   return (
     <DataContext.Provider value={value}>

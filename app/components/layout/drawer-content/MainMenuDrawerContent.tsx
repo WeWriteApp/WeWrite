@@ -107,16 +107,12 @@ function MainMenuList() {
     }
   };
 
-  const isRouteActive = (route: string, itemId: string) => {
-    if (itemId === 'home' && (pathname === '/' || pathname === '/home' || pathname === '')) return true;
-    if (itemId === 'profile' && user && pathname?.startsWith(`/u/${user.uid}`)) return true;
-    return pathname === route;
-  };
+  // When the drawer is open, don't show active state on menu items
+  // The only active indicator should be the X button in the toolbar
 
   return (
     <div className="h-full overflow-y-auto divide-y divide-border pb-safe">
       {filteredItems.map((item) => {
-        const isActive = item.route ? isRouteActive(item.route, item.id) : false;
         const hasChevron = !!item.action; // Show chevron for sub-menu items
 
         return (
@@ -126,17 +122,17 @@ function MainMenuList() {
             className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none"
           >
             <div className="flex items-center">
-              <div className="relative">
+              <div className="relative flex items-center justify-center mr-3 w-6 h-6">
                 <Icon
                   name={item.icon}
                   size={20}
-                  className={isActive ? "text-accent mr-3" : "text-foreground mr-3"}
+                  className="text-foreground"
                 />
                 {item.warningDot && (
                   <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-background" />
                 )}
               </div>
-              <span className={isActive ? "font-medium text-accent" : "font-medium"}>
+              <span className="font-medium leading-6">
                 {item.label}
               </span>
               {item.badge}
@@ -152,8 +148,10 @@ function MainMenuList() {
       {user && (
         <div className="flex items-center justify-between px-4 py-4">
           <div className="flex items-center">
-            <Icon name="User" size={20} className="mr-3 text-muted-foreground" />
-            <span className="font-medium">{user.username || 'User'}</span>
+            <div className="flex items-center justify-center mr-3 w-6 h-6">
+              <Icon name="User" size={20} className="text-muted-foreground" />
+            </div>
+            <span className="font-medium leading-6">{user.username || 'User'}</span>
           </div>
           <Button
             variant="destructive"

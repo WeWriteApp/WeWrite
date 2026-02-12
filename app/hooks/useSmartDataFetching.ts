@@ -160,18 +160,27 @@ export function useSmartDataFetching<T>(
   useEffect(() => {
     const wasRapidNav = wasRapidNavigatingRef.current;
     wasRapidNavigatingRef.current = isRapidNavigating;
-    
+
     // If we just exited rapid navigation mode and should refetch
     if (wasRapidNav && !isRapidNavigating && refetchOnNavigationSettle) {
+      // PERFORMANCE: First check if we already have valid cached data
+      const cachedData = getCachedData();
+      if (cachedData) {
+        // Already have valid cached data - no need to refetch
+        return;
+      }
+
       const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
-      
-      // Only refetch if it's been a while since last fetch
-      if (timeSinceLastFetch > debounceDelay) {
-        console.log(`🔄 SMART FETCH: Refetching ${cacheKey} after navigation settled`);
+
+      // PERFORMANCE: Only refetch if it's been at least 5 seconds since last fetch
+      // (was using debounceDelay ~300ms which triggered too often)
+      const SETTLE_REFETCH_THRESHOLD = 5000;
+      if (timeSinceLastFetch > SETTLE_REFETCH_THRESHOLD) {
+        console.log(`🔄 SMART FETCH: Refetching ${cacheKey} after navigation settled (no cached data)`);
         debouncedFetch();
       }
     }
-  }, [isRapidNavigating, refetchOnNavigationSettle, debounceDelay, debouncedFetch, cacheKey]);
+  }, [isRapidNavigating, refetchOnNavigationSettle, getCachedData, debouncedFetch, cacheKey]);
   
   // Cleanup on unmount
   useEffect(() => {

@@ -31,7 +31,7 @@ export default function RecentsPage() {
     }
   }, [user]);
 
-  // Fetch recently viewed pages from localStorage and get their details
+  // Fetch recently viewed pages from localStorage using batch endpoint
   useEffect(() => {
     if (!user) return;
 
@@ -49,22 +49,32 @@ export default function RecentsPage() {
           return;
         }
 
-        // Fetch page details for each ID
-        const pagesPromises = pageIds.map(async (id) => {
-          try {
-            const response = await fetch(`/api/pages/${id}`);
-            if (!response.ok) {
-              console.warn(`Failed to fetch page ${id}:`, response.status);
-              return null;
-            }
+        // PERFORMANCE: Use batch endpoint instead of individual API calls
+        // This reduces N API calls to a single request
+        const response = await fetch('/api/pages/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageIds })
+        });
 
-            const result = await response.json();
-            if (!result.success || !result.pageData) {
-              console.warn(`Invalid response for page ${id}:`, result);
-              return null;
-            }
+        if (!response.ok) {
+          throw new Error(`Batch fetch failed: ${response.status}`);
+        }
 
-            const page = result.pageData;
+        const result = await response.json();
+
+        if (!result.pages) {
+          throw new Error('Invalid batch response');
+        }
+
+        // Convert the pages object to array, preserving order from pageIds
+        // and filtering out null (not found) pages
+        const validPages = pageIds
+          .map(id => {
+            const page = result.pages[id];
+            if (!page) return null;
+            // Filter: only show public pages or user's own pages
+            if (!page.isPublic && page.userId !== user.uid) return null;
             return {
               id,
               title: page.title || 'Untitled',
@@ -76,18 +86,8 @@ export default function RecentsPage() {
               totalPledged: page.totalPledged || 0,
               pledgeCount: page.pledgeCount || 0
             };
-          } catch (error) {
-            console.error(`Error fetching page ${id}:`, error);
-            return null;
-          }
-        });
-
-        const pagesResults = await Promise.all(pagesPromises);
-
-        // Filter out null results and pages the user can't access
-        const validPages = pagesResults.filter(page =>
-          page !== null && (page.isPublic || page.userId === user.uid)
-        );
+          })
+          .filter(Boolean);
 
         setRecentPages(validPages);
       } catch (error) {

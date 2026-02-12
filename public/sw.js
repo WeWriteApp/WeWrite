@@ -13,7 +13,8 @@ if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
 
 // Cache version - increment this on major changes to force cache clear
 // The service worker will also check for updates on each page load
-const CACHE_VERSION = '2.4';
+// IMPORTANT: Bump this version when making UI changes to force cache invalidation
+const CACHE_VERSION = '2.5';
 
 const CACHE_NAME = `wewrite-v${CACHE_VERSION}`;
 const STATIC_CACHE = `wewrite-static-v${CACHE_VERSION}`;

@@ -35,6 +35,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useMediaQuery } from '../hooks/use-media-query';
+import { DRAWER_HISTORY_DELAY } from '../components/ui/drawer';
 
 // ============================================================================
 // TYPES
@@ -418,6 +419,7 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
       trackDrawerAnalytics(drawerConfig.type, drawerConfig.subPath, 'close');
     }
 
+    // Set drawer to closed state first (triggers close animation)
     setDrawerConfig({ type: null, subPath: null });
 
     // Remove hash from URL, but only if the current hash is one we own
@@ -427,9 +429,14 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
     if (isOurHash) {
       // If we pushed state, go back in history; otherwise just replace the hash
       if (hashedStateDepthRef.current > 0) {
-        // Go back to remove the hash state(s)
-        window.history.go(-hashedStateDepthRef.current);
+        // DELAY history.go() until AFTER drawer has fully unmounted
+        // This prevents hashchange from racing with the unmount and causing a flash
+        // See DRAWER_HISTORY_DELAY in drawer.tsx for timing documentation
+        const depth = hashedStateDepthRef.current;
         hashedStateDepthRef.current = 0;
+        setTimeout(() => {
+          window.history.go(-depth);
+        }, DRAWER_HISTORY_DELAY);
       } else {
         // Just remove the hash
         window.history.replaceState(null, '', window.location.pathname + window.location.search);

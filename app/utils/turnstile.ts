@@ -213,9 +213,12 @@ export const DEV_TEST_TOKEN = 'test_token';
 
 /**
  * Check if we're in development mode and should bypass Turnstile
+ *
+ * In development, always bypass Turnstile because:
+ * 1. Cloudflare test keys don't support "invisible" mode
+ * 2. Dev mode uses isolated test auth anyway
+ * 3. Bot protection isn't needed for local development
  */
 export function shouldBypassTurnstile(): boolean {
-  return (
-    process.env.NODE_ENV === 'development' && !isTurnstileConfigured()
-  );
+  return process.env.NODE_ENV === 'development';
 }
