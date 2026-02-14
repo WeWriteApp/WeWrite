@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Icon } from '@/components/ui/Icon';
 import { XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, BarChart, Bar } from 'recharts';
 import { SegmentedControl, SegmentedControlList, SegmentedControlTrigger } from '../ui/segmented-control';
+import { useHasKeyboard } from '../../hooks/useHasKeyboard';
 
 // Hook to measure container dimensions
 function useContainerSize(ref: React.RefObject<HTMLDivElement>) {
@@ -584,6 +585,8 @@ export function DesktopOptimizedDashboard({
   onChartTypeChange,
   useBatchMode = true // Default to batch mode for performance
 }: DesktopOptimizedDashboardProps) {
+  const hasKeyboard = useHasKeyboard();
+
   // Global height state - all graphs use the same height
   const [globalHeight, setGlobalHeight] = useState<number>(DEFAULT_ROW_HEIGHT);
 
@@ -1114,9 +1117,11 @@ export function DesktopOptimizedDashboard({
     <div className="desktop-optimized-dashboard">
       {/* Instructions and Chart Type Toggle - hidden on mobile */}
       <div className="hidden md:flex mb-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground items-center justify-between">
-        <div>
-          💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights.
-        </div>
+        {hasKeyboard && (
+          <div>
+            💡 <strong>Tip:</strong> Hold <kbd className="px-1 py-0.5 bg-background rounded text-xs">Option</kbd> and scroll to adjust all graph heights.
+          </div>
+        )}
         {/* Chart Type Toggle */}
         <div className="flex items-center gap-2">
           <span className="text-xs">Chart:</span>

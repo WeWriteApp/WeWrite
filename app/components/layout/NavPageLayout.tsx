@@ -9,6 +9,7 @@ import {
   getHeaderClearance,
 } from "../../constants/layout";
 import { useAuth } from "../../providers/AuthProvider";
+import { useGlobalDrawer } from "../../providers/GlobalDrawerProvider";
 
 export interface NavPageLayoutProps {
   children: React.ReactNode;
@@ -61,6 +62,7 @@ export default function NavPageLayout({
   headerHeight
 }: NavPageLayoutProps) {
   const { user } = useAuth();
+  const { navigatingTo } = useGlobalDrawer();
 
   // Calculate the effective header clearance
   // Priority: header prop > headerHeight prop > default behavior
@@ -91,11 +93,11 @@ export default function NavPageLayout({
     <div className="min-h-screen bg-background">
       {/* Content area with padding - max-width is handled by SidebarLayout */}
       <div
-        className={`${RESPONSIVE_PADDING_CLASSES} pb-32 md:pb-8 ${topPaddingClass} ${className}`}
+        className={`${RESPONSIVE_PADDING_CLASSES} pb-32 lg:pb-8 ${topPaddingClass} ${className}`}
         style={topPaddingStyle}
       >
         {/* Content loads progressively below header */}
-        {loading ? (
+        {loading || navigatingTo ? (
           loadingFallback || defaultLoadingFallback
         ) : (
           <Suspense fallback={loadingFallback || defaultLoadingFallback}>

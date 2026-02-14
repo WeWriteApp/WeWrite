@@ -11,15 +11,9 @@
 /* ===== CARD THEME CSS VARIABLES ===== */
 
 :root {
-  /* Dynamic card opacity - default 15% */
-  --card-opacity: 0.15;
-
-  /* Dynamic card blur - default 50% */
-  --card-blur: 0.5;
-
-  /* Light theme card variables - CSS fallback defaults (NeutralColorContext will override) */
-  --card-bg: oklch(1.00 0.00 230 / 0.70); /* 70% white overlay - fallback if JS fails */
-  --card-bg-hover: oklch(1.00 0.00 230 / 0.75); /* 75% white overlay on hover */
+  /* Light theme card variables - solid backgrounds (NeutralColorContext will override) */
+  --card-bg: oklch(1.00 0.00 0); /* Solid white */
+  --card-bg-hover: oklch(0.97 0.00 0); /* Very light gray */
   --card-border: oklch(0.00 0.00 0 / 0.1); /* Black with 10% opacity */
   --card-border-hover: oklch(0.00 0.00 0 / 0.15);
   --card-text: oklch(0.16 0.13 274.7);
@@ -27,9 +21,9 @@
 }
 
 .dark {
-  /* Dark theme card variables - CSS fallback defaults (NeutralColorContext will override) */
-  --card-bg: oklch(1.00 0.00 230 / 0.06); /* 6% white overlay - fallback if JS fails */
-  --card-bg-hover: oklch(1.00 0.00 230 / 0.08); /* 8% white overlay on hover */
+  /* Dark theme card variables - solid backgrounds (NeutralColorContext will override) */
+  --card-bg: oklch(0.16 0.00 0); /* Solid dark gray */
+  --card-bg-hover: oklch(0.20 0.00 0); /* Slightly lighter dark gray */
   --card-border: oklch(1.00 0.00 158.2 / 0.08); /* White with 8% opacity */
   --card-border-hover: oklch(1.00 0.00 158.2 / 0.12);
   --card-text: oklch(0.98 0.00 158.2);
@@ -54,12 +48,8 @@
  * Use this class for ALL cards: daily notes, recent edits, content cards, etc.
  */
 .wewrite-card {
-  /* Semi-transparent white overlay with conditional glassmorphism */
+  /* Solid background */
   background-color: var(--card-bg);
-
-  /* Backdrop filters using separate blur and opacity controls */
-  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1));
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1));
 
   /* Subtle, theme-aware borders */
   border: 1px solid var(--card-border);
@@ -81,9 +71,6 @@
   border-color: var(--card-border-hover);
   /* Enhanced hover shadow */
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  /* Enhanced backdrop filters on hover with increased blur */
-  backdrop-filter: blur(calc(var(--card-blur) * 24px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.15));
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 24px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.15));
 }
 
 .dark .wewrite-card {
@@ -97,40 +84,6 @@
 }
 
 /* ===== CARD MODIFIERS ===== */
-
-/**
- * Opacity modifiers - card-n system
- *
- * Usage: Add card-n class to any wewrite-card element
- * Examples:
- *   - card-1 = 1% opacity (most transparent)
- *   - card-15 = 15% opacity (default)
- *   - card-80 = 80% opacity (solid but slightly transparent)
- *   - card-100 = 100% opacity (fully opaque)
- *
- * Perfect for modals, overlays, and varying card transparency needs.
- */
-.wewrite-card.card-1 { --card-opacity: 0.01; }
-.wewrite-card.card-5 { --card-opacity: 0.05; }
-.wewrite-card.card-10 { --card-opacity: 0.10; }
-.wewrite-card.card-15 { --card-opacity: 0.15; }
-.wewrite-card.card-20 { --card-opacity: 0.20; }
-.wewrite-card.card-25 { --card-opacity: 0.25; }
-.wewrite-card.card-30 { --card-opacity: 0.30; }
-.wewrite-card.card-35 { --card-opacity: 0.35; }
-.wewrite-card.card-40 { --card-opacity: 0.40; }
-.wewrite-card.card-45 { --card-opacity: 0.45; }
-.wewrite-card.card-50 { --card-opacity: 0.50; }
-.wewrite-card.card-55 { --card-opacity: 0.55; }
-.wewrite-card.card-60 { --card-opacity: 0.60; }
-.wewrite-card.card-65 { --card-opacity: 0.65; }
-.wewrite-card.card-70 { --card-opacity: 0.70; }
-.wewrite-card.card-75 { --card-opacity: 0.75; }
-.wewrite-card.card-80 { --card-opacity: 0.80; }
-.wewrite-card.card-85 { --card-opacity: 0.85; }
-.wewrite-card.card-90 { --card-opacity: 0.90; }
-.wewrite-card.card-95 { --card-opacity: 0.95; }
-.wewrite-card.card-100 { --card-opacity: 1.00; }
 
 /**
  * Corner radius modifiers
@@ -227,40 +180,26 @@
  * All inherit from .wewrite-card base styling
  */
 
-/* Daily notes cards - flex layout with enhanced glassmorphism */
+/* Daily notes cards - flex layout with enhanced shadows */
 .wewrite-card.wewrite-daily-notes {
   display: flex;
   flex-direction: column;
   min-height: 13rem; /* h-52 */
-
-  /* FIXED: Use consistent blur variable instead of opacity-based calculation */
-  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
 
   /* Enhanced shadows for better depth */
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .dark .wewrite-card.wewrite-daily-notes {
-  /* Enhanced blur and shadow for daily notes cards in dark mode - use consistent blur variable */
-  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
 }
 
-/* Floating cards - enhanced shadows and glassmorphism */
+/* Floating cards - enhanced shadows */
 .wewrite-card.wewrite-floating {
-  /* Enhanced floating card shadows */
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  /* Add glassmorphism blur for light mode too */
-  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
 }
 
 .dark .wewrite-card.wewrite-floating {
-  /* FIXED: Use consistent blur variable instead of opacity-based calculation */
-  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 100%));
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
 }
 

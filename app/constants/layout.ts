@@ -21,6 +21,14 @@
  */
 
 // ============================================================================
+// MOBILE ↔ DESKTOP BREAKPOINT
+// ============================================================================
+
+/** The viewport width (px) that divides mobile from desktop layout.
+ *  Matches Tailwind's `lg` breakpoint. Use `lg:` in Tailwind classes. */
+export const MOBILE_BREAKPOINT = 1024;
+
+// ============================================================================
 // GLOBAL SIDEBAR WIDTHS
 // ============================================================================
 

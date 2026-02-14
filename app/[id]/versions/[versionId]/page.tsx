@@ -11,6 +11,7 @@ import { InlineError } from '../../../components/ui/InlineError';
 import ViewableContent from '../../../components/content/ViewableContent';
 import { DiffStats } from '../../../components/activity/DiffPreview';
 import { PageProvider } from '../../../contexts/PageContext';
+import { useHasKeyboard } from '../../../hooks/useHasKeyboard';
 
 interface VersionSnapshotPageProps {
   params: Promise<{ id: string; versionId: string }> | { id: string; versionId: string };
@@ -54,6 +55,7 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
 
   const { id: pageId, versionId } = unwrappedParams;
   const router = useRouter();
+  const hasKeyboard = useHasKeyboard();
 
   const [version, setVersion] = useState<VersionData | null>(null);
   const [previousVersion, setPreviousVersion] = useState<VersionNavInfo | null>(null);
@@ -217,7 +219,7 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
   return (
     <div className="min-h-screen bg-background">
       {/* Fixed Header with Navigation */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-3">
           {/* Top row: Back button and page title */}
           <div className="flex items-center justify-between mb-3">
@@ -384,11 +386,11 @@ export default function VersionSnapshotPage({ params }: VersionSnapshotPageProps
           </div>
 
           {/* Keyboard Shortcuts Hint */}
-          <div className="mt-6 text-center text-xs text-muted-foreground">
-            <span className="hidden sm:inline">
+          {hasKeyboard && (
+            <div className="mt-6 text-center text-xs text-muted-foreground">
               Use <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">←</kbd> / <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">→</kbd> to navigate, <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs">Esc</kbd> to go back
-            </span>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

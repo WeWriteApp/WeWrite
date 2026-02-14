@@ -178,7 +178,7 @@ export function Modal({
             ref={combinedRef}
             className={cn(
               "relative z-10",
-              "bg-[var(--card-bg)] border border-[var(--card-border)] backdrop-blur-md",
+              "bg-[var(--card-bg)] border border-[var(--card-border)]",
               alwaysCentered
                 ? "w-[calc(100%-2rem)] max-w-lg mx-4 my-5 rounded-2xl"
                 : "w-full md:w-[calc(100%-2rem)] md:max-w-lg md:mx-4 md:my-5 rounded-t-2xl md:rounded-2xl",

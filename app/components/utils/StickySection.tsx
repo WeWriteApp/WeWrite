@@ -612,7 +612,7 @@ export default function StickySection({
           // Base styling - positioning managed via JavaScript
           // Note: z-index is managed via JavaScript for proper progressive layering
           'relative',
-          'bg-background backdrop-blur-sm',
+          'bg-background',
           'w-full cursor-pointer',
           // Border and shadow when sticky to create unified look with main header
           isSticky && 'border-b border-border/50 shadow-md',

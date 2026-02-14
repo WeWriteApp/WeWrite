@@ -77,7 +77,7 @@ export default function UserProfileHeader({ username }: UserProfileHeaderProps) 
       <div className="flex w-full h-full">
         {/* Sidebar spacer - only on desktop */}
         <div
-          className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
+          className="hidden lg:block transition-all duration-300 ease-in-out flex-shrink-0"
           style={{ width: `${headerSidebarWidth}px` }}
         />
 

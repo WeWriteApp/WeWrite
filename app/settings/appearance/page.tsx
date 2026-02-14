@@ -6,7 +6,6 @@ import { useTheme } from "../../providers/ThemeProvider";
 import { useRouter } from 'next/navigation';
 import ColorSystemManager from '../../components/settings/ColorSystemManager';
 import SolidColorPicker from '../../components/settings/SolidColorPicker';
-import CardOpacityControl from '../../components/settings/CardOpacityControl';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import UIStyleToggle from '../../components/utils/UIStyleToggle';
 import { useAccentColor } from '../../contexts/AccentColorContext';
@@ -151,15 +150,6 @@ export default function AppearancePage() {
 
         {/* Color System */}
         <ColorSystemManager />
-
-        {/* Card Style */}
-        <div className="wewrite-card">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Card Style</h2>
-          </div>
-
-          <CardOpacityControl />
-        </div>
       </div>
     </div>
   );

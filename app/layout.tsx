@@ -20,8 +20,11 @@ import { PWAProvider } from "./providers/PWAProvider"
 import { BannerProvider } from "./providers/BannerProvider"
 import { PreviousRouteProvider } from "./providers/PreviousRouteProvider"
 import { GlobalDrawerProvider } from "./providers/GlobalDrawerProvider"
+import { CommandPaletteActionsProvider } from "./contexts/CommandPaletteActionsContext"
+import { CommandPaletteProvider } from "./providers/CommandPaletteProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import GlobalDrawerRenderer from "./components/layout/GlobalDrawerRenderer"
+import CommandPalette from "./components/command-palette/CommandPalette"
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
@@ -261,35 +264,40 @@ export default function RootLayout({
                             <AllAppProviders>
                               <PreviousRouteProvider>
                                 <GlobalDrawerProvider>
-                                  <SessionAuthInitializer>
-                                    <SessionMonitor />
-                                    <AutomaticUpdateManager />
-                                    <ServiceWorkerRegistration />
-                                    <ScrollRestorationDisabler />
-                                    <GlobalLandingBlobs />
-                                    <GlobalNavigation>
-                                      {children}
-                                    </GlobalNavigation>
-                                    {/* Global drawer overlay for settings/admin on mobile */}
-                                    <GlobalDrawerRenderer />
-                                    {/* UI label tooltips for admin debugging */}
-                                    <UILabelTooltipOverlay />
-                                    {/* Toast notifications - theme="system" for auto dark/light mode */}
-                                    <Toaster
-                                      richColors
-                                      position="bottom-right"
-                                      theme="system"
-                                      toastOptions={{
-                                        classNames: {
-                                          toast: 'dark:bg-neutral-900 dark:border-neutral-800',
-                                          title: 'dark:text-neutral-100',
-                                          description: 'dark:text-neutral-400',
-                                          actionButton: 'dark:bg-primary dark:text-primary-foreground',
-                                          cancelButton: 'dark:bg-neutral-800 dark:text-neutral-400',
-                                        }
-                                      }}
-                                    />
-                                  </SessionAuthInitializer>
+                                  <CommandPaletteActionsProvider>
+                                    <CommandPaletteProvider>
+                                      <SessionAuthInitializer>
+                                        <SessionMonitor />
+                                        <AutomaticUpdateManager />
+                                        <ServiceWorkerRegistration />
+                                        <ScrollRestorationDisabler />
+                                        <GlobalLandingBlobs />
+                                        <GlobalNavigation>
+                                          {children}
+                                        </GlobalNavigation>
+                                        <CommandPalette />
+                                        {/* Global drawer overlay for settings/admin on mobile */}
+                                        <GlobalDrawerRenderer />
+                                        {/* UI label tooltips for admin debugging */}
+                                        <UILabelTooltipOverlay />
+                                        {/* Toast notifications - theme="system" for auto dark/light mode */}
+                                        <Toaster
+                                          richColors
+                                          position="bottom-right"
+                                          theme="system"
+                                          toastOptions={{
+                                            classNames: {
+                                              toast: 'dark:bg-neutral-900 dark:border-neutral-800',
+                                              title: 'dark:text-neutral-100',
+                                              description: 'dark:text-neutral-400',
+                                              actionButton: 'dark:bg-primary dark:text-primary-foreground',
+                                              cancelButton: 'dark:bg-neutral-800 dark:text-neutral-400',
+                                            }
+                                          }}
+                                        />
+                                      </SessionAuthInitializer>
+                                    </CommandPaletteProvider>
+                                  </CommandPaletteActionsProvider>
                                 </GlobalDrawerProvider>
                               </PreviousRouteProvider>
                             </AllAppProviders>

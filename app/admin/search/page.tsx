@@ -372,7 +372,7 @@ export default function SearchAdminPage() {
   if (authLoading || !user?.isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Icon name="Loader" size={32} className="animate-spin" />
+        <Icon name="Loader" size={32} />
       </div>
     );
   }
@@ -410,7 +410,7 @@ export default function SearchAdminPage() {
 
         {loading && !analytics ? (
           <div className="flex items-center justify-center py-20">
-            <Icon name="Loader" size={32} className="animate-spin text-muted-foreground" />
+            <Icon name="Loader" size={32} className="text-muted-foreground" />
           </div>
         ) : error ? (
           <div className="border border-red-200 bg-red-50 dark:bg-red-900/20 rounded-lg p-4">

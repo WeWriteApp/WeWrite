@@ -162,7 +162,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         >
         {/* Loading overlay - higher z-index to blur all content including stars */}
         {loading && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center">
             <div className="text-center">
               <div className="animate-pulse text-muted-foreground">Shuffling pages...</div>
             </div>
@@ -270,7 +270,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         >
         {/* Loading overlay for mobile - higher z-index to blur all content including stars */}
         {loading && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
+          <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center rounded-2xl">
             <div className="text-center">
               <div className="animate-pulse text-muted-foreground">Shuffling pages...</div>
             </div>
@@ -358,7 +358,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         <div className="relative" style={{ minHeight }}>
           {/* Loading overlay */}
           {loading && (
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
+            <div className="absolute inset-0 bg-background/80 z-20 flex items-center justify-center rounded-2xl">
               <div className="text-center">
                 <div className="animate-pulse text-muted-foreground">Shuffling pages...</div>
               </div>

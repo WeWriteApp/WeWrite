@@ -12,7 +12,6 @@
  */
 
 import React, { Suspense, lazy } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
 import { useGlobalDrawer } from '../../../providers/GlobalDrawerProvider';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useFeatureFlags } from '../../../contexts/FeatureFlagContext';
@@ -51,10 +50,8 @@ interface NavItem {
  * Main navigation menu list
  */
 function MainMenuList() {
-  const router = useRouter();
-  const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const { navigateInDrawer, closeDrawer } = useGlobalDrawer();
+  const { navigateInDrawer, closeAndNavigate } = useGlobalDrawer();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
   // Settings warning indicators
@@ -95,15 +92,11 @@ function MainMenuList() {
 
   const handleItemClick = (item: NavItem) => {
     if (item.action === 'settings') {
-      // Navigate to settings sub-menu
       navigateInDrawer('settings');
     } else if (item.action === 'admin') {
-      // Navigate to admin sub-menu
       navigateInDrawer('admin');
     } else if (item.route) {
-      // Navigate to route - just push the new route, the hash will be replaced
-      // Don't call closeDrawer() as it manipulates history which conflicts with router.push
-      router.push(item.route);
+      closeAndNavigate(item.route);
     }
   };
 
@@ -176,7 +169,7 @@ function MainMenuList() {
 function ContentLoading() {
   return (
     <div className="flex items-center justify-center h-32">
-      <Icon name="Loader" className="text-muted-foreground animate-spin" size={20} />
+      <Icon name="Loader" className="text-muted-foreground" size={20} />
     </div>
   );
 }

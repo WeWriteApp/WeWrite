@@ -140,7 +140,7 @@ export default function ZoomControl() {
       <Button
         variant="outline"
         size="icon"
-        className="bg-background/80 backdrop-blur-sm shadow-lg border-theme-medium"
+        className="bg-background shadow-lg border-theme-medium"
         onClick={handleZoomIn}
         aria-label="Zoom In"
       >
@@ -150,7 +150,7 @@ export default function ZoomControl() {
       <Button
         variant="outline"
         size="icon"
-        className="bg-background/80 backdrop-blur-sm shadow-lg border-theme-medium"
+        className="bg-background shadow-lg border-theme-medium"
         onClick={handleZoomOut}
         aria-label="Zoom Out"
       >
@@ -159,7 +159,7 @@ export default function ZoomControl() {
 
       <Button
         variant="outline"
-        className="bg-background/80 backdrop-blur-sm shadow-lg border-theme-medium text-primary font-medium"
+        className="bg-background shadow-lg border-theme-medium text-primary font-medium"
         onClick={resetZoom}
         aria-label="Reset Zoom"
       >

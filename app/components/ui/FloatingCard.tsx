@@ -78,9 +78,7 @@ export function FloatingCard({
     toolbar: cn(
       // Semi-transparent with blur when collapsed, opaque when expanded
       // CSS handles expanded state via [data-expanded="true"]
-      isExpanded
-        ? "!bg-white dark:!bg-black !border !border-border !backdrop-filter-none"
-        : "!bg-white/80 dark:!bg-black/80 !border !border-border !backdrop-blur-xl"
+      "!bg-[var(--card-bg)] !border !border-border"
     ),
     header: "",
     overlay: cn(
@@ -98,11 +96,11 @@ export function FloatingCard({
       "!rounded-none !shadow-none",
       "!border-l-0 !border-r-0 !border-b-0 !border-t !border-border",
       // GPU-accelerated transitions for smooth animations
-      "will-change-[background-color,border-radius,backdrop-filter]",
+      "will-change-[background-color,border-radius]",
       // Semi-transparent card style when collapsed, solid (same brightness) when expanded
       isExpanded
-        ? "!bg-[var(--card-bg)] dark:!bg-[var(--card-bg)] !backdrop-filter-none !rounded-t-2xl"
-        : "" // Let wewrite-card handle the semi-transparent background with blur
+        ? "!bg-[var(--card-bg)] !rounded-t-2xl"
+        : ""
     )
   };
 

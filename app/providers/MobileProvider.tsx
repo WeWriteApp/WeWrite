@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useState, useEffect, useContext, ReactNode } from "react";
+import { MOBILE_BREAKPOINT } from "../constants/layout";
 
 /**
  * Mobile context interface
@@ -32,7 +33,7 @@ export const MobileProvider = ({ children }: MobileProviderProps) => {
      * Check if the current viewport is mobile-sized
      */
     const checkMobile = (): void => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
 
     // Initial check

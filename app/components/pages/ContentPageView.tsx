@@ -57,6 +57,7 @@ import FullPageError from "../ui/FullPageError";
 import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import { useConfirmation } from "../../hooks/useConfirmation";
+import { useCommandPaletteActions } from "../../contexts/CommandPaletteActionsContext";
 import { ConfirmationModal } from "../utils/UnifiedModal";
 import AutoSaveIndicator from "../layout/AutoSaveIndicator";
 import { motion } from "framer-motion";
@@ -246,6 +247,7 @@ export default function ContentPageView({
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { addRecentPage } = useRecentPages();
+  const { registerPageActions, unregisterPageActions } = useCommandPaletteActions();
 
   // Confirmation modals hook (replaces window.confirm)
   const { confirmationState, confirm, closeConfirmation } = useConfirmation();
@@ -1988,6 +1990,28 @@ export default function ContentPageView({
       setError("Failed to delete page. Please try again.");
     }
   }, [page, pageId, router, confirm]);
+
+  // Register page actions for the command palette
+  useEffect(() => {
+    if (!pageId || !page) return;
+    registerPageActions({
+      pageId,
+      pageTitle: title || page.title,
+      isEditing: !!isEditing,
+      isOwner: !!canEdit,
+      canEdit: !!canEdit,
+      onSave: canEdit ? handleSave : undefined,
+      onCancel: canEdit ? handleCancel : undefined,
+      onDelete: canEdit ? handleDelete : undefined,
+      onInsertLink: linkInsertionTrigger ?? undefined,
+      onAddLocation: canEdit ? () => router.push(`/${pageId}/location`) : undefined,
+      onCopyLink: () => {
+        navigator.clipboard.writeText(`${window.location.origin}/${pageId}`);
+      },
+      isSaving,
+    });
+    return () => unregisterPageActions(pageId);
+  }, [pageId, page, title, isEditing, canEdit, isSaving, handleSave, handleCancel, handleDelete, linkInsertionTrigger, router, registerPageActions, unregisterPageActions]);
 
   // ARCHITECTURAL SIMPLIFICATION: Remove complex content processing
   // Let ContentDisplay components handle their own content conversion

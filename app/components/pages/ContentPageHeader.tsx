@@ -758,7 +758,7 @@ export default function ContentPageHeader({
           ${isEditing ? 'block page-header-edit-mode w-full' : 'fixed top-0 left-0 right-0 w-full'}
           z-50 bg-background border-visible
           ${!isEditing ? 'transition-all duration-300 ease-out will-change-transform' : ''}
-          ${isScrolled && !isEditing ? 'bg-background/80 backdrop-blur-sm shadow-sm' : ''}
+          ${isScrolled && !isEditing ? 'shadow-sm' : ''}
         `}
         style={!isEditing ? {
           transform: 'translateZ(0)',
@@ -771,7 +771,7 @@ export default function ContentPageHeader({
           {/* Sidebar spacer - only in view mode on desktop */}
           {!isEditing && (
             <div
-              className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
+              className="hidden lg:block transition-all duration-300 ease-in-out flex-shrink-0"
               style={{ width: `${headerSidebarWidth}px` }}
             />
           )}

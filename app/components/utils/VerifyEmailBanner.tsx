@@ -142,7 +142,7 @@ export default function VerifyEmailBanner() {
   };
 
   return (
-    <div className="relative mx-4 mt-2 mb-2 md:hidden" data-banner="email-verification">
+    <div className="relative mx-4 mt-2 mb-2 lg:hidden" data-banner="email-verification">
       <div
         className={`wewrite-card px-4 py-3 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
           isCollapsing ? 'max-h-0 py-0 opacity-0 transform -translate-y-4 scale-95' : 'max-h-32 opacity-100 transform translate-y-0 scale-100'

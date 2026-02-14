@@ -38,7 +38,7 @@ export default function FullScreenMapView({
   return (
     <div className={`fixed inset-0 bg-background z-50 flex flex-col ${className}`}>
       {/* Header with back button */}
-      <div className="flex items-center gap-4 p-4 border-b border-border bg-background/95 backdrop-blur-sm">
+      <div className="flex items-center gap-4 p-4 border-b border-border bg-background">
         <Button
           variant="ghost"
           size="sm"
@@ -85,7 +85,7 @@ export default function FullScreenMapView({
       </div>
 
       {/* Footer with location info */}
-      <div className="p-4 border-t border-border bg-background/95 backdrop-blur-sm">
+      <div className="p-4 border-t border-border bg-background">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

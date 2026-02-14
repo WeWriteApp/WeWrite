@@ -12,6 +12,7 @@ import { BannerSystemSection } from './BannerSystemSection';
 import { BordersSeparatorsSection } from './BordersSeparatorsSection';
 import { ButtonSection } from './ButtonSection';
 import { CardSection } from './CardSection';
+import { CommandPaletteSection } from './CommandPaletteSection';
 import { ChartsSection } from './ChartsSection';
 import { ColorSystemSection } from './ColorSystemSection';
 import { ContentPageSection } from './ContentPageSection';
@@ -37,6 +38,7 @@ import { RollingCounterSection } from './RollingCounterSection';
 import { SaveStatusSection } from './SaveStatusSection';
 import { SearchResultsSection } from './SearchResultsSection';
 import { SegmentedControlSection } from './SegmentedControlSection';
+import { SurfaceElevationSection } from './SurfaceElevationSection';
 import { ShinyButtonSection } from './ShinyButtonSection';
 import { TableSection } from './TableSection';
 import { TabsSection } from './TabsSection';
@@ -66,6 +68,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'button', label: 'Button', component: ButtonSection },
   { id: 'card', label: 'Card', component: CardSection },
   { id: 'charts', label: 'Charts & Sparklines', component: ChartsSection },
+  { id: 'command-palette', label: 'Command Palette', component: CommandPaletteSection },
   { id: 'color-system', label: 'Color System Controls', component: ColorSystemSection },
   { id: 'color-token-reference', label: 'Color Token Reference', component: ColorTokenReferenceSection },
   { id: 'content-page', label: 'Content Page', component: ContentPageSection },
@@ -91,6 +94,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'search-results', label: 'Search Results', component: SearchResultsSection },
   { id: 'segmented-control', label: 'Segmented Control', component: SegmentedControlSection },
   { id: 'shiny-button', label: 'Shiny Button System', component: ShinyButtonSection },
+  { id: 'surface-elevation', label: 'Surface & Elevation', component: SurfaceElevationSection },
   { id: 'table', label: 'Table', component: TableSection },
   { id: 'tabs', label: 'Tabs', component: TabsSection },
   { id: 'textarea', label: 'Textarea', component: TextareaSection },

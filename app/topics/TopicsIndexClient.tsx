@@ -75,7 +75,7 @@ export default function TopicsIndexClient() {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="flex flex-col items-center">
-            <Icon name="Loader2" size={32} className="animate-spin text-primary mb-4" />
+            <Icon name="Loader" size={32} className="mb-4" />
             <p className="text-muted-foreground">Loading topics...</p>
           </div>
         </div>

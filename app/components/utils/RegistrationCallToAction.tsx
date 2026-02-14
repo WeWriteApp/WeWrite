@@ -22,7 +22,7 @@ const RegistrationCallToAction: React.FC = () => {
       data-registration-cta
       className="fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300"
     >
-      <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-3">
+      <div className="w-full max-w-md mx-auto bg-background dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-3">
         {/* Desktop Layout: Horizontal */}
         <div className="hidden sm:flex items-center justify-between gap-4">
           <div className="flex-1">

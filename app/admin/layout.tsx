@@ -44,7 +44,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
   if (!isHydrated) {
     return (
       <div className={cn(
-        "flex items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-lg",
+        "flex items-center gap-2 bg-background border rounded-lg",
         isCollapsed ? "p-2 justify-center" : "px-3 py-2"
       )}>
         <Icon name="Database" size={16} className="text-muted-foreground" />
@@ -81,7 +81,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
   }
 
   return (
-    <div className="flex items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border rounded-lg px-3 py-2">
+    <div className="flex items-center gap-2 bg-background border rounded-lg px-3 py-2">
       <Icon name="Database" size={16} className="text-muted-foreground" />
       <span className="text-xs text-muted-foreground">Data:</span>
       <div className="flex items-center gap-1.5">
@@ -310,7 +310,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     >
       {/* Collapsible sidebar */}
       <aside
-        className="fixed top-0 h-screen border-r border-border bg-background overflow-hidden z-40 transition-[width,left] duration-300 ease-out hidden md:flex flex-col"
+        className="fixed top-0 h-screen border-r border-border bg-[var(--card-bg)] overflow-hidden z-40 transition-[width,left] duration-300 ease-out hidden lg:flex flex-col"
         style={{
           left: SECONDARY_SIDEBAR_LEFT_OFFSET,
           width: sidebarWidth,
@@ -356,7 +356,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main
-        className="min-h-screen transition-[margin-left] duration-300 ease-out hidden md:block"
+        className="min-h-screen transition-[margin-left] duration-300 ease-out hidden lg:block"
         style={{
           marginLeft: `calc(${SECONDARY_SIDEBAR_LEFT_OFFSET} + ${sidebarWidth}px)`,
         }}

@@ -20,7 +20,7 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title="Theme"
-      className="fixed top-[72px] right-4 w-[200px] rounded-lg border bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className="fixed top-[72px] right-4 w-[200px] rounded-lg border bg-background p-4 shadow-lg"
       showCloseButton={false}
     >
       <div className="space-y-2">

@@ -77,7 +77,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-60 p-2 backdrop-blur-lg bg-background/90 border border-border shadow-xl"
+          className="w-60 p-2 bg-background border border-border shadow-xl"
         >
           <DropdownMenuItem
             className="flex items-center gap-3 cursor-pointer py-3 px-3 rounded-lg hover:bg-muted/50 focus:bg-muted/50"

@@ -67,7 +67,7 @@ function CollapsibleColorCard({
 
 export default function ColorSystemManager({ className }: ColorSystemManagerProps) {
   const { accentColor, setAccentColor, getCurrentThemeColor } = useAccentColor();
-  const { background, setBackground, lastUploadedImage, backgroundBlur, setBackgroundBlur } = useAppBackground();
+  const { background, setBackground, lastUploadedImage } = useAppBackground();
   const { theme } = useTheme();
   const { hasActiveSubscription } = useSubscription();
 

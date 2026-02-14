@@ -94,7 +94,7 @@ export default function PWABanner() {
       {/* PWA Banner - Fixed position at top, matching email verification banner style */}
       <div
         ref={bannerRef}
-        className="fixed top-0 left-0 right-0 z-[100] md:hidden"
+        className="fixed top-0 left-0 right-0 z-[100] lg:hidden"
         style={{ height: BANNER_HEIGHT }}
         data-banner="pwa-installation"
       >

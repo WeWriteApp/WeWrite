@@ -149,7 +149,7 @@ export default function LocationPickerPage({
 
       {/* Floating Header */}
       <div className="absolute top-0 left-0 right-0 z-20 p-4">
-        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border border-border shadow-lg">
+        <div className="bg-background rounded-lg border border-border shadow-lg">
           <div className="flex items-center p-4">
             <Button
               variant="ghost"
@@ -174,7 +174,7 @@ export default function LocationPickerPage({
       {/* Floating Bottom Buttons - Show when owner is viewing existing location */}
       {isOwner && !isAddingNew && !isSaving && (
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
-          <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border border-border shadow-lg">
+          <div className="bg-background rounded-lg border border-border shadow-lg">
             <div className="p-4">
               {hasChanges ? (
                 // When location has been changed: show Revert / Save / Delete

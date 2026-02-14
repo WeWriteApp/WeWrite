@@ -233,8 +233,8 @@ export default function RecentSearches({ onSelect, userId = null, selectedIndex 
             key={`${search.term}-${index}`}
             ref={isSelected ? selectedItemRef : null}
             className={cn(
-              "space-y-2 p-2 -mx-2 rounded-md transition-colors",
-              isSelected && "bg-black/5 dark:bg-white/5 outline outline-1 outline-black/10 dark:outline-white/10"
+              "wewrite-card space-y-2 p-3 transition-colors",
+              isSelected && "outline outline-1 outline-black/10 dark:outline-white/10"
             )}
           >
             {/* Search term row */}

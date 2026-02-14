@@ -49,7 +49,7 @@ function SettingsMenuList() {
         return (
           <button
             key={section.id}
-            onClick={() => navigateInDrawer(subPath || section.id)}
+            onClick={() => navigateInDrawer(`settings/${subPath || section.id}`)}
             className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none"
           >
             <div className="flex items-center">

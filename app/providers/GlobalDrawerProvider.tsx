@@ -58,6 +58,8 @@ interface GlobalDrawerContextType {
   openMenu: () => void;
   /** Close the active drawer */
   closeDrawer: () => void;
+  /** Close the drawer with animation then navigate to a route */
+  closeAndNavigate: (route: string) => void;
   /** Navigate to a sub-path within the drawer */
   navigateInDrawer: (subPath: string) => void;
   /** Go back to drawer root (menu view) */
@@ -72,6 +74,8 @@ interface GlobalDrawerContextType {
    * - 3+ = Sub-page (#menu/settings/profile)
    */
   navigationDepth: number;
+  /** Route being navigated to during drawer close animation (mobile only) */
+  navigatingTo: string | null;
 }
 
 // ============================================================================
@@ -186,10 +190,12 @@ const GlobalDrawerContext = createContext<GlobalDrawerContextType>({
   openDrawer: () => {},
   openMenu: () => {},
   closeDrawer: () => {},
+  closeAndNavigate: () => {},
   navigateInDrawer: () => {},
   goToDrawerRoot: () => {},
   isGlobalDrawerActive: false,
   navigationDepth: 0,
+  navigatingTo: null,
 });
 
 export const useGlobalDrawer = () => useContext(GlobalDrawerContext);
@@ -204,6 +210,7 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [isHydrated, setIsHydrated] = useState(false);
   const [drawerConfig, setDrawerConfig] = useState<DrawerConfig>({ type: null, subPath: null });
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
 
   // Track if we've pushed a hash state (to know when to go back vs replace)
   const hashedStateDepthRef = useRef(0);
@@ -371,6 +378,13 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  // Reset navigatingTo when we arrive at the target route
+  useEffect(() => {
+    if (navigatingTo && pathname === navigatingTo) {
+      setNavigatingTo(null);
+    }
+  }, [pathname, navigatingTo]);
+
   // Open the main menu (mobile only)
   const openMenu = useCallback(() => {
     if (!isGlobalDrawerActive) return;
@@ -447,6 +461,44 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
     }
   }, [isGlobalDrawerActive, drawerConfig, trackDrawerAnalytics]);
 
+  // Close drawer with animation then navigate to a route
+  const closeAndNavigate = useCallback((route: string) => {
+    if (!isGlobalDrawerActive) {
+      router.push(route);
+      return;
+    }
+
+    // Signal optimistic page clearing immediately (before animation delay)
+    setNavigatingTo(route);
+
+    // Track analytics before closing
+    if (drawerConfig.type) {
+      trackDrawerAnalytics(drawerConfig.type, drawerConfig.subPath, 'close');
+    }
+
+    // Close drawer visually (triggers close animation)
+    setDrawerConfig({ type: null, subPath: null });
+
+    // After animation, clean up hash history and navigate
+    const depth = hashedStateDepthRef.current;
+    hashedStateDepthRef.current = 0;
+
+    setTimeout(() => {
+      if (depth > 0) {
+        // Listen for the popstate from history.go, then navigate
+        const onPopState = () => {
+          window.removeEventListener('popstate', onPopState);
+          router.push(route);
+        };
+        window.addEventListener('popstate', onPopState);
+        window.history.go(-depth);
+      } else {
+        // No hash entries to clean up, just navigate
+        router.push(route);
+      }
+    }, DRAWER_HISTORY_DELAY);
+  }, [isGlobalDrawerActive, drawerConfig, router, trackDrawerAnalytics]);
+
   // Navigate within drawer (to a sub-path)
   const navigateInDrawer = useCallback((subPath: string) => {
     if (!drawerConfig.type) return;
@@ -486,10 +538,12 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
     openDrawer,
     openMenu,
     closeDrawer,
+    closeAndNavigate,
     navigateInDrawer,
     goToDrawerRoot,
     isGlobalDrawerActive,
     navigationDepth,
+    navigatingTo,
   };
 
   return (

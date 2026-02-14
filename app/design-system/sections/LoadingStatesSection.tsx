@@ -119,6 +119,32 @@ export function LoadingStatesSection({ id }: { id: string }) {
         </div>
       </StateDemo>
 
+      <StateDemo label="Anti-Patterns">
+        <div className="w-full space-y-4">
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                <span className="text-xs font-bold text-red-500 uppercase">Wrong</span>
+                <div className="animate-spin">
+                  <Icon name="Loader" size={20} />
+                </div>
+              </div>
+              <code className="text-xs text-muted-foreground">{'<Icon name="Loader" className="animate-spin" />'}</code>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                <span className="text-xs font-bold text-green-500 uppercase">Right</span>
+                <Icon name="Loader" size={20} />
+              </div>
+              <code className="text-xs text-muted-foreground">{'<Icon name="Loader" />'}</code>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            The PulseLoader has built-in animation. Never wrap it in <code className="text-foreground">animate-spin</code> or any spinning container &mdash; animation is atomic (inside the loader), not molecular (applied by a parent).
+          </p>
+        </div>
+      </StateDemo>
+
       <CollapsibleDocs type="usage">
         <DocsCodeBlock label="Loading state usage">
 {`// Default loader (PulseLoader) - always use default style
@@ -127,6 +153,12 @@ export function LoadingStatesSection({ id }: { id: string }) {
 // Size variants
 <Icon name="Loader" size={16} />  // small
 <Icon name="Loader" size={32} />  // large
+
+// WRONG - never add animate-spin to Loader (it already animates)
+// <Icon name="Loader" className="animate-spin" />
+
+// WRONG - don't use Loader2, use Loader instead
+// <Icon name="Loader2" className="animate-spin" />
 
 // Bordered loading state (matches EmptyState style)
 <LoadingState

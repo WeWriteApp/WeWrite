@@ -98,7 +98,7 @@ function LocationModal({ isOpen, onClose, title, children }: LocationModalProps)
 
           <motion.div
             ref={modalRef}
-            className="relative z-10 bg-[var(--card-bg)] border border-[var(--card-border)] backdrop-blur-md rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+            className="relative z-10 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}

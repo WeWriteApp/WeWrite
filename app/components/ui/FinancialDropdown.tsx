@@ -234,7 +234,7 @@ export function FinancialDropdown({
         }}
       >
         {/* WeWrite card with glassmorphic passthrough blur */}
-        <div className="wewrite-card card-80">
+        <div className="wewrite-card">
           <AnimatedRow index={0} isAnimating={isAnimating} className="text-sm font-medium text-foreground mb-3 text-center">
             {title}
           </AnimatedRow>
@@ -285,7 +285,7 @@ export function FinancialDropdown({
         {isDemo && (
           <AnimatedRow index={6} isAnimating={isAnimating}>
             <div className="border-t border-border my-3" />
-            <div className="text-xs text-muted-foreground bg-gray-100/50 dark:bg-white/5 p-2 rounded text-center">
+            <div className="text-xs text-muted-foreground bg-gray-100 dark:bg-zinc-800 p-2 rounded text-center">
               {demoMessage}
             </div>
           </AnimatedRow>

@@ -186,9 +186,9 @@ export function SecondarySidebar({
     <SecondarySidebarContext.Provider value={{ isCollapsed, sidebarWidth, toggleCollapsed }}>
       <aside
         className={cn(
-          "fixed top-0 h-screen border-r border-border bg-background overflow-hidden z-40",
+          "fixed top-0 h-screen border-r border-border bg-[var(--card-bg)] overflow-hidden z-40",
           "transition-[width,left] duration-300 ease-out",
-          "hidden md:flex flex-col",
+          "hidden lg:flex flex-col",
           className
         )}
         style={{
@@ -336,7 +336,7 @@ export function SecondarySidebarContent({
   return (
     <main
       className={cn(
-        "min-h-screen transition-[margin-left] duration-300 ease-out hidden md:block",
+        "min-h-screen transition-[margin-left] duration-300 ease-out hidden lg:block",
         className
       )}
       style={{

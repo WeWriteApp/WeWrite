@@ -5,7 +5,6 @@ import { Icon } from '@/components/ui/Icon';
 import { useTheme } from "../../../providers/ThemeProvider";
 import ColorSystemManager from '../ColorSystemManager';
 import SolidColorPicker from '../SolidColorPicker';
-import CardOpacityControl from '../CardOpacityControl';
 import PillStyleToggle from '../../utils/PillStyleToggle';
 import UIStyleToggle from '../../utils/UIStyleToggle';
 import { useAccentColor } from '../../../contexts/AccentColorContext';
@@ -149,14 +148,6 @@ export default function AppearanceContent({ onClose }: AppearanceContentProps) {
 
       {/* Color System */}
       <ColorSystemManager />
-
-      {/* Card Style */}
-      <div className="wewrite-card">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Card Style</h2>
-        </div>
-        <CardOpacityControl />
-      </div>
     </div>
   );
 }

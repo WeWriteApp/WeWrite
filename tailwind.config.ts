@@ -209,6 +209,9 @@ const config: Config = {
         // Drawer animations
         'drawer-slide-up': 'drawer-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
         'drawer-slide-down': 'drawer-slide-down 0.3s ease-out forwards',
+        // Navigation stack within-detail slide animations
+        'slide-in-from-right': 'slide-in-from-right 250ms ease-out forwards',
+        'slide-in-from-left': 'slide-in-from-left 250ms ease-out forwards',
       },
       keyframes: {
         'gradient-x': {
@@ -284,6 +287,15 @@ const config: Config = {
         'reveal-scale-out': {
           '0%': { opacity: '1', transform: 'scale(1) translateY(0)' },
           '100%': { opacity: '0', transform: 'scale(0.95) translateY(4px)' },
+        },
+        // Navigation stack within-detail slide animations
+        'slide-in-from-right': {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        'slide-in-from-left': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
         },
       },
     },

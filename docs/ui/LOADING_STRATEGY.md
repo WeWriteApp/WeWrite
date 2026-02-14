@@ -71,6 +71,39 @@ style={{
 - Includes header navigation and content area skeletons
 - Transitions smoothly to real content when loaded
 
+## Loader Animation Rules
+
+### 1. PulseLoader Has Built-In Animation
+The `<Icon name="Loader" />` component renders a PulseLoader with its own animation. **Never** add `animate-spin` or any other animation wrapper — doing so double-animates the icon (a pulse inside a spin).
+
+### 2. Animation Is Atomic, Not Molecular
+Animation belongs inside the loader component itself, not applied by a parent container. This keeps loading behavior consistent and predictable across the app.
+
+### 3. Always Use `Loader`, Not `Loader2`
+Use `<Icon name="Loader" />` for all standard loading states. Do not use `Loader2` (a raw Lucide spinning icon) — it requires manual `animate-spin` and doesn't match the project's PulseLoader style.
+
+### 4. RefreshCw with `animate-spin` Is Fine
+`RefreshCw` with `animate-spin` is a deliberate UI choice for refresh buttons, not a loading indicator. This is acceptable.
+
+### 5. Code Examples
+
+```tsx
+// CORRECT - PulseLoader animates on its own
+<Icon name="Loader" size={24} />
+
+// CORRECT - with additional styling (no animation classes)
+<Icon name="Loader" size={16} className="mr-2" />
+
+// WRONG - double animation (pulse + spin)
+<Icon name="Loader" className="animate-spin" />
+
+// WRONG - using Loader2 instead of Loader
+<Icon name="Loader2" className="animate-spin" />
+
+// OK - RefreshCw spinning is a deliberate refresh indicator
+<Icon name="RefreshCw" className="animate-spin" />
+```
+
 ## Best Practices
 
 ### 1. Skeleton-First Approach

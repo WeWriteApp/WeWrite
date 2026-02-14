@@ -215,7 +215,7 @@ export default function SubscriptionGate({
   if (isLoading) {
     return (
       <div className={`relative ${className}`}>
-        <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Icon name="Loader" />
             <span className="text-sm">Checking subscription...</span>
@@ -255,7 +255,7 @@ export default function SubscriptionGate({
         </div>
 
         {/* Activation overlay */}
-        <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
           <div className="text-center max-w-sm mx-auto p-6">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
               <Icon name="Eye" size={32} className="text-primary" />
@@ -322,7 +322,7 @@ export default function SubscriptionGate({
           <div className="absolute top-2 left-2 right-2 z-20 flex justify-center">
             <Badge
               variant="secondary"
-              className="px-3 py-1.5 shadow-lg bg-background/95 backdrop-blur-sm border border-border"
+              className="px-3 py-1.5 shadow-lg bg-background border border-border"
             >
               <Icon name="Eye" size={24} className="h-3.5 w-3.5 mr-1.5" />
               <span className="text-xs font-medium">
@@ -364,7 +364,7 @@ export default function SubscriptionGate({
       </div>
 
       {/* Subscription/signup overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+      <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
         <div className="text-center max-w-sm mx-auto p-6">
           <div className="mb-4">
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">

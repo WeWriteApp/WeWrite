@@ -27,8 +27,6 @@ export default function BackgroundOptionsCard() {
   const {
     background,
     setBackground,
-    backgroundBlur,
-    setBackgroundBlur,
     lastUploadedImage
   } = useAppBackground();
   const { hasActiveSubscription } = useSubscription();
@@ -344,26 +342,6 @@ export default function BackgroundOptionsCard() {
         </SegmentedControlContent>
       </SegmentedControl>
 
-      {/* Background Blur Slider - show for both tabs */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">Background Blur</label>
-          <span className="text-sm text-muted-foreground">
-            {Math.round(backgroundBlur * 100)}%
-          </span>
-        </div>
-        <ColorSlider
-          value={backgroundBlur * 100}
-          onChange={(value) => setBackgroundBlur(value / 100)}
-          min={0}
-          max={100}
-          step={5}
-          gradient="linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5))"
-        />
-        <p className="text-xs text-muted-foreground">
-          Add blur effect to the background (0-20px blur)
-        </p>
-      </div>
     </div>
   );
 }

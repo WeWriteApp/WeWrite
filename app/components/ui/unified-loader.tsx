@@ -70,7 +70,7 @@ export function UnifiedLoader({
           {children}
         </div>
         {/* Overlay loading spinner */}
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center bg-background">
           <div className="flex flex-col items-center gap-3 text-center px-4">
             <Icon name="Loader" size={32} />
             {message && (
@@ -137,7 +137,7 @@ export function UnifiedLoader({
       className={cn(
         "flex flex-col items-center justify-center",
         fullScreen
-          ? "fixed bg-background/80 backdrop-blur-sm z-50"
+          ? "fixed bg-background z-50"
           : "min-h-[50vh] w-full py-8",
         className
       )}

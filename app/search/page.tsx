@@ -19,6 +19,7 @@ import RecentSearches from '../components/search/RecentSearches';
 import SavedSearches from '../components/search/SavedSearches';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { SHARE_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { useHasKeyboard } from '../hooks/useHasKeyboard';
 
 // Import the new separated components
 import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
@@ -235,6 +236,8 @@ const SearchPage = React.memo(() => {
 
   // Groups functionality removed
   const groupsEnabled = false;
+
+  const hasKeyboard = useHasKeyboard();
 
   // Keyboard navigation state
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -658,7 +661,7 @@ const SearchPage = React.memo(() => {
             onItemsChange={handleRecentSearchesChange}
           />
           {/* Keyboard navigation hint for recent searches */}
-          {recentSearchesCount > 0 && selectedIndex === -1 && (
+          {hasKeyboard && recentSearchesCount > 0 && selectedIndex === -1 && (
             <p className="text-xs text-muted-foreground/60 mt-2">
               Use <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↑</kbd> <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↓</kbd> to navigate recent searches, <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to search
             </p>
@@ -683,7 +686,7 @@ const SearchPage = React.memo(() => {
               )}
             </p>
             {/* Keyboard navigation hint - only show when there are results and nothing selected */}
-            {!isLoading && flatResultsUrls.length > 0 && selectedIndex === -1 && (
+            {hasKeyboard && !isLoading && flatResultsUrls.length > 0 && selectedIndex === -1 && (
               <p className="text-xs text-muted-foreground/60 mt-0.5">
                 Use <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↑</kbd> <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">↓</kbd> to navigate, <kbd className="px-1 py-0.5 bg-muted rounded text-[10px]">Enter</kbd> to open
               </p>

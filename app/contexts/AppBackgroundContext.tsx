@@ -89,12 +89,6 @@ interface AppBackgroundContextType {
   background: AppBackground;
   setBackground: (background: AppBackground) => void;
   defaultSolidBackgrounds: SolidBackground[];
-  cardOpacity: number;
-  setCardOpacity: (opacity: number) => void;
-  cardBlur: number;
-  setCardBlur: (blur: number) => void;
-  backgroundBlur: number;
-  setBackgroundBlur: (blur: number) => void;
   resetToDefault: () => void;
   // Persistent image storage - keeps last uploaded image even when using solid colors
   lastUploadedImage: string | null;
@@ -113,12 +107,6 @@ const AppBackgroundContext = createContext<AppBackgroundContextType>({
   background: DEFAULT_BACKGROUND,
   setBackground: () => {},
   defaultSolidBackgrounds: DEFAULT_SOLID_BACKGROUNDS,
-  cardOpacity: 0.15, // 15% opacity - within 0-20% range
-  setCardOpacity: () => {},
-  cardBlur: 0.5, // 50% blur - within 0-1 range
-  setCardBlur: () => {},
-  backgroundBlur: 0.0, // 0% background blur by default
-  setBackgroundBlur: () => {},
   resetToDefault: () => {},
   lastUploadedImage: null,
   setLastUploadedImage: () => {}
@@ -126,9 +114,6 @@ const AppBackgroundContext = createContext<AppBackgroundContextType>({
 
 export function AppBackgroundProvider({ children }: { children: React.ReactNode }) {
   const [background, setBackground] = useState<AppBackground>(DEFAULT_BACKGROUND);
-  const [cardOpacity, setCardOpacity] = useState(0.15); // Default 15% opacity - within 0-20% range
-  const [cardBlur, setCardBlur] = useState(0.5); // Default 50% blur - within 0-1 range
-  const [backgroundBlur, setBackgroundBlur] = useState(0.0); // Default 0% background blur
   const [lastUploadedImage, setLastUploadedImage] = useState<string | null>(null);
   const { theme, resolvedTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
@@ -160,7 +145,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
           if (loadedForUserRef.current === currentUserId) {
             // Still ensure the background is applied to DOM in case it was cleared
             if (background.type !== 'solid' || background.color !== DEFAULT_BACKGROUND.color) {
-              applyBackgroundToDOM(background, cardOpacity, resolvedTheme || 'light');
+              applyBackgroundToDOM(background, resolvedTheme || 'light');
             }
             return;
           }
@@ -247,25 +232,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
           }
         }
 
-        // Always load card opacity and blur from localStorage
-        const savedOpacity = localStorage.getItem('card-opacity');
-        if (savedOpacity) {
-          const opacity = parseFloat(savedOpacity);
-          setCardOpacity(opacity);
-        }
-
-        const savedBlur = localStorage.getItem('card-blur');
-        if (savedBlur) {
-          const blur = parseFloat(savedBlur);
-          setCardBlur(blur);
-        }
-
-        const savedBackgroundBlur = localStorage.getItem('background-blur');
-        if (savedBackgroundBlur) {
-          const blur = parseFloat(savedBackgroundBlur);
-          setBackgroundBlur(blur);
-        }
-
         setIsInitialized(true);
       } catch (error) {
         setIsInitialized(true);
@@ -306,12 +272,12 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
     }
   };
 
-  // Apply background when theme or background settings change (NOT card opacity)
+  // Apply background when theme or background settings change
   useEffect(() => {
     if (!isInitialized || !resolvedTheme) return;
 
     // Apply background immediately for visual feedback
-    applyBackgroundToDOM(background, cardOpacity, resolvedTheme);
+    applyBackgroundToDOM(background, resolvedTheme);
 
     // Clear any existing timeout
     if (saveTimeoutRef.current) {
@@ -347,60 +313,13 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
     };
   }, [background, resolvedTheme, isInitialized, isAuthenticated]);
 
-  // Handle card opacity changes separately to avoid triggering background changes
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    try {
-      localStorage.setItem('card-opacity', cardOpacity.toString());
-      // Only update the card opacity CSS variable, don't re-apply entire background
-      const root = document.documentElement;
-      root.style.setProperty('--card-opacity', cardOpacity.toString());
-    } catch (error) {
-      // Failed to save card opacity
-    }
-  }, [cardOpacity, isInitialized]);
-
-  // Handle card blur changes separately to avoid triggering background changes
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    try {
-      localStorage.setItem('card-blur', cardBlur.toString());
-      // Update the card blur CSS variable
-      const root = document.documentElement;
-      root.style.setProperty('--card-blur', cardBlur.toString());
-    } catch (error) {
-      // Failed to save card blur
-    }
-  }, [cardBlur, isInitialized]);
-
-  // Handle background blur changes
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    try {
-      localStorage.setItem('background-blur', backgroundBlur.toString());
-      // Update the background blur CSS variable
-      const root = document.documentElement;
-      root.style.setProperty('--background-blur', `${backgroundBlur * 20}px`); // Scale 0-1 to 0-20px
-    } catch (error) {
-      // Failed to save background blur
-    }
-  }, [backgroundBlur, isInitialized]);
-
   // Force re-apply background when theme changes (additional safety)
   useEffect(() => {
     if (!isInitialized || !resolvedTheme) return;
 
     // Small delay to ensure theme has been applied to DOM
     const timeoutId = setTimeout(() => {
-      applyBackgroundToDOM(background, cardOpacity, resolvedTheme);
-      // Also re-apply card opacity and blur after theme change
-      const root = document.documentElement;
-      root.style.setProperty('--card-opacity', cardOpacity.toString());
-      root.style.setProperty('--card-blur', cardBlur.toString());
-      root.style.setProperty('--background-blur', `${backgroundBlur * 20}px`);
+      applyBackgroundToDOM(background, resolvedTheme);
     }, 100);
 
     return () => clearTimeout(timeoutId);
@@ -417,7 +336,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
       // If we have an image background but the CSS variable is missing, re-apply
       if (background.type === 'image' && background.url && !currentBgImage) {
-        applyBackgroundToDOM(background, cardOpacity, resolvedTheme);
+        applyBackgroundToDOM(background, resolvedTheme);
       }
     };
 
@@ -426,7 +345,7 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
     const timeoutId = setTimeout(checkAndReapplyBackground, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [background, cardOpacity, backgroundBlur, resolvedTheme, isInitialized]);
+  }, [background, resolvedTheme, isInitialized]);
 
   // Handle subscription changes - reset to default if subscription expires and user has custom image background
   useEffect(() => {
@@ -441,9 +360,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
 
   const resetToDefault = () => {
     setBackground(DEFAULT_BACKGROUND);
-    setCardOpacity(0.15); // Reset to 15% opacity
-    setCardBlur(0.5); // Reset to 50% blur
-    setBackgroundBlur(0.0); // Reset to 0% background blur
   };
 
   return (
@@ -451,12 +367,6 @@ export function AppBackgroundProvider({ children }: { children: React.ReactNode 
       background,
       setBackground,
       defaultSolidBackgrounds: DEFAULT_SOLID_BACKGROUNDS,
-      cardOpacity,
-      setCardOpacity,
-      cardBlur,
-      setCardBlur,
-      backgroundBlur,
-      setBackgroundBlur,
       resetToDefault,
       lastUploadedImage,
       setLastUploadedImage
@@ -487,10 +397,8 @@ function updateOverlayOpacity(background: AppBackground, theme: string) {
 }
 
 // Helper function to apply background to DOM with theme awareness
-function applyBackgroundToDOM(background: AppBackground, cardOpacity: number, theme: string) {
+function applyBackgroundToDOM(background: AppBackground, theme: string) {
   const root = document.documentElement;
-
-  // Note: Card opacity is now handled separately to avoid triggering background changes
 
   if (background.type === 'solid') {
     // Use the resolved theme from next-themes

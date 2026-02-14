@@ -124,7 +124,7 @@ const RandomPagesHeader = () => {
               size="md"
             />
             {lineFeaturesEnabled && (
-              <div className="flex items-center gap-2 rounded-2xl border border-border px-2 py-1 bg-background/80 backdrop-blur-md">
+              <div className="flex items-center gap-2 rounded-2xl border border-border px-2 py-1 bg-background">
                 <Switch
                   checked={denseMode}
                   onCheckedChange={handleDenseModeToggle}

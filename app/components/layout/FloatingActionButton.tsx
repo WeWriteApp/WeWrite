@@ -8,6 +8,7 @@ import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../providers/AuthProvider';
 import { isPWA } from '../../utils/pwa-detection';
+import { MOBILE_BREAKPOINT } from '../../constants/layout';
 import { usePageVisibility } from '../../hooks/usePageVisibility';
 import { buildNewPageUrl } from '../../utils/pageId';
 
@@ -82,7 +83,7 @@ export default function FloatingActionButton() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);

@@ -461,7 +461,7 @@ export default function UserMapTab({ userId, username, isOwnContent = false }: U
         </div>
 
         {/* Map overlay with page count */}
-        <div className="absolute top-4 left-4 bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-sm">
+        <div className="absolute top-4 left-4 bg-background border border-border rounded-lg px-3 py-2 shadow-sm">
           <div className="flex items-center gap-2 text-sm">
             <Icon name="MapPin" size={16} className="text-primary" />
             <span className="font-medium">{pages.length}</span>

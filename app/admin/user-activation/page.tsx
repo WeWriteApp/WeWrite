@@ -142,7 +142,7 @@ export default function UserActivationPage() {
   const handleUserSelect = (user: UserActivationData) => {
     if (isGlobalDrawerActive && !isDesktop) {
       // On mobile in drawer: navigate to user details subpage
-      navigateInDrawer(`users/${user.uid}`);
+      navigateInDrawer(`admin/users/${user.uid}`);
     } else {
       // On desktop: open SideDrawer
       setSelectedUserId(user.uid);

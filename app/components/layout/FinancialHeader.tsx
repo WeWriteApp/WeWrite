@@ -330,7 +330,7 @@ export default function FinancialHeader({
     <>
       {/* Mobile: Full-width sticky header - card style with bottom border */}
       <header
-        className={cn(headerClasses, "md:hidden")}
+        className={cn(headerClasses, "lg:hidden")}
         style={headerStyle}
       >
         <div className="mx-auto px-5 max-w-4xl">
@@ -340,7 +340,7 @@ export default function FinancialHeader({
 
       {/* Desktop: Full-width sticky header respecting sidebar - card style with bottom border */}
       <header
-        className={cn(headerClasses, "hidden md:block")}
+        className={cn(headerClasses, "hidden lg:block")}
         style={headerStyle}
       >
         <div

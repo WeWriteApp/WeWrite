@@ -266,7 +266,7 @@ export function ChallengeWrapper({
       {/* Loading state for visible widget */}
       {showLoading && state.status === 'loading' && showVisibleWidget && (
         <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Icon name="Loader" className="animate-spin" size={16} />
+          <Icon name="Loader" size={16} />
           Loading security check...
         </div>
       )}

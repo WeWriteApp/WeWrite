@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import NavPageLayout from "../components/layout/NavPageLayout";
 import { LottieAnimation, TrophyAnimation, StarAnimation, FireAnimation } from "../components/ui/LottieAnimation";
+import { useLeaderboardData } from "../hooks/useLeaderboardData";
 
 // Types
 type UserLeaderboardCategory = 'pages-created' | 'links-received' | 'sponsors-gained' | 'page-views';
@@ -422,14 +423,14 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
           {/* Navigation Arrows - Desktop only */}
           <button
             onClick={() => navigateCategory('prev')}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
             aria-label="Previous leaderboard"
           >
             <Icon name="ChevronLeft" size={20} />
           </button>
           <button
             onClick={() => navigateCategory('next')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:bg-muted transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
             aria-label="Next leaderboard"
           >
             <Icon name="ChevronRight" size={20} />
@@ -578,28 +579,20 @@ function LeaderboardContent() {
     type: 'user' | 'page';
     categoryId: string;
   } | null>(null);
-  
-  const [userLeaderboardData, setUserLeaderboardData] = useState<Record<UserLeaderboardCategory, LeaderboardUser[]>>({
-    'pages-created': [],
-    'links-received': [],
-    'sponsors-gained': [],
-    'page-views': []
-  });
-  
-  const [pageLeaderboardData, setPageLeaderboardData] = useState<Record<PageLeaderboardCategory, LeaderboardPage[]>>({
-    'new-supporters': [],
-    'most-replies': [],
-    'most-views': [],
-    'most-links': []
-  });
-  
-  const [userLoading, setUserLoading] = useState(true);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [userError, setUserError] = useState<string | null>(null);
-  const [pageError, setPageError] = useState<string | null>(null);
 
-  // PERFORMANCE: Track which categories have full data loaded (lazy loading)
-  const [fullyLoadedCategories, setFullyLoadedCategories] = useState<Set<string>>(new Set());
+  // Consolidated data fetching hook
+  const {
+    userData: userLeaderboardData,
+    pageData: pageLeaderboardData,
+    userLoading,
+    pageLoading,
+    userError,
+    pageError,
+    fetchLeaderboards,
+    fullyLoadedCategories,
+    setFullyLoadedCategories,
+    resetFullyLoaded,
+  } = useLeaderboardData(selectedMonth);
 
   // Parse URL params on mount for detail view
   useEffect(() => {
@@ -624,7 +617,7 @@ function LeaderboardContent() {
       }
 
       // PERFORMANCE: Mark this category for full load since we're going directly to detail view
-      // The fetchUserLeaderboards/fetchPageLeaderboards effect will handle the actual fetch
+      // The fetchLeaderboards effect will handle the actual fetch
       setFullyLoadedCategories(prev => new Set([...prev, `${viewType}-${categoryParam}-pending`]));
     }
   }, [searchParams]);
@@ -632,13 +625,12 @@ function LeaderboardContent() {
   // Handle month change
   const handleMonthChange = useCallback((month: string) => {
     setSelectedMonth(month);
-    // PERFORMANCE: Reset fully loaded categories when month changes
-    setFullyLoadedCategories(new Set());
+    resetFullyLoaded();
     // Update URL
     const params = new URLSearchParams(searchParams.toString());
     params.set('month', month);
     router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
-  }, [router, searchParams]);
+  }, [router, searchParams, resetFullyLoaded]);
 
   // Handle opening detail view
   const handleOpenDetail = useCallback((type: 'user' | 'page', categoryId: string) => {
@@ -653,13 +645,9 @@ function LeaderboardContent() {
     // PERFORMANCE: Lazy load full data for this category if not already loaded
     const categoryKey = `${type}-${categoryId}`;
     if (!fullyLoadedCategories.has(categoryKey)) {
-      if (type === 'user') {
-        fetchUserLeaderboards(true, categoryId);
-      } else {
-        fetchPageLeaderboards(true, categoryId);
-      }
+      fetchLeaderboards(type, true, categoryId);
     }
-  }, [router, selectedMonth, fullyLoadedCategories, fetchUserLeaderboards, fetchPageLeaderboards]);
+  }, [router, selectedMonth, fullyLoadedCategories, fetchLeaderboards]);
 
   // Handle closing detail view
   const handleCloseDetail = useCallback(() => {
@@ -670,106 +658,6 @@ function LeaderboardContent() {
     router.replace(`/leaderboard?${params.toString()}`, { scroll: false });
   }, [router, selectedMonth]);
 
-  // PERFORMANCE: Fetch user leaderboards with lazy loading (5 items for carousel, 20 on expand)
-  const fetchUserLeaderboards = useCallback(async (fullLoad = false, specificCategory?: string) => {
-    // If fetching a specific category for detail view, don't show global loading
-    if (!specificCategory) {
-      setUserLoading(true);
-    }
-    setUserError(null);
-
-    // PERFORMANCE: Only fetch 5 items initially for carousel view
-    const limit = fullLoad ? 20 : 5;
-    const categoriesToFetch = specificCategory
-      ? userCategories.filter(c => c.id === specificCategory)
-      : userCategories;
-
-    try {
-      const results = await Promise.all(
-        categoriesToFetch.map(async (category) => {
-          const response = await fetch(
-            `/api/leaderboard?type=user&category=${category.id}&month=${selectedMonth}&limit=${limit}`
-          );
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${category.id} leaderboard`);
-          }
-          const data = await response.json();
-          return { category: category.id, data: data.data || [] };
-        })
-      );
-
-      setUserLeaderboardData(prev => {
-        const newData = { ...prev };
-        results.forEach(result => {
-          newData[result.category as UserLeaderboardCategory] = result.data;
-        });
-        return newData;
-      });
-
-      // Track fully loaded categories
-      if (fullLoad && specificCategory) {
-        setFullyLoadedCategories(prev => new Set([...prev, `user-${specificCategory}`]));
-      }
-    } catch (err) {
-      console.error('Error fetching user leaderboards:', err);
-      setUserError('Unable to load user leaderboards.');
-    } finally {
-      if (!specificCategory) {
-        setUserLoading(false);
-      }
-    }
-  }, [selectedMonth]);
-
-  // PERFORMANCE: Fetch page leaderboards with lazy loading (5 items for carousel, 20 on expand)
-  const fetchPageLeaderboards = useCallback(async (fullLoad = false, specificCategory?: string) => {
-    // If fetching a specific category for detail view, don't show global loading
-    if (!specificCategory) {
-      setPageLoading(true);
-    }
-    setPageError(null);
-
-    // PERFORMANCE: Only fetch 5 items initially for carousel view
-    const limit = fullLoad ? 20 : 5;
-    const categoriesToFetch = specificCategory
-      ? pageCategories.filter(c => c.id === specificCategory)
-      : pageCategories;
-
-    try {
-      const results = await Promise.all(
-        categoriesToFetch.map(async (category) => {
-          const response = await fetch(
-            `/api/leaderboard?type=page&category=${category.id}&month=${selectedMonth}&limit=${limit}`
-          );
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${category.id} leaderboard`);
-          }
-          const data = await response.json();
-          return { category: category.id, data: data.data || [] };
-        })
-      );
-
-      setPageLeaderboardData(prev => {
-        const newData = { ...prev };
-        results.forEach(result => {
-          newData[result.category as PageLeaderboardCategory] = result.data;
-        });
-        return newData;
-      });
-
-      // Track fully loaded categories
-      if (fullLoad && specificCategory) {
-        setFullyLoadedCategories(prev => new Set([...prev, `page-${specificCategory}`]));
-      }
-    } catch (err) {
-      console.error('Error fetching page leaderboards:', err);
-      setPageError('Unable to load page leaderboards.');
-    } finally {
-      if (!specificCategory) {
-        setPageLoading(false);
-      }
-    }
-  }, [selectedMonth]);
-
   // Fetch data on mount and when month changes
   useEffect(() => {
     // PERFORMANCE: Check if we're starting in detail view (from URL params)
@@ -779,16 +667,16 @@ function LeaderboardContent() {
     if (viewType && categoryParam) {
       // Starting in detail view - fetch full data for that category, minimal for others
       if (viewType === 'user') {
-        fetchUserLeaderboards(true, categoryParam);
-        fetchPageLeaderboards(false);
+        fetchLeaderboards('user', true, categoryParam);
+        fetchLeaderboards('page', false);
       } else {
-        fetchUserLeaderboards(false);
-        fetchPageLeaderboards(true, categoryParam);
+        fetchLeaderboards('user', false);
+        fetchLeaderboards('page', true, categoryParam);
       }
     } else {
       // Normal carousel view - fetch minimal data for all
-      fetchUserLeaderboards(false);
-      fetchPageLeaderboards(false);
+      fetchLeaderboards('user', false);
+      fetchLeaderboards('page', false);
     }
   }, [selectedMonth]); // Only refetch when month changes, not on every function reference change
 
@@ -956,7 +844,7 @@ function LeaderboardContent() {
               data={userLeaderboardData[category.id] || []}
               loading={userLoading}
               error={userError}
-              onRetry={fetchUserLeaderboards}
+              onRetry={() => fetchLeaderboards('user')}
               onBack={handleCloseDetail}
               selectedMonth={selectedMonth}
               renderEntry={renderUserEntry}
@@ -975,7 +863,7 @@ function LeaderboardContent() {
               data={pageLeaderboardData[category.id] || []}
               loading={pageLoading}
               error={pageError}
-              onRetry={fetchPageLeaderboards}
+              onRetry={() => fetchLeaderboards('page')}
               onBack={handleCloseDetail}
               selectedMonth={selectedMonth}
               renderEntry={renderPageEntry}
@@ -1036,7 +924,7 @@ function LeaderboardContent() {
           data={userLeaderboardData}
           loading={userLoading}
           error={userError}
-          onRetry={fetchUserLeaderboards}
+          onRetry={() => fetchLeaderboards('user')}
           renderEntry={renderUserEntry}
           type="user"
           onOpenDetail={handleOpenDetail}
@@ -1055,7 +943,7 @@ function LeaderboardContent() {
           data={pageLeaderboardData}
           loading={pageLoading}
           error={pageError}
-          onRetry={fetchPageLeaderboards}
+          onRetry={() => fetchLeaderboards('page')}
           renderEntry={renderPageEntry}
           type="page"
           onOpenDetail={handleOpenDetail}

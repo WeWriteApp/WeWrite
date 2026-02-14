@@ -477,8 +477,10 @@ const DrawerContent = React.forwardRef<
         data-state={open ? "open" : "closed"}
         className={cn(
           drawerVariants({ side }),
+          // Elevated surface background on wrapper (ensures opacity)
+          "bg-[var(--card-bg)] overflow-hidden",
           // Extend background below to cover bounce overshoot
-          "after:absolute after:left-0 after:right-0 after:top-full after:h-32 after:bg-background",
+          "after:absolute after:left-0 after:right-0 after:top-full after:h-32 after:bg-[var(--card-bg)]",
           // Apply className here so z-index classes work on the wrapper
           className
         )}
@@ -492,9 +494,9 @@ const DrawerContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
-            // Fully opaque background
+            // Elevated surface background (white in light, dark grey in dark)
             "flex flex-col h-full p-0 shadow-2xl border-subtle",
-            "bg-background",
+            "bg-[var(--card-bg)]",
             // Safe area support for bottom drawer
             "pb-safe",
             // Match the wrapper's rounded corners

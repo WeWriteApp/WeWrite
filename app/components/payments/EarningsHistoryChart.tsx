@@ -104,7 +104,7 @@ export default function EarningsHistoryChart() {
   const recentHighlightCount = Math.max(3, Math.min(8, chartData.length));
 
   return (
-    <Card className="backdrop-blur-md bg-card/80 border border-border/60 shadow-xl">
+    <Card className="bg-card border border-border/60 shadow-xl">
       <CardHeader className="pb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base sm:text-lg">Earnings over time</CardTitle>
         <div className="flex flex-wrap gap-2">

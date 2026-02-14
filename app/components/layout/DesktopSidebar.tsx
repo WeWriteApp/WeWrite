@@ -9,6 +9,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useNavigationOrder } from '../../contexts/NavigationOrderContext';
 import { useNavigationPreloader } from '../../hooks/useNavigationPreloader';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
+import { useNavigationItems } from '../../hooks/useNavigationItems';
 import MapEditor from "../editor/MapEditor";
 import { cn } from "../../lib/utils";
 import { WarningDot } from '../ui/warning-dot';
@@ -16,9 +17,7 @@ import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
-import { buildNewPageUrl } from '../../utils/pageId';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
-import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 // ============================================================================
 // CONSTANTS
@@ -243,14 +242,11 @@ function SidebarContent({
   const emailVerificationStatus = useEmailVerificationStatus();
   const { handleButtonPress, isNavigatingTo, targetRoute } = useOptimisticNavigation();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { isEnabled } = useFeatureFlags();
-  const groupsEnabled = isEnabled('groups');
+  const navigationItems = useNavigationItems();
 
   // Computed states
   const showContent = isExpanded || isHovering;
   const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
-  const isUserAdmin = user?.isAdmin === true;
-  const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
   // Settings warning status
   const criticalSettingsStatus = (() => {
@@ -263,24 +259,10 @@ function SidebarContent({
     return null;
   })();
 
-  // Navigation config
-  const navigationItemsConfig: Record<string, { icon: string; label: string; href: string; action?: () => void }> = {
-    'home': { icon: 'Home', label: 'Home', href: '/' },
-    'search': { icon: 'Search', label: 'Search', href: '/search' },
-    'new': { icon: 'Plus', label: 'New Page', href: '/new', action: () => router.push(buildNewPageUrl()) },
-    'notifications': { icon: 'Bell', label: 'Notifications', href: '/notifications' },
-    'map': { icon: 'Map', label: 'Map', href: '/map' },
-    'leaderboard': { icon: 'Trophy', label: 'Leaderboards', href: '/leaderboard' },
-    'random-pages': { icon: 'Shuffle', label: 'Random', href: '/random-pages' },
-    'trending-pages': { icon: 'TrendingUp', label: 'Trending', href: '/trending-pages' },
-    'following': { icon: 'Heart', label: 'Following', href: '/following' },
-    'recents': { icon: 'Clock', label: 'Recents', href: '/recents' },
-    'invite': { icon: 'UserPlus', label: 'Invite Friends', href: '/invite' },
-    ...(isFeatureEnabled('groups') ? { 'groups': { icon: 'Users', label: 'Groups', href: '/groups' } } : {}),
-    'profile': { icon: 'User', label: 'Profile', href: user ? `/u/${user.uid}` : '/auth/login' },
-    'settings': { icon: 'Settings', label: 'Settings', href: '/settings' },
-    ...(isUserAdmin ? { 'admin': { icon: 'Shield', label: 'Admin', href: '/admin' } } : {}),
-  };
+  // Build record from shared hook for existing rendering code
+  const navigationItemsConfig = Object.fromEntries(
+    navigationItems.map(item => [item.id, item])
+  );
 
   // Build ordered nav items using canonical order
   const orderedItems = sidebarOrder.filter(itemId => navigationItemsConfig[itemId]);
@@ -335,10 +317,10 @@ function SidebarContent({
     <aside
       className={cn(
         // Base positioning
-        "hidden md:flex fixed left-0 top-0 h-screen flex-col",
+        "hidden lg:flex fixed left-0 top-0 h-screen flex-col",
         "z-fixed-toolbar",
         // Simple styling
-        "bg-background/80 backdrop-blur-md border-r border-border",
+        "bg-[var(--card-bg)] border-r border-border",
         // Width transition
         "transition-[width] duration-300 ease-out",
         showContent ? "w-64" : "w-[72px]"

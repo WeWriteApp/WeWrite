@@ -170,9 +170,7 @@ const SideDrawerContent = React.forwardRef<
         aria-describedby={undefined}
         className={cn(
           sideDrawerVariants({ side, size }),
-          // Frosted glass effect
-          "bg-white/95 dark:bg-zinc-900/95",
-          "backdrop-blur-xl",
+          "bg-[var(--card-bg)]",
           "shadow-2xl",
           "border-border",
           className
@@ -210,7 +208,7 @@ const SideDrawerHeader = ({
   <div
     className={cn(
       "flex flex-col space-y-1.5 px-6 py-4 border-b border-border",
-      sticky && "sticky top-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl z-10",
+      sticky && "sticky top-0 bg-[var(--card-bg)] z-10",
       className
     )}
     {...props}
@@ -266,7 +264,7 @@ const SideDrawerFooter = ({
   <div
     className={cn(
       "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 px-6 py-4 border-t border-border",
-      sticky && "sticky bottom-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl z-10",
+      sticky && "sticky bottom-0 bg-[var(--card-bg)] z-10",
       className
     )}
     {...props}

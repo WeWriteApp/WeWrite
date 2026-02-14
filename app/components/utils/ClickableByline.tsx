@@ -35,7 +35,7 @@ export default function ClickableByline({
           {children}
           <span className="flex items-center">
             {isChanging ? (
-              <Icon name="Loading" size={12} className="animate-spin" trigger="loop" />
+              <Icon name="Loading" size={12} trigger="loop" />
             ) : (
               <Icon name="ChevronDown" size={12} className="transition-transform duration-200 ease-in-out group-hover:text-foreground" />
             )}

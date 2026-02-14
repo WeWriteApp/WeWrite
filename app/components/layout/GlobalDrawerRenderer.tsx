@@ -380,7 +380,7 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
   return (
     <div
       className={cn(
-        "flex-shrink-0 border-t border-border bg-background overflow-hidden",
+        "flex-shrink-0 border-t border-border bg-[var(--card-bg)] overflow-hidden",
         "transition-all duration-300 ease-in-out"
       )}
       style={{

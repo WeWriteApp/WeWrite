@@ -670,7 +670,7 @@ function MapPageContent() {
         {/* Top hint text */}
         {mapReady && !showNewPinDrawer && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="bg-background/90 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-lg">
+            <div className="bg-background border border-border rounded-full px-4 py-2 shadow-lg">
               <p className="text-sm text-muted-foreground">Tap to add to the map</p>
             </div>
           </div>

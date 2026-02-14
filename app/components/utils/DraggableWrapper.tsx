@@ -116,7 +116,7 @@ const DraggableWrapper: React.FC<DraggableWrapperProps> = ({
           Reset
         </button>
       </div>
-      <div className="draggable-content border-theme-medium border-t-0 rounded-b-md bg-background/95 backdrop-blur-sm shadow-md">
+      <div className="draggable-content border-theme-medium border-t-0 rounded-b-md bg-background shadow-md">
         {children}
       </div>
     </div>

@@ -120,7 +120,7 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
         {savedSearches.map((search, index) => (
           <div
             key={`${search.term}-${index}`}
-            className="flex items-center bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full text-sm transition-all hover:shadow-sm cursor-pointer group"
+            className="wewrite-card flex items-center text-foreground px-3 py-1.5 text-sm transition-all hover:shadow-sm cursor-pointer group"
           >
             <span
               className="mr-1"

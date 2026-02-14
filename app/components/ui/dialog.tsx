@@ -197,10 +197,8 @@ const DialogContent = React.forwardRef<
         // Subtle slide up + fade animation
         "transition-all duration-200 ease-out",
         "data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out",
-        // Frosted glass effect: mostly opaque white with subtle blur
         "border border-border shadow-lg",
-        "bg-white/95 dark:bg-zinc-900/95",
-        "backdrop-blur-xl",
+        "bg-[var(--card-bg)]",
         className
       )}
       {...props}

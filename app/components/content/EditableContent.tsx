@@ -3,6 +3,7 @@
 import React from 'react';
 import Editor from '../editor/Editor';
 import { InlineError } from '../ui/InlineError';
+import { useHasKeyboard } from '../../hooks/useHasKeyboard';
 
 /**
  * EditableContent - Pure Editing Component
@@ -93,13 +94,14 @@ const EditableContent: React.FC<EditableContentProps> = ({
   className = ''
 }) => {
   // 🎯 ELEGANT: No forced re-renders needed - LinkNode components auto-update via events
+  const hasKeyboard = useHasKeyboard();
 
   return (
     <div className={`wewrite-editable-content ${className}`}>
       {/* Toolbar and controls - temporarily removed for simplified editor */}
       {showToolbar && (
         <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Ctrl+K to insert links</span>
+          {hasKeyboard && <span>Ctrl+K to insert links</span>}
           {onSave && (
             <button
               onClick={() => onSave()}

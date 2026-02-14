@@ -147,7 +147,7 @@ function SessionCard({
             className="flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             {isRevoking ? (
-              <Icon name="Loader" size={16} className="animate-spin" />
+              <Icon name="Loader" size={16} />
             ) : (
               <>
                 <Icon name="LogOut" size={16} className="mr-2" />
@@ -333,7 +333,7 @@ export default function SecurityPage() {
                 >
                   {isRevokingAll ? (
                     <>
-                      <Icon name="Loader" size={16} className="mr-2 animate-spin" />
+                      <Icon name="Loader" size={16} className="mr-2" />
                       Signing out...
                     </>
                   ) : (

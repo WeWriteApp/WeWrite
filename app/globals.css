@@ -1907,11 +1907,11 @@ a.username-badge-link:has(.text-muted-foreground) {
     --background: 0.00 0 0;
     --foreground: 0.93 0 0;
 
-    /* Card background in dark mode - slightly elevated */
-    --card: 0.15 0 0;
+    /* Card background in dark mode - visibly elevated from black background */
+    --card: 0.21 0 0;
     --card-foreground: 0.93 0 0;
 
-    --popover: 0.10 0 0;
+    --popover: 0.17 0 0;
     --popover-foreground: 0.93 0 0;
 
     /* Primary uses dynamic accent color */
@@ -2130,23 +2130,15 @@ iframe[src*="js.stripe.com"] {
   background-color: var(--card-bg-hover) !important;
 }
 
-/* Expanded toolbar - ALWAYS opaque white/black, NO hover/active states */
+/* Expanded toolbar - ALWAYS solid card bg, NO hover/active states */
 .wewrite-card[data-expanded="true"],
 .wewrite-card[data-expanded="true"]:hover,
 .wewrite-card[data-expanded="true"]:active,
 .wewrite-card[data-expanded="true"]:focus {
-  background-color: white !important;
+  background-color: var(--card-bg) !important;
   border-color: var(--card-border) !important;
-  backdrop-filter: none !important;
   transform: none !important;
   box-shadow: var(--card-shadow) !important;
-}
-
-.dark .wewrite-card[data-expanded="true"],
-.dark .wewrite-card[data-expanded="true"]:hover,
-.dark .wewrite-card[data-expanded="true"]:active,
-.dark .wewrite-card[data-expanded="true"]:focus {
-  background-color: black !important;
 }
 
 /* Disable ALL hover/active states on mobile/touch devices to prevent sticky hover */
@@ -2161,20 +2153,12 @@ iframe[src*="js.stripe.com"] {
     transform: none !important;
   }
 
-  /* Ensure expanded toolbar stays white on mobile regardless of touch state */
+  /* Ensure expanded toolbar uses card-bg on mobile regardless of touch state */
   .wewrite-card[data-expanded="true"],
   .wewrite-card[data-expanded="true"]:hover,
   .wewrite-card[data-expanded="true"]:active,
   .wewrite-card[data-expanded="true"]:focus {
-    background-color: white !important;
-    backdrop-filter: none !important;
-  }
-
-  .dark .wewrite-card[data-expanded="true"],
-  .dark .wewrite-card[data-expanded="true"]:hover,
-  .dark .wewrite-card[data-expanded="true"]:active,
-  .dark .wewrite-card[data-expanded="true"]:focus {
-    background-color: black !important;
+    background-color: var(--card-bg) !important;
   }
 }
 
@@ -2275,10 +2259,8 @@ textarea.wewrite-input.wewrite-input-warning:focus {
  * - Theme-aware colors
  */
 .wewrite-input {
-  /* Base glassmorphic styling matching cards */
+  /* Solid background matching cards */
   background-color: var(--card-bg) !important;
-  backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1)) !important;
-  -webkit-backdrop-filter: blur(calc(var(--card-blur) * 20px)) saturate(calc(100% + var(--card-opacity) * 80%)) brightness(calc(1 + var(--card-opacity) * 0.1)) !important;
 
   /* Border and styling */
   border: 1px solid var(--card-border) !important;
@@ -3983,7 +3965,7 @@ button.bg-transparent[type] {
 /* Section header styling */
 .section-header {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-property: box-shadow, background-color, backdrop-filter;
+  transition-property: box-shadow, background-color;
   visibility: visible !important;
   opacity: 1 !important;
   position: relative;
@@ -3993,7 +3975,6 @@ button.bg-transparent[type] {
   position: fixed !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   background-color: oklch(var(--background)) !important;
-  backdrop-filter: blur(8px);
   z-index: var(--z-fixed-header) !important;
   margin: 0 !important;
   padding-left: 1.5rem !important;
@@ -4144,11 +4125,10 @@ button.bg-transparent[type] {
   padding-left: 0;
 }
 
-/* Enhanced shadow and backdrop when sticky - Reduced blur for subtlety */
+/* Enhanced shadow when sticky */
 .section-header-enhanced {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
-  background-color: oklch(var(--background) / 0.95);
+  background-color: oklch(var(--background));
 }
 
 .dark .section-header-enhanced {

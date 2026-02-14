@@ -126,11 +126,10 @@ export const cardThemeClasses = {
     'transition-all duration-200 ease-in-out'
   ].join(' '),
   
-  // Floating card styling (glassmorphism)
+  // Floating card styling
   floatingCard: [
     'bg-[var(--card-floating-bg)]',
     'hover:bg-[var(--card-floating-bg-hover)]',
-    'backdrop-blur-xl saturate-180',
     'border border-[var(--card-border)]',
     'text-[var(--card-text)]',
     'transition-all duration-300 ease-in-out'

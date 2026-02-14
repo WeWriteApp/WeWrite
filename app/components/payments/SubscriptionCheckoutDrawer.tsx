@@ -476,7 +476,7 @@ function CheckoutForm({
       </div>
 
       {/* Fixed footer with subscribe button */}
-      <div className="flex-shrink-0 border-t border-border/50 p-4 pb-12 bg-background/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 border-t border-border/50 p-4 pb-12 bg-background">
         <Button
           onClick={handleSubmit}
           className={`w-full h-12 text-base font-medium text-white ${getButtonColorClass()}`}

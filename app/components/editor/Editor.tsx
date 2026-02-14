@@ -1512,7 +1512,7 @@ const Editor: React.FC<EditorProps> = ({
             // Desktop: Use Dialog via portal
             showSuggestionModal && typeof document !== 'undefined' && createPortal(
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
                 onClick={() => {
                   setShowSuggestionModal(false);
                   setActiveSuggestionForModal(null);

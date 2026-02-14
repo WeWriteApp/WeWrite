@@ -54,7 +54,7 @@ function InfoTooltip({ text }: { text: string }) {
       </span>
       {isVisible && (
         <div
-          className="fixed z-[9999] px-3 py-2 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm text-foreground text-xs rounded-lg shadow-lg border whitespace-normal w-64 pointer-events-none"
+          className="fixed z-[9999] px-3 py-2 bg-[var(--card-bg)] text-foreground text-xs rounded-lg shadow-lg border whitespace-normal w-64 pointer-events-none"
           style={{
             top: position.top,
             left: position.left,
@@ -366,19 +366,19 @@ export default function MonthlyFinancialsPage() {
                       Production subscribers and allocations will not appear here.
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 text-xs">
-                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                      <div className="p-2 bg-[var(--card-bg)] rounded">
                         <p className="text-yellow-600 dark:text-yellow-400">Environment</p>
                         <p className="font-mono font-medium">{data.debug.environment}</p>
                       </div>
-                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                      <div className="p-2 bg-[var(--card-bg)] rounded">
                         <p className="text-yellow-600 dark:text-yellow-400">Stripe Mode</p>
                         <p className="font-mono font-medium">{data.debug.stripeMode}</p>
                       </div>
-                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                      <div className="p-2 bg-[var(--card-bg)] rounded">
                         <p className="text-yellow-600 dark:text-yellow-400">Firebase Collection</p>
                         <p className="font-mono font-medium">{data.debug.firebaseCollection}</p>
                       </div>
-                      <div className="p-2 bg-white/50 dark:bg-black/20 rounded">
+                      <div className="p-2 bg-[var(--card-bg)] rounded">
                         <p className="text-yellow-600 dark:text-yellow-400">Records</p>
                         <p className="font-mono font-medium">{data.debug.stripeSubscriptionCount} Stripe / {data.debug.firebaseRecordCount} Firebase</p>
                       </div>

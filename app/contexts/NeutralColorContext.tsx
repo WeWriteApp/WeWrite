@@ -100,15 +100,9 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
       root.style.setProperty('--popover', isDark ? darkPopover : lightPopover);
       root.style.setProperty('--popover-foreground', isDark ? darkPopoverForeground : lightPopoverForeground);
 
-      // Card theme system variables - pure grayscale
-      const cardOpacity = parseFloat(getComputedStyle(root).getPropertyValue('--card-opacity').trim()) || 0.15;
-      const cardOpacityValue = isDark ? cardOpacity * 0.4 : cardOpacity;
-      const cardHoverOpacityValue = isDark ? (cardOpacity * 0.4) + 0.02 : cardOpacity + 0.05;
-
-      // Pure white/black card backgrounds with zero chroma
-      const cardBgL = isDark ? 1.0 : 1.0;
-      root.style.setProperty('--card-bg', `oklch(${cardBgL.toFixed(2)} 0.00 0.0 / ${cardOpacityValue.toFixed(3)})`);
-      root.style.setProperty('--card-bg-hover', `oklch(${cardBgL.toFixed(2)} 0.00 0.0 / ${cardHoverOpacityValue.toFixed(3)})`);
+      // Card theme system variables - solid backgrounds
+      root.style.setProperty('--card-bg', isDark ? 'oklch(0.16 0.00 0)' : 'oklch(1.00 0.00 0)');
+      root.style.setProperty('--card-bg-hover', isDark ? 'oklch(0.20 0.00 0)' : 'oklch(0.97 0.00 0)');
 
       // Pure grayscale borders
       const borderL = isDark ? 1.0 : 0.0;

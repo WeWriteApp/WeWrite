@@ -1162,7 +1162,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
   const handleUserSelect = (user: User) => {
     if (isGlobalDrawerActive && !isDesktop) {
       // On mobile in drawer: navigate to user details subpage
-      navigateInDrawer(`users/${user.uid}`);
+      navigateInDrawer(`admin/users/${user.uid}`);
     } else {
       // On desktop: open SideDrawer
       setSelectedUser(user);
