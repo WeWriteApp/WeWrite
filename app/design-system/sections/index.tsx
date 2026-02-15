@@ -39,6 +39,7 @@ import { SaveStatusSection } from './SaveStatusSection';
 import { SearchResultsSection } from './SearchResultsSection';
 import { SegmentedControlSection } from './SegmentedControlSection';
 import { SurfaceElevationSection } from './SurfaceElevationSection';
+import { ShadowSystemSection } from './ShadowSystemSection';
 import { ShinyButtonSection } from './ShinyButtonSection';
 import { TableSection } from './TableSection';
 import { TabsSection } from './TabsSection';
@@ -93,6 +94,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'save-status', label: 'Save Status', component: SaveStatusSection },
   { id: 'search-results', label: 'Search Results', component: SearchResultsSection },
   { id: 'segmented-control', label: 'Segmented Control', component: SegmentedControlSection },
+  { id: 'shadow-system', label: 'Shadow System', component: ShadowSystemSection },
   { id: 'shiny-button', label: 'Shiny Button System', component: ShinyButtonSection },
   { id: 'surface-elevation', label: 'Surface & Elevation', component: SurfaceElevationSection },
   { id: 'table', label: 'Table', component: TableSection },

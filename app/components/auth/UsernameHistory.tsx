@@ -1,3 +1,7 @@
+/**
+ * @deprecated This component is unused (not imported anywhere) and calls a non-existent
+ * /api/username endpoint. Username history is now managed server-side via /api/users/username.
+ */
 "use client";
 import React, { useState, useEffect } from "react";
 import { Icon } from '@/components/ui/Icon';

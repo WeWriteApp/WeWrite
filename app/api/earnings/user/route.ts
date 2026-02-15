@@ -314,6 +314,13 @@ export async function GET(request: NextRequest) {
     // Get earnings sources (incoming allocations) - this applies funding ratio to show only funded amounts
     const incomingAllocations = await getIncomingAllocationsForUser(userId);
 
+    // Get monthly earnings history for the chart
+    const earningsHistoryRecords = await UsdEarningsService.getWriterEarningsHistory(userId, 36);
+    const earningsHistory = earningsHistoryRecords.map(record => ({
+      month: record.month,
+      netEarnings: (record.totalUsdCentsReceived || 0) / 100,
+    }));
+
     // CRITICAL: Use the funded pending amount from getIncomingAllocationsForUser, NOT the raw database value
     // The database stores the full allocation amount, but recipients should only see funded portions
     // (allocations capped by sponsor's actual subscription amount)
@@ -349,7 +356,7 @@ export async function GET(request: NextRequest) {
       pendingBalance: fundedPendingBalance,
       hasEarnings: earningsBreakdown.totalEarnings > 0 || earningsBreakdown.availableBalance > 0 || fundedPendingBalance > 0,
       pendingAllocations: pendingAllocations,
-      earningsHistory: completeData.earnings,
+      earningsHistory: earningsHistory,
       payoutHistory: completeData.payouts
     };
 

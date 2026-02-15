@@ -300,17 +300,22 @@ export const userProfileApi = {
  * USED: checkAvailability (apiClient wrapper), setUsername (profile settings)
  */
 export const usernameApi = {
-  /** Check username availability */
+  /** Check username availability (via consolidated /api/users/username) */
   async checkAvailability(username: string): Promise<ApiResponse> {
-    return apiCall(`/api/auth/username?username=${encodeURIComponent(username)}`);
+    return apiCall(`/api/users/username?username=${encodeURIComponent(username)}`);
   },
 
-  /** Set/update username */
+  /** Set/update username (via consolidated /api/users/username) */
   async setUsername(username: string): Promise<ApiResponse> {
-    return apiCall('/api/auth/username', {
+    return apiCall('/api/users/username', {
       method: 'POST',
       body: JSON.stringify({ username })
     });
+  },
+
+  /** Get cooldown status for the current user */
+  async getCooldownStatus(): Promise<ApiResponse> {
+    return apiCall('/api/users/username?action=cooldown-status');
   }
 };
 
@@ -424,11 +429,22 @@ export async function getUserProfiles(userIds: string[]) {
  */
 export async function checkUsernameAvailability(username: string) {
   const response = await usernameApi.checkAvailability(username);
-  return response.success ? response.data : {
-    isAvailable: false,
-    message: 'Error checking availability',
-    error: response.error,
-    suggestions: []
+  if (!response.success) {
+    return {
+      isAvailable: false,
+      message: 'Error checking availability',
+      error: response.error,
+      suggestions: []
+    };
+  }
+  const data = response.data;
+  // Normalize: /api/users/username returns `available`, client code expects `isAvailable`
+  return {
+    isAvailable: data.available ?? data.isAvailable ?? false,
+    message: data.message || data.error || (data.available ? 'Username is available' : 'Username is already taken'),
+    error: data.error || null,
+    suggestions: data.suggestions || [],
+    cooldown: data.cooldown || null,
   };
 }
 
@@ -529,10 +545,12 @@ export const dailyNotesApi = {
 
 /**
  * Replace addUsername from firebase/auth.ts
+ * Accepts (username) or (userId, username) for call-site compatibility
  */
-export async function addUsername(username: string) {
-  const response = await usernameApi.setUsername(username);
-  return response.success;
+export async function addUsername(usernameOrUserId: string, username?: string) {
+  const actualUsername = username ?? usernameOrUserId;
+  const response = await usernameApi.setUsername(actualUsername);
+  return { success: response.success };
 }
 
 /**

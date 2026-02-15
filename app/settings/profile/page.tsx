@@ -21,7 +21,7 @@ import { useConfirmation } from '../../hooks/useConfirmation';
 import { AlertModal, ConfirmationModal } from '../../components/utils/UnifiedModal';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, signOut } = useAuth();
   const router = useRouter();
 
   // Custom modal hooks
@@ -47,6 +47,10 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+
+  // Cooldown state
+  const [cooldownBlocked, setCooldownBlocked] = useState(false);
+  const [cooldownMessage, setCooldownMessage] = useState('');
 
   useEffect(() => {
     // Wait for auth to finish resolving before attempting to load profile data
@@ -88,6 +92,20 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+
+    // Fetch cooldown status
+    try {
+      const cooldownResult = await usernameApi.getCooldownStatus();
+      if (cooldownResult.success && cooldownResult.data?.blocked) {
+        setCooldownBlocked(true);
+        setCooldownMessage(cooldownResult.data.message || 'Username change is on cooldown.');
+      } else {
+        setCooldownBlocked(false);
+        setCooldownMessage('');
+      }
+    } catch (error) {
+      console.error('Error fetching cooldown status:', error);
     }
   };
 
@@ -329,6 +347,12 @@ export default function ProfilePage() {
               <Label htmlFor="username" className="text-sm font-medium text-foreground">
                 Username
               </Label>
+              {cooldownBlocked && !isEditingUsername && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+                  <Icon name="Clock" size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <p className="text-sm text-amber-700 dark:text-amber-300">{cooldownMessage}</p>
+                </div>
+              )}
               <div className="flex gap-3 items-center">
                 <div className="flex-1">
                   <Input
@@ -349,23 +373,21 @@ export default function ProfilePage() {
                   {isEditingUsername ? (
                     <>
                       <Button
-                        size="sm"
+                        size="icon-sm"
+                        variant="success"
                         onClick={handleSaveUsername}
-                        disabled={loading || !tempUsername.trim()}
-                        className="h-9 px-3"
+                        disabled={loading || !tempUsername.trim() || tempUsername === username}
+                        className={tempUsername !== username ? 'shadow-styled-success' : ''}
                       >
-                        <Icon name="Save" size={16} className="mr-1" />
-                        Save
+                        <Icon name="Check" size={16} />
                       </Button>
                       <Button
-                        size="sm"
+                        size="icon-sm"
                         variant="secondary"
                         onClick={handleCancelUsername}
                         disabled={loading}
-                        className="h-9 px-3"
                       >
-                        <Icon name="X" size={16} className="mr-1" />
-                        Cancel
+                        <Icon name={tempUsername !== username ? "RotateCcw" : "X"} size={16} />
                       </Button>
                     </>
                   ) : (
@@ -373,6 +395,7 @@ export default function ProfilePage() {
                       size="sm"
                       variant="secondary"
                       onClick={handleEditUsername}
+                      disabled={cooldownBlocked}
                       className="h-9 px-3"
                     >
                       <Icon name="Edit3" size={16} className="mr-1" />

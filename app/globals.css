@@ -584,6 +584,69 @@ html, body {
 }
 
 /* ============================================
+   STYLED SHADOWS (Always-On, Color-Matched)
+
+   Unlike the shiny system (which requires shiny mode),
+   these classes provide color-matched shadows that are
+   always visible. Use on colored buttons so the shadow
+   matches the button color instead of being neutral.
+
+   Normal shadow:  neutral/black → use Tailwind shadow-sm, shadow-md, etc.
+   Styled shadow:  color-matched → use .shadow-styled-{color}
+   ============================================ */
+
+/* Primary (blue) */
+.shadow-styled-primary {
+  box-shadow:
+    0 1px 3px oklch(var(--primary) / 0.25),
+    0 2px 8px oklch(var(--primary) / 0.15);
+}
+.shadow-styled-primary:hover {
+  box-shadow:
+    0 2px 6px oklch(var(--primary) / 0.35),
+    0 4px 12px oklch(var(--primary) / 0.2);
+}
+.shadow-styled-primary:active {
+  box-shadow:
+    0 1px 2px oklch(var(--primary) / 0.3),
+    inset 0 1px 2px oklch(var(--primary) / 0.1);
+}
+
+/* Error / Destructive (red) */
+.shadow-styled-error {
+  box-shadow:
+    0 1px 3px oklch(var(--error) / 0.25),
+    0 2px 8px oklch(var(--error) / 0.15);
+}
+.shadow-styled-error:hover {
+  box-shadow:
+    0 2px 6px oklch(var(--error) / 0.35),
+    0 4px 12px oklch(var(--error) / 0.2);
+}
+.shadow-styled-error:active {
+  box-shadow:
+    0 1px 2px oklch(var(--error) / 0.3),
+    inset 0 1px 2px oklch(var(--error) / 0.1);
+}
+
+/* Success (green) */
+.shadow-styled-success {
+  box-shadow:
+    0 1px 3px oklch(var(--success) / 0.25),
+    0 2px 8px oklch(var(--success) / 0.15);
+}
+.shadow-styled-success:hover {
+  box-shadow:
+    0 2px 6px oklch(var(--success) / 0.35),
+    0 4px 12px oklch(var(--success) / 0.2);
+}
+.shadow-styled-success:active {
+  box-shadow:
+    0 1px 2px oklch(var(--success) / 0.3),
+    inset 0 1px 2px oklch(var(--success) / 0.1);
+}
+
+/* ============================================
    SHINY INPUT STYLE
    Skeuomorphic effect for inputs in shiny mode
    ============================================ */

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { cookies } from 'next/headers';
-import { 
-  verifyIdToken, 
-  getFirestoreDocument, 
-  setFirestoreDocument, 
-  updateFirestoreDocument, 
+import {
+  verifyIdToken,
+  getFirestoreDocument,
+  setFirestoreDocument,
+  updateFirestoreDocument,
   queryFirestoreDocuments,
-  updateRtdbData 
+  updateRtdbData
 } from '../../../lib/firebase-rest';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { validateUsernameFormat } from '../../../utils/validationPatterns';
 
 /**
  * Username Management API Route
@@ -30,21 +31,13 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Username is required');
     }
 
-    // Basic username validation
-    if (username.length < 3 || username.length > 30) {
+    // Validate username format using centralized validation
+    const formatValidation = validateUsernameFormat(username);
+    if (!formatValidation.isValid) {
       return createApiResponse({
         isAvailable: false,
-        message: 'Username must be between 3 and 30 characters',
-        error: 'Invalid length',
-        suggestions: []
-      });
-    }
-
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      return createApiResponse({
-        isAvailable: false,
-        message: 'Username can only contain letters, numbers, and underscores',
-        error: 'Invalid characters',
+        message: formatValidation.message,
+        error: formatValidation.error,
         suggestions: []
       });
     }
@@ -144,13 +137,16 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Username is required');
     }
 
-    // Basic username validation
-    if (username.length < 3 || username.length > 30) {
-      return createErrorResponse('BAD_REQUEST', 'Username must be between 3 and 30 characters');
+    // Guard: If user already has a username, they should use /api/users/username for changes
+    const currentUserDoc = await getFirestoreDocument(getCollectionName('users'), currentUserId);
+    if (currentUserDoc.success && currentUserDoc.data?.username) {
+      return createErrorResponse('BAD_REQUEST', 'Use /api/users/username to change an existing username');
     }
 
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      return createErrorResponse('BAD_REQUEST', 'Username can only contain letters, numbers, and underscores');
+    // Validate username format using centralized validation
+    const formatValidation = validateUsernameFormat(username);
+    if (!formatValidation.isValid) {
+      return createErrorResponse('BAD_REQUEST', formatValidation.message || 'Invalid username format');
     }
 
     // Check if username is already taken

@@ -1,3 +1,8 @@
+/**
+ * @deprecated This module is deprecated. Username changes are now handled server-side
+ * via /api/users/username with Firestore batch writes and 30-day cooldown logic.
+ * See app/api/users/username/route.ts and app/api/users/username/cooldown.ts
+ */
 "use client";
 
 import { db } from './config';

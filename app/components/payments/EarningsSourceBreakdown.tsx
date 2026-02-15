@@ -54,7 +54,7 @@ type BreakdownMode = 'pages' | 'sponsors' | 'referrals';
  * - Sponsors: Shows which users are contributing the most
  */
 export default function EarningsSourceBreakdown() {
-  const { earnings, loading } = useEarnings();
+  const { earnings, isLoading: loading } = useEarnings();
   const [mode, setMode] = useState<BreakdownMode>('pages');
   const [historicalEarnings, setHistoricalEarnings] = useState<any[]>([]);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());

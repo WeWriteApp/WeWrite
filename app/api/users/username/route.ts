@@ -1,64 +1,36 @@
 /**
- * Username Management API
- * Provides endpoints for username operations without direct Firebase calls
+ * Username Management API (Primary Route)
+ *
+ * GET:  Check username availability (cooldown-aware) or get cooldown status
+ * POST: Set or update username (with full lifecycle: batch write, old username reservation, cookie update)
+ * PUT:  Generate username suggestions
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { validateUsernameFormat as validateFormat } from '../../../utils/validationPatterns';
+import { checkCooldownForUser, checkAvailabilityWithCooldown } from './cooldown';
+import { parseSignedCookieValue, createSignedCookieValue, SESSION_COOKIE_OPTIONS, type SessionCookieData } from '../../../utils/cookieUtils';
 
 interface UsernameCheckResult {
   available: boolean;
   suggestion?: string;
+  suggestions?: string[];
   error?: string;
+  message?: string;
+  cooldown?: any;
 }
 
-// Username validation regex (same as client-side)
-// Allowed: letters, numbers, underscores, dashes, and periods
-const USERNAME_REGEX = /^[a-zA-Z0-9_.\-]{3,30}$/;
-
 /**
- * Validate username format
+ * Local validation wrapper that maps validationPatterns result to { valid, error }
  */
 function validateUsernameFormat(username: string): { valid: boolean; error?: string } {
-  if (!username) {
-    return { valid: false, error: 'Username is required' };
+  const result = validateFormat(username);
+  if (!result.isValid) {
+    return { valid: false, error: result.message || result.error || 'Invalid username' };
   }
-
-  if (username.length < 3) {
-    return { valid: false, error: 'Username must be at least 3 characters long' };
-  }
-
-  if (username.length > 30) {
-    return { valid: false, error: 'Username must be no more than 30 characters long' };
-  }
-
-  // Check for whitespace
-  if (/\s/.test(username)) {
-    return { valid: false, error: 'Username cannot contain spaces or whitespace' };
-  }
-
-  if (!USERNAME_REGEX.test(username)) {
-    return { valid: false, error: 'Username can only contain letters, numbers, underscores, dashes, and periods' };
-  }
-
-  // Cannot start or end with a period, dash, or underscore
-  if (/^[._\-]|[._\-]$/.test(username)) {
-    return { valid: false, error: 'Username cannot start or end with a period, dash, or underscore' };
-  }
-
-  // Cannot have consecutive special characters
-  if (/[._\-]{2,}/.test(username)) {
-    return { valid: false, error: 'Username cannot have consecutive periods, dashes, or underscores' };
-  }
-
-  // Check for reserved usernames
-  const reservedUsernames = ['admin', 'api', 'www', 'mail', 'ftp', 'localhost', 'root', 'support', 'help'];
-  if (reservedUsernames.includes(username.toLowerCase())) {
-    return { valid: false, error: 'This username is reserved' };
-  }
-
   return { valid: true };
 }
 
@@ -67,11 +39,9 @@ function validateUsernameFormat(username: string): { valid: boolean; error?: str
  */
 function generateUsernameCandidates(baseUsername: string): string[] {
   const candidates: string[] = [];
-  // Allow letters, numbers, underscores, dashes, and periods
   const cleanBase = baseUsername.replace(/[^a-zA-Z0-9_.\-]/g, '').toLowerCase();
 
   if (cleanBase.length >= 3) {
-    // Add variations with numbers
     const currentYear = new Date().getFullYear();
     candidates.push(`${cleanBase}${Math.floor(Math.random() * 100)}`);
     candidates.push(`${cleanBase}_${Math.floor(Math.random() * 1000)}`);
@@ -82,8 +52,6 @@ function generateUsernameCandidates(baseUsername: string): string[] {
     candidates.push(`${cleanBase}_real`);
   }
 
-  // Filter out any that are too long or don't match the format
-  // Also ensure they don't start/end with special chars or have consecutive special chars
   return candidates.filter(c =>
     c.length >= 3 &&
     c.length <= 30 &&
@@ -94,7 +62,7 @@ function generateUsernameCandidates(baseUsername: string): string[] {
 }
 
 /**
- * Check if a username is available (helper for suggestion checking)
+ * Check if a username is available (simple helper for suggestion checking)
  */
 async function isUsernameAvailable(db: FirebaseFirestore.Firestore, username: string): Promise<boolean> {
   const [usersQuery, usernameDoc] = await Promise.all([
@@ -106,7 +74,18 @@ async function isUsernameAvailable(db: FirebaseFirestore.Firestore, username: st
       .doc(username.toLowerCase())
       .get()
   ]);
-  
+
+  // If the usernames doc is reserved and expired, treat as available
+  if (usernameDoc.exists) {
+    const data = usernameDoc.data();
+    if (data?.status === 'reserved' && data?.reservedUntil) {
+      const expiry = new Date(data.reservedUntil);
+      if (new Date() > expiry) {
+        return usersQuery.empty;
+      }
+    }
+  }
+
   return usersQuery.empty && !usernameDoc.exists;
 }
 
@@ -116,35 +95,49 @@ async function isUsernameAvailable(db: FirebaseFirestore.Firestore, username: st
 async function generateVerifiedSuggestions(db: FirebaseFirestore.Firestore, baseUsername: string, maxSuggestions: number = 3): Promise<string[]> {
   const candidates = generateUsernameCandidates(baseUsername);
   const availableSuggestions: string[] = [];
-  
-  // Check candidates in parallel, but limit concurrent checks
+
   for (const candidate of candidates) {
     if (availableSuggestions.length >= maxSuggestions) break;
-    
+
     try {
-      const isAvailable = await isUsernameAvailable(db, candidate);
-      if (isAvailable) {
+      const available = await isUsernameAvailable(db, candidate);
+      if (available) {
         availableSuggestions.push(candidate);
       }
     } catch (error) {
       console.warn(`Error checking suggestion ${candidate}:`, error);
     }
   }
-  
+
   return availableSuggestions;
 }
 
-// GET endpoint - Check username availability
+// GET endpoint - Check username availability or cooldown status
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const username = searchParams.get('username');
+    const action = searchParams.get('action');
 
+    // Handle cooldown status request
+    if (action === 'cooldown-status') {
+      const currentUserId = await getUserIdFromRequest(request);
+      if (!currentUserId) {
+        return createErrorResponse('UNAUTHORIZED');
+      }
+
+      const admin = getFirebaseAdmin();
+      const db = admin.firestore();
+      const cooldownStatus = await checkCooldownForUser(db, currentUserId);
+
+      return createApiResponse(cooldownStatus);
+    }
+
+    // Standard availability check
+    const username = searchParams.get('username');
     if (!username) {
       return createErrorResponse('BAD_REQUEST', 'Username parameter is required');
     }
 
-    // Validate format first
     const formatValidation = validateUsernameFormat(username);
     if (!formatValidation.valid) {
       return createApiResponse({
@@ -156,36 +149,26 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Check BOTH the users collection AND the usernames collection
-    // The usernames collection is the authoritative source for reserved usernames
-    const [usersQuery, usernameDoc] = await Promise.all([
-      db.collection(getCollectionName('users'))
-        .where('username', '==', username)
-        .limit(1)
-        .get(),
-      db.collection(getCollectionName('usernames'))
-        .doc(username.toLowerCase())
-        .get()
-    ]);
+    // Get current user ID (may be null for unauthenticated checks)
+    const currentUserId = await getUserIdFromRequest(request);
 
-    // Username is only available if it's not in EITHER collection
-    const isInUsersCollection = !usersQuery.empty;
-    const isInUsernamesCollection = usernameDoc.exists;
-    const isAvailable = !isInUsersCollection && !isInUsernamesCollection;
+    // Use cooldown-aware availability check
+    const availabilityResult = await checkAvailabilityWithCooldown(db, username, currentUserId);
 
     const result: UsernameCheckResult = {
-      available: isAvailable
+      available: availabilityResult.available,
+      error: availabilityResult.error,
+      message: availabilityResult.message,
+      cooldown: availabilityResult.cooldown,
     };
 
-    // If not available, provide verified available suggestions
-    if (!isAvailable) {
+    // If not available, provide suggestions
+    if (!availabilityResult.available) {
       const verifiedSuggestions = await generateVerifiedSuggestions(db, username, 3);
       if (verifiedSuggestions.length > 0) {
         result.suggestion = verifiedSuggestions[0];
-        // Also include all suggestions in the response
-        (result as any).suggestions = verifiedSuggestions;
+        result.suggestions = verifiedSuggestions;
       }
-      result.error = 'Username already taken';
     }
 
     return createApiResponse(result);
@@ -196,7 +179,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST endpoint - Set or update username
+// POST endpoint - Set or update username (full lifecycle)
 export async function POST(request: NextRequest) {
   try {
     const admin = getFirebaseAdmin();
@@ -220,86 +203,155 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', formatValidation.error);
     }
 
-    // Check availability (excluding current user)
-    const usersQuery = await db.collection(getCollectionName('users'))
-      .where('username', '==', username)
-      .limit(1)
-      .get();
-
-    if (!usersQuery.empty) {
-      const existingUser = usersQuery.docs[0];
-      if (existingUser.id !== currentUserId) {
-        return createErrorResponse('BAD_REQUEST', 'Username is already taken');
-      }
-    }
-
     // Get current user data
     const userRef = db.collection(getCollectionName('users')).doc(currentUserId);
     const userDoc = await userRef.get();
-    
-    let oldUsername = null;
+
+    let oldUsername: string | null = null;
+    let userEmail: string | null = null;
     if (userDoc.exists) {
-      oldUsername = userDoc.data()?.username;
+      const data = userDoc.data();
+      oldUsername = data?.username || null;
+      userEmail = data?.email || null;
     }
 
-    // Update user document
-    await userRef.set({
-      username,
-      lastModified: new Date().toISOString()
-    }, { merge: true });
-
-    // Record username history if this is a change
-    if (oldUsername && oldUsername !== username) {
-      await db.collection(getCollectionName('usernameHistory')).add({
-        userId: currentUserId,
-        oldUsername,
-        newUsername: username,
-        changedAt: admin.firestore.FieldValue.serverTimestamp()
+    // If no actual change, return early
+    if (oldUsername && oldUsername === username) {
+      return createApiResponse({
+        success: true,
+        username,
+        message: 'Username unchanged',
       });
     }
 
-    // Also update in Realtime Database for compatibility
+    // Check cooldown (only for username *changes*, not initial set)
+    if (oldUsername) {
+      const cooldownStatus = await checkCooldownForUser(db, currentUserId);
+      if (cooldownStatus.blocked) {
+        return createErrorResponse('BAD_REQUEST', cooldownStatus.message || 'Username change is on cooldown');
+      }
+    }
+
+    // Check availability with cooldown awareness
+    const availabilityResult = await checkAvailabilityWithCooldown(db, username, currentUserId);
+    if (!availabilityResult.available) {
+      return createErrorResponse('BAD_REQUEST', availabilityResult.message || 'Username is not available');
+    }
+
+    // Build a Firestore batch for atomicity
+    const batch = db.batch();
+    const now = new Date();
+
+    // 1. Update user document with new username
+    batch.set(userRef, {
+      username,
+      lastModified: now.toISOString(),
+    }, { merge: true });
+
+    // 2. Create usernames/{new} doc with status: 'active'
+    const newUsernameRef = db.collection(getCollectionName('usernames')).doc(username.toLowerCase());
+    batch.set(newUsernameRef, {
+      uid: currentUserId,
+      username: username,
+      email: userEmail || '',
+      status: 'active',
+      createdAt: now.toISOString(),
+    });
+
+    // 3. If this is a change, convert old username doc to 'reserved'
+    if (oldUsername && oldUsername !== username) {
+      const oldUsernameRef = db.collection(getCollectionName('usernames')).doc(oldUsername.toLowerCase());
+      const reservedUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+      batch.set(oldUsernameRef, {
+        status: 'reserved',
+        reservedBy: currentUserId,
+        releasedAt: now.toISOString(),
+        reservedUntil: reservedUntil.toISOString(),
+        originalUsername: oldUsername,
+      });
+
+      // 4. Write usernameHistory record
+      const historyRef = db.collection(getCollectionName('usernameHistory')).doc();
+      batch.set(historyRef, {
+        userId: currentUserId,
+        oldUsername,
+        newUsername: username,
+        changedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    // Commit the batch
+    await batch.commit();
+
+    // Update Realtime Database (non-critical, don't fail on error)
     try {
       const rtdb = admin.database();
       await rtdb.ref(`users/${currentUserId}`).update({
         username,
-        lastModified: new Date().toISOString()
+        lastModified: now.toISOString(),
       });
     } catch (rtdbError) {
       console.warn('Failed to update username in RTDB:', rtdbError);
-      // Don't fail the request if RTDB update fails
     }
 
-    // CRITICAL: Invalidate all username-related caches
-    console.log('🔄 Username updated, invalidating caches for user:', currentUserId);
-
-    // Trigger cache invalidation for all components that might display this username
+    // Invalidate caches
     try {
-      // Import cache invalidation utilities
       const { invalidateCache } = await import('../../../utils/serverCache');
-
-      // Invalidate user-specific caches
       invalidateCache.user(currentUserId);
-
-      // Invalidate all related caches
       invalidateCache.search();
-
-      console.log('✅ Cache invalidation completed for username update');
     } catch (cacheError) {
-      console.error('❌ Error invalidating caches after username update:', cacheError);
-      // Don't fail the request if cache invalidation fails
+      console.error('Error invalidating caches after username update:', cacheError);
+    }
+
+    // Update session cookie with new username
+    const cookieValue = request.cookies.get('simpleUserSession')?.value;
+    if (cookieValue) {
+      try {
+        const sessionData = await parseSignedCookieValue<SessionCookieData>(cookieValue);
+        if (sessionData) {
+          sessionData.username = username;
+          const signedValue = await createSignedCookieValue(sessionData);
+
+          const response = NextResponse.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            data: {
+              success: true,
+              username,
+              message: oldUsername ? 'Username updated successfully' : 'Username set successfully',
+              metadata: {
+                userId: currentUserId,
+                oldUsername,
+                newUsername: username,
+                cacheInvalidated: true,
+              },
+            },
+          });
+
+          response.cookies.set({
+            name: 'simpleUserSession',
+            value: signedValue,
+            ...SESSION_COOKIE_OPTIONS,
+          });
+
+          return response;
+        }
+      } catch {
+        // Cookie parse failed, continue without updating cookie
+      }
     }
 
     return createApiResponse({
+      success: true,
       username,
       message: oldUsername ? 'Username updated successfully' : 'Username set successfully',
-      // Include metadata to help client-side components refresh
       metadata: {
         userId: currentUserId,
         oldUsername,
         newUsername: username,
-        cacheInvalidated: true
-      }
+        cacheInvalidated: true,
+      },
     });
 
   } catch (error) {
@@ -322,33 +374,27 @@ export async function PUT(request: NextRequest) {
     const db = admin.firestore();
 
     const suggestions: string[] = [];
-    const maxAttempts = count * 3; // Try more than requested to account for taken usernames
-    
+    const maxAttempts = count * 3;
+
     for (let i = 0; i < maxAttempts && suggestions.length < count; i++) {
       let suggestion: string;
-      // Allow letters, numbers, underscores, dashes, and periods in base username
       const cleanBase = baseUsername.replace(/[^a-zA-Z0-9_.\-]/g, '').toLowerCase()
-        .replace(/^[._\-]+|[._\-]+$/g, '') // Remove leading/trailing special chars
-        .replace(/[._\-]{2,}/g, '_'); // Replace consecutive special chars with single underscore
+        .replace(/^[._\-]+|[._\-]+$/g, '')
+        .replace(/[._\-]{2,}/g, '_');
 
       if (i === 0) {
-        // First try the clean base username
         suggestion = cleanBase;
       } else if (i < 5) {
-        // Try with numbers
         suggestion = `${cleanBase}${Math.floor(Math.random() * 1000)}`;
       } else {
-        // Try with underscores and numbers
         suggestion = `${cleanBase}_${Math.floor(Math.random() * 1000)}`;
       }
 
-      // Validate format
       const formatValidation = validateUsernameFormat(suggestion);
       if (!formatValidation.valid) {
         continue;
       }
 
-      // Check availability
       const usersQuery = await db.collection(getCollectionName('users'))
         .where('username', '==', suggestion)
         .limit(1)

@@ -217,8 +217,10 @@ export async function POST(request: NextRequest) {
         
         if (usernameResponse.ok) {
           const usernameData = await usernameResponse.json();
-          const uid = usernameData.fields?.uid?.stringValue;
-          
+          const usernameStatus = usernameData.fields?.status?.stringValue;
+          // Skip reserved usernames — they no longer map to an active account
+          const uid = usernameStatus !== 'reserved' ? usernameData.fields?.uid?.stringValue : null;
+
           if (uid) {
             const userUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${usersCollection}/${uid}`;
             const userResponse = await fetch(userUrl);
@@ -293,7 +295,7 @@ export async function POST(request: NextRequest) {
       const usernameDocRef = db.collection(getCollectionName('usernames')).doc(emailOrUsername.toLowerCase());
       const usernameDoc = await usernameDocRef.get();
 
-      if (usernameDoc.exists) {
+      if (usernameDoc.exists && usernameDoc.data()?.status !== 'reserved') {
         const data = usernameDoc.data();
         email = data?.email;
         username = data?.username || emailOrUsername;

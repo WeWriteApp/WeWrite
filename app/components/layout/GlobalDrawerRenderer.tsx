@@ -497,10 +497,23 @@ export function GlobalDrawerRenderer() {
     closeDrawer();
   }, [closeDrawer]);
 
-  // Handle back navigation - uses browser history for proper state management
+  // Handle back navigation - navigate within the drawer stack
   const handleBack = useCallback(() => {
-    window.history.back();
-  }, []);
+    if (drawerConfig.subPath) {
+      // In a sub-page (e.g. settings/spend) — go back to the section root (e.g. settings)
+      const parts = drawerConfig.subPath.split('/');
+      if (parts.length > 1) {
+        // Multi-level sub-path: go up one level
+        goToDrawerRoot();
+      } else {
+        // Top-level sub-path: close
+        closeDrawer();
+      }
+    } else {
+      // At drawer root — close
+      closeDrawer();
+    }
+  }, [drawerConfig.subPath, goToDrawerRoot, closeDrawer]);
 
   // Use cached config during close animation so component stays rendered
   const renderConfig = drawerConfig.type ? drawerConfig : cachedConfig;

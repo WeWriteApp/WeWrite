@@ -271,6 +271,10 @@ export const logoutUser = async (): Promise<LogoutResult> => {
   }
 }
 
+/**
+ * @deprecated Use addUsername from app/utils/apiClient.ts instead, which delegates to /api/users/username.
+ * Client-side Firestore writes are replaced by server-side API calls with cooldown logic.
+ */
 export const addUsername = async (userId: string, username: string): Promise<AuthResult> => {
   try {
     // Check if username is available
@@ -414,92 +418,20 @@ export const updatePassword = async (currentPassword: string, newPassword: strin
   }
 }
 
+/**
+ * Check username availability via the server API.
+ * Delegates to /api/users/username so that cooldown logic is applied server-side.
+ */
 export const checkUsernameAvailability = async (username: string): Promise<UsernameAvailabilityResult> => {
   try {
-    if (!username || username.length < 3) {
-      return {
-        isAvailable: false,
-        message: "Username must be at least 3 characters",
-        error: "TOO_SHORT",
-        suggestions: []
-      };
-    }
-
-    if (username.length > 30) {
-      return {
-        isAvailable: false,
-        message: "Username must be no more than 30 characters",
-        error: "TOO_LONG",
-        suggestions: []
-      };
-    }
-
-    // Check for whitespace characters (comprehensive Unicode whitespace detection)
-    if (/\s/.test(username)) {
-      return {
-        isAvailable: false,
-        message: "Usernames cannot contain spaces or whitespace characters. Try using underscores (_) instead.",
-        error: "CONTAINS_WHITESPACE",
-        suggestions: []
-      };
-    }
-
-    // Check if username contains only allowed characters: letters, numbers, underscores, dashes, and periods
-    if (!/^[a-zA-Z0-9_.\-]+$/.test(username)) {
-      return {
-        isAvailable: false,
-        message: "Username can only contain letters, numbers, underscores, dashes, and periods",
-        error: "INVALID_CHARACTERS",
-        suggestions: []
-      };
-    }
-
-    // Cannot start or end with a period, dash, or underscore
-    if (/^[._\-]|[._\-]$/.test(username)) {
-      return {
-        isAvailable: false,
-        message: "Username cannot start or end with a period, dash, or underscore",
-        error: "INVALID_START_END",
-        suggestions: []
-      };
-    }
-
-    // Cannot have consecutive special characters
-    if (/[._\-]{2,}/.test(username)) {
-      return {
-        isAvailable: false,
-        message: "Username cannot have consecutive periods, dashes, or underscores",
-        error: "CONSECUTIVE_SPECIAL",
-        suggestions: []
-      };
-    }
-
-    const userDoc = doc(firestore, getCollectionName('usernames'), username.toLowerCase());
-    const docSnap = await getDoc(userDoc);
-
-    const isAvailable = !docSnap.exists();
-
-    if (isAvailable) {
-      return {
-        isAvailable: true,
-        message: "Username is available",
-        error: null,
-        suggestions: []
-      };
-    } else {
-      // Generate username suggestions
-      const suggestions = generateUsernameSuggestions(username);
-
-      // Check if suggestions are available
-      const availableSuggestions = await checkSuggestionsAvailability(suggestions);
-
-      return {
-        isAvailable: false,
-        message: "Username already taken",
-        error: "USERNAME_TAKEN",
-        suggestions: availableSuggestions
-      };
-    }
+    const { checkUsernameAvailability: apiCheck } = await import('../utils/apiClient');
+    const result = await apiCheck(username);
+    return {
+      isAvailable: result.isAvailable ?? false,
+      message: result.message || '',
+      error: result.error || null,
+      suggestions: result.suggestions || [],
+    };
   } catch (error) {
     return {
       isAvailable: false,
@@ -510,58 +442,6 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
   }
 }
 
-/**
- * Generate username suggestions based on the original username
- * @param username - The original username
- * @returns Array of username suggestions
- */
-const generateUsernameSuggestions = (username: string): string[] => {
-  const suggestions: string[] = [];
-
-  // Add a random number (1-99) to the end
-  for (let i = 0; i < 3; i++) {
-    const randomNum = Math.floor(Math.random() * 99) + 1;
-    suggestions.push(`${username}${randomNum}`);
-  }
-
-  // Add an underscore and a random number
-  suggestions.push(`${username}_${Math.floor(Math.random() * 99) + 1}`);
-
-  // Add the current year
-  suggestions.push(`${username}${new Date().getFullYear()}`);
-
-  // Return unique suggestions only
-  return Array.from(new Set(suggestions)).slice(0, 3);
-}
-
-/**
- * Check which of the suggested usernames are available
- * @param suggestions - Array of username suggestions
- * @returns Array of available username suggestions
- */
-const checkSuggestionsAvailability = async (suggestions: string[]): Promise<string[]> => {
-  const availableSuggestions: string[] = [];
-
-  for (const suggestion of suggestions) {
-    try {
-      const userDoc = doc(firestore, getCollectionName('usernames'), suggestion.toLowerCase());
-      const docSnap = await getDoc(userDoc);
-
-      if (!docSnap.exists()) {
-        availableSuggestions.push(suggestion);
-
-        // Stop once we have 3 available suggestions
-        if (availableSuggestions.length >= 3) {
-          break;
-        }
-      }
-    } catch (error) {
-      // Error checking suggestion availability
-    }
-  }
-
-  return availableSuggestions;
-}
 
 /**
  * Sign in anonymously
