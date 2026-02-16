@@ -17,6 +17,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { useBanner } from '../../providers/BannerProvider';
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
+import { toast } from "../ui/use-toast";
 
 import { useSidebarContext } from "../layout/DesktopSidebar";
 import {
@@ -225,7 +226,6 @@ export default function ContentPageHeader({
   const [localAlternativeTitles, setLocalAlternativeTitles] = React.useState<string[]>(alternativeTitles);
 
 
-
   // Date formatting context
   const { formatDate } = useDateFormat();
 
@@ -253,8 +253,7 @@ export default function ContentPageHeader({
     // Legacy check: title matches YYYY-MM-DD format (for unmigrated daily notes)
     const isLegacyDailyNote = title ? isExactDateFormat(title) : false;
     // New check: has customDate field (for migrated daily notes)
-    // Note: We don't have access to customDate in PageHeader, so we'll rely on legacy check for now
-    // TODO: Pass customDate as prop if needed for more accurate detection
+    // Note: customDate field is not available as a prop here — relies on legacy title format only
     return isLegacyDailyNote;
   }, [title]);
 
@@ -385,7 +384,6 @@ export default function ContentPageHeader({
     // Allow title editing for all pages, including migrated daily notes
     // Only show date format picker for legacy daily notes (unmigrated ones with YYYY-MM-DD titles)
     if (isExactDateFormat(title || "") && title !== "Daily note") {
-      console.log('Opening date format picker for legacy daily note:', title);
       setShowDateFormatPicker(true);
       return;
     }
@@ -430,7 +428,6 @@ export default function ContentPageHeader({
           router.push(`/new?title=${encodeURIComponent(navigationResult.dateString)}&type=daily-note`);
         }
       } else {
-        console.log(`No ${direction} daily note found`);
       }
     } catch (error) {
       console.error(`Error navigating to ${direction} daily note:`, error);
@@ -478,7 +475,6 @@ export default function ContentPageHeader({
     setIsEditorFocused(false);
     resizeTitleField(titleInputRef.current);
   };
-
 
 
   // Auto-resize textarea when content changes
@@ -726,10 +722,22 @@ export default function ContentPageHeader({
       if (response.ok) {
         onVisibilityChange(newIsPublic);
       } else {
-        console.error('Failed to update visibility');
+        const data = await response.json().catch(() => ({}));
+        const msg = data.error || `Visibility update failed (${response.status})`;
+        toast.error("Failed to update visibility", {
+          description: msg,
+          enableCopy: true,
+          copyText: `Visibility error: ${msg}\nPage: ${pageId}\nTime: ${new Date().toISOString()}`
+        });
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error updating visibility:', error);
+      toast.error("Failed to update visibility", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Visibility error: ${msg}\nPage: ${pageId}\nTime: ${new Date().toISOString()}`
+      });
     } finally {
       setIsUpdatingVisibility(false);
     }
@@ -1005,7 +1013,6 @@ export default function ContentPageHeader({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Title settings clicked, opening modal...');
                         setIsTitleSettingsOpen(true);
                       }}
                     >

@@ -4,14 +4,11 @@
  */
 
 import { initAdmin } from '../firebase/admin';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getStripe } from '../lib/stripe';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+const stripe = getStripe();
 
 interface ValidationResult {
   category: string;

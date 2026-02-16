@@ -26,7 +26,6 @@ export async function GET(
   const { type } = await params;
 
   try {
-    console.log(`📊 [STATS_API] ${type.toUpperCase()} request:`, Object.fromEntries(searchParams));
 
     switch (type) {
       case 'page': {
@@ -156,7 +155,6 @@ export async function POST(
     const { type } = await params;
     const body = await request.json();
 
-    console.log(`📊 [STATS_API] ${type.toUpperCase()} POST request:`, body);
 
     switch (type) {
       case 'batch': {
@@ -274,14 +272,11 @@ export async function DELETE(
 
         if (pageId) {
           // Clear specific page cache (implementation would need to be added to service)
-          console.log(`📊 [STATS_API] Clearing cache for page: ${pageId}`);
         } else if (userId) {
           // Clear specific user cache (implementation would need to be added to service)
-          console.log(`📊 [STATS_API] Clearing cache for user: ${userId}`);
         } else {
           // Clear all cache
           unifiedStatsService.clearCache();
-          console.log(`📊 [STATS_API] Clearing all stats cache`);
         }
 
         return NextResponse.json({
@@ -381,7 +376,6 @@ async function fetchPageStats(pageId: string) {
       lastModified: doc.data().createdAt // Use createdAt as lastModified for versions
     }));
 
-    console.log(`📊 [PAGE_STATS] Found ${recentEdits.length} recent edits for page ${pageId} in last 24h`);
 
     // Generate hourly data for sparkline (last 24 hours)
     const changeData = Array(24).fill(0);
@@ -400,11 +394,6 @@ async function fetchPageStats(pageId: string) {
     // Count unique editors
     const uniqueEditors = new Set(recentEdits.map(edit => edit.userId).filter(Boolean));
 
-    console.log(`📊 [PAGE_STATS] Generated sparkline data for page ${pageId}:`, {
-      recentChanges: recentEdits.length,
-      changeData,
-      uniqueEditors: uniqueEditors.size
-    });
 
     // Get the most recent edit for preview (if available)
     const mostRecentEdit = recentEdits.length > 0 ? recentEdits[0] : null;
@@ -502,12 +491,6 @@ async function fetchPageStats(pageId: string) {
         }
       }
 
-      console.log(`📊 [PAGE_STATS] View data for page ${pageId}:`, {
-        totalViews,
-        viewsLast24h,
-        viewDataSum: viewData.reduce((a, b) => a + b, 0),
-        pageViewsDocs: pageViewsSnapshot.size
-      });
     } catch (viewError) {
       console.warn('📊 [PAGE_STATS] View stats fallback:', viewError);
     }
@@ -520,7 +503,7 @@ async function fetchPageStats(pageId: string) {
       recentChanges: recentEdits.length,
       changeData,
       editorsCount: uniqueEditors.size,
-      liveReaders: 0, // TODO: Implement live reader tracking
+      liveReaders: 0, // Requires real-time presence system
       totalReaders: 0,
       supporterCount,
       totalPledgedTokens: 0,

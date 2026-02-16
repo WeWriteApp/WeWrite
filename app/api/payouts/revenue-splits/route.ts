@@ -5,11 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { payoutService } from '../../../services/payoutService';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { db } from '../../../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
-
-const admin = getFirebaseAdmin();
 
 export async function GET(request: NextRequest) {
   try {

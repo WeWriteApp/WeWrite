@@ -5,6 +5,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { INTERACTION_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 import { formatUsdCents } from '../utils/formatCurrency';
+import { toast } from '../components/ui/use-toast';
 
 interface AllocationIntervalContextType {
   allocationIntervalCents: number;
@@ -107,14 +108,19 @@ export function AllocationIntervalProvider({ children }: AllocationIntervalProvi
       });
 
       if (!response.ok) {
-        // Rollback on error
-        setAllocationIntervalCents(previousCents);
-        console.error('Failed to save allocation interval');
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Save failed (${response.status})`);
       }
     } catch (error) {
       // Rollback on error
       setAllocationIntervalCents(previousCents);
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error saving allocation interval:', error);
+      toast.error("Failed to save allocation interval", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Allocation interval error: ${msg}\nTime: ${new Date().toISOString()}`
+      });
     }
   }, [user, allocationIntervalCents]);
 

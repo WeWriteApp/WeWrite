@@ -219,12 +219,10 @@ function CheckoutForm({
       });
 
       const subscriptionData = await subscriptionResponse.json();
-      console.log('Subscription creation response:', subscriptionData);
 
       if (!subscriptionResponse.ok) {
         // Handle the case where user already has an active subscription
         if (subscriptionResponse.status === 409 && subscriptionData.shouldUpdate) {
-          console.log('User already has active subscription, redirecting to update flow');
           // Redirect to update the existing subscription instead
           window.location.href = `/settings/fund-account?update=${subscriptionData.existingSubscriptionId}&amount=${amount}`;
           return;
@@ -232,7 +230,6 @@ function CheckoutForm({
         throw new Error(subscriptionData.error || 'Failed to create subscription after setup');
       }
 
-      console.log('Calling onSuccess with subscriptionId:', subscriptionData.subscriptionId);
       onSuccess(subscriptionData.subscriptionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed');

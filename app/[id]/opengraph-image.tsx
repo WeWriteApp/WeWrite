@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { getAdminFirestore } from '../firebase/admin';
+import { getCollectionName } from '../utils/environmentConfig';
 
 export const runtime = 'nodejs';
 
@@ -150,7 +151,7 @@ async function fetchPageData(pageId: string): Promise<OGPageData | null> {
     // Use Firebase Admin SDK for direct database access
     // This bypasses security rules and doesn't require authentication
     const db = getAdminFirestore();
-    const pageDoc = await db.collection('pages').doc(pageId).get();
+    const pageDoc = await db.collection(getCollectionName('pages')).doc(pageId).get();
 
     if (!pageDoc.exists) {
       console.warn(`Page ${pageId} not found for OG image`);
@@ -178,7 +179,7 @@ async function fetchSponsorCount(pageId: string): Promise<number> {
   try {
     // Use Firebase Admin SDK for direct database access
     const db = getAdminFirestore();
-    const pledgesSnapshot = await db.collection('pages').doc(pageId).collection('pledges').get();
+    const pledgesSnapshot = await db.collection(getCollectionName('pages')).doc(pageId).collection('pledges').get();
     return pledgesSnapshot.size;
   } catch {
     return 0;

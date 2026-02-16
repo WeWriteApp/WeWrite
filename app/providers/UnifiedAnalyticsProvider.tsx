@@ -307,7 +307,6 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
                   // Ensure we're collecting page titles for data science team
                   send_page_view: false, // We'll track manually to include titles
                 });
-                console.log('Google Analytics initialized with ID: ${GA_MEASUREMENT_ID}');
               `}}
           />
         </>
@@ -322,11 +321,9 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
               window.dataLayer = window.dataLayer || [];
               function gtag(){
                 if (typeof console !== 'undefined') {
-                  console.log('gtag (dev stub):', arguments);
                 }
               }
               window.gtag = gtag;
-              console.log('Google Analytics disabled in development (stub loaded)');
             `}}
         />
       )}

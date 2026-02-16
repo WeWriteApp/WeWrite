@@ -42,11 +42,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('📊 [Platform Fee Analytics API] Processing request:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      granularity
-    });
 
     // Get analytics data and stats in parallel for efficiency
     const [analyticsData, statsData] = await Promise.all([
@@ -54,11 +49,6 @@ export async function GET(request: NextRequest) {
       getPlatformFeeStats({ startDate, endDate })
     ]);
 
-    console.log('✅ [Platform Fee Analytics API] Data fetched successfully:', {
-      dataPoints: analyticsData.length,
-      totalRevenue: statsData.totalRevenue,
-      totalPayouts: statsData.totalPayouts
-    });
 
     return NextResponse.json({
       success: true,
@@ -147,11 +137,6 @@ export async function POST(request: NextRequest) {
       totalPayouts
     };
 
-    console.log('🧪 [Platform Fee Analytics API] Generated mock data:', {
-      dataPoints: mockData.length,
-      totalRevenue: mockStats.totalRevenue,
-      totalPayouts: mockStats.totalPayouts
-    });
 
     return NextResponse.json({
       success: true,

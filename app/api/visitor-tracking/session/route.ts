@@ -31,12 +31,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Fingerprint ID is required');
     }
 
-    console.log('👤 [VISITOR TRACKING] Creating/updating session', {
-      fingerprintId,
-      userId: userId || 'anonymous',
-      isAuthenticated: !!isAuthenticated,
-      pageId
-    });
 
     // Use environment-aware collection naming
     const visitorsRef = db.collection(getCollectionName('siteVisitors'));
@@ -74,10 +68,6 @@ export async function POST(request: NextRequest) {
 
       await existingDoc.ref.update(updateData);
       
-      console.log('✅ [VISITOR TRACKING] Updated existing session', {
-        sessionId: existingDoc.id,
-        fingerprintId
-      });
 
       return createSuccessResponse({
         sessionId: existingDoc.id,
@@ -103,10 +93,6 @@ export async function POST(request: NextRequest) {
 
       const newDocRef = await visitorsRef.add(newSessionData);
       
-      console.log('✅ [VISITOR TRACKING] Created new session', {
-        sessionId: newDocRef.id,
-        fingerprintId
-      });
 
       return createSuccessResponse({
         sessionId: newDocRef.id,

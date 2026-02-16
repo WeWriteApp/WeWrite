@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
     const cacheKey = `batch-pages:${pageIds.sort().join(',')}:${userId || 'anon'}`;
     const cached = batchPageCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < BATCH_CACHE_TTL) {
-      console.log(`🚀 EMERGENCY COST OPTIMIZATION: Returning cached batch pages (${pageIds.length} pages)`);
       return NextResponse.json({
         ...cached.data,
         cached: true,
@@ -83,12 +82,10 @@ export async function POST(request: NextRequest) {
     const pagesCollection = db.collection(getCollectionName('pages'));
 
     // CRITICAL OPTIMIZATION: Batch read all pages in a single query
-    console.log(`🔥 EMERGENCY COST OPTIMIZATION: Batch loading ${pageIds.length} pages in single query`);
     
     const batchQuery = pagesCollection.where(admin.firestore.FieldPath.documentId(), 'in', pageIds);
     const querySnapshot = await batchQuery.get();
 
-    console.log(`📊 BATCH PAGES: Retrieved ${querySnapshot.docs.length} pages in ${Date.now() - startTime}ms`);
 
     const pages: Record<string, any> = {};
     const rtdbPromise = admin.database(); // Pre-start RTDB connection
@@ -101,7 +98,6 @@ export async function POST(request: NextRequest) {
       // CRITICAL: Check if page is soft-deleted
       if (pageData.deleted === true) {
         if (userId && pageData.userId === userId) {
-          console.log(`Owner access granted to deleted page ${pageId} for user ${userId}`);
         } else {
           // Skip deleted pages for non-owners
           continue;
@@ -174,7 +170,6 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now()
     });
 
-    console.log(`🔥 BATCH PAGES: Completed batch load of ${pageIds.length} pages in ${Date.now() - startTime}ms`);
 
     return NextResponse.json(responseData);
 

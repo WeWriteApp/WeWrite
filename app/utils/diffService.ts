@@ -232,7 +232,6 @@ export async function trackContentChange(
   try {
     // Check if there are meaningful changes
     if (!hasContentChangedSync(newContent, previousContent)) {
-      console.log('Content tracking: No meaningful changes detected, skipping analytics recording');
       return;
     }
 
@@ -241,7 +240,6 @@ export async function trackContentChange(
 
     // Only track if there are actual character changes
     if (diffResult.added === 0 && diffResult.removed === 0) {
-      console.log('Content tracking: No character changes detected, skipping analytics recording');
       return;
     }
 
@@ -275,12 +273,6 @@ export async function trackContentChange(
       timestamp: Timestamp.fromDate(changeEvent.timestamp)
     });
 
-    console.log('📊 Content change tracked:', {
-      pageId,
-      charactersAdded: diffResult.added,
-      charactersDeleted: diffResult.removed,
-      netChange: diffResult.added - diffResult.removed
-    });
 
   } catch (error) {
     console.error('Error tracking content change:', error);

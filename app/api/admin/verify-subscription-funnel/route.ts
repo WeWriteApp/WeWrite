@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
       }
 
-    console.log('🔍 Admin verification: Checking subscription conversion funnel pipeline...');
 
     // Check for subscription funnel events in analytics_events
     const funnelActions = [
@@ -151,12 +150,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('✅ Subscription funnel verification complete:', {
-      totalEvents: result.funnelEvents.totalEvents,
-      recentActivity: hasRecentActivity,
-      isTracking: isTrackingProperly,
-      status: result.status
-    });
 
     return NextResponse.json({
       success: true,

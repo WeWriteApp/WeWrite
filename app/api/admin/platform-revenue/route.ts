@@ -51,22 +51,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('📊 [Platform Revenue API] Processing request:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      granularity,
-      cumulative
-    });
 
     // Get platform revenue data from the service
     const revenueData = await getPlatformRevenueData({ startDate, endDate }, granularity, cumulative);
 
-    console.log('✅ [Platform Revenue API] Data fetched successfully:', {
-      dataPoints: revenueData.chartData.length,
-      totalRevenue: revenueData.stats.totalRevenue,
-      platformFees: revenueData.stats.totalPlatformFees,
-      unallocatedFunds: revenueData.stats.totalUnallocatedFunds
-    });
 
     return NextResponse.json({
       success: true,
@@ -161,12 +149,6 @@ export async function POST(request: NextRequest) {
       averageRevenuePerMonth: totalRevenue / (dataPoints / 30)
     };
 
-    console.log('🧪 [Platform Revenue API] Generated mock data:', {
-      dataPoints: mockData.length,
-      totalRevenue: mockStats.totalRevenue,
-      totalPlatformFees: mockStats.totalPlatformFees,
-      totalUnallocatedFunds: mockStats.totalUnallocatedFunds
-    });
 
     return NextResponse.json({
       success: true,

@@ -51,10 +51,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<RepliesRes
       }, { status: 400 });
     }
 
-    console.log(`📝 [REPLIES_API] Getting replies for page ${pageId}`, {
-      filterType,
-      timestamp: new Date().toISOString()
-    });
 
     // Query pages that have replyTo pointing to this page
     // Note: We can't query for isDeleted == false directly since some docs may not have the field
@@ -130,11 +126,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<RepliesRes
       return bTime.getTime() - aTime.getTime();
     });
 
-    console.log(`📝 [REPLIES_API] Found ${replies.length} replies for page ${pageId}`, {
-      counts,
-      filterType,
-      timestamp: new Date().toISOString()
-    });
 
     return NextResponse.json({
       replies,

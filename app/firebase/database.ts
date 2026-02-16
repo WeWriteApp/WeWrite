@@ -138,13 +138,8 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
         // Don't fail page deletion if counter update fails
       }
 
-      // TODO: In the future, we could also mark versions as deleted
-      // For now, we keep versions for potential recovery
-
-      // TODO: Consider cleanup of related data like:
-      // - Page followers (mark as deleted)
-      // - Pledges (handle separately)
-      // - Notifications (keep for audit trail)
+      // Versions are kept for potential recovery
+      // Related data (followers, pledges, notifications) not cleaned up — retained for audit trail
 
       return true;
     }

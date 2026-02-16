@@ -68,7 +68,6 @@ class EmergencyReadOptimizer {
           return analysis.topOffenders.some(p => p.cacheHitRate < 30 && p.totalReads > 50);
         },
         action: async (analysis) => {
-          console.log('🔥 Warming caches for low hit rate endpoints');
           const lowCacheEndpoints = analysis.topOffenders.filter(p => p.cacheHitRate < 30);
           for (const pattern of lowCacheEndpoints.slice(0, 3)) {
             await this.warmCache(pattern.endpoint);
@@ -95,7 +94,6 @@ class EmergencyReadOptimizer {
    */
   async optimize(): Promise<void> {
     if (this.isActive) {
-      console.log('⏳ Optimization already in progress, skipping...');
       return;
     }
 
@@ -104,7 +102,6 @@ class EmergencyReadOptimizer {
     try {
       const analysis = databaseReadAnalyzer.analyzeReads();
       
-      console.log(`📊 Read Analysis: ${analysis.readsPerMinute.toFixed(1)} reads/min, $${analysis.costEstimate.toFixed(4)} estimated cost`);
 
       // Apply optimization rules in priority order
       const sortedRules = this.optimizationRules.sort((a, b) => {
@@ -114,7 +111,6 @@ class EmergencyReadOptimizer {
 
       for (const rule of sortedRules) {
         if (rule.condition(analysis)) {
-          console.log(`🔧 Applying optimization: ${rule.name}`);
           await rule.action(analysis);
         }
       }
@@ -137,7 +133,6 @@ class EmergencyReadOptimizer {
     if (Date.now() >= breaker.nextAttempt) {
       breaker.isOpen = false;
       breaker.failureCount = 0;
-      console.log(`🔄 Circuit breaker reset for ${endpoint}`);
       return false;
     }
 
@@ -183,7 +178,6 @@ class EmergencyReadOptimizer {
    */
   private applyRateLimit(endpoint: string, limit: number, windowMs: number): void {
     // This would integrate with your existing rate limiting system
-    console.log(`🚦 Rate limit applied to ${endpoint}: ${limit} requests per ${windowMs}ms`);
   }
 
   /**
@@ -192,7 +186,6 @@ class EmergencyReadOptimizer {
   private async warmCache(endpoint: string): Promise<void> {
     try {
       // This would make a few strategic requests to warm the cache
-      console.log(`🔥 Cache warming initiated for ${endpoint}`);
       
       // Example: Make a few common requests to warm the cache
       if (endpoint.includes('pledge-bar-data')) {
@@ -210,7 +203,6 @@ class EmergencyReadOptimizer {
    */
   private disableNonEssentialPolling(): void {
     // This would integrate with your polling systems
-    console.log('🛑 Disabling non-essential polling systems');
     
     // Example: Increase polling intervals or disable certain polls
     if (typeof window !== 'undefined') {
@@ -252,7 +244,6 @@ class EmergencyReadOptimizer {
     this.isActive = false;
     this.circuitBreakers.clear();
     this.rateLimiters.clear();
-    console.log('🔓 Emergency optimization disabled');
   }
 
   /**
@@ -261,7 +252,6 @@ class EmergencyReadOptimizer {
   reset(): void {
     this.circuitBreakers.clear();
     this.rateLimiters.clear();
-    console.log('🔄 Emergency optimization reset');
   }
 }
 

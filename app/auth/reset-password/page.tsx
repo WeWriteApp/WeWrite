@@ -50,7 +50,6 @@ function CustomPasswordResetContent() {
         const data = await response.json();
         setUserEmail(data.email);
         setIsValidCode(true);
-        console.log("Password reset code verified for:", data.email);
       } catch (error: any) {
         console.error("Error verifying password reset code:", error);
 
@@ -124,7 +123,6 @@ function CustomPasswordResetContent() {
       }
 
       const data = await response.json();
-      console.log("Password reset successful for:", userEmail);
       setSuccess(true);
     } catch (error: any) {
       console.error("Password reset error:", error);

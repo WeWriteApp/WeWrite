@@ -887,13 +887,10 @@ export default function LinkEditorModal({
     return (
       <Drawer open={isOpen} onOpenChange={(open) => {
         // Guard: Don't close modal during save operations
-        console.log('[LinkEditorModal Drawer] onOpenChange called', { open, isSaving });
         if (!open && isSaving) {
-          console.log('[LinkEditorModal Drawer] BLOCKED close - isSaving is true');
           return;
         }
         if (!open) {
-          console.log('[LinkEditorModal Drawer] Closing modal');
           onClose();
         }
       }} hashId="link-editor" analyticsId="link_editor">
@@ -960,13 +957,10 @@ export default function LinkEditorModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       // Guard: Don't close modal during save operations
-      console.log('[LinkEditorModal Dialog] onOpenChange called', { open, isSaving });
       if (!open && isSaving) {
-        console.log('[LinkEditorModal Dialog] BLOCKED close - isSaving is true');
         return;
       }
       if (!open) {
-        console.log('[LinkEditorModal Dialog] Closing modal');
         onClose();
       }
     }} hashId="link-editor" analyticsId="link_editor">

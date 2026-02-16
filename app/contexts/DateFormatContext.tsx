@@ -69,7 +69,6 @@ export function DateFormatProvider({ children }: DateFormatProviderProps) {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('dateFormat', format);
-        console.log('Date format saved to localStorage:', format);
       } catch (error) {
         console.error('Error saving date format to localStorage:', error);
       }

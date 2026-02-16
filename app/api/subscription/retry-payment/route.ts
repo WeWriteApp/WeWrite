@@ -9,14 +9,12 @@ import { PaymentRecoveryService } from '../../../services/paymentRecoveryService
 import { parseStripeError, createDetailedErrorLog } from '../../../utils/stripeErrorMessages';
 import { FinancialUtils } from '../../../types/financial';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 /**
  * POST /api/subscription/retry-payment

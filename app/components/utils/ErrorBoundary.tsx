@@ -140,7 +140,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       errorId: ''
     });
 
-    console.log('ErrorBoundary: Retrying after error');
   };
 
   private handleGoHome = () => {

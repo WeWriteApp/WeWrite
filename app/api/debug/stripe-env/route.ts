@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { detectEnvironmentType } from '../../../utils/environmentDetection';
+import { getStripe } from '../../../lib/stripe';
 import { requireDevelopmentEnvironment } from '../debugHelper';
 
 export async function GET(request: NextRequest) {
@@ -11,16 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const envType = detectEnvironmentType();
     const host = request.headers.get('host') || '';
-    const secretKey = process.env.STRIPE_SECRET_KEY;
-
-    if (!secretKey) {
-      return NextResponse.json(
-        { error: 'STRIPE_SECRET_KEY not set', envType, host },
-        { status: 500 }
-      );
-    }
-
-    const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' });
+    const stripe = getStripe();
 
     // Lightweight call to confirm key validity and mode
     const balance = await stripe.balance.retrieve();

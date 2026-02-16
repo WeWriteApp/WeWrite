@@ -108,7 +108,6 @@ export function UsernameBadge({
 
               // ENHANCEMENT: Trigger page refresh if this is a significant username change
               if (username === 'Missing username' || username === 'Anonymous') {
-                console.log('🔄 Username recovered for user:', userId, 'from', username, 'to', newUsername);
                 // Dispatch event to refresh other components
                 window.dispatchEvent(new CustomEvent('userDataUpdated', {
                   detail: { userId, oldUsername: username, newUsername }
@@ -144,7 +143,6 @@ export function UsernameBadge({
               timestamp: Date.now()
             });
 
-            console.log('✅ Fresh profile fetched for user:', userId, newUsername);
           } else {
             console.warn('No username found in API response for user:', userId);
             // FALLBACK: Try to generate a reasonable username
@@ -174,7 +172,6 @@ export function UsernameBadge({
 
       // If this is for our user, refresh the profile
       if (updatedUserId === userId) {
-        console.log('🔄 Profile update detected for user:', userId);
         setFreshUsername(null); // Clear cached username
         setIsLoadingUsername(true);
 

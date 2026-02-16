@@ -224,7 +224,6 @@ class EmergencyCircuitBreaker {
   emergencyDisable() {
     this.config.enabled = false;
     this.config.emergencyMode = false;
-    console.log('🔄 EMERGENCY: Circuit breaker disabled');
   }
 
   /**
@@ -233,7 +232,6 @@ class EmergencyCircuitBreaker {
   enable() {
     this.config.enabled = true;
     this.config.emergencyMode = true;
-    console.log('🚨 Circuit breaker re-enabled in emergency mode');
   }
 
   /**
@@ -241,7 +239,6 @@ class EmergencyCircuitBreaker {
    */
   setReadLimit(limit: number) {
     this.config.maxReadsPerMinute = limit;
-    console.log(`🔧 Circuit breaker read limit set to ${limit}/minute`);
   }
 
   /**
@@ -250,7 +247,6 @@ class EmergencyCircuitBreaker {
   allowEndpoint(endpoint: string) {
     if (!this.config.allowedEndpoints.includes(endpoint)) {
       this.config.allowedEndpoints.push(endpoint);
-      console.log(`✅ Endpoint allowed: ${endpoint}`);
     }
   }
 
@@ -260,7 +256,6 @@ class EmergencyCircuitBreaker {
   blockEndpoint(endpoint: string) {
     if (!this.config.blockedEndpoints.includes(endpoint)) {
       this.config.blockedEndpoints.push(endpoint);
-      console.log(`🚫 Endpoint blocked: ${endpoint}`);
     }
   }
 }

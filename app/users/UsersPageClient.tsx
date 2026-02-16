@@ -59,7 +59,6 @@ export default function UsersPageClient() {
   useEffect(() => {
     const fetchUsersAndPages = async () => {
       try {
-        console.log("UsersPage: Starting to fetch user and page data");
         setLoading(true);
         setError(null);
         setErrorDetails("");
@@ -69,13 +68,11 @@ export default function UsersPageClient() {
         const usersSnapshot = await getDocs(usersRef);
 
         if (usersSnapshot.empty) {
-          console.log("UsersPage: No users found");
           setUsers([]);
           setLoading(false);
           return;
         }
 
-        console.log(`UsersPage: Retrieved ${usersSnapshot.size} users from Firestore`);
 
         // Create a lookup object to store page counts per user
         const pageCountsByUser = {};
@@ -84,7 +81,6 @@ export default function UsersPageClient() {
         const pagesRef = collection(db, getCollectionName('pages'));
         const pagesSnapshot = await getDocs(pagesRef);
 
-        console.log(`UsersPage: Retrieved ${pagesSnapshot.size} pages from Firestore`);
 
         // Count pages by user
         pagesSnapshot.forEach((doc) => {
@@ -97,7 +93,6 @@ export default function UsersPageClient() {
           }
         });
 
-        console.log("UsersPage: Processing user data");
 
         // Process users data
         const usersData: User[] = [];
@@ -143,14 +138,11 @@ export default function UsersPageClient() {
         // Sort users by page count
         const sortedUsersData = usersData.sort((a, b) => b.pageCount - a.pageCount);
 
-        console.log(`UsersPage: Processed ${sortedUsersData.length} users with page counts`);
 
         // Fetch activity data for all users
         try {
           const userIds = sortedUsersData.map(user => user.id);
-          console.log('UsersPage: Fetching activity data for users:', userIds);
           const activityData = await getBatchUserActivityLast24Hours(userIds);
-          console.log('UsersPage: Received activity data:', activityData);
           setUserActivityData(activityData);
         } catch (activityError) {
           console.error('UsersPage: Error fetching user activity data:', activityError);

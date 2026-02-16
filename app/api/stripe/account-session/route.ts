@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
+import { getStripe } from '../../../lib/stripe';
 
-// Initialize Stripe
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 // Updated API route for embedded Stripe components
 export async function POST(request: NextRequest) {
@@ -46,7 +42,6 @@ export async function POST(request: NextRequest) {
 
     const finalComponents = components || defaultComponents;
 
-    console.log('Creating account session with components:', JSON.stringify(finalComponents, null, 2));
 
     // Get user data to find their connected account ID
     const db = admin.firestore();
@@ -57,7 +52,6 @@ export async function POST(request: NextRequest) {
 
     // If no connected account exists, create one
     if (!stripeConnectedAccountId) {
-      console.log(`Creating new Stripe Connect account for user ${userId}`);
       
       // Get user email from Firestore (avoids admin.auth() jose issues)
       let userEmail = userData?.email;
@@ -107,7 +101,6 @@ export async function POST(request: NextRequest) {
         stripeConnectedAccountId: stripeConnectedAccountId
       }, { merge: true });
 
-      console.log(`Created Stripe Connect account ${stripeConnectedAccountId} for user ${userId}`);
     }
 
     // Create Account Session for embedded components
@@ -116,7 +109,6 @@ export async function POST(request: NextRequest) {
       components: finalComponents
     });
 
-    console.log(`Created Account Session for user ${userId}, account ${stripeConnectedAccountId}`);
 
     return NextResponse.json({
       success: true,

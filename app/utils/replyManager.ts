@@ -81,7 +81,6 @@ export const fetchUsernameForPage = async (pageData: PageData): Promise<string> 
       pageData.username !== "Anonymous" &&
       pageData.username !== "Missing username" &&
       pageData.username.trim() !== "") {
-    console.log("Using username from page object:", pageData.username);
     return pageData.username.trim();
   }
 
@@ -89,7 +88,6 @@ export const fetchUsernameForPage = async (pageData: PageData): Promise<string> 
   if (pageData.userId) {
     try {
       const fetchedUsername = await getUsernameById(pageData.userId);
-      console.log("Fetched username from centralized utility:", fetchedUsername);
       return fetchedUsername;
     } catch (error) {
       console.error("Error fetching username for page:", error);
@@ -109,7 +107,6 @@ export const validateReplyContent = (originalContent: any[], newContent: any[]):
   if (originalContent.length > 0 && newContent.length > 0) {
     // Always preserve the attribution line (first paragraph)
     if (JSON.stringify(newContent[0]) !== JSON.stringify(originalContent[0])) {
-      console.log('Protecting attribution line from changes');
       newContent[0] = originalContent[0];
     }
   }

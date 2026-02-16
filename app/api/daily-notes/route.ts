@@ -21,7 +21,6 @@ const DAILY_NOTES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
  * - endDate: End date in YYYY-MM-DD format (optional)
  */
 export async function GET(request: NextRequest) {
-  console.log('🔄 [daily-notes API] NEW VERSION - Using createdAt dates instead of customDate');
 
   try {
     const { searchParams } = new URL(request.url);
@@ -38,7 +37,6 @@ export async function GET(request: NextRequest) {
     const cacheKey = `daily-notes:${userId}:${startDate}:${endDate}:${timezone}`;
     const cached = dailyNotesCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < DAILY_NOTES_CACHE_TTL) {
-      console.log(`🚀 EMERGENCY COST OPTIMIZATION: Returning cached daily notes for ${userId}`);
       return NextResponse.json({
         ...cached.data,
         cached: true,

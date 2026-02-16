@@ -112,6 +112,61 @@ async function sendWithRetry<T>(
   return { data: null, error: lastError };
 }
 
+/**
+ * Internal rate-limited send — ALL email sending must go through this.
+ * Checks daily/monthly quota, auto-schedules via Resend's scheduledAt if over limit,
+ * records usage in Firestore on success.
+ */
+async function rateLimitedSend(
+  templateId: string,
+  params: { from: string; to: string | string[]; subject: string; html?: string; text?: string; replyTo?: string; scheduledAt?: string }
+): Promise<{ data: { id: string } | null; error: { message: string; name?: string } | null; scheduled?: boolean; scheduledFor?: string }> {
+  const priority = getPriorityForTemplate(templateId);
+  let scheduledAt = params.scheduledAt;
+  let wasAutoScheduled = false;
+
+  // Check rate limits (unless already scheduled for a future date)
+  if (!scheduledAt) {
+    try {
+      const rateLimitResult = await canSendEmail(priority);
+      if (!rateLimitResult.canSend) {
+        if (priority === EmailPriority.P0_CRITICAL) {
+          console.warn(`[Email Service] Sending P0 email despite quota: ${rateLimitResult.reason}`);
+        } else if (rateLimitResult.suggestedScheduleDate) {
+          scheduledAt = rateLimitResult.suggestedScheduleDate;
+          wasAutoScheduled = true;
+          console.log(`[Email Service] Auto-scheduling ${templateId} for ${scheduledAt} (${rateLimitResult.reason})`);
+        }
+      }
+    } catch (err) {
+      console.warn('[Email Service] Rate limit check failed, sending anyway:', err);
+    }
+  }
+
+  const result = await sendWithRetry(async () => {
+    const res = await getResend().emails.send({
+      ...params,
+      ...(scheduledAt && { scheduledAt }),
+    } as any);
+    return {
+      data: res.data,
+      error: res.error ? { message: res.error.message, name: res.error.name } : null,
+    };
+  });
+
+  // Record usage on success
+  if (!result.error) {
+    try {
+      const recordDate = scheduledAt ? scheduledAt.split('T')[0] : undefined;
+      await recordEmailSent(priority, recordDate);
+    } catch (err) {
+      console.warn('[Email Service] Failed to record email sent:', err);
+    }
+  }
+
+  return { ...result, scheduled: wasAutoScheduled, scheduledFor: scheduledAt };
+}
+
 // Use notifications@ instead of noreply@ for better deliverability
 const FROM_EMAIL = `WeWrite <${Emails.notifications}>`;
 const REPLY_TO_EMAIL = Emails.support;
@@ -164,7 +219,7 @@ export const sendVerificationEmail = async (options: VerificationEmailOptions): 
   try {
     const { to, verificationLink, username, userId } = options;
     
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('verification', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to,
@@ -213,7 +268,7 @@ export const sendWelcomeEmail = async (options: WelcomeEmailOptions): Promise<bo
   try {
     const { to, username, userId } = options;
     
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('welcome', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to,
@@ -262,7 +317,7 @@ export const sendPasswordResetEmail = async (options: PasswordResetEmailOptions)
   try {
     const { to, resetLink, username, userId } = options;
     
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('password-reset', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to,
@@ -311,7 +366,7 @@ export const sendNotificationEmail = async (options: NotificationEmailOptions): 
   try {
     const { to, subject, heading, body, ctaText, ctaUrl, username, userId } = options;
     
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('generic-notification', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to,
@@ -362,13 +417,12 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     // Resend requires at least one of: html, text, or react
     const content = html || text || subject;
     
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('generic', {
       from: FROM_EMAIL,
-      replyTo: REPLY_TO_EMAIL,
+      replyTo: replyTo || REPLY_TO_EMAIL,
       to: Array.isArray(to) ? to : [to],
       subject,
       ...(html ? { html } : { text: content }),
-      ...(replyTo && { replyTo }),
     });
 
     if (error) {
@@ -397,7 +451,7 @@ export const sendPayoutSetupReminder = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('payout-setup-reminder', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
@@ -454,7 +508,7 @@ export const sendPayoutProcessed = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('payout-processed', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
@@ -510,7 +564,7 @@ export const sendSubscriptionConfirmation = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('subscription-confirmation', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
@@ -569,7 +623,7 @@ export const sendNewFollowerEmail = async (options: {
     const subject = newFollowerTemplate.subject
       .replace('{{followerUsername}}', options.followerUsername);
 
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('new-follower', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
@@ -631,7 +685,7 @@ export const sendPageLinkedEmail = async (options: {
       .replace('{{linkerUsername}}', options.linkerUsername)
       .replace('{{linkedPageTitle}}', options.linkedPageTitle);
 
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('page-linked', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,
@@ -686,7 +740,7 @@ export const sendSecurityAlert = async (options: {
 }): Promise<boolean> => {
   const sentAt = new Date().toISOString();
   try {
-    const { data, error } = await getResend().emails.send({
+    const { data, error } = await rateLimitedSend('account-security', {
       from: FROM_EMAIL,
       replyTo: REPLY_TO_EMAIL,
       to: options.to,

@@ -166,7 +166,6 @@ export class PaymentAnalyticsService {
         return cachedData;
       }
 
-      console.log('🔄 [Payment Analytics] Fetching subscription conversion funnel data via API...');
 
       // Build query parameters
       const params = new URLSearchParams({
@@ -185,7 +184,6 @@ export class PaymentAnalyticsService {
 
       const result = await response.json();
 
-      console.log(`✅ [Payment Analytics] Subscription conversion funnel data fetched: ${result.length} stages`);
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -210,7 +208,6 @@ export class PaymentAnalyticsService {
         return cachedData;
       }
 
-      console.log('🔄 [Payment Analytics] Fetching subscriptions over time data via API...');
 
       // Build query parameters
       const params = new URLSearchParams({
@@ -233,7 +230,6 @@ export class PaymentAnalyticsService {
 
       const result = await response.json();
 
-      console.log(`✅ [Payment Analytics] Subscriptions over time data fetched: ${result.length} data points`);
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -258,7 +254,6 @@ export class PaymentAnalyticsService {
         return cachedData;
       }
 
-      console.log('🔄 [Payment Analytics] Fetching subscription revenue data via API...');
 
       // Build query parameters
       const params = new URLSearchParams({
@@ -281,7 +276,6 @@ export class PaymentAnalyticsService {
 
       const result = await response.json();
 
-      console.log(`✅ [Payment Analytics] Subscription revenue data fetched: ${result.length} data points`);
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -306,7 +300,6 @@ export class PaymentAnalyticsService {
         return cachedData;
       }
 
-      console.log('🔄 [Payment Analytics] Fetching token allocation metrics via API...');
 
       // Build query parameters
       const params = new URLSearchParams({
@@ -329,7 +322,6 @@ export class PaymentAnalyticsService {
 
       const result = await response.json();
 
-      console.log(`✅ [Payment Analytics] Token allocation metrics data fetched: ${result.length} data points`);
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -347,7 +339,6 @@ export class PaymentAnalyticsService {
    */
   static async getAllPaymentAnalytics(dateRange: DateRange, granularity?: number): Promise<PaymentAnalyticsData> {
     try {
-      console.log('🔄 [Payment Analytics] Fetching all payment analytics data...');
 
       const [
         conversionFunnel,
@@ -361,7 +352,6 @@ export class PaymentAnalyticsService {
         this.getTokenAllocationMetrics(dateRange, granularity)
       ]);
 
-      console.log('✅ [Payment Analytics] All payment analytics fetched successfully');
 
       return {
         conversionFunnel,

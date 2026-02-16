@@ -354,11 +354,6 @@ export class FinancialLogger {
     correlationId: CorrelationId,
     context: Record<string, any>
   ): void {
-    console.log(`[FINANCIAL] ${operation} STARTED`, {
-      correlationId,
-      timestamp: new Date().toISOString(),
-      ...context
-    });
   }
 
   /**
@@ -369,11 +364,6 @@ export class FinancialLogger {
     correlationId: CorrelationId,
     result: Record<string, any>
   ): void {
-    console.log(`[FINANCIAL] ${operation} SUCCESS`, {
-      correlationId,
-      timestamp: new Date().toISOString(),
-      ...result
-    });
   }
 
   /**
@@ -405,13 +395,6 @@ export class FinancialLogger {
     oldBalance: any,
     newBalance: any
   ): void {
-    console.log(`[FINANCIAL] BALANCE_UPDATE`, {
-      correlationId,
-      userId,
-      timestamp: new Date().toISOString(),
-      oldBalance,
-      newBalance
-    });
   }
 
   /**
@@ -423,12 +406,6 @@ export class FinancialLogger {
     attempt: number,
     maxAttempts: number
   ): void {
-    console.log(`[FINANCIAL] ${operation} RETRY_ATTEMPT`, {
-      correlationId,
-      timestamp: new Date().toISOString(),
-      attempt,
-      maxAttempts
-    });
   }
 
   /**
@@ -439,11 +416,6 @@ export class FinancialLogger {
     correlationId: CorrelationId,
     successfulAttempt: number
   ): void {
-    console.log(`[FINANCIAL] ${operation} RETRY_SUCCESS`, {
-      correlationId,
-      timestamp: new Date().toISOString(),
-      successfulAttempt
-    });
   }
 
   /**
@@ -455,12 +427,6 @@ export class FinancialLogger {
     attempt: number,
     delayMs: number
   ): void {
-    console.log(`[FINANCIAL] ${operation} RETRY_DELAY`, {
-      correlationId,
-      timestamp: new Date().toISOString(),
-      attempt,
-      delayMs
-    });
   }
 
   /**
@@ -472,12 +438,6 @@ export class FinancialLogger {
     attempt: number,
     reason: string
   ): void {
-    console.log(`[FINANCIAL] ${operation} RETRY_ABORTED`, {
-      correlationId,
-      timestamp: new Date().toISOString(),
-      attempt,
-      reason
-    });
   }
 
   /**

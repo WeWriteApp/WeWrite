@@ -170,7 +170,6 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
       setIsLoading(true);
       setError(null);
 
-      console.log('Loading versions for pageId:', pageId, 'versionId:', versionId);
 
       // Fetch all versions for the page
       const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
@@ -183,7 +182,6 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
       if (response.ok) {
         const result = await response.json();
         const allVersions = result.data?.versions || result.versions || [];
-        console.log('Fetched versions:', allVersions.length);
 
         setVersions(allVersions);
 
@@ -196,8 +194,6 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
           setCurrentVersion(current);
           setPreviousVersion(previous);
           setCurrentIndex(index);
-          console.log('Found current version:', current.id, 'at index:', index);
-          console.log('Previous version:', previous?.id || 'none');
         } else {
           setError('Version not found');
         }

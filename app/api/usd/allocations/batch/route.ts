@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`🎯 Batch Allocations API: Processing ${updates.length} updates for user ${userId}`);
 
     // Process all updates in a batch to minimize database operations
     const results = [];
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
             success: true
           });
 
-          console.log(`🎯 Batch Allocations: Updated ${update.pageId}: ${currentCents} -> ${update.cents} cents`);
         } else {
           results.push({
             pageId: update.pageId,
@@ -94,7 +92,6 @@ export async function POST(request: NextRequest) {
     const successCount = results.filter(r => r.success).length;
     const errorCount = results.filter(r => !r.success).length;
 
-    console.log(`🎯 Batch Allocations API: Completed ${successCount} successful, ${errorCount} failed updates`);
 
     return NextResponse.json({
       success: true,
@@ -144,7 +141,6 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🎯 Batch Allocations API: Getting allocations for ${pageIds.length} pages for user ${userId}`);
 
     // Get all user allocations (single database read)
     const allAllocations = await UsdService.getUserUsdAllocations(userId);

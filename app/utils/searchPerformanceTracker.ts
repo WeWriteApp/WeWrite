@@ -216,7 +216,6 @@ class SearchPerformanceTracker {
     } else if (duration > this.thresholds.slow) {
       console.warn(`⚠️ Slow search "${searchTerm}" took ${duration}ms`);
     } else if (duration < this.thresholds.fast && cacheHit) {
-      console.log(`⚡ Fast cached search "${searchTerm}" took ${duration}ms (${resultCount} results)`);
     }
   }
 

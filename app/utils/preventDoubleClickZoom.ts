@@ -47,7 +47,6 @@ export function initPreventDoubleClickZoom(): void {
   // Prevent trackpad zoom gestures (two-finger zoom on trackpads)
   document.addEventListener('wheel', handleWheel, { passive: false });
 
-  console.log('Comprehensive zoom prevention initialized');
 }
 
 /**
@@ -75,7 +74,6 @@ function handleTouchStart(event: TouchEvent): void {
     // Mark as potential pinch gesture
     isPinching = true;
 
-    console.log('Multi-touch detected, monitoring for pinch gesture');
   }
 }
 
@@ -110,7 +108,6 @@ function handleTouchEnd(event: TouchEvent): void {
         touchTimeout = null;
       }
 
-      console.log('Double-tap zoom prevented');
       return;
     }
 
@@ -144,7 +141,6 @@ function handleClick(event: MouseEvent): void {
   if (now - lastTouchEnd <= 100) {
     event.preventDefault();
     event.stopPropagation();
-    console.log('Rapid click zoom prevented');
     return false;
   }
 }
@@ -177,11 +173,6 @@ function handleTouchMove(event: TouchEvent): void {
     if ((distanceChange > 10 || distanceChangeRatio > 0.05) && gestureTime > 100) {
       event.preventDefault();
       event.stopPropagation();
-      console.log('Pinch-to-zoom gesture prevented', {
-        distanceChange,
-        distanceChangeRatio: (distanceChangeRatio * 100).toFixed(1) + '%',
-        gestureTime: gestureTime + 'ms'
-      });
       return;
     }
 
@@ -198,7 +189,6 @@ function handleTouchMove(event: TouchEvent): void {
   // For any other multi-touch scenarios, be conservative and prevent
   if (touches.length > 2) {
     event.preventDefault();
-    console.log('Multi-touch gesture (>2 fingers) prevented');
   }
 }
 
@@ -209,7 +199,6 @@ function handleContextMenu(event: MouseEvent): void {
   // Only prevent on touch devices during active touch interactions
   if (('ontouchstart' in window) && activeTouches.length > 0) {
     event.preventDefault();
-    console.log('Context menu prevented during touch interaction');
   }
 }
 
@@ -226,7 +215,6 @@ function handleWheel(event: WheelEvent): void {
 
     if (isLikelyTrackpadGesture) {
       event.preventDefault();
-      console.log('Trackpad zoom gesture prevented');
     }
     // Allow keyboard zoom shortcuts (Ctrl/Cmd + wheel when deltaY is large)
   }
@@ -237,7 +225,6 @@ function handleWheel(event: WheelEvent): void {
     const isZoomGesture = event.deltaY !== 0 && event.deltaX === 0 && !event.shiftKey;
     if (isZoomGesture) {
       event.preventDefault();
-      console.log('Touch device wheel zoom prevented');
     }
   }
 }
@@ -309,7 +296,6 @@ export function cleanupPreventDoubleClickZoom(): void {
   lastPinchDistance = 0;
   activeTouches = [];
 
-  console.log('Comprehensive zoom prevention cleaned up');
 }
 
 /**
@@ -337,6 +323,5 @@ export function conditionallyInitPreventDoubleClickZoom(): void {
   if (needsDoubleClickZoomPrevention()) {
     initPreventDoubleClickZoom();
   } else {
-    console.log('Double-click zoom prevention not needed on this device');
   }
 }

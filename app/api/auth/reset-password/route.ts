@@ -247,7 +247,6 @@ export async function POST(request: NextRequest) {
     const rateLimitKey = `password-reset:${email.toLowerCase()}`;
     const rateLimitResult = await passwordResetRateLimiter.checkLimit(rateLimitKey);
     if (!rateLimitResult.allowed) {
-      console.log(`🔐 [Password Reset] Rate limited: ${email}`);
       return createErrorResponse('BAD_REQUEST',
         'Too many password reset requests. Please wait before trying again.'
       );
@@ -363,10 +362,6 @@ export async function PUT(request: NextRequest) {
     }
 
     const processingTime = Math.round(performance.now() - startTime);
-    console.log('🔐 [Password Reset REST API] Password reset confirmed:', {
-      email: result.email,
-      processingTime: `${processingTime}ms`
-    });
 
     return createApiResponse({
       message: 'Password reset successfully. You can now log in with your new password.',
@@ -393,7 +388,6 @@ export async function PUT(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔐 [Password Reset REST API] Verifying reset code');
 
     if (!FIREBASE_API_KEY) {
       return createErrorResponse('INTERNAL_ERROR', 'Service not configured');

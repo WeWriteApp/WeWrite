@@ -85,13 +85,11 @@ async function fetchAllPagesWithTitles(
     const db = getFirebaseAdmin().firestore();
     const pagesCollectionName = getCollectionName('pages');
 
-    console.log(`🔗 LINK_SUGGESTIONS: Fetching all pages from collection: ${pagesCollectionName}`);
 
     const pagesQuery = await db.collection(pagesCollectionName)
       .where('deleted', '!=', true)
       .get();
 
-    console.log(`🔗 LINK_SUGGESTIONS: Found ${pagesQuery.docs.length} total pages`);
 
     const pages: PageWithTitles[] = [];
 
@@ -225,30 +223,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log('🔗 LINK_SUGGESTIONS_API: Analyzing text for EXACT title matches:', {
-      textLength: text.length,
-      userId,
-      excludePageId: excludePageId || 'none',
-      textPreview: text.substring(0, 100) + (text.length > 100 ? '...' : '')
-    });
 
     // Fetch all pages with their titles and alternative titles
     const pages = await fetchAllPagesWithTitles(excludePageId);
 
-    console.log(`🔗 LINK_SUGGESTIONS_API: Loaded ${pages.length} pages to check for exact matches`);
 
     // Find exact title/alt-title matches in the text
     const suggestions = findTitleMatchesInText(text, pages);
 
-    console.log('🔗 LINK_SUGGESTIONS_API: Found exact matches:', {
-      totalSuggestions: suggestions.length,
-      matches: suggestions.slice(0, 5).map(s => ({
-        title: s.title,
-        matchedText: s.matchedText,
-        matchType: s.matchType,
-        confidence: s.confidence
-      }))
-    });
 
     return NextResponse.json({
       success: true,

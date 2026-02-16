@@ -145,7 +145,6 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
       try {
         setLoading(true);
 
-        console.log('[USER_GRAPH] Fetching graph for user:', userId);
 
         // Use optimized single-request API instead of N+1 queries
         const response = await fetch(`/api/user-graph?userId=${userId}&limit=100`);
@@ -156,11 +155,6 @@ export default function UserGraphTab({ userId, username, isOwnContent = false }:
 
         const data = await response.json();
 
-        console.log('[USER_GRAPH] API response:', {
-          nodes: data.nodes?.length || 0,
-          links: data.links?.length || 0,
-          computeTimeMs: data.stats?.computeTimeMs
-        });
 
         if (!data.nodes || data.nodes.length === 0) {
           setNodes([]);

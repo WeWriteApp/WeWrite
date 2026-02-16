@@ -16,12 +16,11 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
-import { getCollectionName } from '../utils/environmentConfig';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
 import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
+import { getStripe } from '../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey());
+const stripe = getStripe();
 
 export interface UserEarningsView {
   userId: string;
@@ -224,9 +223,9 @@ export class EarningsVisualizationService {
   async getPayoutQueue(): Promise<PayoutQueueItem[]> {
     try {
       const payoutsQuery = query(
-        collection(db, getCollectionName('payouts')),
-        where('status', 'in', ['queued', 'processing', 'failed']),
-        orderBy('scheduledDate', 'asc'),
+        collection(db, getCollectionName(USD_COLLECTIONS.USD_PAYOUTS)),
+        where('status', 'in', ['pending', 'pending_approval', 'failed']),
+        orderBy('requestedAt', 'asc'),
         limit(100)
       );
 
@@ -235,20 +234,20 @@ export class EarningsVisualizationService {
 
       for (const payoutDoc of payoutsSnapshot.docs) {
         const payout = payoutDoc.data();
-        
+
         // Get user data
         const userDoc = await getDoc(doc(db, getCollectionName('users'), payout.userId));
         const userData = userDoc.exists() ? userDoc.data() : {};
 
         payoutQueue.push({
           userId: payout.userId,
-          username: userData.username || 'Unknown User',
-          amount: payout.amount,
-          scheduledDate: payout.scheduledDate?.toDate() || new Date(),
+          username: userData?.username || 'Unknown User',
+          amount: (payout.amountCents || 0) / 100,
+          scheduledDate: payout.requestedAt?.toDate() || new Date(),
           status: payout.status,
           failureReason: payout.failureReason,
-          retryCount: payout.retryCount || 0,
-          nextRetryDate: payout.nextRetryDate?.toDate()
+          retryCount: 0,
+          nextRetryDate: undefined
         });
       }
 

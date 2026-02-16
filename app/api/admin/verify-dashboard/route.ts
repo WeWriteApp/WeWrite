@@ -14,7 +14,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔍 Admin verification: Running comprehensive dashboard verification...');
 
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const verificationResults: Record<string, any> = {};
@@ -30,7 +29,6 @@ export async function GET(request: NextRequest) {
     // Run all verifications in parallel
     const verificationPromises = verificationEndpoints.map(async ({ name, endpoint }) => {
       try {
-        console.log(`🔄 Testing ${name}...`);
         
         const response = await fetch(`${baseUrl}${endpoint}`, {
           method: 'GET',
@@ -46,7 +44,6 @@ export async function GET(request: NextRequest) {
             data: data.data,
             endpoint
           };
-          console.log(`✅ ${name} verification passed`);
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           verificationResults[name] = {
@@ -54,7 +51,6 @@ export async function GET(request: NextRequest) {
             error: errorData.error || `HTTP ${response.status}`,
             endpoint
           };
-          console.log(`❌ ${name} verification failed: ${errorData.error}`);
         }
       } catch (error) {
         verificationResults[name] = {
@@ -62,7 +58,6 @@ export async function GET(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Network error',
           endpoint
         };
-        console.log(`❌ ${name} verification failed: ${error}`);
       }
     });
 
@@ -78,7 +73,6 @@ export async function GET(request: NextRequest) {
 
     const analyticsPromises = analyticsEndpoints.map(async ({ name, endpoint }) => {
       try {
-        console.log(`🔄 Testing ${name}...`);
         
         const response = await fetch(`${baseUrl}${endpoint}`, {
           method: 'GET',
@@ -95,7 +89,6 @@ export async function GET(request: NextRequest) {
             dataKeys: data.data ? Object.keys(data.data) : [],
             endpoint
           };
-          console.log(`✅ ${name} analytics passed`);
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           analyticsResults[name] = {
@@ -103,7 +96,6 @@ export async function GET(request: NextRequest) {
             error: errorData.error || `HTTP ${response.status}`,
             endpoint
           };
-          console.log(`❌ ${name} analytics failed: ${errorData.error}`);
         }
       } catch (error) {
         analyticsResults[name] = {
@@ -111,7 +103,6 @@ export async function GET(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Network error',
           endpoint
         };
-        console.log(`❌ ${name} analytics failed: ${error}`);
       }
     });
 
@@ -193,12 +184,6 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    console.log('✅ Comprehensive dashboard verification complete:', {
-      overallScore: overallHealth.overallScore,
-      status: overallStatus,
-      passedTests: result.summary.passedTests,
-      totalTests: result.summary.totalTests
-    });
 
     return NextResponse.json({
       success: true,

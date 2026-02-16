@@ -30,11 +30,6 @@ export async function GET(
       return createErrorResponse('BAD_REQUEST', 'Page ID and Version ID are required');
     }
 
-    console.log(`📊 [VERSION_DETAIL] Fetching version:`, {
-      pageId,
-      versionId,
-      timestamp: new Date().toISOString()
-    });
 
     // Initialize Firebase Admin
     const admin = initAdmin();
@@ -64,18 +59,6 @@ export async function GET(
                          process.env.VERCEL_ENV === 'development' ||
                          process.env.VERCEL_ENV === 'preview';
 
-    console.log(`📊 [VERSION_DETAIL] Permission check:`, {
-      pageId,
-      versionId,
-      currentUserId,
-      isOwner,
-      isAdmin,
-      isDevelopment,
-      canView: true,
-      pageUserId: pageData?.userId,
-      pageTitle: pageData?.title,
-      note: 'All pages are now public'
-    });
 
     // No access control needed - all pages are accessible
 
@@ -146,14 +129,6 @@ export async function GET(
       pageTitle: pageData?.title || 'Untitled'
     };
 
-    console.log(`✅ [VERSION_DETAIL] Successfully fetched version:`, {
-      pageId,
-      versionId,
-      hasContent: !!versionData?.content,
-      hasPreviousVersion: !!previousVersion,
-      hasNextVersion: !!nextVersion,
-      username: versionData?.username
-    });
 
     return createApiResponse(response);
 

@@ -46,7 +46,6 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && user?.uid) {
-        console.log('[SUBSCRIPTION HISTORY] Page became visible, refreshing history');
         fetchHistory();
       }
     };
@@ -83,7 +82,6 @@ export default function SubscriptionHistory({ className }: SubscriptionHistoryPr
       setLoading(false);
     }
   };
-
 
 
   const getEventBadgeVariant = (eventType: string): "default" | "secondary" | "destructive" | "success" | "warning" => {

@@ -63,7 +63,7 @@ describe('Payout System Integration Tests', () => {
     try {
       await adminDb.collection(getCollectionName('users')).doc(testUserId).delete();
       await adminDb.collection(getCollectionName('users')).doc(testCreatorId).delete();
-      await adminDb.collection(getCollectionName('payouts')).doc(testPayoutId).delete();
+      await adminDb.collection(getCollectionName('usdPayouts')).doc(testPayoutId).delete();
     } catch (error) {
       console.warn('Cleanup error:', error);
     }
@@ -107,7 +107,7 @@ describe('Payout System Integration Tests', () => {
         }
       };
 
-      await adminDb.collection(getCollectionName('payouts')).doc(testPayoutId).set(payoutData);
+      await adminDb.collection(getCollectionName('usdPayouts')).doc(testPayoutId).set(payoutData);
 
       const result = await PayoutService.processPayout(testPayoutId);
 
@@ -316,7 +316,7 @@ describe('Payout System Integration Tests', () => {
         metadata: { correlationId }
       };
 
-      await adminDb.collection(getCollectionName('payouts')).doc(testPayoutId).set(payoutData);
+      await adminDb.collection(getCollectionName('usdPayouts')).doc(testPayoutId).set(payoutData);
 
       const payoutResult = await PayoutService.processPayout(testPayoutId);
       expect(payoutResult.success).toBe(true);
@@ -337,7 +337,7 @@ describe('Payout System Integration Tests', () => {
         metadata: { correlationId }
       };
 
-      await adminDb.collection(getCollectionName('payouts')).doc(failingPayoutId).set(payoutData);
+      await adminDb.collection(getCollectionName('usdPayouts')).doc(failingPayoutId).set(payoutData);
 
       const result = await PayoutService.processPayout(failingPayoutId);
 
@@ -346,7 +346,7 @@ describe('Payout System Integration Tests', () => {
       expect(result.error).toBeDefined();
 
       // Check that payout status was updated
-      const updatedPayout = await adminDb.collection(getCollectionName('payouts')).doc(failingPayoutId).get();
+      const updatedPayout = await adminDb.collection(getCollectionName('usdPayouts')).doc(failingPayoutId).get();
       const updatedData = updatedPayout.data();
       expect(updatedData?.status).toBe('failed');
     });

@@ -10,18 +10,7 @@
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionNameAsync } from '../utils/environmentConfig';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
-
-// Initialize Stripe - lazy initialization to avoid issues during build
-let stripeInstance: Stripe | null = null;
-function getStripe(): Stripe {
-  if (!stripeInstance) {
-    stripeInstance = new Stripe(getStripeSecretKey() || '', {
-      apiVersion: '2024-06-20'
-    });
-  }
-  return stripeInstance;
-}
+import { getStripe } from '../lib/stripe';
 
 // Helper function to get Firestore instance from Firebase Admin
 function getAdminFirestore() {

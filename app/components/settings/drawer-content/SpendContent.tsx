@@ -13,6 +13,7 @@ import { AllocationIntervalModal } from '../../payments/AllocationIntervalModal'
 import { UsdAllocation } from '../../../types/database';
 import Link from 'next/link';
 import { RollingCounter } from '../../ui/rolling-counter';
+import { toast } from '../../ui/use-toast';
 
 interface SpendContentProps {
   onClose: () => void;
@@ -101,9 +102,18 @@ export default function SpendContent({ onClose }: SpendContentProps) {
       if (response.ok) {
         await refreshUsdBalance();
         setAllocations(prev => prev.filter(a => a.id !== allocation.id));
+      } else {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Remove failed (${response.status})`);
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error removing allocation:', error);
+      toast.error("Failed to remove allocation", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Remove allocation error: ${msg}\nResource: ${allocation.resourceId}\nTime: ${new Date().toISOString()}`
+      });
     }
   };
 
@@ -130,19 +140,36 @@ export default function SpendContent({ onClose }: SpendContentProps) {
         ? { recipientUserId: allocation.resourceId, usdCentsChange: allocationIntervalCents }
         : { pageId: allocation.resourceId, usdCentsChange: allocationIntervalCents };
 
-      fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(() => {});
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Increase failed (${res.status})`);
+      }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error increasing allocation:', error);
+      // Rollback optimistic update
+      setAllocations(prev => prev.map(a =>
+        a.id === allocation.id
+          ? { ...a, usdCents: a.usdCents - allocationIntervalCents }
+          : a
+      ));
+      toast.error("Failed to increase allocation", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Increase allocation error: ${msg}\nResource: ${allocation.resourceId}\nTime: ${new Date().toISOString()}`
+      });
     }
   };
 
   const handleDecreaseAllocation = async (allocation: UsdAllocation) => {
     if (allocation.usdCents <= 0) return;
 
+    const previousCents = allocation.usdCents;
     setAllocations(prev => prev.map(a =>
       a.id === allocation.id
         ? { ...a, usdCents: Math.max(0, a.usdCents - allocationIntervalCents) }
@@ -157,13 +184,27 @@ export default function SpendContent({ onClose }: SpendContentProps) {
         ? { recipientUserId: allocation.resourceId, usdCentsChange: -allocationIntervalCents }
         : { pageId: allocation.resourceId, usdCentsChange: -allocationIntervalCents };
 
-      fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(() => {});
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Decrease failed (${res.status})`);
+      }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error decreasing allocation:', error);
+      // Rollback optimistic update
+      setAllocations(prev => prev.map(a =>
+        a.id === allocation.id ? { ...a, usdCents: previousCents } : a
+      ));
+      toast.error("Failed to decrease allocation", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Decrease allocation error: ${msg}\nResource: ${allocation.resourceId}\nTime: ${new Date().toISOString()}`
+      });
     }
   };
 
@@ -171,6 +212,7 @@ export default function SpendContent({ onClose }: SpendContentProps) {
     const delta = newAmountCents - allocation.usdCents;
     if (delta === 0) return;
 
+    const previousCents = allocation.usdCents;
     setAllocations(prev => prev.map(a =>
       a.id === allocation.id
         ? { ...a, usdCents: newAmountCents }
@@ -185,13 +227,27 @@ export default function SpendContent({ onClose }: SpendContentProps) {
         ? { recipientUserId: allocation.resourceId, usdCentsChange: delta }
         : { pageId: allocation.resourceId, usdCentsChange: delta };
 
-      fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }).catch(() => {});
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Set amount failed (${res.status})`);
+      }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error setting allocation amount:', error);
+      // Rollback optimistic update
+      setAllocations(prev => prev.map(a =>
+        a.id === allocation.id ? { ...a, usdCents: previousCents } : a
+      ));
+      toast.error("Failed to update allocation", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Set allocation error: ${msg}\nResource: ${allocation.resourceId}\nTime: ${new Date().toISOString()}`
+      });
     }
   };
 

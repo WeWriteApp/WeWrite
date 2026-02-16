@@ -117,13 +117,11 @@ function attemptChunkErrorRecovery(): boolean {
 
       // If within the recovery window and already attempted, don't retry
       if (now - timestamp < CHUNK_ERROR_RECOVERY_EXPIRY) {
-        console.log('🔄 Chunk error recovery already attempted recently, not retrying')
         return false
       }
 
       // If we've had multiple attempts in quick succession, something else is wrong
       if (attempts >= 2) {
-        console.log('🔄 Multiple chunk error recovery attempts failed, not retrying')
         sessionStorage.removeItem(CHUNK_ERROR_RECOVERY_KEY)
         return false
       }
@@ -135,7 +133,6 @@ function attemptChunkErrorRecovery(): boolean {
       attempts: recoveryData ? JSON.parse(recoveryData).attempts + 1 : 1
     }))
 
-    console.log('🔄 Attempting automatic recovery from chunk load error...')
 
     // Small delay to ensure the storage is written
     setTimeout(() => {

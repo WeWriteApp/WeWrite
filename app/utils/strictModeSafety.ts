@@ -78,7 +78,6 @@ export function safeLog(message: string, ...args: any[]): void {
   const lastLog = logCache.get(key);
   
   if (!lastLog || (now - lastLog) > LOG_DEDUP_WINDOW) {
-    console.log(message, ...args);
     logCache.set(key, now);
   }
 }

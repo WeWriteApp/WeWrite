@@ -157,7 +157,6 @@ class SearchPerformanceMonitor {
     } else if (duration > 1000) {
       console.warn(`⚠️ Slow search detected: "${searchTerm}" took ${duration}ms (${type})`);
     } else if (duration < 100) {
-      console.log(`⚡ Fast search: "${searchTerm}" took ${duration}ms (${type})`);
     }
   }
 
@@ -231,21 +230,15 @@ class SearchPerformanceMonitor {
   logReport(): void {
     const stats = this.getStats();
     console.group('🔍 Search Performance Report');
-    console.log('Total Searches:', stats.totalSearches);
-    console.log('Average Time:', stats.averageSearchTime.toFixed(1) + 'ms');
-    console.log('Cache Hit Rate:', stats.cacheMetrics.hitRate);
-    console.log('Slow Searches (>1s):', stats.slowSearches.length);
 
     console.group('By Type:');
     for (const [type, avg] of Object.entries(stats.typeAverages)) {
-      console.log(`${type}:`, avg);
     }
     console.groupEnd();
 
     if (stats.slowSearches.length > 0) {
       console.group('Recent Slow Searches:');
       stats.slowSearches.slice(-5).forEach(search => {
-        console.log(`"${search.searchTerm}" - ${search.duration}ms (${search.type})`);
       });
       console.groupEnd();
     }

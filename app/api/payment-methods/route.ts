@@ -4,7 +4,7 @@ import { initAdmin } from '../../firebase/admin';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getCollectionName } from '../../utils/environmentConfig';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { getStripe } from '../../lib/stripe';
 
 
 // Initialize Firebase Admin lazily
@@ -33,10 +33,7 @@ function initializeFirebase() {
   return { db };
 }
 
-// Get the appropriate Stripe key based on environment
-const stripeSecretKey = getStripeSecretKey();
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-04-30.basil' as any});
+const stripe = getStripe();
 
 // GET /api/payment-methods - Get all payment methods for the current user (v4)
 export async function GET(request: NextRequest) {

@@ -67,12 +67,10 @@ export default function BackgroundOptionsCard() {
 
         if (response.ok) {
           const data = await response.json();
-          console.log('[BackgroundOptionsCard] Fetched background data:', data);
 
           // Set the uploaded image if it exists
           if (data.backgroundImage?.url) {
             setUserUploadedImage(data.backgroundImage.url);
-            console.log('[BackgroundOptionsCard] Found uploaded image:', data.backgroundImage.url);
           }
         } else {
           console.error('Failed to fetch background preference:', response.status);

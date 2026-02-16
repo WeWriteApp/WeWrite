@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
     const adminEmail = 'admin.test@wewrite.app';
     const adminPassword = password;
 
-    console.log('🔐 Creating secure admin account...');
 
     // Use the same Firebase Admin SDK instance
     if (!firebaseAdmin) {
@@ -55,7 +54,6 @@ export async function POST(request: NextRequest) {
       let userRecord;
       try {
         userRecord = await admin.auth().getUserByEmail(adminEmail);
-        console.log('⚠️ Admin account already exists, updating password...');
         
         // Update existing user's password
         await firebaseAdmin.auth().updateUser(userRecord.uid, {
@@ -63,7 +61,6 @@ export async function POST(request: NextRequest) {
           emailVerified: true
         });
 
-        console.log('✅ Admin account password updated successfully');
         
         return NextResponse.json({
           success: true,
@@ -79,7 +76,6 @@ export async function POST(request: NextRequest) {
       } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
           // User doesn't exist, create new one
-          console.log('📝 Creating new admin account...');
           
           userRecord = await firebaseAdmin.auth().createUser({
             email: adminEmail,
@@ -88,7 +84,6 @@ export async function POST(request: NextRequest) {
             // displayName removed - WeWrite only uses username field stored in Firestore
           });
 
-          console.log('✅ Admin account created successfully');
 
           return NextResponse.json({
             success: true,

@@ -100,16 +100,10 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
         let responseData = await pageResponse.json();
         let pageData = responseData.pageData || responseData; // Handle both wrapped and direct responses
 
-        console.log('📊 [VERSIONS PAGE] Page data received:', {
-          title: pageData?.title,
-          fullPageData: pageData,
-          responseStructure: Object.keys(responseData)
-        });
 
         setPage(pageData);
 
         // Fetch page versions using the dedicated page versions API
-        console.log('Page versions - Attempting to fetch versions for page:', id);
         const versionsResponse = await fetch(`/api/pages/${id}/versions?limit=50&includeNoOp=false`, {
           credentials: 'include', // Include authentication cookies
           headers: {
@@ -118,13 +112,10 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
         });
         let pageVersions = [];
 
-        console.log('Page versions - API response status:', versionsResponse.status);
 
         if (versionsResponse.ok) {
           const versionsData = await versionsResponse.json();
           pageVersions = versionsData.data?.versions || versionsData.versions || [];
-          console.log('Page versions - Fetched from versions API:', pageVersions.length, 'versions');
-          console.log('Page versions - Full API response:', versionsData);
         } else {
           console.error('Failed to fetch page versions:', versionsResponse.status, versionsResponse.statusText);
 
@@ -137,10 +128,8 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
           }
 
           // Fallback to old version system if API fails
-          console.log('Trying fallback to old version system');
           const fallbackVersions = await getPageVersions(id);
           pageVersions = fallbackVersions || [];
-          console.log('Page versions - Fallback versions:', pageVersions.length, 'versions');
         }
 
         // Convert page versions to activity format for display
@@ -148,7 +137,6 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
 
         if (pageVersions.length > 0) {
           // Use page versions data from the dedicated API
-          console.log('Using page versions data for versions page:', pageVersions.length, 'versions');
 
           // Calculate diff previews for each version
           activityItems = await Promise.all(pageVersions.map(async (version, index) => {
@@ -249,23 +237,12 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
             };
           }));
 
-          console.log('📊 [VERSIONS PAGE] Activity items created:', {
-            count: activityItems.length,
-            firstItem: activityItems[0] ? {
-              username: activityItems[0].username,
-              tier: activityItems[0].tier,
-              hasActiveSubscription: activityItems[0].hasActiveSubscription
-            } : null
-          });
 
-          console.log('Page versions - Converted to activity items with calculated diffs:', activityItems.length, 'items');
         } else {
           // No versions found
-          console.log('No versions found for this page');
         }
 
         if (process.env.NODE_ENV === 'development') {
-          console.log('Versions page - setting activities:', activityItems.length, 'items');
         }
         setActivities(activityItems);
         setVersions(pageVersions); // Set versions from the API

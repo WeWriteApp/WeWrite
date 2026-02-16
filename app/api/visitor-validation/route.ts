@@ -24,10 +24,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Visitor data is required');
     }
 
-    console.log('🔍 [VISITOR VALIDATION] Starting validation', {
-      type: validationType,
-      fingerprintId: visitorData.fingerprintId
-    });
 
     // Use environment-aware collection naming
     const visitorsRef = db.collection(getCollectionName('siteVisitors'));
@@ -43,11 +39,6 @@ export async function POST(request: NextRequest) {
     // Analyze patterns
     const validation = await analyzeVisitorPatterns(visitorData, recentVisitorsSnapshot.docs);
 
-    console.log('✅ [VISITOR VALIDATION] Validation completed', {
-      isValid: validation.isValid,
-      confidence: validation.confidence,
-      issueCount: validation.issues.length
-    });
 
     return createSuccessResponse({
       validation,
@@ -77,7 +68,6 @@ export async function GET(request: NextRequest) {
     const hours = parseInt(searchParams.get('hours') || '24');
     const includeDetails = searchParams.get('includeDetails') === 'true';
 
-    console.log('📊 [VISITOR VALIDATION] Fetching traffic patterns', { hours });
 
     // Use environment-aware collection naming
     const visitorsRef = db.collection(getCollectionName('siteVisitors'));
@@ -92,10 +82,6 @@ export async function GET(request: NextRequest) {
     // Analyze patterns
     const patterns = analyzeTrafficPatterns(snapshot.docs, includeDetails);
 
-    console.log('✅ [VISITOR VALIDATION] Traffic patterns analyzed', {
-      totalVisitors: snapshot.size,
-      patterns: patterns.length
-    });
 
     return createSuccessResponse({
       patterns,

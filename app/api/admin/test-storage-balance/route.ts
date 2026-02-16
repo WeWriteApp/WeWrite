@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, amount, confirm } = body;
 
-    console.log(`🧪 [ADMIN] Test Storage Balance request: ${action}`);
 
     switch (action) {
       case 'test_move_to_storage':
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleTestMoveToStorage(amount: number, devBypass: boolean) {
-  console.log(`🧪 [ADMIN] Testing move $${amount} to Storage Balance`);
   
   // Get current balances
   const beforeBalance = await stripeStorageBalanceService.getBalanceBreakdown();
@@ -81,7 +79,6 @@ async function handleTestMoveToStorage(amount: number, devBypass: boolean) {
     }, { status: 500 });
   }
 
-  console.log(`📊 [ADMIN] Current balances before test:`, beforeBalance);
 
   // Check if we have sufficient funds in Payments Balance
   if (beforeBalance.paymentsBalance < amount && !devBypass) {
@@ -143,7 +140,6 @@ async function handleTestMoveToStorage(amount: number, devBypass: boolean) {
 }
 
 async function handleTestMoveFromStorage(amount: number) {
-  console.log(`🧪 [ADMIN] Testing move $${amount} from Storage Balance back to Payments Balance`);
   
   // Get current balances
   const beforeBalance = await stripeStorageBalanceService.getBalanceBreakdown();
@@ -206,7 +202,6 @@ async function handleTestMoveFromStorage(amount: number) {
 }
 
 async function handleGetCurrentBalances() {
-  console.log(`📊 [ADMIN] Getting current Stripe balances`);
   
   const balances = await stripeStorageBalanceService.getBalanceBreakdown();
   

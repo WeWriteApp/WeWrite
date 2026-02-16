@@ -7,8 +7,6 @@
 
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from 'firebase/firestore';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
 import { UsdEarningsService } from './usdEarningsService';
 import {
   FinancialOperationResult,
@@ -20,8 +18,9 @@ import {
 } from '../types/financial';
 import { WriterTokenEarnings, WriterTokenBalance, TokenAllocation } from '../types/database';
 import { getCollectionName } from "../utils/environmentConfig";
+import { getStripe } from '../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey());
+const stripe = getStripe();
 
 /**
  * Reconciliation discrepancy types

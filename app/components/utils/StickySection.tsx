@@ -37,7 +37,6 @@ function setActiveStickySection(newActiveSection: string | null): void {
 
     // Debug logging
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[StickySection] Global state updated: ${previousSection} → ${newActiveSection}`);
     }
   }
 }
@@ -139,17 +138,12 @@ function determineActiveSectionPrecise(): string | null {
         // Simplified logic: if we're in the section and past the header, make it sticky
         // Removed contentBelowHeader check that was causing disappearing behavior
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[StickySection] Active section: ${section.id}`);
-          console.log(`  - effectiveViewportTop: ${effectiveViewportTop}`);
-          console.log(`  - section.top: ${section.top}`);
-          console.log(`  - section.bottom: ${section.bottom}`);
         }
         return section.id;
       }
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[StickySection] No active section - all headers return to original positions`);
     }
 
     return null;
@@ -178,7 +172,6 @@ function setupStickyDetection(): void {
       // Only update if the active section actually changed
       if (newActiveSection !== lastActiveSection) {
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[StickySection] Section transition: ${lastActiveSection} → ${newActiveSection}`);
         }
 
         setActiveStickySection(newActiveSection);
@@ -499,7 +492,6 @@ export default function StickySection({
 
     // Debug logging for state transitions
     if (process.env.NODE_ENV === 'development') {
-      console.log(`[StickySection] ${sectionId} - shouldBeSticky: ${shouldBeSticky}, isSticky: ${isSticky}`);
     }
 
     if (shouldBeSticky && !isSticky) {
@@ -511,7 +503,6 @@ export default function StickySection({
 
         // Debug logging
         if (process.env.NODE_ENV === 'development') {
-          console.log(`[StickySection] ${sectionId} - Adding placeholder with height: ${headerRect.height}px`);
         }
       }
 
@@ -543,7 +534,6 @@ export default function StickySection({
 
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] ${sectionId} - Now sticky with fade transition`);
       }
     } else if (!shouldBeSticky && isSticky) {
       // No longer sticky - fade out and restore to original position
@@ -586,7 +576,6 @@ export default function StickySection({
 
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] ${sectionId} - Fading out and restoring to original position`);
       }
     }
   }, [isActiveStickySection, isSticky, sectionId, headerSidebarWidth]);

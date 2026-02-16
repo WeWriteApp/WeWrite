@@ -15,7 +15,6 @@ import { getCollectionName } from '../../utils/environmentConfig';
  */
 
 export async function GET(request: NextRequest) {
-  console.log('📅 [timeline API] Fetching pages with custom dates for timeline view');
   
   try {
     const { searchParams } = new URL(request.url);
@@ -38,10 +37,6 @@ export async function GET(request: NextRequest) {
     let pagesQuery = db.collection(getCollectionName('pages'))
       .where('userId', '==', userId);
 
-    console.log(`📅 [timeline API] Querying pages for user ${userId} with custom dates`, {
-      startDate,
-      endDate
-    });
 
     const snapshot = await pagesQuery.get();
 
@@ -92,16 +87,9 @@ export async function GET(request: NextRequest) {
         return true;
       });
 
-    console.log(`📅 [timeline API] Found ${pages.length} pages with custom dates`);
 
     // Debug: Show first few pages to understand what we're returning
     if (pages.length > 0) {
-      console.log('📅 [timeline API] Sample pages with custom dates:', pages.slice(0, 5).map(page => ({
-        id: page.id,
-        title: page.title,
-        customDate: page.customDate,
-        createdAt: page.createdAt
-      })));
     }
 
     return NextResponse.json({

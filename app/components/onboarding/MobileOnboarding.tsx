@@ -124,7 +124,6 @@ export default function MobileOnboarding({ platform, onComplete, isPreview = fal
         await PushNotifications.register();
       }
     } catch (e) {
-      console.log('Push notifications not available:', e);
     }
   };
 

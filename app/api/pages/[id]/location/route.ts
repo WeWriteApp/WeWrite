@@ -40,17 +40,6 @@ export async function PATCH(
     const body = await request.json();
     const { location } = body;
 
-    console.log('🗺️ Location API: PATCH request received for page:', pageId, 'with location:', location, 'user:', currentUserId);
-    console.log('🗺️ Location API: Location details:', {
-      location,
-      lat: location?.lat,
-      lng: location?.lng,
-      zoom: location?.zoom,
-      latType: typeof location?.lat,
-      lngType: typeof location?.lng,
-      latValid: location?.lat >= -90 && location?.lat <= 90,
-      lngValid: location?.lng >= -180 && location?.lng <= 180
-    });
 
     // Initialize Firebase Admin
     const admin = initAdmin();
@@ -155,7 +144,6 @@ export async function PATCH(
 
       // Create the version document
       const versionRef = await pageRef.collection('versions').add(versionData);
-      console.log('🗺️ Location API: Created version record:', versionRef.id);
 
       // Update the page with the new location and version info
       const updateData: any = {
@@ -172,7 +160,6 @@ export async function PATCH(
       };
 
       await pageRef.update(updateData);
-      console.log('🗺️ Location API: Successfully updated location and created version for page:', pageId);
 
     } catch (versionError) {
       console.error('🗺️ Location API: Error creating version record (non-fatal):', versionError);
@@ -183,7 +170,6 @@ export async function PATCH(
         lastModified: now
       };
       await pageRef.update(updateData);
-      console.log('🗺️ Location API: Updated location without version record (fallback)');
     }
 
     return NextResponse.json({

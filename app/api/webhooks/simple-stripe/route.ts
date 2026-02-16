@@ -8,15 +8,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
+import { getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { db } from '../../../firebase/database/core';
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { calculateTokensForAmount, determineTierFromAmount } from '../../../utils/subscriptionTiers';
 import { getCollectionName } from "../../../utils/environmentConfig";
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {

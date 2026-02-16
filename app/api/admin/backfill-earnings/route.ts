@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
       const month = searchParams.get('month') || getCurrentMonth();
       const debug = searchParams.get('debug') === 'true';
 
-      console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Starting preview for month: ${month}`);
 
       const admin = getFirebaseAdmin();
       const db = admin.firestore();
@@ -68,10 +67,6 @@ export async function GET(request: NextRequest) {
       const allocationsCollectionName = getCollectionName(USD_COLLECTIONS.USD_ALLOCATIONS);
       const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
 
-    console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Collection names:`, {
-      allocations: allocationsCollectionName,
-      earnings: earningsCollectionName
-    });
 
     // DEBUG: First, get ALL allocations without any filters to see what exists
     let debugInfo: any = {};
@@ -98,7 +93,6 @@ export async function GET(request: NextRequest) {
       debugInfo.uniqueMonths = Array.from(months);
       debugInfo.uniqueStatuses = Array.from(statuses);
 
-      console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Debug info:`, debugInfo);
     }
 
     // Get all active allocations for the month
@@ -113,7 +107,6 @@ export async function GET(request: NextRequest) {
       ...doc.data()
     })) as AllocationRecord[];
 
-    console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Found ${allocations.length} allocations for ${month}`);
 
     // Group allocations by recipient
     const allocationsByRecipient = new Map<string, AllocationRecord[]>();
@@ -142,7 +135,6 @@ export async function GET(request: NextRequest) {
       existingEarnings.set(data.userId, data);
     });
 
-    console.log(`📊 [BACKFILL PREVIEW] [${correlationId}] Found ${existingEarnings.size} existing earnings records`);
 
     // Calculate discrepancies
     const discrepancies: {
@@ -243,7 +235,6 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Starting backfill for ${month} (dryRun: ${dryRun})`);
 
       const admin = getFirebaseAdmin();
       const db = admin.firestore();
@@ -253,11 +244,6 @@ export async function POST(request: NextRequest) {
       const earningsCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS);
       const balancesCollectionName = getCollectionName(USD_COLLECTIONS.WRITER_USD_BALANCES);
 
-    console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Collection names:`, {
-      allocations: allocationsCollectionName,
-      earnings: earningsCollectionName,
-      balances: balancesCollectionName
-    });
 
     // Get all active allocations for the month
     const allocationsSnapshot = await db
@@ -271,7 +257,6 @@ export async function POST(request: NextRequest) {
       ...doc.data()
     })) as AllocationRecord[];
 
-    console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Found ${allocations.length} allocations`);
 
     // Group allocations by recipient
     const allocationsByRecipient = new Map<string, AllocationRecord[]>();
@@ -480,13 +465,6 @@ export async function POST(request: NextRequest) {
 
     const duration = Date.now() - startTime;
 
-    console.log(`💰 [BACKFILL EXECUTE] [${correlationId}] Completed in ${duration}ms`, {
-      dryRun,
-      created: createdCount,
-      updated: updatedCount,
-      skipped: skippedCount,
-      totalBackfilledCents
-    });
 
     return NextResponse.json({
       success: true,

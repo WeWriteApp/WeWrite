@@ -7,15 +7,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { FinancialUtils } from '../../../types/financial';
+import { getStripe } from '../../../lib/stripe';
 
-// Initialize Stripe
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   const correlationId = FinancialUtils.generateCorrelationId();

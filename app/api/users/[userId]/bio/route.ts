@@ -86,7 +86,7 @@ export async function PUT(
 
     // Get current user ID from request (handles both production and development auth)
     const currentUserId = await getUserIdFromRequest(request);
-    
+
     // Check if user is authorized to update this bio
     // Allow if:
     // 1. User is updating their own bio
@@ -95,7 +95,11 @@ export async function PUT(
     const isAuthorized = currentUserId === userId || isDevelopmentTestUser;
 
     if (!isAuthorized) {
-      return createErrorResponse('FORBIDDEN', 'Not authorized to update this user bio');
+      console.warn(`[Bio API] Auth failed: session userId=${currentUserId || 'null'}, requested userId=${userId}`);
+      const reason = !currentUserId
+        ? 'Session expired or not found. Please sign in again.'
+        : 'You can only update your own bio.';
+      return createErrorResponse('FORBIDDEN', reason);
     }
 
     const body = await request.json();
@@ -131,7 +135,6 @@ export async function PUT(
       await userDocRef.update(updateData);
     }
 
-    console.log(`Bio updated for user ${userId} by ${editorName || 'Unknown'}`);
 
     return createApiResponse({
       success: true,

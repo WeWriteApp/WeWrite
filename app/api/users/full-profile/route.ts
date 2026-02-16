@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
     const cached = fullProfileCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < FULL_PROFILE_CACHE_TTL) {
       const responseTime = Date.now() - startTime;
-      console.log(`🚀 [Full Profile API] Cache hit for ${lookupValue} (${responseTime}ms)`);
 
       const response = createApiResponse(cached.data);
       response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=300'); // 2min browser, 5min CDN
@@ -54,7 +53,6 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    console.log(`💸 [Full Profile API] Cache miss for ${lookupValue} - fetching from database`);
 
     const admin = getFirebaseAdmin();
     if (!admin) {
@@ -165,7 +163,6 @@ export async function GET(request: NextRequest) {
     userCache.set(lookupValue, profileData, 'profile');
 
     const responseTime = Date.now() - startTime;
-    console.log(`✅ [Full Profile API] Successfully fetched ${lookupValue} (${responseTime}ms)`);
 
     const response = createApiResponse(profileData);
     response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=300, stale-while-revalidate=600');
@@ -197,7 +194,6 @@ export async function POST(request: NextRequest) {
           fullProfileCache.delete(key);
         }
       }
-      console.log(`🗑️ Full profile cache invalidated for user: ${userId}`);
 
       return NextResponse.json({
         success: true,

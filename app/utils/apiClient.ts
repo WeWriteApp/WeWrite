@@ -258,7 +258,6 @@ export const invalidatePageCacheAfterSave = (pageId: string, userId?: string) =>
     }
   }
 
-  console.log(`🧹 Cache invalidated for page ${pageId}`);
 };
 
 /**

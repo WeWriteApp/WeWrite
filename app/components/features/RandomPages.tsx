@@ -73,7 +73,6 @@ const RandomPages = React.memo(function RandomPages({
     return '';
   });
 
-  console.log('RandomPages: Rendering with props:', { limit, priority, viewMode });
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -104,7 +103,6 @@ const RandomPages = React.memo(function RandomPages({
       const lastFetch = parseInt(localStorage.getItem(lastFetchKey) || '0');
 
       if (!isShuffling && (now - lastFetch) < 2000) {
-        console.log('RandomPages: Throttling API call, too recent');
         // If we're throttling on initial load, still need to set loading to false
         // Check if we have cached data to show
         const cachedData = localStorage.getItem(`randomPages_cache_${user?.uid || 'anonymous'}`);
@@ -113,7 +111,6 @@ const RandomPages = React.memo(function RandomPages({
             const parsed = JSON.parse(cachedData);
             if (parsed && Array.isArray(parsed) && parsed.length > 0) {
               setRandomPages(parsed);
-              console.log('RandomPages: Using cached data while throttled');
             }
           } catch (e) {
             console.error('Error parsing cached random pages:', e);
@@ -182,7 +179,6 @@ const RandomPages = React.memo(function RandomPages({
       }
 
       setRandomPages(data.randomPages || []);
-      console.log(`RandomPages: Fetched ${data.randomPages?.length || 0} random pages`);
 
       // Cache the fetched data for throttling scenarios
       if (data.randomPages && data.randomPages.length > 0) {
@@ -214,7 +210,6 @@ const RandomPages = React.memo(function RandomPages({
 
   // Handle shuffle button click
   const handleShuffle = useCallback((excludeOwn = excludeOwnPages, excludedUser = excludeUsername) => {
-    console.log('RandomPages: Shuffle button clicked', { excludeOwn, excludedUser });
     fetchRandomPages(true, excludeOwn, excludedUser);
   }, [fetchRandomPages, excludeOwnPages, excludeUsername]);
 
@@ -237,7 +232,6 @@ const RandomPages = React.memo(function RandomPages({
     const handleShuffleEvent = (event: CustomEvent) => {
       const excludeOwn = event.detail?.excludeOwnPages ?? excludeOwnPages;
       const excludedUser = event.detail?.excludeUsername ?? excludeUsername;
-      console.log('RandomPages: Shuffle event received', { excludeOwn, excludedUser });
 
       // Update local state if settings changed
       if (excludeOwn !== excludeOwnPages) {
@@ -260,7 +254,6 @@ const RandomPages = React.memo(function RandomPages({
   useEffect(() => {
     const handleDenseModeEvent = (event: CustomEvent) => {
       const newDenseMode = event.detail?.denseMode ?? false;
-      console.log('RandomPages: Dense mode event received', { denseMode: newDenseMode });
       setDenseMode(newDenseMode);
     };
 
@@ -275,7 +268,6 @@ const RandomPages = React.memo(function RandomPages({
     const handleViewModeEvent = (event: CustomEvent) => {
       const newViewMode = event.detail?.viewMode ?? 'cards';
       const newDenseMode = event.detail?.denseMode ?? false;
-      console.log('RandomPages: View mode event received', { viewMode: newViewMode, denseMode: newDenseMode });
       setViewMode(newViewMode);
       setDenseMode(newDenseMode);
     };
@@ -290,7 +282,6 @@ const RandomPages = React.memo(function RandomPages({
   useEffect(() => {
     // Only re-fetch if switching to graph mode (need graph data) or from graph mode (don't need it)
     if (viewMode === 'graph' && randomPages.length > 0 && !randomPages[0]?.graphData) {
-      console.log('RandomPages: Switching to graph mode, re-fetching with graph data');
       fetchRandomPages(true);
     }
   }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps

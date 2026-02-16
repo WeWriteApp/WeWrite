@@ -45,7 +45,6 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
   // Fetch notes for the current month
   const fetchNotesForMonth = useCallback(async (date: Date) => {
     if (!user?.uid) {
-      console.log('📅 DailyNotesCalendar: No current account, skipping fetch');
       return;
     }
 
@@ -55,12 +54,6 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
       const startDate = startOfMonth(date);
       const endDate = endOfMonth(date);
 
-      console.log('📅 DailyNotesCalendar: Fetching notes for month:', {
-        month: format(date, 'yyyy-MM'),
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
-        userId: user.uid
-      });
 
       // Use the same API endpoint as the carousel
       const apiUrl = '/api/daily-notes?' + new URLSearchParams({
@@ -69,7 +62,6 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
         endDate: format(endDate, 'yyyy-MM-dd')
       });
 
-      console.log('📅 DailyNotesCalendar: API URL:', apiUrl);
       const response = await fetch(apiUrl);
 
       if (!response.ok) {
@@ -79,7 +71,6 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
       }
 
       const data = await response.json();
-      console.log('📅 DailyNotesCalendar: API returned data:', data);
 
       // The daily-notes API returns { notesByDate: { "2025-07-16": [pages...] } }
       const notesByDateMap = new Map<string, Note[]>();
@@ -100,7 +91,6 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
       }
 
       setNotesByDate(notesByDateMap);
-      console.log('📅 DailyNotesCalendar: Grouped notes by date:', notesByDateMap.size, 'days with notes');
 
     } catch (error) {
       console.error('Error fetching notes for calendar:', error);

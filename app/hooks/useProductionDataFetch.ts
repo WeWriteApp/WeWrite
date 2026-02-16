@@ -43,7 +43,6 @@ export function useProductionDataFetch() {
     // Add production data header for logged-out users (anywhere in the app)
     if (shouldForceProduction) {
       headers.set('X-Force-Production-Data', 'true');
-      console.log('[Production Data Fetch] Adding X-Force-Production-Data header for logged-out user');
     }
     
     // Merge with existing init options

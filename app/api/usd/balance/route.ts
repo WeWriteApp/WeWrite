@@ -13,32 +13,23 @@ import { getUserSubscriptionServer } from '../../../firebase/subscription-server
 export async function GET(request: NextRequest) {
   try {
     // Debug: Log all cookies received
-    console.log('🔍 USD Balance API: Cookies received:', request.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`));
 
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
-      console.log('🔍 USD Balance API: No userId found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`🎯 USD Balance API: Getting balance for user ${userId}`);
 
     // CRITICAL: Check subscription status first (uses Stripe as source of truth)
     const subscription = await getUserSubscriptionServer(userId);
     const isSubscriptionActive = subscription?.status === 'active' || subscription?.status === 'trialing';
 
-    console.log(`🎯 USD Balance API: Subscription status for ${userId}:`, {
-      status: subscription?.status,
-      isActive: isSubscriptionActive
-    });
 
     // Get USD balance (fast path - no heavy operations)
     const balance = await UsdService.getUserUsdBalance(userId);
 
-    console.log(`🎯 USD Balance API: Retrieved balance:`, balance);
 
     if (!balance) {
-      console.log(`🎯 USD Balance API: No balance found for user ${userId}`);
 
       // Fast path: Return empty balance instead of heavy auto-initialization
       return NextResponse.json({
@@ -58,7 +49,6 @@ export async function GET(request: NextRequest) {
     // This ensures cancelled/failed subscriptions show $0 budget with overspending
     let effectiveTotalUsdCents = balance.totalUsdCents;
     if (!isSubscriptionActive) {
-      console.log(`🎯 USD Balance API: Subscription not active, setting totalUsdCents to 0 (was ${balance.totalUsdCents})`);
       effectiveTotalUsdCents = 0;
     }
 
@@ -85,13 +75,6 @@ export async function GET(request: NextRequest) {
       subscriptionActive: isSubscriptionActive
     };
 
-    console.log(`🎯 USD Balance API: Returning response:`, {
-      totalUsdCents: finalBalance.totalUsdCents,
-      allocatedUsdCents: finalBalance.allocatedUsdCents,
-      availableUsdCents: finalBalance.availableUsdCents,
-      allocationCount: allocations.length,
-      subscriptionActive: isSubscriptionActive
-    });
 
     return NextResponse.json(response);
   } catch (error) {
@@ -116,7 +99,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, subscriptionAmount } = body;
 
-    console.log(`🎯 USD Balance API: POST request for user ${userId}:`, { action, subscriptionAmount });
 
     if (action === 'initialize') {
       // Initialize USD balance for user with active subscription

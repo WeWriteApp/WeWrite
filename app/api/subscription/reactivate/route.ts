@@ -12,7 +12,9 @@ import { UsdService } from '../../../services/usdService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { serverTimestamp } from 'firebase-admin/firestore';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import { getStripe } from '../../../lib/stripe';
+
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {

@@ -108,9 +108,7 @@ export async function GET(request: NextRequest) {
 
     // Initialize Stripe (uses async version to respect X-Force-Production-Data header)
     const stripeKey = await getStripeSecretKeyAsync() || '';
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2024-06-20'
-    });
+    const stripe = new Stripe(stripeKey);
 
     const usdBalancesCollection = getCollectionName(USD_COLLECTIONS.USD_BALANCES);
 

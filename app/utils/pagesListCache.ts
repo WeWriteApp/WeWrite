@@ -83,7 +83,6 @@ class PagesListCache {
     this.stats.hits++;
     this.stats.costSavings += 0.00036 / 1000; // Firestore read cost saved
     
-    console.log(`🚀 PAGES LIST CACHE: Hit for user ${userId} (${results.length} pages)`);
     return results;
   }
   
@@ -111,7 +110,6 @@ class PagesListCache {
       etag: `"pages-${userId}-${Date.now()}"`
     });
     
-    console.log(`💾 PAGES LIST CACHE: Stored ${data.length} pages for user ${userId}`);
   }
   
   /**
@@ -127,7 +125,6 @@ class PagesListCache {
     }
     
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log(`🗑️  PAGES LIST CACHE: Invalidated ${keysToDelete.length} entries for user ${userId}`);
   }
   
   /**
@@ -136,7 +133,6 @@ class PagesListCache {
   clear(): void {
     this.cache.clear();
     this.stats = { hits: 0, misses: 0, totalQueries: 0, costSavings: 0 };
-    console.log('🧹 PAGES LIST CACHE: Cleared all entries');
   }
   
   /**
@@ -155,7 +151,6 @@ class PagesListCache {
     keysToDelete.forEach(key => this.cache.delete(key));
     
     if (keysToDelete.length > 0) {
-      console.log(`🧹 PAGES LIST CACHE: Cleaned up ${keysToDelete.length} expired entries`);
     }
   }
   

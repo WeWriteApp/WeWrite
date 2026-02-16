@@ -54,7 +54,6 @@ export default function UserPage({ params }: UserPageProps) {
   // This handles the case when someone navigates with userId instead of username
   useEffect(() => {
     if (needsRedirect) {
-      console.log(`[UserPage] Redirecting from /u/${username} to /u/${profile.username}`);
       setHasRedirected(true);
       router.replace(`/u/${profile.username}`);
     }
@@ -63,11 +62,6 @@ export default function UserPage({ params }: UserPageProps) {
   // 🚀 OPTIMIZATION: Log cache performance for monitoring
   useEffect(() => {
     if (profile && !needsRedirect) {
-      console.log(`🚀 User profile loaded for ${username}:`, {
-        username: profile.username,
-        fromCache: isFromCache,
-        loadTime: isFromCache ? 'instant' : 'fresh'
-      });
     }
   }, [profile, isFromCache, username, needsRedirect]);
 

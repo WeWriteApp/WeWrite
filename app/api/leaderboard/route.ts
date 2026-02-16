@@ -103,7 +103,6 @@ async function getPagesCreatedLeaderboard(
   const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
   const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
   
-  console.log(`📊 Query: ${collectionName} where createdAt >= ${startDate.toISOString()} and <= ${endDate.toISOString()}`);
   
   // Query by date range using Timestamps for proper comparison
   const snapshot = await db.collection(collectionName)
@@ -111,7 +110,6 @@ async function getPagesCreatedLeaderboard(
     .where('createdAt', '<=', endTimestamp)
     .get();
 
-  console.log(`📊 Found ${snapshot.docs.length} documents in date range`);
 
   const userCounts: Record<string, number> = {};
   
@@ -685,7 +683,6 @@ export async function GET(request: NextRequest) {
   const cachedResult = getFromCache<any>(cacheKey);
 
   if (cachedResult) {
-    console.log(`📊 [CACHE HIT] Returning cached leaderboard: ${type}/${category} for ${month}`);
     return NextResponse.json({
       ...cachedResult,
       cached: true,
@@ -693,7 +690,6 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  console.log(`📊 [CACHE MISS] Fetching ${type} leaderboard: ${category} for ${month} (${startDate.toISOString()} - ${endDate.toISOString()})`);
 
   try {
     const admin = initAdmin();
@@ -734,7 +730,6 @@ export async function GET(request: NextRequest) {
 
       // Cache the result
       setInCache(cacheKey, result);
-      console.log(`📊 [CACHED] Stored leaderboard result: ${type}/${category} for ${month}`);
 
       return NextResponse.json(result);
     } else if (type === 'page') {
@@ -772,7 +767,6 @@ export async function GET(request: NextRequest) {
 
       // Cache the result
       setInCache(cacheKey, result);
-      console.log(`📊 [CACHED] Stored leaderboard result: ${type}/${category} for ${month}`);
 
       return NextResponse.json(result);
     } else {

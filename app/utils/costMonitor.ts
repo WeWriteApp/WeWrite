@@ -252,7 +252,6 @@ class CostMonitor {
    */
   reset(): void {
     this.operations = [];
-    console.log('🔄 Cost monitor reset');
   }
 }
 
@@ -313,7 +312,6 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
   setInterval(() => {
     const stats = costMonitor.getStats();
     if (stats.totalOperations > 0) {
-      console.log(`💰 COST MONITOR: Daily: $${stats.dailyCost.toFixed(4)}, Hourly: $${stats.hourlyCost.toFixed(4)}, Operations: ${stats.totalOperations}`);
       
       // Show top expensive collections
       const topCollections = Object.entries(stats.breakdown)
@@ -321,7 +319,6 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
         .slice(0, 3);
       
       if (topCollections.length > 0) {
-        console.log('💸 Top expensive collections:', topCollections.map(([name, cost]) => `${name}: $${cost.toFixed(4)}`).join(', '));
       }
     }
   }, 600000); // 10 minutes

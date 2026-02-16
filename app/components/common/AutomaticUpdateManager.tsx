@@ -87,10 +87,6 @@ export default function AutomaticUpdateManager() {
         
         // Check if there's a new build
         if (newBuildTime && newBuildTime !== currentBuildTimeRef.current) {
-          console.log('🔄 [AutoUpdate] New version detected:', {
-            current: currentBuildTimeRef.current,
-            new: newBuildTime
-          });
           
           setUpdateState(prev => ({
             ...prev,
@@ -109,7 +105,6 @@ export default function AutomaticUpdateManager() {
     if (isApplyingUpdateRef.current) return;
     isApplyingUpdateRef.current = true;
 
-    console.log('🚀 [AutoUpdate] Applying update during navigation to:', targetRoute);
 
     try {
       // Clear all caches

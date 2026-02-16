@@ -60,7 +60,6 @@ export default function LinkSuggestionEditorModal({
 
   // Handle page selection from search results
   const handlePageSelect = (page: any) => {
-    console.log('LinkSuggestionEditorModal: Page selected:', page);
     setSelectedPage(page);
   };
 
@@ -71,7 +70,6 @@ export default function LinkSuggestionEditorModal({
       return;
     }
 
-    console.log('LinkSuggestionEditorModal: Creating link');
 
     const linkData = {
       type: showAuthor ? 'compound' : 'page',

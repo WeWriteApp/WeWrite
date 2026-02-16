@@ -9,7 +9,7 @@ import { payoutService, PayoutService } from '../../../services/payoutService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
-const admin = getFirebaseAdmin();
+function getAdmin() { return getFirebaseAdmin(); }
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the connected account belongs to this user
-    const db = admin.firestore();
+    const db = getAdmin().firestore();
     const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     await Promise.all(splitPromises);
 
     // Create default revenue splits for user's groups
-    const groupsSnapshot = await db.collection('groups')
+    const groupsSnapshot = await db.collection(getCollectionName('groups'))
       .where('createdBy', '==', userId)
       .get();
 

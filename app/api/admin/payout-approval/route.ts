@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { PayoutService } from '../../../services/payoutService';
 import { sendUserNotification } from '../../../utils/notifications';
 
@@ -29,29 +30,14 @@ interface ApprovalRequestBody {
 
 async function handlePayoutApproval(req: NextRequest) {
   try {
-    // Get admin user from request (set by middleware/auth)
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminCheck = await checkAdminPermissions(req);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const admin = getFirebaseAdmin();
     if (!admin) {
       return NextResponse.json({ error: 'Server not available' }, { status: 500 });
-    }
-
-    // Verify admin token
-    const token = authHeader.split('Bearer ')[1];
-    let decodedToken;
-    try {
-      decodedToken = await admin.auth().verifyIdToken(token);
-    } catch (error) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    if (!decodedToken.admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     // Parse request body
@@ -97,7 +83,7 @@ async function handlePayoutApproval(req: NextRequest) {
     await approvalDoc.ref.update({
       status: action === 'approve' ? 'approved' : 'rejected',
       reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
-      reviewedBy: decodedToken.uid,
+      reviewedBy: adminCheck.uid,
       reviewNotes: notes || '',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });

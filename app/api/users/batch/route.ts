@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { executeDeduplicatedOperation } from '../../../utils/serverRequestDeduplication';
-import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { userCache } from '../../../utils/userCache';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
     try {
       currentUserId = await getUserIdFromRequest(request);
     } catch (error) {
-      console.log('🔓 Anonymous batch user request');
     }
 
     const body = await request.json();
@@ -53,7 +52,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Maximum 100 user IDs allowed per request');
     }
 
-    console.log(`👥 [Batch User API] Enhanced: Fetching data for ${userIds.length} users`);
 
     // Use enhanced cache system for batch operations
     const batchResults = await userCache.getBatchProfiles(userIds);
@@ -62,13 +60,11 @@ export async function POST(request: NextRequest) {
     const cacheHits = Object.keys(batchResults).length;
     const cacheMisses = userIds.length - cacheHits;
 
-    console.log(`📊 [Batch User API] Cache performance: ${cacheHits} hits, ${cacheMisses} misses`);
 
     // If we have cache misses, fall back to original batch function for complex data
     let finalResults = batchResults;
 
     if (cacheMisses > 0) {
-      console.log(`💸 [Batch User API] Fetching ${cacheMisses} users from database`);
 
       // Track database reads for cost monitoring
       trackFirebaseRead('users', 'batchGetUsers', cacheMisses, 'api-batch-enhanced');
@@ -106,7 +102,6 @@ export async function POST(request: NextRequest) {
     }
 
     const responseTime = Date.now() - startTime;
-    console.log(`✅ [Batch User API] Enhanced: Successfully fetched data for ${Object.keys(finalResults).length} users (${responseTime}ms)`);
 
     const response = createApiResponse({
       users: finalResults,
@@ -159,7 +154,7 @@ async function fetchBatchUserDataInternal(
 
       try {
         // Fetch user profiles from Firestore
-          const usersQuery = db.collection('users').where('__name__', 'in', batch);
+          const usersQuery = db.collection(getCollectionName('users')).where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
         // Fetch subscription data in parallel using environment-aware paths
@@ -201,7 +196,6 @@ async function fetchBatchUserDataInternal(
           );
 
 
-
           // Only use username field - displayName and email are deprecated for display
           const safeUsername = sanitizeUsername(
             userData.username || `user_${doc.id.slice(0, 8)}`,
@@ -229,7 +223,6 @@ async function fetchBatchUserDataInternal(
         const rtdbUserIds = batch.filter(id => !firestoreUserIds.has(id));
 
         if (rtdbUserIds.length > 0 && rtdb) {
-          console.log(`Batch user data: Falling back to RTDB for ${rtdbUserIds.length} users`);
 
           const rtdbPromises = rtdbUserIds.map(async (userId) => {
             try {
@@ -265,7 +258,6 @@ async function fetchBatchUserDataInternal(
           });
         } else if (rtdbUserIds.length > 0 && !rtdb) {
           // If RTDB is not available, create fallback user data for missing users
-          console.log(`Batch user data: RTDB not available, creating fallback data for ${rtdbUserIds.length} users`);
           rtdbUserIds.forEach(userId => {
             results[userId] = {
               uid: userId,

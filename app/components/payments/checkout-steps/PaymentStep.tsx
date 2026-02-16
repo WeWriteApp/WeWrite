@@ -86,7 +86,6 @@ export function PaymentStep({
     : paymentElementComplete && billingAddressComplete;
 
   // Debug log to verify component is updated
-  console.log('[PaymentStep] Form validity computed:', { formValid, useExistingPayment, selectedExistingMethod, paymentElementComplete, billingAddressComplete });
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [deletingPaymentMethod, setDeletingPaymentMethod] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -112,7 +111,6 @@ export function PaymentStep({
         }
 
         const data = await response.json();
-        console.log('Payment methods response:', data);
 
         if (data.paymentMethods) {
           setExistingPaymentMethods(data.paymentMethods);

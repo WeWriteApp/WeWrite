@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'pageId and title are required');
     }
 
-    console.log('🔍 [SIMILAR PAGES API] Finding similar pages for:', { pageId, title, maxPages });
 
     // Use environment-aware collection naming
     const pagesRef = db.collection(getCollectionName('pages'));
@@ -42,7 +41,6 @@ export async function GET(request: NextRequest) {
 
     if (titleWords.length === 0) {
       // If no significant words, use a generic query for recent public pages
-      console.log('🔍 [SIMILAR PAGES API] No significant words, using generic query');
       
       const genericQuery = pagesRef
         .where('isPublic', '==', true)
@@ -58,7 +56,6 @@ export async function GET(request: NextRequest) {
 
     } else {
       // Search for pages with similar title words
-      console.log('🔍 [SIMILAR PAGES API] Searching with keywords:', titleWords);
       
       const allPages = new Map();
       const scoreMap = new Map();
@@ -113,7 +110,6 @@ export async function GET(request: NextRequest) {
         .slice(0, maxPages);
     }
 
-    console.log('🔍 [SIMILAR PAGES API] Found similar pages:', similarPages.length);
 
     return createSuccessResponse({
       pages: similarPages,

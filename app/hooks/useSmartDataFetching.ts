@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSimpleNavigationOptimizer } from '../components/navigation/SimpleNavigationOptimizer';
 
 interface SmartDataFetchingOptions {
   /** Cache duration in milliseconds (default: 30 seconds) */
@@ -53,7 +52,7 @@ export function useSmartDataFetching<T>(
     refetchOnNavigationSettle = true
   } = options;
 
-  const { isRapidNavigating } = useSimpleNavigationOptimizer();
+  const isRapidNavigating = false;
   
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
@@ -141,7 +140,6 @@ export function useSmartDataFetching<T>(
     
     // Skip fetch during rapid navigation if configured
     if (skipDuringRapidNav && isRapidNavigating) {
-      console.log(`⏸️ SMART FETCH: Skipping fetch for ${cacheKey} during rapid navigation`);
       return;
     }
     
@@ -176,7 +174,6 @@ export function useSmartDataFetching<T>(
       // (was using debounceDelay ~300ms which triggered too often)
       const SETTLE_REFETCH_THRESHOLD = 5000;
       if (timeSinceLastFetch > SETTLE_REFETCH_THRESHOLD) {
-        console.log(`🔄 SMART FETCH: Refetching ${cacheKey} after navigation settled (no cached data)`);
         debouncedFetch();
       }
     }

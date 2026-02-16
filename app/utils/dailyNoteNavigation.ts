@@ -48,13 +48,11 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
   try {
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
-    console.log('📅 [DAILY NOTES] Finding previous note via API for:', userId, currentDate);
 
     // Get the latest daily note (which should be before currentDate)
     const response = await dailyNotesApi.getLatestDailyNote(userId);
 
     if (!response.success || !response.data?.date) {
-      console.log('📅 [DAILY NOTES] No latest note found');
       return null;
     }
 
@@ -62,13 +60,11 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
 
     // If the latest note is before our current date, return it
     if (latestDate < currentDate) {
-      console.log('📅 [DAILY NOTES] Found previous note:', latestDate);
       return latestDate;
     }
 
     // If the latest note is not before current date, we need to search backwards
     // For now, return null as this is a complex case that would require additional API endpoints
-    console.log('📅 [DAILY NOTES] Latest note is not before current date, returning null');
     return null;
 
   } catch (error) {

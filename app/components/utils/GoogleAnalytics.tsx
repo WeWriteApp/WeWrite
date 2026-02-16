@@ -25,13 +25,11 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
 
   // Skip Google Analytics in development to prevent authentication errors
   if (process.env.NODE_ENV === 'development') {
-    console.log('Google Analytics disabled in development to prevent authentication errors');
     return null;
   }
 
   // Log initialization attempt
   useEffect(() => {
-    console.log('Google Analytics component mounting with ID:', GA_MEASUREMENT_ID);
 
     if (!GA_MEASUREMENT_ID) {
       console.error('Missing Google Analytics Measurement ID');
@@ -61,7 +59,6 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
         page_location: window.location.href
       });
 
-      console.log('Google Analytics pageview tracked:', url, 'with title:', pageTitle);
       setInitialized(true);
     } catch (err) {
       console.error('Error tracking pageview:', err);
@@ -71,7 +68,6 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
 
   // Debug onLoad/onError handlers
   const handleScriptLoad = () => {
-    console.log('Google Analytics script loaded successfully');
     setInitialized(true);
   };
 
@@ -81,7 +77,6 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
     // setError('Script load failed');
 
     // Instead, just log and continue gracefully
-    console.log('Continuing without Google Analytics due to script loading failure');
   };
 
   return (
@@ -106,7 +101,6 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
               page_path: window.location.pathname,
               send_page_view: false
             });
-            console.log('Google Analytics config initialized');
           `}}
       />
 

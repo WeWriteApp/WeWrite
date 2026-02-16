@@ -1,34 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { DEFAULT_ALLOCATION_INTERVAL_CENTS } from '../../../contexts/AllocationIntervalContext';
+import { getAdminFirestore } from '../../../firebase/firebaseAdmin';
 
-// Initialize Firebase Admin SDK
-let allocationIntervalApp;
-try {
-  allocationIntervalApp = getApps().find(app => app.name === 'allocation-interval-app');
-
-  if (!allocationIntervalApp) {
-    const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-    const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-    const serviceAccount = JSON.parse(decodedJson);
-
-    allocationIntervalApp = initializeApp({
-      credential: cert({
-        projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-      })
-    }, 'allocation-interval-app');
-  }
-} catch (error) {
-  console.error('[Allocation Interval Admin SDK] Initialization failed:', error);
-  throw error;
+let _db: ReturnType<typeof getAdminFirestore> | null = null;
+function getDb() {
+  if (!_db) _db = getAdminFirestore();
+  return _db;
 }
-
-const db = getFirestore(allocationIntervalApp);
 
 /**
  * GET /api/user-preferences/allocation-interval
@@ -43,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user preferences document
-    const preferencesRef = db.collection(getCollectionName(COLLECTIONS.USER_PREFERENCES)).doc(userId);
+    const preferencesRef = getDb().collection(getCollectionName(COLLECTIONS.USER_PREFERENCES)).doc(userId);
     const preferencesDoc = await preferencesRef.get();
 
     if (!preferencesDoc.exists) {
@@ -90,8 +70,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user preferences
-    const preferencesRef = db.collection(getCollectionName(COLLECTIONS.USER_PREFERENCES)).doc(userId);
-    
+    const preferencesRef = getDb().collection(getCollectionName(COLLECTIONS.USER_PREFERENCES)).doc(userId);
+
     await preferencesRef.set({
       allocationIntervalCents,
       updatedAt: new Date()

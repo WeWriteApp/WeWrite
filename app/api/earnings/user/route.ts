@@ -45,7 +45,7 @@ async function getUnfundedEarningsForUser(userId: string) {
     const loggedOutUsdCents = loggedOutAllocations.reduce((sum, allocation) => sum + allocation.usdCents, 0);
     const loggedOutUsdValue = loggedOutUsdCents / 100; // Convert cents to dollars
 
-    // TODO: Add logic for users without subscriptions when that data is available
+    // Non-subscriber earnings not tracked yet
     const noSubscriptionUsdCents = 0;
     const noSubscriptionUsdValue = 0;
 
@@ -282,7 +282,6 @@ export async function GET(request: NextRequest) {
     const cacheKey = `unified_earnings:${userId}:v2`; // v2: Fixed funded allocations calculation
     const cached = earningsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < EARNINGS_CACHE_TTL) {
-      console.log(`🚀 COST OPTIMIZATION: Returning cached earnings for ${userId}`);
       return NextResponse.json({
         ...cached.data,
         cached: true,

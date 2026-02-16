@@ -247,15 +247,32 @@ export class UsdDataService {
         };
       }
 
+      // Calculate lastMonthEarnings and monthlyChange from history
+      const history = data.earnings.earningsHistory || [];
+      let lastMonthEarnings = 0;
+      let monthlyChange = 0;
+
+      if (history.length > 0) {
+        // History is ordered by month — find the most recent and second most recent
+        const sorted = [...history].sort((a: any, b: any) => b.month.localeCompare(a.month));
+        lastMonthEarnings = sorted[0]?.netEarnings || sorted[0]?.totalEarnings || 0;
+        if (sorted.length >= 2) {
+          const previousEarnings = sorted[1]?.netEarnings || sorted[1]?.totalEarnings || 0;
+          monthlyChange = previousEarnings > 0
+            ? ((lastMonthEarnings - previousEarnings) / previousEarnings) * 100
+            : lastMonthEarnings > 0 ? 100 : 0;
+        }
+      }
+
       const earnings: EarningsData = {
         totalEarnings: data.earnings.totalEarnings || 0,
         availableBalance: data.earnings.availableBalance || 0,
         pendingBalance: data.earnings.pendingBalance || 0,
         hasEarnings: data.earnings.hasEarnings || false,
-        lastMonthEarnings: 0, // TODO: Calculate from history if needed
-        monthlyChange: 0, // TODO: Calculate from history if needed
-        pendingAllocations: data.earnings.pendingAllocations || [], // Pass through earnings sources data
-        earningsHistory: data.earnings.earningsHistory || []
+        lastMonthEarnings,
+        monthlyChange,
+        pendingAllocations: data.earnings.pendingAllocations || [],
+        earningsHistory: history
       };
 
       return {

@@ -145,7 +145,6 @@ export const recordUserActivity = async (userId: string): Promise<boolean> => {
   } catch (error: any) {
     // Handle permission denied errors gracefully - this is expected in some environments
     if (error?.code === 'permission-denied') {
-      console.log('Permission denied recording user activity - this is expected in some environments');
       return false;
     } else {
       console.error('Error recording user activity:', error);

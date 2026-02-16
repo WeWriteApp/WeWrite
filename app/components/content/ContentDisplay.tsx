@@ -132,14 +132,11 @@ const ContentDisplay: React.FC<ContentDisplayProps> = ({
 
   // DEBUG: Track mount/unmount
   useEffect(() => {
-    console.log('[ContentDisplay] Component MOUNTED, pageId:', pageId);
     return () => {
-      console.log('[ContentDisplay] Component UNMOUNTED, pageId:', pageId);
     };
   }, [pageId]);
 
   // DEBUG: Log mode changes
-  console.log('[ContentDisplay] Rendering with isEditable:', isEditable, 'pageId:', pageId);
 
   if (isEditable) {
     // EDITING MODE: Use EditableContent component

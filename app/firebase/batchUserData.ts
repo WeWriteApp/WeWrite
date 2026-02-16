@@ -47,7 +47,6 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
     return {};
   }
 
-  console.log(`getBatchUserData: Fetching data for ${userIds.length} users via API`);
 
   const results: Record<string, UserData> = {};
   const uncachedIds: string[] = [];
@@ -63,10 +62,8 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
   });
 
   if (uncachedIds.length === 0) {
-    console.log('getBatchUserData: All data found in memory cache');
     return results;
   }
-
 
 
   // Use API endpoint to fetch user data with subscription information

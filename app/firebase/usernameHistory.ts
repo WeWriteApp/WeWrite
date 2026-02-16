@@ -116,7 +116,6 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
 
     // Check if the new username is different from the current one
     if (oldUsername === newUsername) {
-      console.log("Username unchanged, skipping update");
       return { success: true, message: "Username unchanged" };
     }
 
@@ -137,7 +136,6 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
 
     // Update username in RTDB
     await update(userRef, { username: newUsername });
-    console.log("Username updated in RTDB");
 
     // Firebase Auth doesn't need displayName updates - WeWrite only uses usernames
 
@@ -180,7 +178,6 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
         });
       }
 
-      console.log("Username updated in Firestore usernames collection");
     } catch (firestoreError) {
       console.error("Error updating username in Firestore:", firestoreError);
       // Don't throw here, as RTDB update already succeeded

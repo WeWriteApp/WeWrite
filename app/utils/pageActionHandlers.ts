@@ -96,7 +96,6 @@ export const handleAddToPage = (page: Page, setIsAddToPageOpen: (open: boolean) 
 
   // Open the Add to Page modal
   if (setIsAddToPageOpen) {
-    console.log("Opening Add to Page modal for page:", page.id);
     setIsAddToPageOpen(true);
   } else {
     console.error("setIsAddToPageOpen function not provided");
@@ -198,11 +197,6 @@ export const handleReply = async (page: Page, user: User | null, router: Router)
         username
       });
 
-      console.log("Navigating to reply page with:", {
-        title: replyTitle,
-        username,
-        initialContent
-      });
 
       // CONSOLIDATION FIX: Use unified /new route for all page creation
       const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&title=${params.title}&initialContent=${params.content}&username=${params.username}`;
@@ -291,7 +285,6 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
         page.username
       );
     }).catch(err => {
-      console.log('Error sharing:', err);
 
       // Check if user cancelled the share (AbortError)
       if (err.name === 'AbortError') {

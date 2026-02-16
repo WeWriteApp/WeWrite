@@ -18,6 +18,7 @@ import {
   DrawerDescription,
   DrawerClose,
 } from '../ui/drawer';
+import { toast } from '../ui/use-toast';
 
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
@@ -538,10 +539,22 @@ export function SubscriptionCheckoutDrawer({
         if (response.ok && data.clientSecret) {
           setClientSecret(data.clientSecret);
         } else {
-          console.error('Setup intent error:', data.error);
+          const msg = data.error || `Setup failed (${response.status})`;
+          console.error('Setup intent error:', msg);
+          toast.error("Failed to initialize payment", {
+            description: msg,
+            enableCopy: true,
+            copyText: `Payment setup error: ${msg}\nTime: ${new Date().toISOString()}`
+          });
         }
       } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         console.error('Error creating setup intent:', error);
+        toast.error("Failed to initialize payment", {
+          description: msg,
+          enableCopy: true,
+          copyText: `Payment setup error: ${msg}\nTime: ${new Date().toISOString()}`
+        });
       } finally {
         setIsLoading(false);
       }

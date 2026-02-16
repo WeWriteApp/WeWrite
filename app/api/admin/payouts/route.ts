@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../auth-helper';
 import { db } from '../../../firebase/config';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 import {
@@ -15,16 +14,12 @@ import {
   startAfter,
   serverTimestamp
 } from 'firebase/firestore';
-import { getCollectionName } from '../../../utils/environmentConfig';
-import { payoutStatusService } from '../../../services/payoutStatusService';
-import { payoutRetryService } from '../../../services/payoutRetryService';
+import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { PayoutService } from '../../../services/payoutService';
-import { PayoutMonitoringService } from '../../../services/payoutMonitoringService';
-import { FinancialUtils } from '../../../types/financial';
 import { adminRateLimiter } from '../../../utils/rateLimiter';
 import { withAdminContext } from '../../../utils/adminRequestContext';
 
-// SECURITY: Removed vulnerable admin check - now using centralized security module
+const PAYOUTS_COLLECTION = USD_COLLECTIONS.USD_PAYOUTS;
 
 /**
  * GET /api/admin/payouts
@@ -33,127 +28,114 @@ import { withAdminContext } from '../../../utils/adminRequestContext';
 export async function GET(request: NextRequest) {
   return withAdminContext(request, async () => {
     try {
-      // SECURITY: Use centralized admin verification with audit logging
       const adminAuth = await verifyAdminAccess(request);
       if (!adminAuth.isAdmin) {
         return createAdminUnauthorizedResponse(adminAuth.auditId);
       }
 
-    // Apply admin rate limiting
-    const rateLimitResult = await adminRateLimiter.checkLimit(adminAuth.userId!);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json({
-        error: 'Rate limit exceeded',
-        message: 'Too many admin requests. Please wait before trying again.',
-        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
-      }, {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': '100',
-          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-          'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+      const rateLimitResult = await adminRateLimiter.checkLimit(adminAuth.userId!);
+      if (!rateLimitResult.allowed) {
+        return NextResponse.json({
+          error: 'Rate limit exceeded',
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        }, { status: 429 });
+      }
+
+      const { searchParams } = new URL(request.url);
+      const status = searchParams.get('status');
+      const userId = searchParams.get('userId');
+      const pageSize = parseInt(searchParams.get('pageSize') || '20');
+      const lastPayoutId = searchParams.get('lastPayoutId');
+      const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+      // Build query against the active usdPayouts collection
+      let payoutsRef = collection(db, getCollectionName(PAYOUTS_COLLECTION));
+      const constraints: any[] = [];
+
+      if (status) {
+        constraints.push(where('status', '==', status));
+      }
+
+      if (userId) {
+        constraints.push(where('userId', '==', userId));
+      }
+
+      constraints.push(orderBy('requestedAt', sortOrder as any));
+      constraints.push(limit(pageSize));
+
+      if (lastPayoutId) {
+        const lastDoc = await getDoc(doc(db, getCollectionName(PAYOUTS_COLLECTION), lastPayoutId));
+        if (lastDoc.exists()) {
+          constraints.push(startAfter(lastDoc));
         }
+      }
+
+      const payoutsQuery = query(payoutsRef, ...constraints);
+      const payoutsSnapshot = await getDocs(payoutsQuery);
+
+      const payouts = payoutsSnapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: d.id,
+          userId: data.userId,
+          amountCents: data.amountCents || 0,
+          amountDollars: (data.amountCents || 0) / 100,
+          status: data.status,
+          stripePayoutId: data.stripePayoutId || null,
+          failureReason: data.failureReason || null,
+          requestedAt: data.requestedAt,
+          completedAt: data.completedAt || null,
+          approvalRequired: data.approvalRequired || false,
+          approvalFlags: data.approvalFlags || [],
+          adminNotes: data.adminNotes || [],
+        };
       });
-    }
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const recipientId = searchParams.get('recipientId');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
-    const lastPayoutId = searchParams.get('lastPayoutId');
-    const sortBy = searchParams.get('sortBy') || 'scheduledAt';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+      // Summary stats from recent payouts
+      const statsQuery = query(
+        collection(db, getCollectionName(PAYOUTS_COLLECTION)),
+        orderBy('requestedAt', 'desc'),
+        limit(1000)
+      );
+      const statsSnapshot = await getDocs(statsQuery);
+      const allPayouts = statsSnapshot.docs.map(d => d.data());
 
-    // Build query
-    let payoutsQuery = collection(db, getCollectionName('payouts'));
-    const constraints = [];
-
-    if (status) {
-      constraints.push(where('status', '==', status));
-    }
-
-    if (recipientId) {
-      constraints.push(where('recipientId', '==', recipientId));
-    }
-
-    constraints.push(orderBy(sortBy, sortOrder as any));
-    constraints.push(limit(pageSize));
-
-    if (lastPayoutId) {
-      const lastDoc = await getDoc(doc(db, getCollectionName('payouts'), lastPayoutId));
-      if (lastDoc.exists()) {
-        constraints.push(startAfter(lastDoc));
-      }
-    }
-
-    payoutsQuery = query(payoutsQuery, ...constraints);
-    const payoutsSnapshot = await getDocs(payoutsQuery);
-
-    const payouts = payoutsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    // Get recipient information for each payout
-    const recipientIds = [...new Set(payouts.map(p => p.recipientId))];
-    const recipientPromises = recipientIds.map(id =>
-      getDoc(doc(db, getCollectionName('payoutRecipients'), id))
-    );
-    const recipientDocs = await Promise.all(recipientPromises);
-    
-    const recipients = {};
-    recipientDocs.forEach(doc => {
-      if (doc.exists()) {
-        recipients[doc.id] = doc.data();
-      }
-    });
-
-    // Get summary statistics
-    const statsQuery = query(
-      collection(db, getCollectionName('payouts')),
-      orderBy('scheduledAt', 'desc'),
-      limit(1000) // Get recent payouts for stats
-    );
-    const statsSnapshot = await getDocs(statsQuery);
-    const allPayouts = statsSnapshot.docs.map(doc => doc.data());
-
-    const stats = {
-      total: allPayouts.length,
-      pending: allPayouts.filter(p => p.status === 'pending').length,
-      processing: allPayouts.filter(p => p.status === 'processing').length,
-      completed: allPayouts.filter(p => p.status === 'completed').length,
-      failed: allPayouts.filter(p => p.status === 'failed').length,
-      cancelled: allPayouts.filter(p => p.status === 'cancelled').length,
-      totalAmount: allPayouts.reduce((sum, p) => sum + (p.amount || 0), 0),
-      averageAmount: allPayouts.length > 0 ? allPayouts.reduce((sum, p) => sum + (p.amount || 0), 0) / allPayouts.length : 0
-    };
+      const stats = {
+        total: allPayouts.length,
+        pending: allPayouts.filter(p => p.status === 'pending').length,
+        pending_approval: allPayouts.filter(p => p.status === 'pending_approval').length,
+        completed: allPayouts.filter(p => p.status === 'completed').length,
+        failed: allPayouts.filter(p => p.status === 'failed').length,
+        totalAmountCents: allPayouts.reduce((sum, p) => sum + (p.amountCents || 0), 0),
+      };
 
       return NextResponse.json({
         success: true,
         data: {
           payouts,
-          recipients,
           stats,
           pagination: {
             hasMore: payoutsSnapshot.docs.length === pageSize,
-            lastPayoutId: payoutsSnapshot.docs.length > 0 ? payoutsSnapshot.docs[payoutsSnapshot.docs.length - 1].id : null
+            lastPayoutId: payoutsSnapshot.docs.length > 0
+              ? payoutsSnapshot.docs[payoutsSnapshot.docs.length - 1].id
+              : null
           }
         }
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting admin payouts:', error);
       return NextResponse.json({
         error: 'Internal server error',
         details: error.message
       }, { status: 500 });
     }
-  }); // End withAdminContext
+  });
 }
 
 /**
  * POST /api/admin/payouts
- * Admin actions on payouts (retry, cancel, force complete, etc.)
+ * Admin actions on payouts: reprocess, cancel, force_complete, add_note
  */
 export async function POST(request: NextRequest) {
   return withAdminContext(request, async () => {
@@ -163,149 +145,72 @@ export async function POST(request: NextRequest) {
         return createAdminUnauthorizedResponse(adminAuth.auditId);
       }
 
-      const userId = adminAuth.userId!;
+      const adminUserId = adminAuth.userId!;
+      const body = await request.json();
+      const { action, payoutId, reason, data } = body;
 
-    const body = await request.json();
-    const { action, payoutId, reason, data } = body;
+      if (!action || !payoutId) {
+        return NextResponse.json({ error: 'Action and payoutId are required' }, { status: 400 });
+      }
 
-    if (!action || !payoutId) {
-      return NextResponse.json({
-        error: 'Action and payoutId are required'
-      }, { status: 400 });
-    }
+      // Verify payout exists in the active collection
+      const payoutRef = doc(db, getCollectionName(PAYOUTS_COLLECTION), payoutId);
+      const payoutDoc = await getDoc(payoutRef);
+      if (!payoutDoc.exists()) {
+        return NextResponse.json({ error: 'Payout not found' }, { status: 404 });
+      }
 
-    const correlationId = FinancialUtils.generateCorrelationId();
+      switch (action) {
+        case 'reprocess': {
+          const result = await PayoutService.processPayout(payoutId);
+          if (result.success) {
+            return NextResponse.json({ success: true, message: 'Payout reprocessed' });
+          }
+          return NextResponse.json({ error: 'Failed to reprocess', details: result.error }, { status: 400 });
+        }
 
-    switch (action) {
-      case 'retry':
-        // Force retry a failed payout
-        const retryResult = await payoutRetryService.scheduleRetry(
-          payoutId,
-          reason || 'Admin manual retry'
-        );
-
-        if (retryResult.success) {
-          return NextResponse.json({
-            success: true,
-            message: 'Payout scheduled for retry',
-            data: { nextRetryAt: retryResult.nextRetryAt },
-            correlationId
+        case 'cancel': {
+          await updateDoc(payoutRef, {
+            status: 'failed',
+            failureReason: reason || 'Cancelled by admin',
+            completedAt: serverTimestamp(),
           });
-        } else {
-          return NextResponse.json({
-            error: 'Failed to schedule retry',
-            details: retryResult.error,
-            correlationId
-          }, { status: 400 });
+          return NextResponse.json({ success: true, message: 'Payout cancelled' });
         }
 
-      case 'cancel':
-        // Cancel a pending or processing payout
-        const cancelResult = await payoutStatusService.updatePayoutStatus({
-          payoutId,
-          status: 'cancelled',
-          reason: reason || 'Admin cancellation',
-          updateRecipientBalance: true
-        });
-
-        if (cancelResult.success) {
-          return NextResponse.json({
-            success: true,
-            message: 'Payout cancelled',
-            correlationId
+        case 'force_complete': {
+          await updateDoc(payoutRef, {
+            status: 'completed',
+            completedAt: serverTimestamp(),
           });
-        } else {
-          return NextResponse.json({
-            error: 'Failed to cancel payout',
-            details: cancelResult.error,
-            correlationId
-          }, { status: 400 });
+          return NextResponse.json({ success: true, message: 'Payout marked as completed' });
         }
 
-      case 'force_complete':
-        // Force mark a payout as completed (use with caution)
-        const completeResult = await payoutStatusService.updatePayoutStatus({
-          payoutId,
-          status: 'completed',
-          reason: reason || 'Admin force completion',
-          updateRecipientBalance: true
-        });
-
-        if (completeResult.success) {
-          return NextResponse.json({
-            success: true,
-            message: 'Payout marked as completed',
-            correlationId
+        case 'add_note': {
+          const currentPayout = payoutDoc.data();
+          const adminNotes = currentPayout.adminNotes || [];
+          adminNotes.push({
+            adminUserId,
+            note: data?.note || reason,
+            timestamp: serverTimestamp(),
+            action: data?.relatedAction,
           });
-        } else {
+          await updateDoc(payoutRef, { adminNotes, updatedAt: serverTimestamp() });
+          return NextResponse.json({ success: true, message: 'Admin note added' });
+        }
+
+        default:
           return NextResponse.json({
-            error: 'Failed to complete payout',
-            details: completeResult.error,
-            correlationId
+            error: 'Invalid action. Supported: reprocess, cancel, force_complete, add_note'
           }, { status: 400 });
-        }
+      }
 
-      case 'reprocess':
-        // Reprocess a payout through Stripe
-        const reprocessResult = await PayoutService.processPayout(payoutId);
-
-        if (reprocessResult.success) {
-          return NextResponse.json({
-            success: true,
-            message: 'Payout reprocessed',
-            correlationId
-          });
-        } else {
-          return NextResponse.json({
-            error: 'Failed to reprocess payout',
-            details: reprocessResult.error,
-            correlationId
-          }, { status: 400 });
-        }
-
-      case 'add_note':
-        // Add admin note to payout
-        const payoutDoc = await getDoc(doc(db, getCollectionName('payouts'), payoutId));
-        if (!payoutDoc.exists()) {
-          return NextResponse.json({
-            error: 'Payout not found'
-          }, { status: 404 });
-        }
-
-        const currentPayout = payoutDoc.data();
-        const adminNotes = currentPayout.adminNotes || [];
-        
-        adminNotes.push({
-          id: correlationId,
-          adminUserId: userId,
-          note: data?.note || reason,
-          timestamp: serverTimestamp(),
-          action: data?.relatedAction
-        });
-
-        await updateDoc(doc(db, getCollectionName('payouts'), payoutId), {
-          adminNotes,
-          updatedAt: serverTimestamp()
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: 'Admin note added',
-          correlationId
-        });
-
-      default:
-        return NextResponse.json({
-          error: 'Invalid action. Supported actions: retry, cancel, force_complete, reprocess, add_note'
-        }, { status: 400 });
-    }
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing admin payout action:', error);
       return NextResponse.json({
         error: 'Internal server error',
         details: error.message
       }, { status: 500 });
     }
-  }); // End withAdminContext
+  });
 }

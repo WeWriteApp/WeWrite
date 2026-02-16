@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Button } from '../ui/button'
 import { Icon } from '@/components/ui/Icon'
 import { useRouter } from 'next/navigation'
+import { toast } from '../ui/use-toast'
 
 interface DeletedPageBannerProps {
   pageId: string
@@ -38,7 +39,13 @@ export default function DeletedPageBanner({
       // After successful restore, redirect to the restored page
       router.push(`/${pageId}`)
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
       console.error('Error restoring page:', error)
+      toast.error("Failed to restore page", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Restore error: ${msg}\nPage: ${pageId}\nTime: ${new Date().toISOString()}`
+      })
       setIsRestoring(false)
     }
   }
@@ -56,7 +63,13 @@ export default function DeletedPageBanner({
       // After successful deletion, redirect to settings/deleted
       router.push('/settings/deleted')
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
       console.error('Error permanently deleting page:', error)
+      toast.error("Failed to delete page", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Delete error: ${msg}\nPage: ${pageId}\nTime: ${new Date().toISOString()}`
+      })
       setIsPermanentlyDeleting(false)
     }
   }

@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { getAdminFirestore } from '../../firebase/admin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +27,7 @@ async function fetchUserData(username: string): Promise<UserData | null> {
     const db = getAdminFirestore();
 
     // Query users collection where username matches
-    const usersSnapshot = await db.collection('users')
+    const usersSnapshot = await db.collection(getCollectionName('users'))
       .where('username', '==', username)
       .limit(1)
       .get();

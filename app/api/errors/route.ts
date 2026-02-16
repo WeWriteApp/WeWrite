@@ -96,18 +96,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // LOG ALL ERRORS TO TERMINAL - This is what the user wants!
-    console.log('🚨 BROWSER ERROR DETECTED:');
-    console.log('📍 Error Message:', typeof error === 'string' ? error : error.message);
-    console.log('📍 Stack Analysis:', body.stackAnalysis);
-    console.log('📍 Filename:', body.filename);
-    console.log('📍 Line/Column:', `${body.lineno}:${body.colno}`);
-    console.log('📍 Script Tags:', body.scriptTags);
-    console.log('📍 Full Stack:', typeof error === 'object' ? error.stack : body.stack);
-    console.log('📍 URL:', body.url);
-    console.log('📍 Type:', body.type);
-    console.log('📍 User Agent:', body.userAgent);
-    console.log('📍 Full Body:', JSON.stringify(body, null, 2));
-    console.log('🚨 END ERROR DETAILS');
 
     // Enhanced logging for Google API errors (additional details)
     const isGoogleApiError = (
@@ -125,8 +113,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
 
     if (isGoogleApiError) {
-      console.log('🔍 ADDITIONAL GOOGLE API ERROR ANALYSIS:');
-      console.log('📍 This appears to be a Google API related error');
     }
 
     // Try to log the error to Google Cloud, but don't fail if it doesn't work

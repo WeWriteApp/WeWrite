@@ -1,38 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 import { getCollectionNameAsync, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
+import { getAdminFirestore } from '../../../firebase/firebaseAdmin';
 
 // EMERGENCY COST OPTIMIZATION: Global cache for recent edits
 const globalRecentEditsCache = new Map<string, { data: any; timestamp: number }>();
 
-// Initialize Firebase Admin SDK with unique app name for global recent edits
-let globalRecentEditsApp;
-try {
-  // Try to get existing app first
-  globalRecentEditsApp = getApps().find(app => app.name === 'global-recent-edits-app');
-
-  if (!globalRecentEditsApp) {
-    // Parse the service account JSON from environment (it's base64 encoded)
-    const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-    const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-    const serviceAccount = JSON.parse(decodedJson);
-
-    globalRecentEditsApp = initializeApp({
-      credential: cert({
-        projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})}, 'global-recent-edits-app');
-  }
-} catch (error) {
-  throw error;
+let _adminDb: ReturnType<typeof getAdminFirestore> | null = null;
+function getDb() {
+  if (!_adminDb) _adminDb = getAdminFirestore();
+  return _adminDb;
 }
-
-const adminDb = getFirestore(globalRecentEditsApp);
 
 /**
  * GLOBAL ACTIVITY FEED API
@@ -82,7 +63,7 @@ export async function GET(request: NextRequest) {
     const responseData = await (async () => {
 
     // Use the same Firebase Admin instance as my-pages API
-    const db = adminDb;
+    const db = getDb();
 
     const pagesCollectionName = await getCollectionNameAsync('pages');
 

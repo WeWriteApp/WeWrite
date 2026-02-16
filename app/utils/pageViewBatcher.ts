@@ -112,7 +112,6 @@ class PageViewBatcher {
         this.batchTimer = null;
       }
 
-      console.log(`📊 Flushing ${currentBatch.size} batched page views...`);
 
       for (const [pageId, batchedView] of currentBatch) {
         // Update page view document with aggregated format matching /api/analytics/page-view
@@ -147,7 +146,6 @@ class PageViewBatcher {
 
       await batch.commit();
       
-      console.log(`✅ Successfully flushed ${currentBatch.size} page view batches`);
       
       // Track write operations for monitoring
       if (typeof window === 'undefined') {
@@ -270,12 +268,10 @@ function generateSessionId(): string {
 // Graceful shutdown handling
 if (typeof process !== 'undefined') {
   process.on('SIGTERM', async () => {
-    console.log('🔄 Flushing page views before shutdown...');
     await flushPageViews();
   });
 
   process.on('SIGINT', async () => {
-    console.log('🔄 Flushing page views before shutdown...');
     await flushPageViews();
   });
 }

@@ -110,7 +110,6 @@ export function trackDatabaseRead(
 
   // Log the read for debugging (only for high-volume endpoints)
   if (readCount > 5 || !fromCache) {
-    console.log(`📊 DB READ: ${endpoint} - ${readCount} reads, ${responseTime}ms, cache: ${fromCache}`);
   }
 }
 

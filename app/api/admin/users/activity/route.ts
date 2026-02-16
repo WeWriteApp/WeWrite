@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { checkAdminPermissions } from '../../../admin-auth-helper';
-import { getCollectionName } from '../../../../utils/environmentConfig';
+import { getCollectionName, USD_COLLECTIONS } from '../../../../utils/environmentConfig';
 import { withAdminContext } from '../../../../utils/adminRequestContext';
 
 export type ActivityType = 'subscription' | 'payout' | 'notification';
@@ -272,17 +272,17 @@ export async function GET(request: NextRequest) {
           
           // Check payouts collection (actual transfers)
           const payoutsQuery = await db
-            .collection(getCollectionName('payouts'))
+            .collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
             .where('userId', '==', uid)
-            .orderBy('createdAt', 'desc')
+            .orderBy('requestedAt', 'desc')
             .limit(10)
             .get();
-          
+
           payoutsQuery.docs.forEach(doc => {
             const data = doc.data();
-            const createdAt = data.createdAt?._seconds 
-              ? new Date(data.createdAt._seconds * 1000).toISOString()
-              : data.createdAt || new Date().toISOString();
+            const createdAt = data.requestedAt?._seconds
+              ? new Date(data.requestedAt._seconds * 1000).toISOString()
+              : data.requestedAt || new Date().toISOString();
             
             const amountUsd = (data.amountCents || data.amount || 0) / 100;
             

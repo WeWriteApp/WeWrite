@@ -12,11 +12,9 @@ import { getUserIdFromRequest } from '../auth-helper';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../utils/adminSecurity';
-import Stripe from 'stripe';
+import { getStripe } from '../../lib/stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+const stripe = getStripe();
 
 interface SubscriptionHistoryEvent {
   id: string;

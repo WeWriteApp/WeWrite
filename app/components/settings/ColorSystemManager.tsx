@@ -187,7 +187,6 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
             backgroundData: imageBackground
           })
         });
-        console.log('[Background Switch] Background preference saved');
       } catch (error) {
         console.warn('[Background Switch] Failed to save background preference:', error);
       }

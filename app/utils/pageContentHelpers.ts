@@ -68,7 +68,6 @@ export async function createNewPagesFromLinks(
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Created linked page:', { title: pageRef.title, id: result.id });
       } else {
         let errorMessage = `Failed to create page "${pageRef.title}"`;
         try {

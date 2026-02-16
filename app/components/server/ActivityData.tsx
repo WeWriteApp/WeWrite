@@ -8,7 +8,6 @@ import { internalApiFetch } from '../../utils/internalApi';
  */
 export async function getServerActivityData(limitCount = 30) {
   try {
-    console.log('Starting getServerActivityData with limit:', limitCount);
 
     // Use environment-aware API endpoint instead of direct Firebase calls
     // SECURITY: Uses validated internal API URL to prevent SSRF
@@ -40,7 +39,6 @@ export async function getServerActivityData(limitCount = 30) {
       isPublic: page.isPublic || false
     }));
 
-    console.log(`✅ Server Activity Data: Successfully fetched ${activities.length} activities via API`);
 
     return { activities };
 

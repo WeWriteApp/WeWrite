@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { useAppBackground, type ImageBackground } from '@/contexts/AppBackgroundContext';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/ui/use-toast';
 
 interface BackgroundImageUploadProps {
   className?: string;
@@ -54,7 +55,13 @@ export function BackgroundImageUpload({
         });
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Failed to remove background image:', error);
+      toast.error("Failed to remove background image", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Background remove error: ${msg}\nTime: ${new Date().toISOString()}`
+      });
     }
   };
 
@@ -62,18 +69,15 @@ export function BackgroundImageUpload({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log(`[Background Upload] Starting upload for file: ${file.name} (${file.size} bytes, ${file.type})`);
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      console.log('[Background Upload] Invalid file type:', file.type);
       setUploadError('Please select an image file');
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      console.log('[Background Upload] File too large:', file.size);
       setUploadError('Image must be smaller than 10MB');
       return;
     }
@@ -83,19 +87,16 @@ export function BackgroundImageUpload({
 
     try {
       // Create FormData for upload
-      console.log('[Background Upload] Creating form data...');
       const formData = new FormData();
       formData.append('image', file);
 
       // Upload to our API endpoint
-      console.log('[Background Upload] Sending request to API...');
       const response = await fetch('/api/upload/background', {
         method: 'POST',
         body: formData,
         credentials: 'include' // Include cookies for authentication
       });
 
-      console.log(`[Background Upload] API response status: ${response.status}`);
 
       if (!response.ok) {
         let errorMessage = 'Failed to upload image';
@@ -103,7 +104,6 @@ export function BackgroundImageUpload({
         try {
           // First try to get the raw response text
           responseText = await response.text();
-          console.log('[Background Upload] Raw error response:', responseText);
 
           // Try to parse as JSON
           if (responseText) {
@@ -122,7 +122,6 @@ export function BackgroundImageUpload({
       }
 
       const responseData = await response.json();
-      console.log('[Background Upload] API success response:', responseData);
 
       const url = responseData.data?.url || responseData.url;
       if (!url) {
@@ -154,13 +153,11 @@ export function BackgroundImageUpload({
             backgroundData: newBackground
           })
         });
-        console.log('[Background Upload] Background preference saved');
       } catch (prefError) {
         console.warn('[Background Upload] Failed to save background preference:', prefError);
         // Don't fail the upload if preference saving fails
       }
 
-      console.log('[Background Upload] Upload completed successfully');
     } catch (error) {
       console.error('[Background Upload] Upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload image. Please try again.';
@@ -177,7 +174,6 @@ export function BackgroundImageUpload({
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
-
 
 
   return (

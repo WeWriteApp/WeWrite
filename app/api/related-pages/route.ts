@@ -181,9 +181,6 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    console.log(`🔍 [RELATED_PAGES] Finding related pages for ${pageId}`);
-    console.log(`🔍 [RELATED_PAGES] Title: "${pageTitle}", Author: ${authorUsername || authorId || 'unknown'}`);
-    console.log(`🔍 [RELATED_PAGES] Content length: ${pageContent?.length || 0} chars`);
 
     // Build exclusion list
     const excludeIds = new Set([pageId, ...excludePageIds]);
@@ -192,8 +189,6 @@ export async function GET(request: NextRequest) {
     const titleTerms = extractSearchTerms(pageTitle, 8);
     const contentKeywords = extractKeywords(pageContent, 12);
 
-    console.log(`🔍 [RELATED_PAGES] Title terms: "${titleTerms}"`);
-    console.log(`🔍 [RELATED_PAGES] Content keywords: [${contentKeywords.join(', ')}]`);
 
     // Build a more effective search query:
     // - Title terms appear twice (higher weight)
@@ -254,7 +249,6 @@ export async function GET(request: NextRequest) {
       }));
 
     const responseTime = Date.now() - startTime;
-    console.log(`🔍 [RELATED_PAGES] Found ${relatedByOthers.length} by others, ${relatedByAuthor.length} by author in ${responseTime}ms`);
 
     return NextResponse.json({
       relatedByOthers,

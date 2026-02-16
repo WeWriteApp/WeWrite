@@ -42,7 +42,6 @@ export async function GET(
       return NextResponse.json({ error: 'Page not found' }, { status: 404 });
     }
     
-    console.log(`📊 [PAGE_ACTIVITIES] Fetching activities for page ${pageId}`);
     
     // Query versions from the unified version system
     const versionsQuery = db.collection(getCollectionName('pages'))
@@ -54,7 +53,6 @@ export async function GET(
     const versionsSnapshot = await versionsQuery.get();
     
     if (versionsSnapshot.empty) {
-      console.log(`📊 [PAGE_ACTIVITIES] No versions found for page ${pageId}`);
       return NextResponse.json({
         activities: [],
         count: 0,
@@ -92,7 +90,6 @@ export async function GET(
       };
     });
     
-    console.log(`📊 [PAGE_ACTIVITIES] Found ${activities.length} activities for page ${pageId}`);
     
     return NextResponse.json({
       activities,

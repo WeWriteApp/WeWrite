@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
 
     const requestBody = await request.json();
     const { amount = 25, connectedAccountId, note } = requestBody;
-    console.log('🧪 [ADMIN] Simulate test payout request', { envType, host, devBypass, amount, connectedAccountId, note, userId });
     const total = Number(amount) || 0;
     const createdBy = userId || 'dev-bypass';
 
@@ -58,7 +57,6 @@ export async function POST(request: NextRequest) {
     };
 
     const batchRef = await adminDb.collection(TEST_BATCH_COLLECTION).add(batchPayload);
-    console.log('🧪 [ADMIN] Test payout batch recorded', { id: batchRef.id, ...batchPayload });
 
     // If we have a connected account, run a real test-mode transfer to Stripe
     const payoutDestination = connectedAccountId || process.env.TEST_STRIPE_CONNECTED_ACCOUNT_ID;
@@ -81,9 +79,7 @@ export async function POST(request: NextRequest) {
         updatedAt: ts
       });
 
-      console.log('🧪 [ADMIN] Stripe test payout result', { batchId: batchRef.id, status, stripeResult });
     } else {
-      console.log('🧪 [ADMIN] No connectedAccountId provided; recorded batch only (no Stripe call).');
     }
 
     return NextResponse.json({

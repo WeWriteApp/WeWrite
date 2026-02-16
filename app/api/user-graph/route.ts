@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
     if (!skipCache) {
       const cached = getCachedGraph(userId);
       if (cached) {
-        console.log(`📊 [USER_GRAPH_API] Cache hit for user ${userId}`);
         return NextResponse.json({
           ...cached,
           cached: true,
@@ -106,7 +105,6 @@ export async function GET(request: NextRequest) {
 
     const db = admin.firestore();
 
-    console.log(`📊 [USER_GRAPH_API] Fetching graph for user ${userId}, limit ${limit}`);
 
     // Step 1: Get all user's pages in one query - includes content for link extraction
     // This eliminates the N+1 query for fetching page content separately
@@ -127,7 +125,6 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log(`📊 [USER_GRAPH_API] Found ${userPages.length} pages`);
 
     if (userPages.length === 0) {
       const emptyResult = {
@@ -171,7 +168,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`📊 [USER_GRAPH_API] Found ${backlinksResults.length} backlinks in ${Math.ceil(pageIdArray.length / BATCH_SIZE)} batched queries`);
 
     // Build links map - track all connections
     const linksMap = new Map<string, GraphLink>();
@@ -259,12 +255,6 @@ export async function GET(request: NextRequest) {
     const computeTimeMs = Date.now() - startTime;
     const queryCount = 1 + Math.ceil(pageIdArray.length / BATCH_SIZE); // 1 pages query + N/30 backlinks queries
 
-    console.log(`📊 [USER_GRAPH_API] Completed in ${computeTimeMs}ms:`, {
-      pageCount: nodes.length,
-      linkCount: links.length,
-      orphanCount,
-      queryCount
-    });
 
     // Build result and cache it
     const result = {

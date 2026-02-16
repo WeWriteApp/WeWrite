@@ -60,7 +60,6 @@ function NewPageRedirect() {
 
     // Generate new page URL and redirect
     const newUrl = buildNewPageUrl(options);
-    console.log('🔄 Redirecting /new to:', newUrl);
 
     // Use replace to avoid /new appearing in browser history
     router.replace(newUrl);

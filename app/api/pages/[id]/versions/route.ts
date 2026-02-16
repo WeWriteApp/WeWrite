@@ -50,7 +50,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const resolvedParams = await params;
-  console.log('📊 [PAGE VERSIONS API] Called for pageId:', resolvedParams.id);
   try {
     const { id: pageId } = resolvedParams;
     const { searchParams } = new URL(request.url);
@@ -79,7 +78,6 @@ export async function GET(
     try {
       currentUserId = await getUserIdFromRequest(request);
     } catch (error) {
-      console.log('📊 [PAGE_VERSIONS] Anonymous access (getUserIdFromRequest failed):', error);
       // Continue with null currentUserId for anonymous access
     }
 
@@ -96,37 +94,23 @@ export async function GET(
     const isPublic = true; // All pages are now public
     const canView = true; // All pages are accessible
 
-    console.log(`📊 [PAGE_VERSIONS] Permission check:`, {
-      pageId,
-      currentUserId,
-      isOwner,
-      isPublic,
-      isAdmin,
-      canView,
-      pageUserId: pageData?.userId,
-      pageTitle: pageData?.title
-    });
 
     if (!canView) {
       return createErrorResponse('You do not have permission to view this page', 'FORBIDDEN');
     }
 
-    console.log(`📊 [PAGE_VERSIONS] Fetching versions for page: ${pageId}`);
 
     // Build query for versions - ultra-simplified to avoid any index requirements
-    console.log(`📊 [PAGE_VERSIONS] Building simple query for page: ${pageId}`);
 
     const versionsRef = db.collection(getCollectionName('pages'))
       .doc(pageId)
       .collection('versions');
 
-    console.log(`📊 [PAGE_VERSIONS] Collection path: ${getCollectionName('pages')}/${pageId}/versions`);
 
     // Ultra-simple query - just get all versions and sort/filter in memory
     const versionsSnapshot = await versionsRef.get();
 
     if (versionsSnapshot.empty) {
-      console.log(`📊 [PAGE_VERSIONS] No versions found for page: ${pageId}`);
       return createApiResponse({
         versions: [],
         count: 0,
@@ -165,14 +149,6 @@ export async function GET(
                 hasActiveSubscription: userData.hasActiveSubscription || false
               };
 
-              console.log('📊 [VERSIONS API] User data fetched:', {
-                uid: userData.uid,
-                username: userInfo.username,
-                subscriptionTier: userInfo.subscriptionTier,
-                subscriptionStatus: userInfo.subscriptionStatus,
-                subscriptionAmount: userInfo.subscriptionAmount,
-                hasActiveSubscription: userInfo.hasActiveSubscription
-              });
 
               usernameMap.set(userData.uid, userInfo);
             }
@@ -241,7 +217,6 @@ export async function GET(
     // Apply limit after filtering
     const versions = filteredVersions.slice(0, limit);
 
-    console.log(`📊 [PAGE_VERSIONS] Returning ${versions.length} versions for page: ${pageId} (filtered from ${allVersions.length})`);
 
     return createApiResponse({
       versions,
@@ -328,7 +303,6 @@ export async function POST(
 
     // CRITICAL FIX: Invalidate cache after updating page with new version
     try {
-      console.log('🗑️ [VERSION API] Invalidating cache for page:', pageId);
 
       // Import cache invalidation utilities
       const { invalidateCache, pageCache } = await import('../../../../utils/serverCache');
@@ -340,7 +314,6 @@ export async function POST(
       // Invalidate page cache specifically
       pageCache.invalidate(pageId);
 
-      console.log('✅ [VERSION API] Cache invalidation completed for page:', pageId);
     } catch (cacheError) {
       console.error('⚠️ [VERSION API] Cache invalidation failed (non-fatal):', cacheError);
     }

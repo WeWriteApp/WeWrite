@@ -40,7 +40,6 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   isFullPage = false,
   focusDate = null
 }) => {
-  console.log('📅 TimelineCarousel: Component rendering');
 
   const { user } = useAuth();
   const router = useRouter();
@@ -72,10 +71,8 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
 
   // Check for existing notes when dates change
   const checkExistingNotes = useCallback(async () => {
-    console.log('📅 TimelineCarousel: checkExistingNotes called');
 
     if (!user?.uid) {
-      console.log('📅 TimelineCarousel: No current account UID, skipping load');
       setLoading(false);
       return;
     }
@@ -104,30 +101,12 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
         return;
       }
 
-      console.log('📅 TimelineCarousel: API returned', pages.length, 'pages');
 
       // Filter pages that have customDate and group by date
       const notesByDateMap = new Map<string, Note[]>();
       let pagesWithCustomDate = 0;
 
       if (pages && pages.length > 0) {
-        console.log('📅 TimelineCarousel: Processing pages for customDate field:', {
-          totalPages: pages.length,
-          samplePage: pages[0] ? {
-            id: pages[0].id,
-            title: pages[0].title,
-            hasCustomDate: !!pages[0].customDate,
-            customDate: pages[0].customDate,
-            allFields: Object.keys(pages[0])
-          } : null,
-          // Show first few pages with their customDate status
-          pagesWithCustomDate: pages.slice(0, 5).map(page => ({
-            id: page.id,
-            title: page.title,
-            customDate: page.customDate,
-            hasCustomDate: !!page.customDate
-          }))
-        });
 
         pages.forEach((page: any) => {
         // Only process pages with customDate field
@@ -141,29 +120,12 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
           notesByDateMap.get(dateString)!.push({ id: page.id, title: noteTitle });
           pagesWithCustomDate++;
 
-          console.log('📅 TimelineCarousel: Added to timeline:', {
-            date: dateString,
-            id: page.id,
-            title: noteTitle
-          });
         } else if (!page.deleted) {
           // Log pages without customDate for debugging
-          console.log('📅 TimelineCarousel: Page without customDate:', {
-            id: page.id,
-            title: page.title,
-            hasCustomDate: !!page.customDate,
-            customDate: page.customDate
-          });
         }
         });
       }
 
-      console.log('📅 TimelineCarousel: Summary:', {
-        totalPages: pages.length,
-        pagesWithCustomDate,
-        timelineDates: notesByDateMap.size,
-        dateKeys: Array.from(notesByDateMap.keys()).sort()
-      });
 
       setNotesByDate(notesByDateMap);
 
@@ -209,7 +171,6 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   // Scroll to today's card
   const scrollToToday = useCallback(() => {
     if (!scrollContainerRef.current) {
-      console.log('📅 TimelineCarousel: scrollContainerRef not available');
       return;
     }
 
@@ -218,17 +179,10 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
     const today = startOfDay(now);
     const todayString = format(today, 'yyyy-MM-dd');
 
-    console.log('📅 TimelineCarousel: Scrolling to today:', {
-      now: now.toISOString(),
-      today: today.toISOString(),
-      todayString,
-      allCards: Array.from(scrollContainerRef.current.querySelectorAll('[data-date]')).map(el => el.getAttribute('data-date'))
-    });
 
     const todayCard = scrollContainerRef.current.querySelector(`[data-date="${todayString}"]`);
 
     if (todayCard) {
-      console.log('📅 TimelineCarousel: Found today card, scrolling to it');
       // Scroll the card into view with some padding
       const container = scrollContainerRef.current;
       const cardRect = todayCard.getBoundingClientRect();
@@ -237,13 +191,6 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
       // Calculate scroll position to center the card
       const scrollLeft = container.scrollLeft + cardRect.left - containerRect.left - (containerRect.width / 2) + (cardRect.width / 2);
 
-      console.log('📅 TimelineCarousel: Scrolling details:', {
-        scrollLeft,
-        cardRectLeft: cardRect.left,
-        containerRectLeft: containerRect.left,
-        containerWidth: containerRect.width,
-        cardWidth: cardRect.width
-      });
 
       container.scrollTo({
         left: scrollLeft,

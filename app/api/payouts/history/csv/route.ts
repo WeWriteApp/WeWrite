@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../auth-helper';
-import { getCollectionName, COLLECTIONS } from '../../../../utils/environmentConfig';
+import { getCollectionName, COLLECTIONS, USD_COLLECTIONS } from '../../../../utils/environmentConfig';
 
 // Initialize Firebase Admin lazily
-let admin;
+let admin: ReturnType<typeof getFirebaseAdmin> | null = null;
 
 function initializeFirebase() {
-  if (admin) return { admin }; // Already initialized
+  if (admin) return { admin };
 
   try {
     admin = getFirebaseAdmin();
@@ -17,7 +15,6 @@ function initializeFirebase() {
       console.warn('Firebase Admin initialization skipped during build time');
       return { admin: null };
     }
-    console.log('Firebase Admin initialized successfully in payouts/history/csv');
   } catch (error) {
     console.error('Error initializing Firebase Admin in payouts/history/csv:', error);
     return { admin: null };
@@ -26,30 +23,32 @@ function initializeFirebase() {
   return { admin };
 }
 
-// Initialize Stripe
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
-
 // Helper function to escape CSV values
 function escapeCsvValue(value: any): string {
   if (value === null || value === undefined) {
     return '';
   }
-  
+
   const stringValue = String(value);
-  
+
   // If the value contains comma, quote, or newline, wrap it in quotes and escape internal quotes
   if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   }
-  
+
   return stringValue;
 }
 
 // Helper function to format currency for CSV
-function formatCurrencyForCsv(amount: number, currency: string = 'usd'): string {
-  return (amount / 100).toFixed(2); // Convert from cents to dollars
+function formatCurrencyForCsv(amountCents: number): string {
+  return (amountCents / 100).toFixed(2);
+}
+
+// Helper to convert Firestore timestamp to date string
+function formatTimestamp(ts: any): string {
+  if (!ts) return '';
+  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  return date.toLocaleDateString('en-US');
 }
 
 // GET /api/payouts/history/csv - Download payout history as CSV
@@ -57,179 +56,144 @@ export async function GET(request: NextRequest) {
   try {
     const { admin } = initializeFirebase();
     if (!admin) {
-      console.warn('Firebase Admin not available for payouts/history/csv');
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }
 
-    // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    console.log(`Generating CSV for user: ${userId}`);
-
-    // Get user data to find their connected account ID
     const db = admin.firestore();
-    const userDoc = await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).get();
-    const userData = userDoc.data();
 
-    const stripeConnectedAccountId = userData?.stripeConnectedAccountId;
+    // --- Fetch real payouts from usdPayouts collection ---
+    let payoutsQuery: FirebaseFirestore.Query = db
+      .collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
+      .where('userId', '==', userId)
+      .orderBy('requestedAt', 'desc');
 
-    // Create same sample payout data for CSV export
-    const samplePayouts = [
-      {
-        id: 'payout_sample_1',
-        amount: 2500, // $25.00 in cents
-        currency: 'usd',
-        status: 'completed',
-        createdAt: new Date('2025-06-15').toISOString(),
-        completedAt: new Date('2025-06-17').toISOString(),
-        estimatedArrival: null,
-        bankAccount: {
-          bankName: 'Chase Bank',
-          last4: '1234',
-          accountType: 'checking'
-        },
-        stripePayoutId: 'po_sample_1',
-        failureReason: null,
-        description: 'Monthly payout for June 2025',
-        period: '2025-06'
-      },
-      {
-        id: 'payout_sample_2',
-        amount: 1750, // $17.50 in cents
-        currency: 'usd',
-        status: 'processing',
-        createdAt: new Date('2025-07-01').toISOString(),
-        completedAt: null,
-        estimatedArrival: new Date('2025-07-03').toISOString(),
-        bankAccount: {
-          bankName: 'Chase Bank',
-          last4: '1234',
-          accountType: 'checking'
-        },
-        stripePayoutId: 'po_sample_2',
-        failureReason: null,
-        description: 'Monthly payout for July 2025',
-        period: '2025-07'
-      },
-      {
-        id: 'payout_sample_3',
-        amount: 3200, // $32.00 in cents
-        currency: 'usd',
-        status: 'failed',
-        createdAt: new Date('2025-05-15').toISOString(),
-        completedAt: null,
-        estimatedArrival: null,
-        bankAccount: {
-          bankName: 'Wells Fargo',
-          last4: '5678',
-          accountType: 'savings'
-        },
-        stripePayoutId: 'po_sample_3',
-        failureReason: 'Bank account closed or invalid',
-        description: 'Monthly payout for May 2025',
-        period: '2025-05'
-      },
-      {
-        id: 'payout_sample_4',
-        amount: 1850, // $18.50 in cents
-        currency: 'usd',
-        status: 'failed',
-        createdAt: new Date('2025-04-20').toISOString(),
-        completedAt: null,
-        estimatedArrival: null,
-        bankAccount: {
-          bankName: 'Bank of America',
-          last4: '9012',
-          accountType: 'checking'
-        },
-        stripePayoutId: 'po_sample_4',
-        failureReason: 'Invalid routing number',
-        description: 'Monthly payout for April 2025',
-        period: '2025-04'
-      }
-    ];
-
-    // Apply filters to sample data
-    let filteredSamplePayouts = samplePayouts;
-
-    // Apply status filter if provided
     if (status && status !== 'all') {
-      filteredSamplePayouts = filteredSamplePayouts.filter(payout => payout.status === status);
+      payoutsQuery = payoutsQuery.where('status', '==', status);
     }
 
-    // Apply date filters if provided
+    const payoutsSnapshot = await payoutsQuery.get();
+
+    let payoutRows = payoutsSnapshot.docs.map(doc => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        requestedAt: d.requestedAt,
+        completedAt: d.completedAt,
+        amountCents: d.amountCents || 0,
+        status: d.status || 'pending',
+        stripePayoutId: d.stripePayoutId || '',
+        failureReason: d.failureReason || '',
+      };
+    });
+
+    // Apply date range filtering in memory (avoids composite index requirement)
     if (startDate || endDate) {
-      filteredSamplePayouts = filteredSamplePayouts.filter(payout => {
-        const payoutDate = new Date(payout.createdAt);
-        if (startDate && payoutDate < new Date(startDate)) return false;
-        if (endDate && payoutDate > new Date(endDate)) return false;
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      payoutRows = payoutRows.filter(row => {
+        const date = row.requestedAt?.toDate ? row.requestedAt.toDate() : null;
+        if (!date) return true;
+        if (start && date < start) return false;
+        if (end && date > end) return false;
         return true;
       });
     }
 
-    const payouts = filteredSamplePayouts;
+    // --- Fetch earnings records from writerUsdEarnings collection ---
+    const earningsSnapshot = await db
+      .collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .get();
 
-    // TODO: Replace with actual database query when index is created
-    /*
-    for (const doc of payoutsSnapshot.docs) {
-      // ... actual database processing code ...
+    let earningsRows = earningsSnapshot.docs.map(doc => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        month: d.month || '',
+        amountCents: d.totalUsdCentsReceived || 0,
+        status: d.status || 'pending',
+        createdAt: d.createdAt,
+      };
+    });
+
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      earningsRows = earningsRows.filter(row => {
+        const date = row.createdAt?.toDate ? row.createdAt.toDate() : null;
+        if (!date) return true;
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+        return true;
+      });
     }
-    */
 
-    // Generate CSV content
-    const csvHeaders = [
+    // --- Build CSV ---
+    const csvLines: string[] = [];
+
+    // Section 1: Payouts
+    csvLines.push('--- PAYOUTS ---');
+    csvLines.push([
       'Payout ID',
-      'Date Created',
+      'Date Requested',
       'Date Completed',
       'Amount (USD)',
-      'Currency',
       'Status',
-      'Bank Name',
-      'Account Type',
-      'Account Last 4',
-      'Period',
-      'Description',
-      'Estimated Arrival',
-      'Stripe Payout ID',
-      'Failure Reason'
-    ];
+      'Stripe Transfer ID',
+      'Failure Reason',
+    ].join(','));
 
-    const csvRows = payouts.map(payout => [
-      escapeCsvValue(payout.id),
-      escapeCsvValue(payout.createdAt ? new Date(payout.createdAt).toLocaleDateString() : ''),
-      escapeCsvValue(payout.completedAt ? new Date(payout.completedAt).toLocaleDateString() : ''),
-      escapeCsvValue(formatCurrencyForCsv(payout.amount, payout.currency)),
-      escapeCsvValue(payout.currency.toUpperCase()),
-      escapeCsvValue(payout.status),
-      escapeCsvValue(payout.bankAccount?.bankName || ''),
-      escapeCsvValue(payout.bankAccount?.accountType || ''),
-      escapeCsvValue(payout.bankAccount?.last4 || ''),
-      escapeCsvValue(payout.period || ''),
-      escapeCsvValue(payout.description || ''),
-      escapeCsvValue(payout.estimatedArrival ? new Date(payout.estimatedArrival).toLocaleDateString() : ''),
-      escapeCsvValue(payout.stripePayoutId || ''),
-      escapeCsvValue(payout.failureReason || '')
-    ]);
+    for (const row of payoutRows) {
+      csvLines.push([
+        escapeCsvValue(row.id),
+        escapeCsvValue(formatTimestamp(row.requestedAt)),
+        escapeCsvValue(formatTimestamp(row.completedAt)),
+        escapeCsvValue(formatCurrencyForCsv(row.amountCents)),
+        escapeCsvValue(row.status),
+        escapeCsvValue(row.stripePayoutId),
+        escapeCsvValue(row.failureReason),
+      ].join(','));
+    }
 
-    // Combine headers and rows
-    const csvContent = [
-      csvHeaders.join(','),
-      ...csvRows.map(row => row.join(','))
-    ].join('\n');
+    // Blank separator
+    csvLines.push('');
+
+    // Section 2: Earnings
+    csvLines.push('--- EARNINGS ---');
+    csvLines.push([
+      'Earnings ID',
+      'Month',
+      'Date Created',
+      'Amount (USD)',
+      'Status',
+    ].join(','));
+
+    for (const row of earningsRows) {
+      csvLines.push([
+        escapeCsvValue(row.id),
+        escapeCsvValue(row.month),
+        escapeCsvValue(formatTimestamp(row.createdAt)),
+        escapeCsvValue(formatCurrencyForCsv(row.amountCents)),
+        escapeCsvValue(row.status),
+      ].join(','));
+    }
+
+    const csvContent = csvLines.join('\n');
 
     // Add BOM for proper UTF-8 encoding in Excel
     const csvWithBom = '\uFEFF' + csvContent;
 
-    // Return CSV response
     return new NextResponse(csvWithBom, {
       status: 200,
       headers: {
@@ -243,13 +207,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error generating CSV:', error);
-    
-    if (error instanceof Stripe.errors.StripeError) {
-      return NextResponse.json({
-        error: `Stripe error: ${error.message}`,
-        code: error.code
-      }, { status: 400 });
-    }
 
     return NextResponse.json({
       error: 'Failed to generate CSV'

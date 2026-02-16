@@ -621,7 +621,6 @@ function MapPageContent() {
       }
     } catch (err) {
       // User cancelled share or error
-      console.log('Share cancelled or failed:', err);
     }
   }, []);
 

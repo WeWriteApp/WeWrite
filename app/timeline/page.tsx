@@ -89,21 +89,17 @@ function TimelineContent() {
 
   // Function to scroll to today's card
   const scrollToToday = () => {
-    console.log('📅 Timeline Page: scrollToToday called, type:', type);
 
     // Guard against server-side rendering
     if (typeof window === 'undefined') return;
 
     // Use the appropriate scroll function based on current type
     if (type === 'daily-notes' && (window as any).dailyNotesScrollToToday) {
-      console.log('📅 Timeline Page: Using dailyNotesScrollToToday');
       (window as any).dailyNotesScrollToToday();
     } else if ((window as any).timelineScrollToToday) {
-      console.log('📅 Timeline Page: Using timelineScrollToToday');
       (window as any).timelineScrollToToday();
     } else if (typeof document !== 'undefined') {
       // Fallback: try to find today's card manually
-      console.log('📅 Timeline Page: Using fallback querySelector');
       const today = new Date().toISOString().split('T')[0];
       const todayElement = document.querySelector(`[data-date="${today}"]`);
       if (todayElement) {

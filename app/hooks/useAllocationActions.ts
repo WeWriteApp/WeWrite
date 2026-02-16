@@ -171,7 +171,6 @@ export function useAllocationActions({
       // Report to analytics if needed
       if (errorResult.reportToAnalytics) {
         const analyticsData = allocationErrorHandler.createErrorAnalytics(error as Error, errorContext);
-        console.log('Error analytics:', analyticsData);
       }
     }
   }, [
@@ -324,7 +323,6 @@ export function useAllocationActions({
       // Report to analytics if needed
       if (errorResult.reportToAnalytics) {
         const analyticsData = allocationErrorHandler.createErrorAnalytics(error as Error, errorContext);
-        console.log('Error analytics:', analyticsData);
       }
     });
 

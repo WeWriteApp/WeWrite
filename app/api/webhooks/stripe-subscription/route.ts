@@ -9,8 +9,9 @@ import Stripe from 'stripe';
 import { headers } from 'next/headers';
 import { doc, updateDoc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
-import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
+import { getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionNameAsync, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 import { UsdService } from '../../../services/usdService';
 import { dollarsToCents, formatUsdCents, centsToDollars } from '../../../utils/formatCurrency';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
@@ -23,10 +24,7 @@ import { webhookIdempotencyService } from '../../../services/webhookIdempotencyS
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
 import { parseStripeError, createDetailedErrorLog } from '../../../utils/stripeErrorMessages';
 
-// Initialize Stripe
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   let event: Stripe.Event | undefined;

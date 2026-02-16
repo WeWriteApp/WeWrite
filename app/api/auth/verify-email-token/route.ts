@@ -34,22 +34,8 @@ async function getAndValidateToken(token: string): Promise<{
   error?: string;
 }> {
   try {
-    // Dynamic import to avoid build-time issues
-    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-    const { getFirestore } = await import('firebase-admin/firestore');
-
-    // Initialize admin if not already initialized
-    if (!getApps().length) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '{}');
-      if (!serviceAccount.project_id) {
-        return { valid: false, error: 'Server configuration error' };
-      }
-      initializeApp({
-        credential: cert(serviceAccount),
-      });
-    }
-
-    const adminDb = getFirestore();
+    const { getAdminFirestore } = await import('../../../firebase/firebaseAdmin');
+    const adminDb = getAdminFirestore();
     const collectionName = getCollectionName('email_verification_tokens');
 
     const tokenDoc = await adminDb.collection(collectionName).doc(token).get();
@@ -91,8 +77,8 @@ async function getAndValidateToken(token: string): Promise<{
  */
 async function markTokenAsUsed(token: string): Promise<boolean> {
   try {
-    const { getFirestore } = await import('firebase-admin/firestore');
-    const adminDb = getFirestore();
+    const { getAdminFirestore } = await import('../../../firebase/firebaseAdmin');
+    const adminDb = getAdminFirestore();
     const collectionName = getCollectionName('email_verification_tokens');
 
     await adminDb.collection(collectionName).doc(token).update({
@@ -112,8 +98,8 @@ async function markTokenAsUsed(token: string): Promise<boolean> {
  */
 async function updateUserEmailVerified(userId: string): Promise<boolean> {
   try {
-    const { getFirestore } = await import('firebase-admin/firestore');
-    const adminDb = getFirestore();
+    const { getAdminFirestore } = await import('../../../firebase/firebaseAdmin');
+    const adminDb = getAdminFirestore();
     const collectionName = getCollectionName('users');
 
     await adminDb.collection(collectionName).doc(userId).update({

@@ -25,16 +25,6 @@ export interface VersionData {
  */
 export const saveNewVersionServer = async (pageId: string, data: VersionData) => {
   try {
-    console.log('🔵 VERSION SERVER: Starting version save', {
-      pageId,
-      userId: data.userId,
-      username: data.username,
-      hasContent: !!data.content,
-      contentLength: typeof data.content === 'string' ? data.content.length : JSON.stringify(data.content).length,
-      environment: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV,
-      timestamp: new Date().toISOString()
-    });
 
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
@@ -77,14 +67,12 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       isNoOpEdit = !hasContentChangedSync(contentForDiff, pageData.content);
 
       if (isNoOpEdit) {
-        console.log("🔵 VERSION SERVER: No-op edit detected, but still updating lastModified for recent edits tracking");
 
         // CRITICAL FIX: Even for no-op edits, update lastModified for recent edits tracking
         const now = new Date().toISOString();
         await pageRef.update({
           lastModified: now
         });
-        console.log("✅ VERSION SERVER: Updated lastModified for no-op edit");
 
         return {
           success: true,
@@ -99,10 +87,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     // This prevents rapid auto-saves from creating dozens of versions during a typing session.
     // PERFORMANCE OPTIMIZATION: Diff calculation is done in background for batched saves.
     if (data.batchWithGroup && data.groupId && !isNewPage) {
-      console.log("🔵 VERSION SERVER: Checking for existing version to batch with", {
-        groupId: data.groupId,
-        pageId
-      });
 
       try {
         // Look for an existing version with the same groupId
@@ -117,10 +101,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
           const existingVersionId = existingVersionDoc.id;
           const existingVersionData = existingVersionDoc.data();
 
-          console.log("🔵 VERSION SERVER: Found existing version to batch with", {
-            existingVersionId,
-            groupId: data.groupId
-          });
 
           // PERFORMANCE: Save content immediately WITHOUT waiting for diff calculation
           const now = new Date().toISOString();
@@ -146,10 +126,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
             pageRef.update(immediatePageUpdate)
           ]);
 
-          console.log("✅ VERSION SERVER: Batched into existing version (fast path)", {
-            versionId: existingVersionId,
-            batchCount
-          });
 
           // BACKGROUND: Calculate diff and PageScore asynchronously
           // This doesn't block the save response
@@ -184,10 +160,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
                     }
                   })
                 ]);
-                console.log("✅ [BG] Batch diff calculated and saved:", {
-                  added: diffResult.added,
-                  removed: diffResult.removed
-                });
               }
             } catch (diffError) {
               console.error("⚠️ [BG] Batch diff calculation failed (non-fatal):", diffError);
@@ -215,7 +187,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
                 },
                 pageScoreUpdatedAt: new Date().toISOString()
               });
-              console.log('✅ [BG] PageScore calculated (batched):', scoreResult.score, scoreResult.level);
             } catch (err) {
               console.error('⚠️ [BG] PageScore calculation failed (non-fatal):', err);
             }
@@ -229,9 +200,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
             batchCount
           };
         } else {
-          console.log("🔵 VERSION SERVER: No existing version with groupId found, creating new version", {
-            groupId: data.groupId
-          });
           // Fall through to create a new version with originalContent tracking
         }
       } catch (batchError) {
@@ -256,11 +224,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       // Pass the actual content objects to calculateDiff, not JSON strings
       // The diff service will handle text extraction internally
       diffResult = await calculateDiff(contentForDiff, previousContent);
-      console.log("✅ VERSION SERVER: Diff calculated:", {
-        added: diffResult.added,
-        removed: diffResult.removed,
-        hasChanges: diffResult.added > 0 || diffResult.removed > 0
-      });
     } catch (diffError) {
       console.error("🔴 VERSION SERVER: Error calculating diff (non-fatal):", diffError);
     }
@@ -329,17 +292,11 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       versionData.batchCount = 1;
     }
 
-    console.log('🔵 VERSION SERVER: Creating new version document', {
-      pageId,
-      collectionPath: `${getCollectionName("pages")}/${pageId}/versions`,
-      versionDataKeys: Object.keys(versionData)
-    });
 
     // Create the new version document
     const versionsRef = pageRef.collection("versions");
     const versionRef = await versionsRef.add(versionData);
     
-    console.log("✅ VERSION SERVER: Created new version with ID:", versionRef.id, "with diff data");
 
     // Update the page document with the new current version and content
     // CRITICAL FIX: Store content in original format (object), not as string
@@ -357,29 +314,19 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       } : null
     };
 
-    console.log('🔵 VERSION SERVER: Updating page document', {
-      pageId,
-      currentVersion: versionRef.id,
-      contentType: typeof contentForDiff,
-      contentLength: typeof contentForDiff === 'string' ? contentForDiff.length : JSON.stringify(contentForDiff).length,
-      hasDiff: !!diffResult
-    });
 
     await pageRef.update(pageUpdateData);
-    console.log("✅ VERSION SERVER: Page document updated successfully");
 
     // PERFORMANCE: Run non-blocking operations in background (fire and forget)
     // Cache invalidation doesn't need to block the response
     Promise.allSettled([
-      // TODO: User activity recording is disabled because recordUserActivity is a client-side function
-      // To re-enable, create a server-side version in app/firebase/streaks-server.ts
+      // User activity recording skipped — recordUserActivity is client-side only
       // Invalidate cache
       (async () => {
         try {
           const { invalidateCache } = await import('../../utils/serverCache');
           invalidateCache.page(pageId);
           if (data.userId) invalidateCache.user(data.userId);
-          console.log('✅ [BG] Cache invalidated');
         } catch (err) {
           console.error('⚠️ [BG] Cache invalidation failed:', err);
         }
@@ -406,7 +353,6 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
             },
             pageScoreUpdatedAt: new Date().toISOString()
           });
-          console.log('✅ [BG] PageScore calculated:', scoreResult.score, scoreResult.level);
         } catch (err) {
           console.error('⚠️ [BG] PageScore calculation failed (non-fatal):', err);
         }

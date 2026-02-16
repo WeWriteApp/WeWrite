@@ -43,25 +43,21 @@ export const navigateAfterPageDeletion = async (
   showSuccessToast: boolean = true
 ): Promise<void> => {
   try {
-    console.log('🚀 Post-deletion navigation: Starting for page:', page.id);
 
     // Get the best navigation target based on referrer and history
     const navigationTarget = getBestNavigationTarget(page.id);
 
     if (navigationTarget) {
-      console.log('🎯 Post-deletion navigation: Navigating to referrer:', navigationTarget);
 
       // Check if the target has a hash (tab navigation)
       const hasHash = navigationTarget.includes('#');
       if (hasHash) {
         const hashPart = navigationTarget.split('#')[1];
-        console.log('🏷️ Post-deletion navigation: Preserving tab navigation to:', hashPart);
       }
 
       // Navigate to the determined target (preserves full URL including hash)
       router.replace(navigationTarget);
     } else {
-      console.log('🏠 Post-deletion navigation: Using fallback to home page');
       // Fallback to home page if we can't determine a good target
       router.replace('/');
     }
@@ -95,13 +91,6 @@ const getBestNavigationTarget = (deletedPageId: string): string | null => {
       const referrerUrl = new URL(document.referrer);
       const referrerPath = referrerUrl.pathname;
 
-      console.log('🔍 Post-deletion navigation: Checking referrer:', {
-        fullUrl: document.referrer,
-        path: referrerPath,
-        search: referrerUrl.search,
-        hash: referrerUrl.hash,
-        deletedPageId
-      });
 
       // Make sure the referrer is from the same origin (security)
       if (referrerUrl.origin === window.location.origin) {
@@ -112,21 +101,13 @@ const getBestNavigationTarget = (deletedPageId: string): string | null => {
           // Build the complete URL preserving search params and hash fragments
           const fullTargetUrl = referrerPath + referrerUrl.search + referrerUrl.hash;
 
-          console.log('✅ Post-deletion navigation: Using referrer with full URL:', {
-            targetUrl: fullTargetUrl,
-            preservedHash: referrerUrl.hash,
-            preservedSearch: referrerUrl.search
-          });
 
           return fullTargetUrl;
         } else {
-          console.log('🚫 Post-deletion navigation: Referrer is the deleted page, using fallback');
         }
       } else {
-        console.log('🚫 Post-deletion navigation: Referrer is external origin, using fallback');
       }
     } else {
-      console.log('🚫 Post-deletion navigation: No referrer available, using fallback');
     }
 
     // If no valid referrer, return null to use fallback

@@ -13,7 +13,7 @@
  */
 
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getStripe } from '../lib/stripe';
 import { db } from '../firebase/config';
 import {
   doc,
@@ -107,9 +107,7 @@ export class PlatformBalanceMonitoringService {
   private stripe: Stripe;
 
   constructor() {
-    this.stripe = new Stripe(getStripeSecretKey() || '', {
-      apiVersion: '2024-06-20'
-    });
+    this.stripe = getStripe();
   }
 
   static getInstance(): PlatformBalanceMonitoringService {

@@ -10,17 +10,15 @@
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../utils/environmentConfig';
 import { stripeStorageBalanceService } from './stripeStorageBalanceService';
-import { getStripeSecretKey } from '../utils/stripeConfig';
 import Stripe from 'stripe';
 import { sendUserNotification } from '../utils/notifications';
 import { PLATFORM_FEE_CONFIG } from '../config/platformFee';
 import { sendPayoutProcessed } from './emailService';
 import { UsdEarningsService } from './usdEarningsService';
 import { PayoutLimitService } from './payoutLimitService';
+import { getStripe } from '../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 export interface PayoutRecord {
   id: string;
@@ -543,25 +541,56 @@ export class PayoutService {
   }
 
   static async getEarningsBreakdown(userId: string) {
-    // Placeholder breakdown; replace with real aggregation if needed
-    return {
-      availableCents: 0,
-      pendingCents: 0,
-      lifetimeCents: 0,
-      userId
-    };
+    try {
+      const balance = await UsdEarningsService.getWriterUsdBalance(userId);
+      if (!balance) {
+        return { availableCents: 0, pendingCents: 0, lifetimeCents: 0, userId };
+      }
+      return {
+        availableCents: balance.availableUsdCents || 0,
+        pendingCents: balance.pendingUsdCents || 0,
+        lifetimeCents: balance.totalUsdCentsEarned || 0,
+        userId,
+      };
+    } catch (error) {
+      console.error('[Payout] Error fetching earnings breakdown:', error);
+      return { availableCents: 0, pendingCents: 0, lifetimeCents: 0, userId };
+    }
   }
 
   // Stripe-specific compatibility methods (from stripePayoutService)
   static async verifyStripeAccount(stripeAccountId: string) {
-    // Minimal readiness response; extend with real Stripe checks if needed.
-    return {
-      accountId: stripeAccountId,
-      chargesEnabled: true,
-      payoutsEnabled: true,
-      detailsSubmitted: true,
-      status: 'ready'
-    };
+    try {
+      const account = await stripe.accounts.retrieve(stripeAccountId);
+      const chargesEnabled = account.charges_enabled ?? false;
+      const payoutsEnabled = account.payouts_enabled ?? false;
+      const detailsSubmitted = account.details_submitted ?? false;
+
+      let status: 'ready' | 'pending' | 'restricted' = 'ready';
+      if (!detailsSubmitted) {
+        status = 'pending';
+      } else if (!chargesEnabled || !payoutsEnabled) {
+        status = 'restricted';
+      }
+
+      return {
+        accountId: stripeAccountId,
+        chargesEnabled,
+        payoutsEnabled,
+        detailsSubmitted,
+        status,
+      };
+    } catch (error) {
+      console.error('[Payout] Error verifying Stripe account:', error);
+      return {
+        accountId: stripeAccountId,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        status: 'restricted' as const,
+        error: error instanceof Error ? error.message : 'Failed to verify account',
+      };
+    }
   }
 
   static async getInternationalPayoutInfo(country: string) {

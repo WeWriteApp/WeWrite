@@ -46,12 +46,10 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
       const userIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
 
       if (userIds.length === 0) {
-        console.log('SimpleTrendingCarousel: No user IDs found for subscription data');
         setTrendingPages(pages);
         return;
       }
 
-      console.log(`SimpleTrendingCarousel: Fetching subscription data for ${userIds.length} users`);
 
       // Fetch user data with subscription information
       const userData = await getBatchUserData(userIds);
@@ -65,7 +63,6 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
         username: page.userId ? (userData[page.userId]?.username || page.username) : page.username
       }));
 
-      console.log('SimpleTrendingCarousel: Updated pages with subscription data');
       setTrendingPages(pagesWithSubscriptions);
 
     } catch (error) {
@@ -79,7 +76,6 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
     const fetchTrendingPages = async () => {
       try {
         setLoading(true);
-        console.log('SimpleTrendingCarousel: Fetching trending pages with limit', limit);
 
         // Use the API endpoint to get REAL trending pages (automatically uses production data for logged-out users)
         const response = await fetchJson(`/api/trending?limit=${limit}`);
@@ -95,18 +91,13 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
         // Get pages from standardized API response
         const pages = response.data?.trendingPages || [];
 
-        console.log('SimpleTrendingCarousel: Raw response:', response);
-        console.log('SimpleTrendingCarousel: Processed pages:', pages);
 
         if (!pages || !Array.isArray(pages) || pages.length === 0) {
-          console.log('SimpleTrendingCarousel: No trending pages found or invalid format');
           setError(pages.length === 0 ? null : 'No trending pages available');
           setTrendingPages([]);
         } else {
           // Use all available pages, up to a reasonable limit
           const limitedPages = pages.slice(0, Math.min(20, pages.length));
-          console.log(`SimpleTrendingCarousel: Setting ${limitedPages.length} trending pages`);
-          console.log('Page sample:', limitedPages[0]);
 
           // Fetch subscription data for users
           await fetchSubscriptionData(limitedPages);

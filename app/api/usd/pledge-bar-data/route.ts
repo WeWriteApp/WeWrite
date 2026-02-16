@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
     const cacheKey = `allocation-bar:${userId}:${pageId || recipientUserId}`;
     const cached = allocationBarDataCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < ALLOCATION_BAR_CACHE_TTL) {
-      console.log(`🚀 COST OPTIMIZATION: Returning cached allocation bar data for ${pageId || recipientUserId}`);
 
       // Track cache hit
       trackDatabaseRead('/api/usd/allocation-bar-data', 0, 0, true);
@@ -46,10 +45,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`🎯 USD Allocation Bar Data API: Getting data for user ${userId}:`, {
-      pageId,
-      recipientUserId
-    });
 
     const startTime = Date.now();
 
@@ -67,12 +62,6 @@ export async function GET(request: NextRequest) {
     const responseTime = Date.now() - startTime;
     trackDatabaseRead('/api/usd/allocation-bar-data', 3, responseTime, false);
 
-    console.log(`🎯 USD Allocation Bar Data API: Retrieved data:`, {
-      pageId,
-      recipientUserId,
-      currentAllocation,
-      hasBalance: !!balance
-    });
 
     // Calculate basic USD info
     const totalUsdCents = balance?.totalUsdCents || 0;
@@ -115,13 +104,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`🎯 USD Allocation Bar Data API: Returning response:`, {
-      totalUsdCents,
-      allocatedUsdCents,
-      availableUsdCents,
-      currentAllocation,
-      hasSubscription: responseData.data.hasSubscription
-    });
 
     return NextResponse.json(responseData);
 

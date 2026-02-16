@@ -75,18 +75,11 @@ export default function AdminBackgroundImagesPage() {
 
   // Handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('🖼️ [Upload] File upload triggered');
     const file = event.target.files?.[0];
     if (!file) {
-      console.log('🖼️ [Upload] No file selected');
       return;
     }
 
-    console.log('🖼️ [Upload] File selected:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
 
     setUploading(true);
 
@@ -95,15 +88,12 @@ export default function AdminBackgroundImagesPage() {
       formData.append('file', file);
       formData.append('order', String(images.length));
 
-      console.log('🖼️ [Upload] Sending request to API...');
       const response = await fetch('/api/admin/background-images', {
         method: 'POST',
         body: formData
       });
 
-      console.log('🖼️ [Upload] API response status:', response.status);
       const data = await response.json();
-      console.log('🖼️ [Upload] API response data:', data);
 
       if (data.success) {
         toast({

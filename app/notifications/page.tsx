@@ -66,7 +66,6 @@ function NotificationsContent() {
   // Handle "Mark all as read" button click
   const handleMarkAllAsRead = async () => {
     try {
-      console.log('handleMarkAllAsRead clicked - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
 
       // Count unread notifications before marking as read
       const unreadCount = notifications.filter(n => !n.read).length;

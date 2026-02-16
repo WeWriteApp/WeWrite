@@ -8,7 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { determineTierFromAmount, getTierById } from '../../../utils/subscriptionTiers';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import { getStripe } from '../../../lib/stripe';
+
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {

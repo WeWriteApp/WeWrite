@@ -386,18 +386,15 @@ const SearchPage = React.memo(() => {
     // CRITICAL FIX: Perform initial search immediately if there's a query
     // Don't wait for authentication - the search API handles unauthenticated users
     if (initialQuery && !hasPerformedInitialSearch.current && initialSearchAttempts.current < maxInitialSearchAttempts) {
-      console.log('Performing initial search for:', initialQuery, 'attempt:', initialSearchAttempts.current + 1, 'with userId:', userId || 'public');
 
       initialSearchAttempts.current += 1;
 
       // Perform the search with retry logic
       performSearch(initialQuery).then(() => {
-        console.log('Initial search completed successfully');
         hasPerformedInitialSearch.current = true;
       }).catch((error) => {
         // Ignore AbortError - it's expected when a new search cancels this one
         if (error?.name === 'AbortError') {
-          console.log('Initial search aborted (expected if user started typing)');
           return;
         }
 
@@ -519,7 +516,6 @@ const SearchPage = React.memo(() => {
 
     navigator.clipboard.writeText(textToCopy)
       .then(() => {
-        console.log("Link copied to clipboard");
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);
@@ -571,7 +567,6 @@ const SearchPage = React.memo(() => {
           share_method: 'native_share',
           has_query: Boolean(searchTerm)
         });
-        console.log("Content shared successfully");
       })
       .catch(err => {
         console.error('Error sharing:', err);

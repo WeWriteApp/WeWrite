@@ -15,40 +15,11 @@ import { subscriptionAuditService } from '../../../services/subscriptionAuditSer
 import { SubscriptionAnalyticsService } from '../../../services/subscriptionAnalyticsService';
 import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
 import { UsdService } from '../../../services/usdService';
+import { getFirebaseAdmin, FieldValue } from '../../../firebase/firebaseAdmin';
 
-// Firebase Admin initialization function
-async function getFirebaseAdminAndDb() {
-  try {
-    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
-    const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+import { getStripe } from '../../../lib/stripe';
 
-    // Check if app already exists
-    const existingApps = getApps();
-    let adminApp = existingApps.find(app => app.name === 'subscription-create-app');
-
-    if (!adminApp) {
-      // Initialize new app
-      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(decodedJson);
-
-      adminApp = initializeApp({
-        credential: cert({
-          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-          clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-        })
-      }, 'subscription-create-app');
-    }
-
-    const db = getFirestore(adminApp);
-    return { adminApp, db, FieldValue };
-  } catch (error) {
-    throw error;
-  }
-}
-
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   // Declare variables at function scope so they're accessible in the catch block
@@ -58,7 +29,8 @@ export async function POST(request: NextRequest) {
 
   try {
     // Initialize Firebase Admin
-    const { adminApp, db: adminDb, FieldValue } = await getFirebaseAdminAndDb();
+    const adminApp = getFirebaseAdmin();
+    const adminDb = adminApp.firestore();
 
     // Environment validation
     if (!process.env.STRIPE_SECRET_KEY) {

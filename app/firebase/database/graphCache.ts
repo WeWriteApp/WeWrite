@@ -66,7 +66,6 @@ export async function getPageGraphCache(pageId: string): Promise<PageGraphCacheD
     const cacheDoc = await getDoc(cacheRef);
 
     if (!cacheDoc.exists()) {
-      console.log(`📊 [GRAPH_CACHE] No cache found for page ${pageId}`);
       return null;
     }
 
@@ -74,11 +73,9 @@ export async function getPageGraphCache(pageId: string): Promise<PageGraphCacheD
 
     // Check cache version
     if (data.version !== CACHE_VERSION) {
-      console.log(`📊 [GRAPH_CACHE] Cache version mismatch for page ${pageId}, needs rebuild`);
       return null;
     }
 
-    console.log(`📊 [GRAPH_CACHE] Cache hit for page ${pageId}`, data.stats);
     return data;
 
   } catch (error) {
@@ -105,7 +102,6 @@ export async function setPageGraphCache(
 
     await setDoc(cacheRef, cacheData);
 
-    console.log(`📊 [GRAPH_CACHE] Saved cache for page ${pageId}`, cacheData.stats);
 
   } catch (error) {
     console.error(`📊 [GRAPH_CACHE] Error saving cache for page ${pageId}:`, error);
@@ -120,7 +116,6 @@ export async function invalidatePageGraphCache(pageId: string): Promise<void> {
   try {
     const cacheRef = doc(db, getCollectionName('pageGraphCache'), pageId);
     await deleteDoc(cacheRef);
-    console.log(`📊 [GRAPH_CACHE] Invalidated cache for page ${pageId}`);
   } catch (error) {
     console.error(`📊 [GRAPH_CACHE] Error invalidating cache for page ${pageId}:`, error);
     // Don't throw - cache invalidation failure shouldn't block operations
@@ -133,7 +128,6 @@ export async function invalidatePageGraphCache(pageId: string): Promise<void> {
 export async function invalidateMultiplePageGraphCaches(pageIds: string[]): Promise<void> {
   const uniqueIds = [...new Set(pageIds)];
 
-  console.log(`📊 [GRAPH_CACHE] Invalidating cache for ${uniqueIds.length} pages`);
 
   // Invalidate in parallel
   await Promise.allSettled(

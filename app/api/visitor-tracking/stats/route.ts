@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     }
     const db = admin.firestore();
 
-    console.log('📊 [VISITOR STATS] Fetching visitor statistics');
 
     // Use environment-aware collection naming
     const visitorsRef = db.collection(getCollectionName('siteVisitors'));
@@ -71,7 +70,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('✅ [VISITOR STATS] Statistics calculated', stats);
 
     return createSuccessResponse(stats);
 
@@ -101,10 +99,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Session ID is required');
     }
 
-    console.log('📊 [VISITOR STATS] Updating session', {
-      sessionId,
-      hasUpdates: !!updates
-    });
 
     // Use environment-aware collection naming
     const sessionRef = db.collection(getCollectionName('siteVisitors')).doc(sessionId);
@@ -116,7 +110,6 @@ export async function POST(request: NextRequest) {
 
     await sessionRef.update(updateData);
 
-    console.log('✅ [VISITOR STATS] Session updated', { sessionId });
 
     return createSuccessResponse({
       sessionId,

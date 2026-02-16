@@ -101,7 +101,6 @@ export default function EarningsSourceBreakdown() {
       fetch('/api/usd/earnings')
         .then(res => res.json())
         .then(data => {
-          console.log('[EarningsSourceBreakdown] Historical earnings data:', data);
           if (data.success && data.data?.earnings) {
             setHistoricalEarnings(data.data.earnings);
           }
@@ -117,16 +116,6 @@ export default function EarningsSourceBreakdown() {
 
   // Process both pending allocations AND historical earnings data
   const { pageBreakdown, sponsorBreakdown, referralBreakdown } = useMemo(() => {
-    console.log('[EarningsSourceBreakdown] Processing earnings data:', {
-      earnings,
-      pendingAllocations: earnings?.pendingAllocations,
-      pendingAllocationsLength: earnings?.pendingAllocations?.length,
-      historicalEarnings: historicalEarnings.length,
-      availableBalance: earnings?.availableBalance,
-      totalEarnings: earnings?.totalEarnings,
-      hasEarnings: earnings?.hasEarnings,
-      earningsKeys: earnings ? Object.keys(earnings) : null
-    });
 
     // Combine current pending allocations with historical earnings data
     const allEarningsData: any[] = [];
@@ -148,10 +137,8 @@ export default function EarningsSourceBreakdown() {
       });
     }
 
-    console.log('[EarningsSourceBreakdown] Combined earnings data:', allEarningsData.length);
 
     if (allEarningsData.length === 0) {
-      console.log('[EarningsSourceBreakdown] No earnings data found (pending or historical)');
       return { pageBreakdown: [], sponsorBreakdown: [], referralBreakdown: [] };
     }
 

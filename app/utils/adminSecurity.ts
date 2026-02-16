@@ -182,11 +182,9 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
   try {
     // Get authenticated user ID
     userId = await getUserIdFromRequest(request);
-    console.log('🔐 [ADMIN AUTH] User ID from request:', userId);
 
     if (!userId) {
       // Not authenticated - definitely not admin
-      console.log('🔐 [ADMIN AUTH] No user ID found - not authenticated');
       await logSecurityAudit({
         auditId,
         action: 'admin_access_attempt',
@@ -210,7 +208,6 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
       userEmail = request.headers.get('x-user-email');
     }
 
-    console.log('🔐 [ADMIN AUTH] User email (resolved):', userEmail);
 
     // Check admin status using methods in priority order:
     // 1. Firebase Custom Claims (MOST SECURE - cryptographically signed)
@@ -222,13 +219,6 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
     // Priority 2: Dev user whitelist (development only - H1 security fix)
     const isDevAdmin = isDevUserAdmin(userId, userEmail);
 
-    console.log('🔐 [ADMIN AUTH] Admin checks:', {
-      userId,
-      userEmail,
-      isAdminByCustomClaim,
-      isDevAdmin,
-      environment: getEnvironmentType()
-    });
 
     // SECURITY: Allow admin access by custom claim or dev whitelist (in development)
     isAdmin = isAdminByCustomClaim || isDevAdmin;
@@ -236,7 +226,6 @@ export async function verifyAdminAccess(request: NextRequest): Promise<AdminAuth
     // Log which method granted admin access (useful for auditing)
     if (isAdmin) {
       const grantMethod = isAdminByCustomClaim ? 'custom_claim' : 'dev_whitelist';
-      console.log('🔐 [ADMIN AUTH] Admin access granted via:', grantMethod);
     }
     
     // Log the admin access attempt

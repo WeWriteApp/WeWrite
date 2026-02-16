@@ -130,7 +130,6 @@ export default function VerifyEmailBanner() {
         }, 1000);
 
         // Show success feedback
-        console.log('Verification email sent successfully via Resend');
       } else {
         console.warn('No authenticated user; cannot resend verification email');
       }

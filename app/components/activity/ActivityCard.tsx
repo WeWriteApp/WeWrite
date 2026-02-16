@@ -106,7 +106,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
       // Check if this activity card references the updated page
       if (activity.pageId === pageId) {
-        console.log(`📱 ActivityCard: Updating page name in real-time: ${currentPageName} -> ${newTitle}`);
         setCurrentPageName(newTitle);
       }
     };
@@ -152,7 +151,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
             setLastError(null); // Clear error on success
           } else if (result.error) {
             // Handle access denied or page not found
-            console.log(`ActivityCard: Access denied or page not found for ${activity.pageId}: ${result.error}`);
             setFetchAttempts(maxAttempts); // Stop further attempts
           }
         } catch (error) {
@@ -161,7 +159,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
             console.error(`Error fetching page data for ${activity.pageId}:`, error);
             setLastError(error);
           } else {
-            console.log(`ActivityCard: Permission denied for page ${activity.pageId} - this is expected for private pages`);
             setLastError(null); // Don't show error to user for permission denied
           }
 
@@ -169,7 +166,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
           // Stop retrying on certain error types
           if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
-            console.log(`ActivityCard: Stopping retries for page ${activity.pageId} due to ${error.code}`);
             setFetchAttempts(maxAttempts); // Stop further attempts
           }
         }
@@ -256,22 +252,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
     // DEBUG: Log navigation data in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('ActivityCard: Card clicked, navigation data:', {
-        pageId: activity.pageId,
-        versionId: activity.versionId,
-        isActivityContext: activity.isActivityContext || activity.isHistoryContext,
-        isCurrentVersion: activity.isCurrentVersion,
-        willNavigateTo: (activity.isActivityContext || activity.isHistoryContext) && activity.versionId
-          ? `/${activity.pageId}/version/${activity.versionId}`
-          : `/${activity.pageId}` // Always go to current page for non-activity contexts
-      });
     }
 
     // Handle special activity types (bio_edit, group_about_edit) with direct navigation
     if (activity.activityType === "bio_edit") {
       const userId = activity.pageId.replace("user-bio-", "");
       const url = `/user/${userId}`;
-      console.log('ActivityCard: Bio edit clicked, navigating to:', url);
       window.location.href = url;
       return;
     }
@@ -279,7 +265,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     if (activity.activityType === "group_about_edit") {
       const groupId = activity.pageId.replace("group-about-", "");
       const url = `/group/${groupId}`;
-      console.log('ActivityCard: Group about edit clicked, navigating to:', url);
       window.location.href = url;
       return;
     }
@@ -289,7 +274,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       // From versions page - always go to version page to view that specific version
       const url = `/${activity.pageId}/version/${activity.versionId}`;
       if (process.env.NODE_ENV === 'development') {
-        console.log('ActivityCard: Versions context detected, navigating to version page:', url);
       }
       window.location.href = url;
     } else {
@@ -298,7 +282,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       // Use simple navigation to avoid permission checking issues
       const url = `/${activity.pageId}`;
       if (process.env.NODE_ENV === 'development') {
-        console.log('ActivityCard: Non-activity context, navigating to main page:', url);
       }
       window.location.href = url;
     }
@@ -325,7 +308,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       activityUrl = `/${activity.pageId}`;
     }
   }
-
 
 
   return (

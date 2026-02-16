@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
  * API endpoint to validate pledge budget
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
 
     // Get user's subscription budget
-    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    const subscriptionRef = db.collection(getCollectionName('users')).doc(userId).collection('subscription').doc('current');
     const subscriptionDoc = await subscriptionRef.get();
 
     let subscriptionBudget = 0;
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
     // Batch fetch users
     const userPromises = Array.from(userIds).map(async (userId) => {
       try {
-        const userDoc = await db.collection('users').doc(userId).get();
+        const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
         if (userDoc.exists) {
           return { id: userId, data: userDoc.data() };
         }

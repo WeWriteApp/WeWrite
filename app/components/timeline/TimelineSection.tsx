@@ -25,7 +25,6 @@ interface TimelineSectionProps {
  * Uses accent color from context and respects pill style settings.
  */
 export default function TimelineSection({}: TimelineSectionProps) {
-  console.log('📅 TimelineSection: Component function called');
 
   const { user, isAuthenticated } = useAuth();
   const { accentColor, customColors } = useAccentColor();
@@ -49,10 +48,8 @@ export default function TimelineSection({}: TimelineSectionProps) {
   };
 
   // Temporarily remove auth guard to debug Timeline data
-  console.log('📅 TimelineSection: Rendering with auth state:', { isAuthenticated, hasCurrentAccount: !!user });
 
   if (!isAuthenticated || !user) {
-    console.log('📅 TimelineSection: Auth not ready, but rendering anyway for debugging');
     // return null; // Temporarily disabled
   }
 
@@ -64,7 +61,6 @@ export default function TimelineSection({}: TimelineSectionProps) {
 
   // Function to scroll to today's card using the carousel's exposed function
   const scrollToToday = () => {
-    console.log('📅 TimelineSection: scrollToToday called, hasAutoScrolled:', hasAutoScrolled);
     // Use the globally exposed function from TimelineCarousel
     if ((window as any).timelineScrollToToday) {
       (window as any).timelineScrollToToday();
@@ -87,7 +83,6 @@ export default function TimelineSection({}: TimelineSectionProps) {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting && !hasAutoScrolled) {
-            console.log('📅 TimelineSection: Section came into view, auto-scrolling to today');
             // Add a small delay to ensure the carousel is fully rendered
             setTimeout(() => {
               scrollToToday();

@@ -4,16 +4,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { webhookRateLimiter } from '../../../utils/rateLimiter';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { sendUserNotification } from '../../../utils/notifications';
 import { webhookIdempotencyService } from '../../../services/webhookIdempotencyService';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET_PAYOUTS;
 
 /**
@@ -532,7 +530,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    console.log(`Received Stripe webhook: ${event.type}`);
 
     // Check idempotency - prevent duplicate processing
     const isProcessed = await webhookIdempotencyService.isEventProcessed(event.id);

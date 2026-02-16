@@ -8,11 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20'
-});
+const stripe = getStripe();
 
 export async function GET(request: NextRequest) {
   try {

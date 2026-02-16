@@ -10,14 +10,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { initAdmin } from '../../../firebase/admin';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
+import { getCollectionName } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
 // Initialize Firebase Admin and Stripe
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'});
+const stripe = getStripe();
 
 interface CleanupResult {
   customerId: string;
@@ -161,7 +161,7 @@ async function cleanupCustomerSubscriptions(
 
   try {
     // Get Firebase user ID for this customer
-    const usersSnapshot = await adminDb.collection('users')
+    const usersSnapshot = await adminDb.collection(getCollectionName('users'))
       .where('stripeCustomerId', '==', customerId)
       .limit(1)
       .get();

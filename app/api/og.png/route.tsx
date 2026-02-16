@@ -45,11 +45,6 @@ async function fetchPageData(pageId: string) {
     }
 
     const data = await response.json();
-    console.log(`📄 [OG] Fetched page data for ${pageId}:`, {
-      title: data.title,
-      author: data.authorUsername || data.username,
-      contentLength: data.content?.length || 0
-    });
 
     return data;
   } catch (error) {
@@ -85,7 +80,6 @@ async function fetchSponsorCount(pageId: string) {
 }
 
 export async function GET(request: Request) {
-  console.log('🖼️ [OG.PNG] Route called with URL:', request.url);
   
   try {
     const { searchParams } = new URL(request.url);
@@ -96,19 +90,9 @@ export async function GET(request: Request) {
     const content = searchParams.get('content');
     const sponsors = searchParams.get('sponsors');
 
-    console.log('🖼️ [OG.PNG] Generating image for:', {
-      pageId,
-      type,
-      hasTitle: !!title,
-      hasAuthor: !!author,
-      hasContent: !!content,
-      sponsors,
-      url: request.url
-    });
 
     // Default WeWrite branding if no pageId
     if (!pageId) {
-      console.log('🖼️ [OG.PNG] Default WeWrite branding');
       return new ImageResponse(
         (
           <div
@@ -171,7 +155,6 @@ export async function GET(request: Request) {
     let sponsorCount = 0;
 
     if (pageId && !title && !author && !content) {
-      console.log('🖼️ [OG.PNG] Fetching real data for pageId:', pageId);
       pageData = await fetchPageData(pageId);
       sponsorCount = await fetchSponsorCount(pageId);
     }
@@ -220,12 +203,6 @@ export async function GET(request: Request) {
     // Truncate content for display
     contentPreview = truncateText(contentPreview, 300);
 
-    console.log('🖼️ [OG.PNG] Generating image with data:', {
-      displayTitle: truncateText(displayTitle, 50),
-      displayAuthor,
-      contentLength: contentPreview.length,
-      displaySponsorCount
-    });
 
     // Generate the dynamic OpenGraph image
     return new ImageResponse(

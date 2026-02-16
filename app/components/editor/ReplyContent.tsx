@@ -42,7 +42,6 @@ export default function ReplyContent({
 
     // If initialContent is provided, use it directly
     if (initialContent) {
-      console.log("Using provided initialContent for reply:", initialContent);
       setContent(initialContent);
       setLoading(false);
 
@@ -54,13 +53,11 @@ export default function ReplyContent({
     }
 
     // Otherwise, fetch the original page and create reply content
-    console.log("Fetching original page for reply:", replyToId);
     setLoading(true);
 
     // Use the centralized reply manager to prepare the reply content
     prepareReplyContent(replyToId)
       .then(({ replyContent }) => {
-        console.log("Created reply content:", replyContent);
         setContent(replyContent);
 
         // Notify parent component

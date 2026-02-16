@@ -112,7 +112,6 @@ export async function PUT(
       lastModified: newLastModified
     });
 
-    console.log(`Updated alternative titles for page ${pageId}:`, uniqueTitles);
 
     // Sync to Typesense for search indexing
     syncPageToTypesenseServer({
@@ -253,7 +252,6 @@ export async function PATCH(
 
     await pageRef.update(updateData);
 
-    console.log(`${action} alternative title for page ${pageId}:`, trimmedTitle);
 
     // Sync to Typesense for search indexing
     syncPageToTypesenseServer({

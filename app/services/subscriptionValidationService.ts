@@ -5,13 +5,9 @@
  * This service ensures data integrity in the subscription system.
  */
 
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getStripe } from '../lib/stripe';
 
-// Create Stripe instance
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2025-06-30.basil',
-});
+const stripe = getStripe();
 
 export interface ExistingSubscriptionCheck {
   hasActiveSubscription: boolean;

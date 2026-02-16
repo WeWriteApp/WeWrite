@@ -14,13 +14,11 @@ export const getStripeSecretKey = (): string | undefined => {
   // Preview uses production data, so it should use production Stripe keys
   if (isDevelopment) {
     const key = process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
-    console.log(`Using Stripe test keys (development environment): ${key?.substring(0, 8)}...`);
     return key;
   }
 
   // Use production keys for preview and production deployments
   const key = process.env.STRIPE_PROD_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
-  console.log(`Using Stripe production keys (${isPreview ? 'preview' : 'production'} environment): ${key?.substring(0, 8)}...`);
   return key;
 };
 
@@ -76,7 +74,6 @@ export const getStripeSecretKeyAsync = async (): Promise<string | undefined> => 
           console.error(`[Stripe Config] ⚠️  STRIPE_PROD_SECRET_KEY is set to a TEST key (sk_test_...)!`);
           console.error(`[Stripe Config] Set it to your LIVE key (sk_live_...) to view production data.`);
         } else {
-          console.log(`[Stripe Config] ✓ Using PRODUCTION keys due to X-Force-Production-Data header: ${prodKey.substring(0, 12)}...`);
         }
 
         return prodKey;
@@ -107,7 +104,6 @@ export const getStripePublishableKey = (): string | undefined => {
            process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
     if (typeof window !== 'undefined') {
-      console.log(`Using Stripe test publishable key (development environment): ${key?.substring(0, 8)}...`);
     }
 
     return key;
@@ -118,7 +114,6 @@ export const getStripePublishableKey = (): string | undefined => {
          process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
   if (typeof window !== 'undefined') {
-    console.log(`Using Stripe production publishable key (${isPreview ? 'preview' : 'production'} environment): ${key?.substring(0, 8)}...`);
   }
 
   return key;
@@ -135,12 +130,10 @@ export const getStripeWebhookSecret = (): string | undefined => {
   // Use test webhook secret for preview deployments and development
   if (isPreview || isDevelopment) {
     const secret = process.env.STRIPE_TEST_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET;
-    console.log(`Using Stripe test webhook secret (${isDevelopment ? 'development' : 'preview'} environment)`);
     return secret;
   }
 
   // Use production webhook secret for production deployments
   const secret = process.env.STRIPE_PROD_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET;
-  console.log('Using Stripe production webhook secret');
   return secret;
 };

@@ -135,7 +135,6 @@ const MapPicker: React.FC<MapPickerProps> = ({
           // On mobile Safari, container might not have dimensions immediately
           // Wait a bit and try again
           if (typeof navigator !== 'undefined' && /Safari/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent)) {
-            console.log('🍎 Mobile Safari detected, waiting for container dimensions...');
             setTimeout(() => {
               const retryRect = mapRef.current?.getBoundingClientRect();
               if (retryRect && (retryRect.width === 0 || retryRect.height === 0)) {
@@ -191,13 +190,6 @@ const MapPicker: React.FC<MapPickerProps> = ({
           bounceAtZoomLimits: !isMobileSafari,
         });
 
-        console.log('🗺️ Map initialized with mobile Safari optimizations:', {
-          isMobileSafari,
-          containerDimensions: {
-            width: containerRect.width,
-            height: containerRect.height
-          }
-        });
 
         // Run mobile diagnostics if on mobile Safari
         if (isMobileSafari) {
@@ -264,7 +256,6 @@ const MapPicker: React.FC<MapPickerProps> = ({
             if (successRate > 0.7) {
               hasShownError = false;
               setError(null);
-              console.log('🗺️ Map tiles recovered, clearing error');
             }
           }
         });

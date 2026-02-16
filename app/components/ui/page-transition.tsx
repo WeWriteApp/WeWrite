@@ -165,7 +165,6 @@ export function PageTransition({
         // Log navigation performance
         if (navigationStartTimeRef.current) {
           const duration = Date.now() - navigationStartTimeRef.current;
-          console.log(`Page transition completed in ${duration}ms`);
           navigationStartTimeRef.current = null;
         }
       }, 300); // Short delay for better UX

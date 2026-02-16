@@ -111,12 +111,6 @@ export function trackPWAStatus(): void {
       }
     });
 
-    console.log('📱 PWA Analytics tracked:', {
-      isPWA: pwaData.isPWA,
-      displayMode: pwaData.displayMode,
-      isMobile: pwaData.isMobile,
-      sessionId: pwaData.sessionId
-    });
 
   } catch (error) {
     console.error('PWA analytics tracking failed:', error);
@@ -144,10 +138,6 @@ export function trackPWAStatusChange(newStatus: boolean, previousStatus: boolean
       }
     });
 
-    console.log('📱 PWA status change tracked:', {
-      from: previousStatus ? 'PWA' : 'browser',
-      to: newStatus ? 'PWA' : 'browser'
-    });
 
   } catch (error) {
     console.error('PWA status change tracking failed:', error);
@@ -192,7 +182,6 @@ export function initializePWAAnalytics(): void {
     trackPWAStatus();
   }, 5 * 60 * 1000);
 
-  console.log('📱 PWA analytics initialized');
 }
 
 /**

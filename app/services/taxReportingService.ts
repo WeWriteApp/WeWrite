@@ -23,8 +23,6 @@ import {
   Timestamp
 } from 'firebase/firestore';
 
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
 import { TransactionTrackingService } from './transactionTrackingService';
 import {
   FinancialOperationResult,
@@ -34,8 +32,9 @@ import {
   FinancialLogger,
   CorrelationId
 } from '../types/financial';
+import { getStripe } from '../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey());
+const stripe = getStripe();
 
 /**
  * Tax document types

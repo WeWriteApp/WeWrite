@@ -11,7 +11,9 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { FieldValue } from 'firebase-admin/firestore';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import { getStripe } from '../../../lib/stripe';
+
+const stripe = getStripe();
 
 // Force dynamic rendering to prevent build-time prerendering
 export const dynamic = 'force-dynamic';

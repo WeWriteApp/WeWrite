@@ -50,7 +50,6 @@ export const recordBioEditActivity = async (
   try {
     // Skip activity recording if content hasn't actually changed
     if (!hasContentChanged(content, previousContent)) {
-      console.log('Bio content unchanged after normalization, skipping activity recording');
       return null;
     }
 
@@ -80,7 +79,6 @@ export const recordBioEditActivity = async (
     };
 
     const activityRef = await addDoc(collection(db, getCollectionName("activities")), activityData);
-    console.log(`Bio edit activity recorded with ID: ${activityRef.id}`);
     return activityRef.id;
   } catch (error) {
     console.error("Error recording bio edit activity:", error);
@@ -110,7 +108,6 @@ export const recordGroupAboutEditActivity = async (
   try {
     // Skip activity recording if content hasn't actually changed
     if (!hasContentChanged(content, previousContent)) {
-      console.log('Group about content unchanged after normalization, skipping activity recording');
       return null;
     }
 

@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, getUserEmailFromId } from '../../auth-helper';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
 import { invalidateCache } from '../../../utils/internalApi';
 import Stripe from 'stripe';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2025-06-30.basil',
-});
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {
@@ -187,7 +185,6 @@ export async function POST(request: NextRequest) {
           flow: 'existing_payment_method'
         }
       });
-      console.log(`[CREATE SIMPLE] ✅ Logged subscription creation to audit trail`);
     } catch (auditError) {
       console.warn('[CREATE SIMPLE] Failed to log audit event:', auditError);
       // Don't fail the request if audit logging fails

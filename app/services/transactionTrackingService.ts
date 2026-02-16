@@ -7,8 +7,6 @@
 
 import { db } from '../firebase/config';
 import { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
 import {
   FinancialOperationResult,
   FinancialError,
@@ -18,11 +16,9 @@ import {
   CorrelationId
 } from '../types/financial';
 import { TokenAllocation, WriterTokenEarnings } from '../types/database';
+import { getStripe } from '../lib/stripe';
 
-// Initialize Stripe with fallback for development
-const stripeSecretKey = getStripeSecretKey();
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2024-12-18.acacia'}) : null;
+const stripe = getStripe();
 
 /**
  * Transaction status enum

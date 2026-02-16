@@ -16,7 +16,6 @@ export async function clearAllServiceWorkerCaches(): Promise<void> {
   try {
     const cacheNames = await caches.keys();
     await Promise.all(cacheNames.map(name => caches.delete(name)));
-    console.log('Service Worker: All caches cleared');
   } catch (error) {
     console.error('Service Worker: Failed to clear caches:', error);
   }
@@ -55,7 +54,6 @@ export function ServiceWorkerRegistration() {
         scope: '/'
       });
 
-      console.log('Service Worker: Registered successfully');
 
       // Handle updates with non-blocking toast notification
       registration.addEventListener('updatefound', () => {
@@ -65,7 +63,6 @@ export function ServiceWorkerRegistration() {
         newWorker.addEventListener('statechange', () => {
           // New service worker is installed and waiting
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            console.log('Service Worker: New version available');
 
             // Show non-blocking toast notification
             updateToastId.current = toast.info('Update available', {
@@ -97,7 +94,6 @@ export function ServiceWorkerRegistration() {
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data?.type === 'CACHE_UPDATED') {
-          console.log('Service Worker: Cache updated:', event.data.payload);
         }
       });
 

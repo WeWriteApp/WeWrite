@@ -33,7 +33,6 @@ async function getUsernameByIdServer(userId: string): Promise<string> {
     const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
 
     if (!userDoc.exists) {
-      console.log(`👤 [ALLOCATIONS API] User document not found for: ${userId}`);
       return "Missing username";
     }
 
@@ -45,14 +44,9 @@ async function getUsernameByIdServer(userId: string): Promise<string> {
         username !== "Anonymous" &&
         username !== "Missing username" &&
         username.trim() !== "") {
-      console.log(`👤 [ALLOCATIONS API] Found valid username: ${username} for user: ${userId}`);
       return username.trim();
     }
 
-    console.log(`👤 [ALLOCATIONS API] User found but no valid username for: ${userId}`, {
-      hasUsername: !!username,
-      username
-    });
     return "Missing username";
   } catch (error) {
     console.error(`👤 [ALLOCATIONS API] Error fetching username for ${userId}:`, error);
@@ -71,7 +65,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`🎯 USD Allocations API: Getting enhanced allocations for user ${userId} (with user allocation fix v3)`);
 
     // Get USD balance and allocations
     const balance = await UsdService.getUserUsdBalance(userId);
@@ -102,15 +95,12 @@ export async function GET(request: NextRequest) {
           }
 
           // Handle user allocations (check both resourceType and resourceId pattern)
-          console.log(`Processing allocation: resourceType=${allocation.resourceType}, resourceId=${allocation.resourceId}`);
           const isUserAllocation = allocation.resourceType === 'user' || allocation.resourceId.startsWith('user/');
-          console.log(`Is user allocation: ${isUserAllocation}, resourceType check: ${allocation.resourceType === 'user'}, resourceId check: ${allocation.resourceId.startsWith('user/')}`);
 
           if (isUserAllocation) {
             const userId = allocation.resourceId.replace('user/', '');
 
             try {
-              console.log(`Fetching username for user allocation: ${userId}`);
               const authorUsername = await getUsernameByIdServer(userId);
 
               return {
@@ -199,7 +189,6 @@ export async function GET(request: NextRequest) {
               authorUsername === 'Missing username' ||
               authorUsername.trim() === '') {
             try {
-              console.log(`Fetching username for user ${authorId} (page ${allocation.resourceId})`);
               authorUsername = await getUsernameByIdServer(authorId);
             } catch (usernameError) {
               console.error(`Error fetching username for user ${authorId}:`, usernameError);
@@ -258,7 +247,6 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    console.log(`🎯 USD Allocations API: Returning ${enhancedAllocations.length} enhanced allocations`);
 
     return NextResponse.json(response);
   } catch (error) {

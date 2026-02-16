@@ -176,7 +176,6 @@ export function createHighlightOverlays(
   const { positions } = findTextInContent(contentElement, searchText);
   
   if (positions.length === 0) {
-    console.log('Text not found in content');
     return null;
   }
   

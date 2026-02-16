@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin!.firestore();
 
-    console.log('Fetching database statistics...');
 
     // Get basic counts in parallel for better performance
     const [usersSnapshot, pagesSnapshot] = await Promise.all([
@@ -72,7 +71,6 @@ export async function GET(request: NextRequest) {
       lastUpdated: new Date().toISOString()
     };
 
-    console.log('Database statistics:', stats);
 
     return createApiResponse({
       stats,
@@ -99,7 +97,6 @@ export async function POST(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin!.firestore();
 
-    console.log('Recalculating database statistics...');
 
     // Force recalculation by calling GET endpoint logic
     const getResponse = await GET(request);

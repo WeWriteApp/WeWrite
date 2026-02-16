@@ -3,8 +3,7 @@
 
 import { initAdmin } from "./admin";
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionNameAsync } from "../utils/environmentConfig";
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getStripe } from '../lib/stripe';
 
 // Initialize Firebase Admin lazily
 let adminApp;
@@ -171,9 +170,7 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     // This handles cases where Firebase status is stale due to missed webhooks
     if (subscriptionData.stripeSubscriptionId && subscriptionData.status === 'active') {
       try {
-        const stripeKey = getStripeSecretKey();
-        if (stripeKey) {
-          const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
+          const stripe = getStripe();
           const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionData.stripeSubscriptionId);
 
           // Check if Stripe says the subscription is NOT active
@@ -191,7 +188,6 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
               updatedAt: new Date().toISOString()
             });
           }
-        }
       } catch (stripeError) {
         // If the subscription doesn't exist in Stripe, mark it as canceled
         if ((stripeError as any)?.code === 'resource_missing') {

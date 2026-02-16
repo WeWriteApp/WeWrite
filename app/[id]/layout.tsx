@@ -79,7 +79,6 @@ async function getPageMetadataServer(pageId: string): Promise<any> {
     });
 
     if (!response.ok) {
-      console.log(`Page metadata fetch failed for ${pageId}: ${response.status}`);
       return null;
     }
 

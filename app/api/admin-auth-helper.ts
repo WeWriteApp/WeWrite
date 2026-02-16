@@ -124,14 +124,12 @@ export async function checkAdminPermissions(
 
     // Check if session has isAdmin flag
     if (sessionData?.isAdmin === true) {
-      console.log('🔐 [ADMIN AUTH] Admin access granted via session isAdmin flag');
       return { success: true, userEmail: sessionData.email || undefined };
     }
 
     // H1 Security Fix: Only whitelisted dev users get admin in development
     const env = getEnvironmentType();
     if (env === 'development' && sessionData?.uid && DEV_TEST_USER_UIDS.includes(sessionData.uid)) {
-      console.log('🔧 [DEV MODE] Admin access granted via dev whitelist');
       return { success: true, userEmail: sessionData?.email || undefined };
     }
 

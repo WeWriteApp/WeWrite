@@ -121,12 +121,6 @@ export function logMobileMapDiagnostics() {
   const diagnostics = runMobileMapDiagnostics();
   
   console.group('🗺️📱 Mobile Map Diagnostics');
-  console.log('Environment:', {
-    isMobileSafari: diagnostics.isMobileSafari,
-    isPWA: diagnostics.isPWA,
-    hasViewportMeta: diagnostics.hasViewportMeta,
-    userAgent: navigator.userAgent
-  });
   
   if (diagnostics.containerIssues.length > 0) {
     console.warn('Container Issues:', diagnostics.containerIssues);

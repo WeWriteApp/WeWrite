@@ -38,14 +38,12 @@ export default function SimilarPages({ currentPage, maxPages = 3 }: SimilarPages
       }
 
       try {
-        console.log('[SIMILAR PAGES] Fetching similar pages via API for:', currentPage.title);
 
         // Use API endpoint instead of direct Firebase calls
         const response = await pageApi.getSimilarPages(currentPage.id, currentPage.title, maxPages);
 
         if (response.success && response.data) {
           setSimilarPages(response.data.pages || []);
-          console.log('[SIMILAR PAGES] Found similar pages:', response.data.pages?.length || 0);
         } else {
           console.warn('[SIMILAR PAGES] Failed to fetch similar pages:', response.error);
           setSimilarPages([]);
@@ -61,7 +59,6 @@ export default function SimilarPages({ currentPage, maxPages = 3 }: SimilarPages
 
     fetchSimilarPages();
   }, [currentPage, maxPages]);
-
 
 
   if (loading) {

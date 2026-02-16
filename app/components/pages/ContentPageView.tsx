@@ -65,7 +65,6 @@ import { ContentPageSkeleton, ContentPageMinimalSkeleton } from "./ContentPageSk
 import { LoadingState } from "../ui/LoadingState";
 
 
-
 // Content Display Components - Unified system with preloading
 const ContentDisplay = dynamic(() => import("../content/ContentDisplay"), {
   ssr: false,
@@ -544,7 +543,6 @@ export default function ContentPageView({
   // Version loading functions - declared before useEffect to avoid hoisting issues
   const loadVersionData = async () => {
     try {
-      console.log('Loading version data for pageId:', pageId, 'versionId:', versionId);
 
       // Use the new API-based version service
       const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
@@ -603,7 +601,6 @@ export default function ContentPageView({
 
   const loadDiffData = async () => {
     try {
-      console.log('Loading diff data for pageId:', pageId, 'versionId:', versionId, 'compareVersionId:', compareVersionId);
 
       // Use the new API-based version service
       const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
@@ -1156,9 +1153,6 @@ export default function ContentPageView({
   }, [title, pageLogger]);
 
 
-
-
-
   const handleLocationChange = useCallback((newLocation: Location | null) => {
     setLocation(newLocation);
     // NOTE: Do NOT set hasUnsavedChanges here - the hasChanges memo handles it
@@ -1618,7 +1612,6 @@ export default function ContentPageView({
       // Clear error state
       pageLogger.info('Page saved successfully', { pageId, title });
       setError(null);
-
 
 
       // Page connections will refresh automatically via the pageSaved event

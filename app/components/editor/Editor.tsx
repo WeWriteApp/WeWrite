@@ -159,14 +159,11 @@ const Editor: React.FC<EditorProps> = ({
 
   // DEBUG: Track Editor mount/unmount and showLinkModal state changes
   useEffect(() => {
-    console.log('[Editor] Component MOUNTED, isLiftedState:', isLiftedState);
     return () => {
-      console.log('[Editor] Component UNMOUNTED');
     };
   }, [isLiftedState]);
 
   useEffect(() => {
-    console.log('[Editor] showLinkModal state is now:', showLinkModal, 'isSaving:', isSaving, 'isLiftedState:', isLiftedState);
   }, [showLinkModal, isSaving, isLiftedState]);
 
   // Link suggestions state
@@ -962,6 +959,12 @@ const Editor: React.FC<EditorProps> = ({
 
     // If click is below the last content in the editor
     if (clickY > editableRect.bottom - 20) {
+      // If the click landed on actual Slate content (text nodes, links, etc.),
+      // let the browser handle cursor placement naturally
+      if (target.closest('[data-slate-node]') || target.hasAttribute('data-slate-node')) {
+        return;
+      }
+
       // Check if the click is in an empty/padding area (not on text)
       // This prevents interfering with normal text selection
       const selection = window.getSelection();

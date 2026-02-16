@@ -93,7 +93,6 @@ class GraphDataCache {
     }
 
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log(`🗑️ [CACHE] Cleared ${keysToDelete.length} cache entries for page ${pageId}`);
   }
 
   /**
@@ -138,11 +137,9 @@ class GraphDataCache {
     const cached = this.get<RelatedPagesData>(cacheKey);
 
     if (cached) {
-      console.log('🚀 [CACHE] Hit for related pages:', pageId);
       return cached;
     }
 
-    console.log('📡 [CACHE] Miss for related pages, fetching:', pageId);
 
     try {
       const params = new URLSearchParams({
@@ -187,11 +184,9 @@ class GraphDataCache {
     const cached = this.get<UserPagesData>(cacheKey);
     
     if (cached) {
-      console.log('🚀 [CACHE] Hit for user pages:', userId);
       return cached;
     }
 
-    console.log('📡 [CACHE] Miss for user pages, fetching:', userId);
     
     try {
       const response = await fetch(`/api/my-pages?userId=${userId}&limit=${limit}&sortBy=lastModified`);
@@ -234,7 +229,6 @@ class GraphDataCache {
     }
 
     if (uncachedIds.length > 0) {
-      console.log('📡 [CACHE] Batch fetching connections for', uncachedIds.length, 'pages');
       
       // Fetch uncached data in parallel (limited concurrency)
       const batchSize = 5; // Limit concurrent requests
@@ -266,7 +260,6 @@ class GraphDataCache {
     }
     
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log('🗑️ [CACHE] Invalidated', keysToDelete.length, 'entries for page:', pageId);
   }
 
   /**

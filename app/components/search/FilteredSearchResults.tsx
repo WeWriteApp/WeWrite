@@ -793,7 +793,6 @@ const FilteredSearchResults = forwardRef(({
                     const result = await response.json();
                     // API returns { success: true, data: { id: pageId } }
                     const pageId = result.data?.id || result.id || generatedPageId;
-                    console.log('✅ Created new page from link editor:', { title: search, id: pageId });
 
                     // Return the real page data with actual ID
                     const newPageData = {

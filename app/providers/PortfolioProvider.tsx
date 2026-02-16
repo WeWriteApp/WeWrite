@@ -162,7 +162,6 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
   };
 
   const activateSubscription = (id: string | number): void => {
-    console.log("Activating subscription", id);
     // set to active
     setSubscriptions(
       subscriptions.map((sub) => {
@@ -220,7 +219,6 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
           // Check if the user is authenticated before making the API call
           const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
           if (!isAuthenticated) {
-            console.log('User not authenticated, skipping subscription check');
             return;
           }
 
@@ -248,7 +246,6 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
               setSubscriptions([]);
             }
           } else {
-            console.log('Subscription feature is disabled, skipping subscription check');
             setSubscriptions([]);
             // Still update the timestamp to prevent repeated checks
             localStorage.setItem('lastSubscriptionCheck', now.toString());

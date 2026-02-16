@@ -39,7 +39,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Alert, AlertDescription } from '../ui/alert';
 
 
-
 // Feature flags have been removed
 
 /**
@@ -92,7 +91,6 @@ export function UserManagement() {
    */
   const syncEmailVerificationStatus = async () => {
     try {
-      console.log('Syncing email verification status from Firebase Auth to Firestore...');
 
       // Get current user's verification status (we can only access our own)
       const currentUser = auth.currentUser;
@@ -103,7 +101,6 @@ export function UserManagement() {
           lastEmailVerificationSync: new Date().toISOString()
         }, { merge: true });
 
-        console.log(`Synced email verification for current user: ${currentUser.emailVerified}`);
       }
 
       // For other users, we would need a server-side function
@@ -134,7 +131,6 @@ export function UserManagement() {
     setError({ hasError: false, message: '' });
 
     try {
-      console.log('Loading users from API...');
 
       // First, sync current user's email verification status
       await syncEmailVerificationStatus();
@@ -158,7 +154,6 @@ export function UserManagement() {
         throw new Error(data.error || 'Failed to load users');
       }
 
-      console.log(`Successfully loaded ${data.users.length} users from API`);
 
       setUsers(data.users);
       setFilteredUsers(data.users);
@@ -245,7 +240,6 @@ export function UserManagement() {
       </Badge>
     );
   };
-
 
 
   /**

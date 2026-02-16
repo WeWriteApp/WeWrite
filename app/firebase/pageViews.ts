@@ -627,11 +627,10 @@ async function getFallbackTrendingPages(limitCount: number = 5): Promise<Trendin
         id: pageId,
         title: pageData.title || 'Untitled',
         views: pageViews,
-        views24h: 0, // TODO: Implement real 24h view tracking
+        views24h: 0, // Requires time-series view tracking
         userId: pageData.userId,
         username: pageData.username,
-        // TODO: Implement real hourly view tracking instead of synthetic data
-        hourlyViews: [] // Empty array instead of synthetic data
+        hourlyViews: [] // Requires time-series view tracking
       });
     });
 

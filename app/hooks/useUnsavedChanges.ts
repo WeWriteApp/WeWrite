@@ -130,7 +130,6 @@ export function useUnsavedChanges(
 
   // Function to handle "Stay and Save" action
   const handleStayAndSave = useCallback(async (): Promise<void> => {
-    console.log('handleStayAndSave called, current hasUnsavedChanges:', hasUnsavedChanges, 'isBackNavigation:', isBackNavigation);
     setIsHandlingNavigation(true);
     try {
       // Call the save function
@@ -142,7 +141,6 @@ export function useUnsavedChanges(
       setPendingUrl(null);
 
       // Log the state after saving
-      console.log('Save completed in handleStayAndSave, hasUnsavedChanges should be reset by saveFunction');
 
       // If there was a pending URL navigation (not back navigation), proceed with it
       if (pendingUrl && !isBackNavigation) {
@@ -159,7 +157,6 @@ export function useUnsavedChanges(
 
   // Function to handle "Leave without Saving" action
   const handleLeaveWithoutSaving = useCallback((): void => {
-    console.log('[DEBUG] handleLeaveWithoutSaving called, pendingUrl:', pendingUrl, 'isBackNavigation:', isBackNavigation);
     setIsHandlingNavigation(true);
     setShowDialog(false);
 

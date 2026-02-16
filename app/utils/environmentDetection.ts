@@ -219,7 +219,6 @@ export const logEnvironmentDetection = (): void => {
       vercelEnv: context.vercelEnv,
       gitBranch: context.gitBranch
     });
-    console.log('[Environment Detection] ✅ All checks passed');
   }
 };
 

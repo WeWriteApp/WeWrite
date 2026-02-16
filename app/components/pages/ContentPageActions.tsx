@@ -293,7 +293,6 @@ export function ContentPageActions({
     // The /new page will use these to create the reply attribution
     const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&pageUserId=${page.userId || ''}&pageUsername=${encodeURIComponent(pageOwner)}&replyType=${replyType || 'standard'}`;
 
-    console.log("Reply flow:", { pageOwner, replyUrl });
     router.push(replyUrl);
   };
 

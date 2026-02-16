@@ -34,7 +34,6 @@ export default function RecentlyDeletedPages() {
       setLoading(true)
       setError(null)
 
-      console.log('Fetching deleted pages for user:', user.uid)
 
       // Call API endpoint to get deleted pages
       // Add cache buster to ensure fresh data (browser caches can be 15min stale)
@@ -74,7 +73,6 @@ export default function RecentlyDeletedPages() {
           createdAt: page.createdAt
         }))
 
-      console.log(`Found ${pages.length} deleted pages`)
       setDeletedPages(pages)
     } catch (err) {
       console.error('Error fetching deleted pages:', err)
@@ -133,7 +131,6 @@ export default function RecentlyDeletedPages() {
       // Remove from the deleted pages list
       setDeletedPages(prev => prev.filter(page => page.id !== pageId))
 
-      console.log('Page restored successfully:', result.data.message)
     } catch (err) {
       console.error('Error restoring page:', err)
 
@@ -188,7 +185,6 @@ export default function RecentlyDeletedPages() {
       // Remove from the deleted pages list
       setDeletedPages(prev => prev.filter(page => page.id !== pageId))
 
-      console.log('Page permanently deleted:', result.data.message)
     } catch (err) {
       console.error('Error permanently deleting page:', err)
 

@@ -155,7 +155,6 @@ function SetupUsernameContent() {
       
       if (result.success) {
         // SECURITY: Don't log sensitive user actions
-        console.log("Username added successfully, redirecting to home");
 
         // Track user creation event (this completes the user registration process)
         trackAuthEvent('USER_CREATED', {

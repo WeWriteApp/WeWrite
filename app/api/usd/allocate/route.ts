@@ -18,11 +18,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { pageId, usdCentsChange } = body;
 
-    console.log(`🎯 USD Allocation API: Allocating for user ${userId}:`, {
-      pageId,
-      usdCentsChange,
-      usdAmountFormatted: formatUsdCents(Math.abs(usdCentsChange))
-    });
 
     // Validate inputs
     if (!pageId) {
@@ -44,10 +39,6 @@ export async function POST(request: NextRequest) {
     const updatedBalance = await UsdService.getUserUsdBalance(userId);
     const currentAllocation = await UsdService.getCurrentPageAllocation(userId, pageId);
 
-    console.log(`🎯 USD Allocation API: Allocation successful:`, {
-      newAllocation: formatUsdCents(currentAllocation),
-      newAvailable: updatedBalance ? formatUsdCents(updatedBalance.availableUsdCents) : '$0.00'
-    });
 
     return NextResponse.json({
       success: true,
@@ -106,15 +97,9 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`🎯 USD Allocation API: Getting allocation for user ${userId}, page ${pageId}`);
 
     const currentAllocation = await UsdService.getCurrentPageAllocation(userId, pageId);
 
-    console.log(`🎯 USD Allocation API: Current allocation:`, {
-      pageId,
-      allocationCents: currentAllocation,
-      allocationFormatted: formatUsdCents(currentAllocation)
-    });
 
     return NextResponse.json({
       success: true,

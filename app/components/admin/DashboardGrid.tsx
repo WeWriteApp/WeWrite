@@ -26,30 +26,28 @@ interface DashboardGridProps {
   isMobile: boolean;
 }
 
-// Temporarily disabled - causing lazy loading issues
-// TODO: Fix react-grid-layout dynamic import
-const ResponsiveGridLayout = () => (
-  <div className="h-64 flex items-center justify-center">
-    <div className="text-muted-foreground">Grid layout temporarily disabled</div>
-  </div>
+// Dynamic import of react-grid-layout to avoid SSR issues
+const ResponsiveGridLayout = dynamic(
+  () => import('react-grid-layout').then(mod => {
+    const { WidthProvider, Responsive } = mod;
+    return WidthProvider(Responsive);
+  }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center">
+        <Icon name="Loader" size={24} className="animate-spin" />
+      </div>
+    )
+  }
 );
 
 export function DashboardGrid({ children, layouts, onLayoutChange, isMobile }: DashboardGridProps) {
   const [mounted, setMounted] = useState(false);
-  const [width, setWidth] = useState(1200);
 
   // Ensure component is mounted before rendering grid
   useEffect(() => {
     setMounted(true);
-
-    // Set initial width and listen for resize
-    const updateWidth = () => {
-      setWidth(window.innerWidth);
-    };
-
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
   // Breakpoints for responsive grid
@@ -59,7 +57,7 @@ export function DashboardGrid({ children, layouts, onLayoutChange, isMobile }: D
   if (!mounted) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <Icon name="Loader" size={24} />
+        <Icon name="Loader" size={24} className="animate-spin" />
       </div>
     );
   }
@@ -73,7 +71,6 @@ export function DashboardGrid({ children, layouts, onLayoutChange, isMobile }: D
         breakpoints={breakpoints}
         cols={cols}
         rowHeight={100}
-        width={width}
         margin={isMobile ? [8, 8] : [16, 16]}
         containerPadding={[0, 0]}
         isDraggable={!isMobile}

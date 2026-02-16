@@ -329,9 +329,7 @@ export default function NotificationsContent({ onClose }: NotificationsContentPr
 
     setSaving(true);
     try {
-      console.log('Saving notification preferences:', preferences);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Notification preferences saved successfully');
     } catch (error) {
       console.error('Error saving notification preferences:', error);
     } finally {

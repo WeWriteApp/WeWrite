@@ -393,7 +393,7 @@ export class PayoutLimitService {
       let totalCents = 0;
       earningsSnapshot.docs.forEach((doc) => {
         const data = doc.data();
-        totalCents += data.amountCents || 0;
+        totalCents += data.totalUsdCentsReceived || 0;
       });
 
       return totalCents;

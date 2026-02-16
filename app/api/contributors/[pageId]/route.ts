@@ -23,7 +23,6 @@ export async function GET(
     }
     const db = admin.firestore();
 
-    console.log('👥 [CONTRIBUTORS API] Fetching contributors for page:', pageId);
 
     // Use environment-aware collection naming
     const versionsRef = db.collection(getCollectionName('pages'))
@@ -82,11 +81,6 @@ export async function GET(
 
     const uniqueContributors = contributors.map(c => c.userId);
 
-    console.log('✅ [CONTRIBUTORS API] Found contributors', {
-      pageId,
-      count: contributors.length,
-      totalVersions: versionsSnapshot.size
-    });
 
     return createSuccessResponse({
       pageId,

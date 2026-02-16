@@ -40,12 +40,6 @@ export async function POST(
       return createErrorResponse('BAD_REQUEST', 'Source page data is required');
     }
 
-    console.log('📝 [APPEND REFERENCE] Starting append operation', {
-      targetPageId,
-      sourcePageId: sourcePageData.id,
-      sourceTitle: sourcePageData.title,
-      userId: currentUserId
-    });
 
     // Get the target page using environment-aware collection naming
     const targetPageRef = db.collection(getCollectionName('pages')).doc(targetPageId);
@@ -145,12 +139,6 @@ export async function POST(
 
     await targetPageRef.update(updateData);
 
-    console.log('✅ [APPEND REFERENCE] Successfully appended content', {
-      targetPageId,
-      sourcePageId: sourcePageData.id,
-      newContentBlocks: newContent.length,
-      userId: currentUserId
-    });
 
     return createSuccessResponse({
       success: true,

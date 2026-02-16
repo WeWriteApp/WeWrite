@@ -89,7 +89,6 @@ export function useEmailVerificationStatus(): EmailVerificationStatus {
       });
 
       if (cleaned) {
-        console.log('[EmailVerification] Email verified - cleared all verification-related localStorage flags');
       }
     }
 

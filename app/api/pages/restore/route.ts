@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
 
     // Re-add to Typesense search index
     try {
-      console.log(`🔄 Re-indexing restored page ${pageId} to Typesense`);
 
       const searchSyncData = {
         pageId,
@@ -84,7 +83,6 @@ export async function POST(request: NextRequest) {
 
       const { syncPageToTypesense } = await import('../../../lib/typesenseSync');
       await syncPageToTypesense(searchSyncData);
-      console.log(`✅ Re-indexed restored page ${pageId} to Typesense`);
     } catch (searchError) {
       console.error('Error re-indexing restored page:', searchError);
       // Don't fail the restoration if search indexing fails
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
 
     // Rebuild backlinks when page is restored
     try {
-      console.log(`🔄 Rebuilding what-links-here index for restored page ${pageId}`);
 
       if (pageData.content) {
         // Import the what-links-here update function
@@ -107,7 +104,6 @@ export async function POST(request: NextRequest) {
           new Date().toISOString()
         );
 
-        console.log(`✅ Rebuilt what-links-here index for restored page ${pageId}`);
       }
     } catch (indexError) {
       console.error('Error rebuilding what-links-here index for restored page:', indexError);

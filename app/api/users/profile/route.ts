@@ -29,13 +29,11 @@ export async function GET(request: NextRequest) {
     }
 
     const lookupValue = id || username;
-    console.log(`👤 [User Profile API] Fetching profile for: ${lookupValue}`);
 
     // Check enhanced cache first
     const cachedProfile = userCache.get(lookupValue, 'profile');
     if (cachedProfile) {
       const responseTime = Date.now() - startTime;
-      console.log(`🚀 [User Profile API] Cache hit for ${lookupValue} (${responseTime}ms)`);
 
       const response = createApiResponse(cachedProfile);
       response.headers.set('Cache-Control', 'public, max-age=900, s-maxage=1800'); // 15min browser, 30min CDN
@@ -46,9 +44,7 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    console.log(`💸 [User Profile API] Cache miss for ${lookupValue} - fetching from database`);
 
-    console.log(`👤 [User Profile API] Initializing Firebase Admin for ${lookupValue}`);
     const admin = getFirebaseAdmin();
 
     if (!admin) {
@@ -56,7 +52,6 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
     }
 
-    console.log('👤 [User Profile API] Firebase Admin initialized successfully');
 
     const db = admin.firestore();
     const usersCollection = await getCollectionNameAsync('users');
@@ -130,7 +125,6 @@ export async function GET(request: NextRequest) {
     userCache.set(lookupValue, profileData, 'profile');
 
     const responseTime = Date.now() - startTime;
-    console.log(`✅ [User Profile API] Successfully fetched ${lookupValue} (${responseTime}ms)`);
 
     // Return user profile data with optimized cache headers
     const response = createApiResponse(profileData);

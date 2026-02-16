@@ -131,10 +131,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
       // Preload user data for all users mentioned in new notifications
       if (userIds.size > 0) {
-        console.log(`NotificationProvider - preloading user data for ${userIds.size} additional users`);
         try {
           await preloadUserData(Array.from(userIds));
-          console.log('NotificationProvider - additional user data preloaded successfully');
         } catch (preloadError) {
           console.warn('NotificationProvider - error preloading additional user data:', preloadError?.message || preloadError);
           // Continue even if preloading fails
@@ -230,8 +228,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     if (!user) return;
 
     try {
-      console.log('markAllAsRead called - current unreadCount:', unreadCount);
-      console.log('markAllAsRead called - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
 
       // Use service with optimistic updates
       await notificationsService.markAllAsRead(user.uid);
@@ -242,7 +238,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       );
 
       setUnreadCount(0);
-      console.log('markAllAsRead completed - unreadCount set to 0');
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
       // Re-throw the error so the UI can handle it if needed

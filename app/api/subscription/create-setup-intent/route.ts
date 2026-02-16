@@ -10,8 +10,9 @@ import { getUsernameById } from '../../../utils/userUtils';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {

@@ -75,7 +75,6 @@ export function AuthButton({
   const displayText = children || text;
   
   const handleClick = () => {
-    console.log(`🟠 ${label} clicked`);
     
     try {
       analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {

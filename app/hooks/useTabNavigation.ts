@@ -97,7 +97,6 @@ export function useTabNavigation({
     // If there's a valid hash but no query param, migrate it
     if (hash && (!currentTabParam || currentTabParam === defaultTab)) {
       if (!validTabs || validTabs.includes(hash)) {
-        console.log(`[useTabNavigation] Migrating from hash #${hash} to ?${paramName}=${hash}`);
 
         // Build new URL with query param
         const params = new URLSearchParams(searchParams.toString());
@@ -197,7 +196,6 @@ export function useTabNavigation({
       lastSetTabRef.current = null;
     }, 0);
 
-    console.log(`[useTabNavigation] Tab changed to "${newTab}", URL: ${newUrl}`);
   }, [searchParams, pathname, paramName, defaultTab, validTabs, replaceHistory, activeTab]);
 
   // Helper to check if a tab is active

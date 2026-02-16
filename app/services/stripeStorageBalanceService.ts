@@ -14,7 +14,7 @@
  */
 
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getStripe } from '../lib/stripe';
 import { db } from '../firebase/config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCollectionName } from '../utils/environmentConfig';
@@ -37,9 +37,7 @@ export class StripeStorageBalanceService {
   private stripe: Stripe;
 
   constructor() {
-    this.stripe = new Stripe(getStripeSecretKey() || '', {
-      apiVersion: '2024-12-18.acacia'
-    });
+    this.stripe = getStripe();
   }
 
   static getInstance(): StripeStorageBalanceService {
@@ -58,8 +56,6 @@ export class StripeStorageBalanceService {
     description: string,
     userId?: string
   ): Promise<{ success: boolean; transferId?: string; error?: string }> {
-    console.log(`📝 [LEDGER] Recording allocation of ${formatUsdCents(amount * 100)} for ${userId || 'system'}`);
-    console.log(`   Note: Funds remain in Payments Balance; Firebase tracks allocations`);
 
     // Record in Firebase for audit trail
     const operationId = `allocation_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -87,8 +83,6 @@ export class StripeStorageBalanceService {
     amount: number,
     description: string = 'Unallocated funds - platform revenue'
   ): Promise<{ success: boolean; transferId?: string; error?: string }> {
-    console.log(`📝 [LEDGER] Recording platform revenue of ${formatUsdCents(amount * 100)} (unallocated funds)`);
-    console.log(`   Note: Funds already in Payments Balance as platform revenue`);
 
     // Record in Firebase for audit trail
     const operationId = `revenue_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -129,8 +123,6 @@ export class StripeStorageBalanceService {
 
       const netAmountCents = grossAmountCents - feeCents;
 
-      console.log(`💸 [PAYOUT] Transferring ${formatUsdCents(netAmountCents)} to writer ${userId}`);
-      console.log(`   Gross: ${formatUsdCents(grossAmountCents)}, Fee: ${formatUsdCents(feeCents)} (${PLATFORM_FEE_CONFIG.PERCENTAGE_DISPLAY}%)`);
 
       if (netAmountCents <= 0) {
         return {
@@ -168,7 +160,6 @@ export class StripeStorageBalanceService {
         status: 'completed'
       });
 
-      console.log(`✅ [PAYOUT] Successfully transferred ${formatUsdCents(netAmountCents)} (transfer: ${transfer.id})`);
 
       return {
         success: true,
@@ -261,9 +252,6 @@ export class StripeStorageBalanceService {
     month: string
   ): Promise<{ success: boolean; operations: StorageBalanceOperation[]; error?: string }> {
     try {
-      console.log(`📅 [MONTHLY] Processing month-end for ${month}`);
-      console.log(`   Allocated: ${formatUsdCents(allocatedAmount * 100)} (tracked in Firebase)`);
-      console.log(`   Unallocated: ${formatUsdCents(unallocatedAmount * 100)} (platform revenue)`);
 
       const operations: StorageBalanceOperation[] = [];
 
@@ -295,7 +283,6 @@ export class StripeStorageBalanceService {
         operations.push(unallocatedOp);
       }
 
-      console.log(`✅ [MONTHLY] Month-end processing complete for ${month}`);
 
       return {
         success: true,

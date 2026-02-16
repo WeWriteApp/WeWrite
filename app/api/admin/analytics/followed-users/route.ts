@@ -61,19 +61,16 @@ export async function GET(request: NextRequest) {
       hasFollowsData = followsSnapshot.size > 0;
     } catch (indexError) {
       // Index might not exist yet, try without date filtering
-      console.log('Follows query with date range failed, trying without filters:', indexError);
       try {
         followsSnapshot = await adminDb.collection(getCollectionName('follows')).get();
         hasFollowsData = followsSnapshot.size > 0;
       } catch (e) {
-        console.log('Failed to query follows collection:', e);
         followsSnapshot = { docs: [], size: 0 };
       }
     }
 
     // If no data in follows collection, fall back to counting from userFollowing collection
     if (!hasFollowsData) {
-      console.log('No data in follows collection, falling back to userFollowing collection');
 
       // Get all userFollowing documents to count total follows
       const userFollowingSnapshot = await adminDb.collection(getCollectionName('userFollowing')).get();

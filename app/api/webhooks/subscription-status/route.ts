@@ -4,10 +4,9 @@ import Stripe from 'stripe';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { handleSubscriptionStatusChange } from '../../../services/pledgeBudgetService';
 import { getCollectionName, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -35,7 +34,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    console.log(`Received webhook event: ${event.type}`);
 
     // Handle subscription-related events
     switch (event.type) {
@@ -47,7 +45,6 @@ export async function POST(request: NextRequest) {
         break;
       
       default:
-        console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
@@ -88,13 +85,11 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
           // Get the subscription details
           subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
         } else {
-          console.log('Invoice not associated with subscription, skipping');
           return;
         }
         break;
       
       default:
-        console.log(`Unhandled subscription event type: ${event.type}`);
         return;
     }
 
@@ -105,7 +100,6 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
       .get();
 
     if (usersQuery.empty) {
-      console.log(`No user found for Stripe customer: ${customerId}`);
       return;
     }
 
@@ -113,7 +107,6 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
     const userId = userDoc.id;
     const userData = userDoc.data();
 
-    console.log(`Processing subscription event for user: ${userId}`);
 
     // Get current subscription data from Firestore
     const subscriptionRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.USERS)).doc(userId).collection(getCollectionName(PAYMENT_COLLECTIONS.SUBSCRIPTIONS)).doc('current');
@@ -147,7 +140,6 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
       newStatus = 'active';
     }
 
-    console.log(`Subscription change: ${oldStatus}(${oldAmount}) -> ${newStatus}(${newAmount})`);
 
     // Prepare subscription data for update and audit
     const subscriptionData = {
@@ -180,7 +172,6 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
             amountChange: oldAmount !== newAmount
           }
         });
-        console.log(`✅ Logged subscription update to audit trail: ${oldStatus}(${oldAmount}) -> ${newStatus}(${newAmount})`);
       } catch (auditError) {
         console.error('❌ Failed to log subscription audit event:', auditError);
         // Don't fail the webhook if audit logging fails
@@ -189,7 +180,6 @@ export async function handleSubscriptionEvent(event: Stripe.Event) {
       // Handle pledge budget validation
       try {
         await handleSubscriptionStatusChange(userId, oldStatus, newStatus, oldAmount, newAmount);
-        console.log(`Successfully handled pledge budget changes for user: ${userId}`);
       } catch (pledgeError) {
         console.error('Error handling pledge budget changes:', pledgeError);
         // Don't fail the webhook - subscription update should still succeed

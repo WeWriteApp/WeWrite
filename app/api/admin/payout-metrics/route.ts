@@ -6,15 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
-import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, COLLECTIONS, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
+import { getStripe } from '../../../lib/stripe';
 
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2025-06-30.basil'});
+const stripe = getStripe();
 
 export async function GET(request: NextRequest) {
   return withAdminContext(request, async () => {
@@ -32,8 +30,8 @@ export async function GET(request: NextRequest) {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Get payout metrics
-    const payoutsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.PAYOUTS))
-      .where('createdAt', '>=', thisMonth)
+    const payoutsSnapshot = await adminDb.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
+      .where('requestedAt', '>=', thisMonth)
       .get();
 
     let totalPayouts = 0;
@@ -50,8 +48,8 @@ export async function GET(request: NextRequest) {
       switch (payout.status) {
         case 'completed':
           successfulPayouts++;
-          totalEarningsDistributed += payout.amount || 0;
-          payoutAmounts.push(payout.amount || 0);
+          totalEarningsDistributed += (payout.amountCents || 0) / 100;
+          payoutAmounts.push((payout.amountCents || 0) / 100);
           break;
         case 'failed':
           failedPayouts++;
@@ -70,16 +68,16 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get last month's payouts for growth calculation
-    const lastMonthPayoutsSnapshot = await adminDb.collection(getCollectionName(COLLECTIONS.PAYOUTS))
-      .where('createdAt', '>=', lastMonth)
-      .where('createdAt', '<', thisMonth)
+    const lastMonthPayoutsSnapshot = await adminDb.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
+      .where('requestedAt', '>=', lastMonth)
+      .where('requestedAt', '<', thisMonth)
       .get();
 
     let lastMonthEarnings = 0;
     lastMonthPayoutsSnapshot.forEach(doc => {
       const payout = doc.data();
       if (payout.status === 'completed') {
-        lastMonthEarnings += payout.amount || 0;
+        lastMonthEarnings += (payout.amountCents || 0) / 100;
       }
     });
 

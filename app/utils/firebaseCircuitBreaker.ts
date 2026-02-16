@@ -79,7 +79,6 @@ class FirebaseCircuitBreaker {
         return false;
       } else {
         // Try to close circuit
-        console.log('🔄 FIREBASE CIRCUIT BREAKER: Attempting to close circuit');
         this.isCircuitOpen = false;
         this.emergencyMode = false;
       }
@@ -156,16 +155,6 @@ class FirebaseCircuitBreaker {
   private logStatus(): void {
     setInterval(() => {
       if (this.metrics.readsThisMinute > 0 || this.isCircuitOpen) {
-        console.log(`📊 FIREBASE CIRCUIT BREAKER STATUS:`, {
-          readsThisMinute: this.metrics.readsThisMinute,
-          readsThisHour: this.metrics.readsThisHour,
-          totalReads: this.metrics.totalReads,
-          blockedReads: this.metrics.blockedReads,
-          circuitOpen: this.isCircuitOpen,
-          emergencyMode: this.emergencyMode,
-          savingsRate: this.metrics.blockedReads > 0 ? 
-            ((this.metrics.blockedReads / (this.metrics.totalReads + this.metrics.blockedReads)) * 100).toFixed(1) + '%' : '0%'
-        });
       }
     }, 60000); // Log every minute
   }
@@ -196,7 +185,6 @@ class FirebaseCircuitBreaker {
    * Reset circuit breaker
    */
   reset(): void {
-    console.log('🔄 FIREBASE CIRCUIT BREAKER: Manual reset');
     this.isCircuitOpen = false;
     this.emergencyMode = false;
     this.metrics.readsThisMinute = 0;
@@ -209,7 +197,6 @@ class FirebaseCircuitBreaker {
    */
   updateConfig(newConfig: Partial<CircuitBreakerConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    console.log('🔧 FIREBASE CIRCUIT BREAKER: Configuration updated', this.config);
   }
 }
 

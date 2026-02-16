@@ -42,12 +42,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Log metric for analysis
-    console.log('Web Vitals Metric:', {
-      metric: payload.metric.name,
-      value: payload.metric.value,
-      rating: payload.metric.rating,
-      networkType: payload.networkInfo.effectiveType,
-      timestamp: new Date(payload.timestamp).toISOString()});
 
     // In production, you would send this to your analytics service
     // For now, we'll just log and store basic metrics

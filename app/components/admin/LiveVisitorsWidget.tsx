@@ -173,12 +173,6 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
             <span>Bot filtering: Active</span>
           </div>
           {process.env.NODE_ENV === 'development' && debugMode && (() => {
-            console.log('[LiveVisitorsWidget] Debug Info:', {
-              legitimateVisitors: counts.legitimateVisitors,
-              bots: counts.bots,
-              refreshInterval: '15s',
-              sessionTimeout: '30m'
-            });
             return null;
           })()}
         </div>

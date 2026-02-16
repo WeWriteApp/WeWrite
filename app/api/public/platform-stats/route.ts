@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
     // Check cache first for faster response
     const now = Date.now();
     if (statsCache && (now - statsCache.timestamp) < CACHE_DURATION) {
-      console.log('Returning cached platform statistics');
       return createApiResponse({
         ...statsCache.data,
         note: 'Public platform statistics from production data (cached)',
@@ -36,7 +35,6 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin!.firestore();
 
-    console.log('Fetching fresh platform statistics from production collections...');
 
     // Always use production collections for public stats
     const PRODUCTION_USERS_COLLECTION = 'users';
@@ -68,8 +66,6 @@ export async function GET(request: NextRequest) {
 
     const totalUsers = usersSnapshot.data().count;
     const pagesLast30Days = pagesLast30DaysSnapshot.data().count;
-    console.log(`Total users in production: ${totalUsers}`);
-    console.log(`Pages created in last 30 days: ${pagesLast30Days} (since ${thirtyDaysAgoISO})`);
 
     // Calculate total earnings from earnings records (Phase 2 - single source of truth)
     let totalFromEarnings = 0;
@@ -84,8 +80,6 @@ export async function GET(request: NextRequest) {
       totalFromEarnings += cents;
     });
 
-    console.log(`Processed ${earningsRecordsProcessed} writer earnings records`);
-    console.log(`Total from earnings: $${(totalFromEarnings / 100).toFixed(2)}`);
 
     // Use total from earnings (includes pending + available + paid_out) for transparency
     // This shows the total value that has been earned by writers
@@ -104,7 +98,6 @@ export async function GET(request: NextRequest) {
       timestamp: now
     };
 
-    console.log('Public platform stats (fresh):', stats);
 
     return createApiResponse({
       ...stats,
@@ -117,7 +110,6 @@ export async function GET(request: NextRequest) {
 
     // If we have cached data, return it even if stale
     if (statsCache) {
-      console.log('Returning stale cached data due to error');
       return createApiResponse({
         ...statsCache.data,
         note: 'Public platform statistics from production data (stale cache)',

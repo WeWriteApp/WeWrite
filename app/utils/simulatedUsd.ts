@@ -83,7 +83,6 @@ export const getLoggedOutUsdBalance = (): SimulatedUsdBalance => {
 
       // Check if we need to reset due to version change (to add mock allocations)
       if (data.version !== DEMO_BALANCE_VERSION) {
-        console.log('Demo balance version changed, resetting to add mock allocations');
         localStorage.removeItem(LOGGED_OUT_STORAGE_KEY);
         // Fall through to return default balance with mock allocations
       } else {
@@ -127,7 +126,6 @@ export const getUserUsdBalance = (userId: string): SimulatedUsdBalance => {
 
       // Check if we need to reset due to version change (to add mock allocations)
       if (data.version !== DEMO_BALANCE_VERSION) {
-        console.log('User demo balance version changed, resetting to add mock allocations');
         localStorage.removeItem(getUserStorageKey(userId));
         // Fall through to return default balance with mock allocations
       } else {

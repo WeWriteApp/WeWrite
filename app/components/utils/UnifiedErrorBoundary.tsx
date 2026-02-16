@@ -101,7 +101,6 @@ export class UnifiedErrorBoundary extends Component<Props, State> {
 
     // Auto-retry for certain types of errors (with limit)
     if (this.shouldAutoRetry(error) && this.state.retryCount < this.MAX_RETRIES) {
-      console.log(`Auto-retrying error (attempt ${this.state.retryCount + 1}/${this.MAX_RETRIES})`);
       this.scheduleRetry();
     }
   }

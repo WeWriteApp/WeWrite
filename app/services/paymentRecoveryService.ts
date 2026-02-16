@@ -5,14 +5,12 @@
 
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import Stripe from 'stripe';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
-import { getStripeSecretKey } from '../utils/stripeConfig';
 import { FinancialUtils, CorrelationId } from '../types/financial';
 import { getCollectionName } from "../utils/environmentConfig";
+import { getStripe } from '../lib/stripe';
 
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'});
+const stripe = getStripe();
 
 export interface PaymentFailureRecord {
   id: string;

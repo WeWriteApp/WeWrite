@@ -83,7 +83,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
 
     // Listen for page transition events
     const handlePageTransitionMounted = () => {
-      console.log("DataProvider: Detected page transition mounted event");
       // Reset recovery state on new page transitions
       setRecoveryAttempted(false);
     };
@@ -140,7 +139,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
             const refreshEvent = new CustomEvent('force-refresh-pages');
             window.dispatchEvent(refreshEvent);
           } else {
-            console.log("DataProvider: Recovery throttled, too soon since last attempt");
           }
         }
       }, 5000); // 5 seconds timeout for first recovery attempt
@@ -153,7 +151,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
 
         // Only show timeout error if we don't have any data
         if (pages.length === 0) {
-          console.log("DataProvider: No data available after timeout, this may indicate a connection issue");
         }
 
         // Dispatch an event that other components can listen for
@@ -249,7 +246,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         });
       } else {
         // We have data, so don't show the error prominently
-        console.log("DataProvider: Error occurred but we have cached data, not showing error to user");
         setErrorVisible(false);
       }
     } else {
@@ -267,7 +263,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   // Listen for the loading-force-completed event
   useEffect(() => {
     const handleForceComplete = (event: CustomEvent): void => {
-      console.log("DataProvider: Received force-complete event", event.detail);
 
       // Force loading to false
       setForceLoaded(true);
@@ -308,7 +303,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
 
   // Function to reset loading state and attempt recovery with enhanced error handling
   const resetLoading = useCallback(() => {
-    console.log("DataProvider: Manually resetting loading state");
 
     // First, try to force complete any existing loading state
     setForceLoaded(true);
@@ -343,7 +337,6 @@ export const DataProvider = ({ children }: DataProviderProps) => {
 
       // Use the refreshPages function directly instead of dispatching an event
       if (refreshPages) {
-        console.log("DataProvider: Attempting data refresh after reset");
         refreshPages();
       } else {
         // Fallback to the event if refreshPages is not available

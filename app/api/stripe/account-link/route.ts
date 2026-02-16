@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia'
-});
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +21,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    console.log('🔗 Creating account link for user:', userId);
 
     // Get user data to find or create their connected account ID
     const admin = getFirebaseAdmin();
@@ -39,7 +36,6 @@ export async function POST(request: NextRequest) {
 
     // Create Stripe Connect account if it doesn't exist
     if (!stripeConnectedAccountId) {
-      console.log('📝 Creating new Stripe Connect account...');
       
       const userEmail = userData?.email;
       const username = userData?.username || 'Unknown User';
@@ -70,7 +66,6 @@ export async function POST(request: NextRequest) {
         stripeConnectedAccountId: stripeConnectedAccountId
       }, { merge: true });
 
-      console.log('✅ Created Stripe Connect account:', stripeConnectedAccountId);
     }
 
     // Create account link
@@ -81,7 +76,6 @@ export async function POST(request: NextRequest) {
       type: type || 'account_onboarding'
     });
 
-    console.log('✅ Created account link for user:', userId);
 
     return NextResponse.json({
       url: accountLink.url

@@ -24,7 +24,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
 
-    console.log(`🔧 [ADMIN] Platform account configuration request: ${action}`);
 
     switch (action) {
       case 'initialize':
@@ -58,7 +57,6 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleInitialize() {
-  console.log('🚀 [ADMIN] Initializing fund holding model...');
   
   const result = await platformAccountConfigService.initializeFundHoldingModel();
   
@@ -79,7 +77,6 @@ async function handleInitialize() {
 }
 
 async function handleEnableManualPayouts() {
-  console.log('🔧 [ADMIN] Enabling manual payouts...');
   
   const result = await platformAccountConfigService.enableManualPayouts();
   
@@ -97,7 +94,6 @@ async function handleEnableManualPayouts() {
 }
 
 async function handleGetStatus() {
-  console.log('📊 [ADMIN] Getting platform account status...');
   
   const status = await platformAccountConfigService.getPlatformAccountStatus();
   
@@ -123,7 +119,6 @@ async function handleCreatePlatformPayout(body: any) {
     }, { status: 400 });
   }
 
-  console.log(`💰 [ADMIN] Creating platform payout: $${amount}`);
   
   const result = await platformAccountConfigService.createPlatformPayout(
     amount,
@@ -153,7 +148,6 @@ async function handleCheckBalance(body: any) {
     }, { status: 400 });
   }
 
-  console.log(`💰 [ADMIN] Checking balance sufficiency for $${requiredAmount}`);
   
   const result = await platformAccountConfigService.checkBalanceSufficiency(requiredAmount);
   const balanceBreakdown = await platformAccountConfigService.getBalanceBreakdown();
@@ -178,7 +172,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    console.log('📊 [ADMIN] Getting platform account status...');
     
     const status = await platformAccountConfigService.getPlatformAccountStatus();
     const balanceBreakdown = await platformAccountConfigService.getBalanceBreakdown();

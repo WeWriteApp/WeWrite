@@ -4,7 +4,6 @@ import { getCollectionName } from '../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../auth-helper';
 
 
-
 // Initialize Firebase Admin lazily
 let adminDb;
 
@@ -93,7 +92,6 @@ function initializeFirebase() {
       return { adminDb: null };
     }
     adminDb = admin.firestore();
-    console.log('Firebase Admin initialized successfully in my-pages');
   } catch (error) {
     console.error('Error initializing Firebase Admin in my-pages:', error);
     return { adminDb: null };

@@ -82,19 +82,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           }
         });
 
-        console.log('🔍 UserBioTab: API response status:', response.status);
 
         if (response.ok) {
           const bioResponse = await response.json();
           const bioData = bioResponse.data; // Extract data from API response
 
-          console.log('🔍 UserBioTab: API response data:', {
-            hasBio: !!bioData.bio,
-            bioType: typeof bioData.bio,
-            bioIsArray: Array.isArray(bioData.bio),
-            bioLength: bioData.bio ? (Array.isArray(bioData.bio) ? bioData.bio.length : bioData.bio.length) : 0,
-            bioSample: typeof bioData.bio === 'string' ? bioData.bio.substring(0, 100) : JSON.stringify(bioData.bio).substring(0, 100)
-          });
 
           if (bioData.bio) {
             setBioContent(bioData.bio);
@@ -138,8 +130,14 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           }
         }
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Error fetching user bio content:", err);
         setError("Failed to load user information. Please try again later.");
+        toast.error("Failed to load bio", {
+          description: errorMessage,
+          enableCopy: true,
+          copyText: `Bio load error: ${errorMessage}\nUser: ${profile.uid}\nTime: ${new Date().toISOString()}`
+        });
       } finally {
         setIsLoading(false);
       }
@@ -149,16 +147,14 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   }, [profile.uid]);
 
   // Handle saving the bio content
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       setIsLoading(true);
 
       // Ensure we're saving the content in the correct format
       // The Editor returns an array of nodes, which we want to preserve
-      const contentToSave = bioContent;
+      const contentToSave = currentContentRef.current || bioContent;
       const editorName = user?.username || "Unknown";
-
-      console.log("Saving bio content:", contentToSave);
 
       // Use API route for bio updates to handle environment-aware operations
       const response = await fetch(`/api/users/${profile.uid}/bio`, {
@@ -173,14 +169,12 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save bio');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || `Save failed (${response.status})`;
+        throw new Error(errorMsg);
       }
 
-      const result = await response.json();
-
-      // REMOVED: Bio edit activity recording disabled for cost optimization
-      console.log("Bio edit activity recording disabled for cost optimization");
+      await response.json();
 
       setOriginalContent(contentToSave);
       // Update the last saved content ref for auto-save comparison
@@ -194,14 +188,19 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
       return true; // Indicate success for the useUnsavedChanges hook
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error("Error updating user bio content:", err);
       setError("Failed to save changes. Please try again.");
-      toast.error("Failed to update bio");
+      toast.error("Failed to update bio", {
+        description: errorMessage,
+        enableCopy: true,
+        copyText: `Bio save error: ${errorMessage}\nUser: ${profile.uid}\nTime: ${new Date().toISOString()}`
+      });
       return false; // Indicate failure for the useUnsavedChanges hook
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [bioContent, profile.uid, user?.username, isProfileOwner]);
 
   // Handle beforeunload for browser/tab close - uses system dialog
   useEffect(() => {
@@ -218,13 +217,14 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   }, [hasUnsavedChanges]);
 
   // Handle canceling edits with unsaved changes check - uses system dialog
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (hasUnsavedChanges) {
       const confirmed = window.confirm(
         'You have unsaved changes. Are you sure you want to discard them?'
       );
       if (confirmed) {
         setBioContent(originalContent);
+        currentContentRef.current = originalContent;
         if (!isProfileOwner) {
           handleSetIsEditing(false);
         }
@@ -232,11 +232,12 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     } else {
       // No changes, just revert content (stay in editing mode for owners)
       setBioContent(originalContent);
+      currentContentRef.current = originalContent;
       if (!isProfileOwner) {
         handleSetIsEditing(false);
       }
     }
-  };
+  }, [hasUnsavedChanges, originalContent, isProfileOwner]);
 
   // Handle content change in the editor
   const handleContentChange = (content) => {
@@ -245,7 +246,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     setBioContent(content);
     // Update current content ref for auto-save comparison
     currentContentRef.current = content;
-    console.log("Bio content updated:", content);
   };
 
   // Keyboard shortcuts for bio editing
@@ -358,8 +358,14 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         // Transition to idle after showing saved state
         setTimeout(() => setAutoSaveStatus('idle'), 3000);
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Auto-save failed';
         setAutoSaveStatus('error');
-        setAutoSaveError(err instanceof Error ? err.message : 'Auto-save failed');
+        setAutoSaveError(errorMessage);
+        toast.error("Auto-save failed", {
+          description: errorMessage,
+          enableCopy: true,
+          copyText: `Auto-save error: ${errorMessage}\nUser: ${profile.uid}\nTime: ${new Date().toISOString()}`
+        });
       }
     }, 1000); // 1 second delay
 

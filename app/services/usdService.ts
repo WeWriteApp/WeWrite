@@ -6,8 +6,7 @@
  * This file should ONLY be imported in API routes and server components
  */
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAdminFirestore, FieldValue } from '../firebase/firebaseAdmin';
 import { getCurrentMonth } from '../utils/usdConstants';
 import { dollarsToCents, centsToDollars } from '../utils/formatCurrency';
 import type { UsdBalance, UsdAllocation } from '../types/database';
@@ -39,37 +38,8 @@ function generateAllocationDocId(
 }
 
 
-// Robust Firebase Admin initialization function - uses the same pattern as working endpoints
-function getFirebaseAdminAndDb() {
-  try {
-    // Check if we already have an app for USD services
-    let usdServiceApp = getApps().find(app => app.name === 'usd-service-app');
-
-    if (!usdServiceApp) {
-      // Initialize a new app specifically for USD services
-      const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-      if (!base64Json) {
-        throw new Error('GOOGLE_CLOUD_KEY_JSON environment variable not found');
-      }
-
-      const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-      const serviceAccount = JSON.parse(decodedJson);
-
-      usdServiceApp = initializeApp({
-        credential: cert({
-          projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-          clientEmail: serviceAccount.client_email,
-          privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')
-        })
-      }, 'usd-service-app');
-    }
-
-    const db = getFirestore(usdServiceApp);
-    return { admin: usdServiceApp, db };
-  } catch (error) {
-    console.error('[USD Service] Error initializing Firebase Admin:', error);
-    throw error;
-  }
+function getDb() {
+  return getAdminFirestore();
 }
 
 export class UsdService {
@@ -84,7 +54,7 @@ export class UsdService {
     totalUsdCents: number;
   }> {
     try {
-      const { db } = getFirebaseAdminAndDb();
+      const db = getDb();
       const currentMonth = getCurrentMonth();
       const allocationsCollectionName = await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS);
       const allocationsRef = db.collection(allocationsCollectionName);
@@ -261,7 +231,7 @@ export class UsdService {
     subscriptionAmountDollars: number
   ): Promise<void> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
 
       const usdCents = dollarsToCents(subscriptionAmountDollars);
       const currentMonth = getCurrentMonth();
@@ -303,7 +273,7 @@ export class UsdService {
    */
   static async getUserUsdBalance(userId: string): Promise<UsdBalance | null> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
 
       // Ensure we carry forward previous allocations into the current month before computing balances.
       await this.backfillCurrentMonthAllocations(userId);
@@ -453,7 +423,7 @@ export class UsdService {
    */
   static async calculateActualAllocatedUsdCents(userId: string): Promise<number> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
       await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
@@ -495,7 +465,7 @@ export class UsdService {
     totalSubscriptionCents: number;
     userCount: number;
   }> {
-    const { db } = getFirebaseAdminAndDb();
+    const db = getDb();
 
     const balancesRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_BALANCES));
     const snapshot = await balancesRef.get();
@@ -541,7 +511,7 @@ export class UsdService {
    */
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
       await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
@@ -574,7 +544,7 @@ export class UsdService {
    */
   static async getUserUsdAllocations(userId: string): Promise<UsdAllocation[]> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
       await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
@@ -623,7 +593,7 @@ export class UsdService {
         throw new Error(`[${correlationId}] Invalid allocation parameters: userId=${userId}, pageId=${pageId}, usdCentsChange=${usdCentsChange}`);
       }
 
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
       await this.backfillCurrentMonthAllocations(userId);
       const currentMonth = getCurrentMonth();
 
@@ -812,7 +782,7 @@ export class UsdService {
    */
   static async allocateUsdToUser(userId: string, recipientUserId: string, usdCentsChange: number): Promise<void> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
       const currentMonth = getCurrentMonth();
 
       // Get current USD balance
@@ -930,7 +900,7 @@ export class UsdService {
    */
   static async getCurrentUserAllocation(userId: string, recipientUserId: string): Promise<number> {
     try {
-      const { admin, db } = getFirebaseAdminAndDb();
+      const db = getDb();
       const currentMonth = getCurrentMonth();
 
       const allocationsRef = db.collection(await getCollectionNameAsync(USD_COLLECTIONS.USD_ALLOCATIONS));

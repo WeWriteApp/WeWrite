@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { requireDevelopmentEnvironment } from '../debugHelper';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 export async function POST(request: NextRequest) {
   // SECURITY: Only allow in local development
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     console.log(`[DEBUG] Attempting to undelete page: ${pageId}`);
 
     // Get the page document
-    const pageRef = db.collection('pages').doc(pageId);
+    const pageRef = db.collection(getCollectionName('pages')).doc(pageId);
     const pageDoc = await pageRef.get();
 
     if (!pageDoc.exists) {
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       console.log(`[DEBUG] Fixing missing currentVersion for page ${pageId}`);
       
       // Query for versions of this page
-      const versionsQuery = db.collection('pages').doc(pageId).collection('versions')
+      const versionsQuery = db.collection(getCollectionName('pages')).doc(pageId).collection('versions')
         .orderBy('createdAt', 'desc')
         .limit(1);
       

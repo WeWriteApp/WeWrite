@@ -8,8 +8,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { StripeUrls } from '../../../utils/urlConfig';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import { getStripe } from '../../../lib/stripe';
+
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
     console.log(`[SUBSCRIPTION PORTAL] Creating portal session for user ${userId}`);
 
     // Get user's Stripe customer ID
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userDoc = await adminDb.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
     const customerId = userData?.stripeCustomerId;
 

@@ -102,7 +102,6 @@ export async function applyReadOptimization(
       const existingRequest = requestDeduplicationCache.get(deduplicationKey);
 
       if (existingRequest && Date.now() - existingRequest.timestamp < DEDUPLICATION_WINDOW) {
-        console.log(`🔄 Request deduplication: Using existing request for ${pathname}`);
         return existingRequest.promise;
       }
 
@@ -133,7 +132,6 @@ export async function applyReadOptimization(
       const cached = responseCache.get(cacheKey);
       
       if (cached && Date.now() - cached.timestamp < cached.ttl) {
-        console.log(`💾 Cache hit for ${pathname}`);
         
         // Track cache hit
         if (finalConfig.enableTracking) {
@@ -255,12 +253,10 @@ function getCacheTTL(pathname: string): number {
   for (const [pattern, ttl] of Object.entries(CACHE_TTL_CONFIG)) {
     if (pattern === 'default') continue;
     if (pathname.startsWith(pattern)) {
-      console.log(`🚨 EMERGENCY CACHE: ${pathname} cached for ${ttl/1000/60} minutes`);
       return ttl;
     }
   }
 
-  console.log(`🚨 EMERGENCY CACHE: ${pathname} using default ${CACHE_TTL_CONFIG.default/1000/60} minutes`);
   return CACHE_TTL_CONFIG.default;
 }
 
@@ -315,7 +311,6 @@ function cleanCache(): void {
   }
 
   if (cleaned > 0) {
-    console.log(`🧹 Cleaned ${cleaned} expired cache entries`);
   }
 
   // Limit cache size
@@ -329,7 +324,6 @@ function cleanCache(): void {
       responseCache.delete(entries[i][0]);
     }
     
-    console.log(`🧹 Removed ${toRemove} oldest cache entries`);
   }
 }
 

@@ -35,7 +35,9 @@ function initializeFirebase() {
   return { admin, adminDb, FieldValue };
 }
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import { getStripe } from '../../../lib/stripe';
+
+const stripe = getStripe();
 
 export async function POST(request: NextRequest) {
   try {

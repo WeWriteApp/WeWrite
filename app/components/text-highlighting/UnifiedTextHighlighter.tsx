@@ -40,11 +40,9 @@ const UnifiedTextHighlighter: React.FC<UnifiedTextHighlighterProps> = ({
 
       const storedHighlight = getStoredHighlight(hash);
       if (!storedHighlight) {
-        console.log('No highlight data found for hash:', hash);
         return;
       }
 
-      console.log('Found highlight:', storedHighlight);
       setHighlightInfo(storedHighlight);
       setIsHighlighting(true);
 
@@ -143,7 +141,6 @@ const UnifiedTextHighlighter: React.FC<UnifiedTextHighlighterProps> = ({
       });
 
       if (!highlightContainer) {
-        console.log('Text not found in content:', text);
         // If text is not found, dismiss the highlight
         dismissHighlight();
       }

@@ -29,12 +29,10 @@ export default function WritingIdeasPage() {
         const result = await response.json();
 
         if (!result.isAdmin) {
-          console.log('User is not admin, redirecting to home');
           router.push('/');
           return;
         }
 
-        console.log('User is admin, allowing access');
         setIsAuthorized(true);
       } catch (error) {
         console.error('Error checking admin status:', error);

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Switch } from '../../components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../components/ui/collapsible';
+import { toast } from '../../components/ui/use-toast';
 
 // Notification types that users can configure
 // Grouped by category for better organization
@@ -303,10 +304,24 @@ export default function NotificationSettingsPage() {
     });
 
     setPreferences(defaultPreferences);
-    setLoading(false);
 
-    // TODO: Load actual preferences from API
-    // loadNotificationPreferences();
+    // Load saved preferences from API
+    const loadPreferences = async () => {
+      try {
+        const response = await fetch('/api/user-preferences/notifications');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.preferences) {
+            setPreferences(prev => ({ ...prev, ...data.preferences }));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading notification preferences:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPreferences();
   }, [user, isAuthenticated]);
 
   const handlePreferenceChange = (typeId: string, channel: 'push' | 'inApp' | 'email', enabled: boolean) => {
@@ -338,15 +353,26 @@ export default function NotificationSettingsPage() {
 
     setSaving(true);
     try {
-      // TODO: Save preferences to API
-      console.log('Saving notification preferences:', preferences);
+      const response = await fetch('/api/user-preferences/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferences })
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Save failed (${response.status})`);
+      }
 
-      console.log('Notification preferences saved successfully');
+      toast.success("Notification preferences saved");
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('Error saving notification preferences:', error);
+      toast.error("Failed to save preferences", {
+        description: msg,
+        enableCopy: true,
+        copyText: `Notification preferences error: ${msg}\nTime: ${new Date().toISOString()}`
+      });
     } finally {
       setSaving(false);
     }

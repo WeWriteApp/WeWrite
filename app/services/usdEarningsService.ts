@@ -232,32 +232,11 @@ export class UsdEarningsService {
             // Calculate funding ratio: what percentage of allocations are actually funded
             const fundingRatio = sponsorSubscriptionCents / sponsorAllocatedCents;
             fundedUsdCents = Math.round(usdCentsChange * fundingRatio);
-            console.log(`💰 [EARNINGS] [${correlationId}] Applied funding ratio`, {
-              fromUserId,
-              recipientUserId,
-              fundingRatio: fundingRatio.toFixed(4),
-              originalUsdCents: usdCentsChange,
-              fundedUsdCents,
-              sponsorSubscriptionCents,
-              sponsorAllocatedCents
-            });
           } else {
-            console.log(`💰 [EARNINGS] [${correlationId}] Sponsor fully funded`, {
-              fromUserId,
-              recipientUserId,
-              usdCents: fundedUsdCents,
-              sponsorSubscriptionCents,
-              sponsorAllocatedCents
-            });
           }
         } else {
           // No balance record means no subscription - allocation is completely unfunded
           fundedUsdCents = 0;
-          console.log(`💰 [EARNINGS] [${correlationId}] No sponsor balance record (unfunded)`, {
-            fromUserId,
-            recipientUserId,
-            originalUsdCents: usdCentsChange
-          });
         }
       } catch (balanceError) {
         console.warn(`[UsdEarningsService] [${correlationId}] Error checking sponsor balance:`, balanceError);
@@ -266,15 +245,6 @@ export class UsdEarningsService {
 
       // Skip recording if there's nothing funded
       if (fundedUsdCents <= 0) {
-        console.log(`💰 [EARNINGS SKIPPED] [${correlationId}] No funded amount for allocation`, {
-          fromUserId,
-          recipientUserId,
-          resourceId,
-          resourceType,
-          originalUsdCents: usdCentsChange,
-          fundedUsdCents,
-          reason: 'Allocation is unfunded (sponsor has no active subscription or is over-allocated)'
-        });
         return;
       }
 
@@ -328,16 +298,6 @@ export class UsdEarningsService {
 
       // Log successful earnings recording
       const duration = Date.now() - startTime;
-      console.log(`💰 [EARNINGS SUCCESS] [${correlationId}] Recorded earnings (${duration}ms)`, {
-        fromUserId,
-        recipientUserId,
-        resourceId,
-        resourceType,
-        fundedUsdCents,
-        originalUsdCents: usdCentsChange,
-        month,
-        earningsId: `${recipientUserId}_${month}`
-      });
     } catch (error) {
       const duration = Date.now() - startTime;
       console.error(`[UsdEarningsService] [${correlationId}] Error processing USD allocation (${duration}ms):`, {
@@ -441,15 +401,6 @@ export class UsdEarningsService {
         return { success: true, referralEarningsCents: 0 };
       }
 
-      console.log(`💰 [REFERRAL EARNINGS] Processing referral for ${referrerUserId}`, {
-        referredUserId,
-        referredUsername,
-        payoutId,
-        payoutAmountCents,
-        platformFeeCents,
-        referralEarningsCents,
-        referralSharePercent: REFERRAL_SHARE * 100
-      });
 
       // Get current month for the earnings record
       const now = new Date();
@@ -501,11 +452,6 @@ export class UsdEarningsService {
         }
       });
 
-      console.log(`✅ [REFERRAL EARNINGS] Recorded $${(referralEarningsCents / 100).toFixed(2)} for ${referrerUserId}`, {
-        earningsId,
-        referredUserId,
-        payoutId
-      });
 
       return { success: true, referralEarningsCents };
 

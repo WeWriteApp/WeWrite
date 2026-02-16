@@ -140,7 +140,6 @@ export const useUnifiedSearch = (
   const getCachedResults = useCallback((cacheKey: string): SearchResults | null => {
     const cached = searchCacheRef.current.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log('🎯 Using cached search results');
       return cached.results;
     }
     if (cached) {
@@ -201,7 +200,6 @@ export const useUnifiedSearch = (
 
     // Prevent duplicate searches
     if (trimmedSearchTerm === lastSearchRef.current && results.pages.length > 0) {
-      console.log('Skipping duplicate search with existing results');
       return Promise.resolve();
     }
 
@@ -219,7 +217,6 @@ export const useUnifiedSearch = (
     setError(null);
 
     try {
-      console.log(`🔍 Performing unified search: "${trimmedSearchTerm}"`, mergedOptions);
 
       // Build query parameters
       const queryParams = new URLSearchParams({
@@ -278,7 +275,6 @@ export const useUnifiedSearch = (
 
       const searchEngine = data.performance?.searchEngine || 'unknown';
       const typesenseError = data.performance?.typesenseError;
-      console.log(`✅ Search completed [${searchEngine.toUpperCase()}]: ${uniquePages.length} pages, ${uniqueUsers.length} users in ${data.performance?.searchTimeMs}ms`);
       if (typesenseError && searchEngine !== 'typesense') {
         console.warn(`⚠️ Typesense failed, used Firestore fallback. Error: ${typesenseError}`);
       }
@@ -286,7 +282,6 @@ export const useUnifiedSearch = (
     } catch (error) {
       // AbortError is expected when a new search cancels an old one - don't treat as error
       if (error.name === 'AbortError') {
-        console.log('Search aborted (expected behavior):', trimmedSearchTerm);
         // Don't set error state for AbortError - this is normal during typing
         return Promise.resolve();
       }

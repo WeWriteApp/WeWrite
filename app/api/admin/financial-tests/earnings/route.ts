@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { amount = 25, payerUserId, pageId, connectedAccountId, fee = 0, note } = await request.json();
-    console.log('🧪 [ADMIN] Simulate test earning request', { envType, host, devBypass, amount, payerUserId, pageId, connectedAccountId, fee, note, userId });
 
     const gross = Number(amount) || 0;
     const feeAmount = Number(fee) || 0;
@@ -61,7 +60,6 @@ export async function POST(request: NextRequest) {
     };
 
     const docRef = await adminDb.collection(TEST_COLLECTION).add(payload);
-    console.log('🧪 [ADMIN] Test earning recorded', { id: docRef.id, ...payload });
 
     return NextResponse.json({
       success: true,

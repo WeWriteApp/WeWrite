@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, COLLECTIONS, USD_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
-
-// Initialize Stripe
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
+function getAdmin() { return getFirebaseAdmin(); }
+function getStripeClient() { return getStripe(); }
 
 // GET /api/payouts/history - Get payout history for user
 export async function GET(request: NextRequest) {
@@ -29,25 +23,16 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    console.log(`Loading payout history for user: ${userId}`);
 
-    // Get user data to find their connected account ID
-    const db = admin.firestore();
-    const userDoc = await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).get();
-    const userData = userDoc.data();
+    const db = getAdmin().firestore();
 
-    const stripeConnectedAccountId = userData?.stripeConnectedAccountId;
-
-    // Get payouts from our database
-    console.log(`Fetching payouts from Firestore for user: ${userId}`);
-
-    let payouts = [];
+    let payouts: any[] = [];
 
     try {
-      // Query payouts collection for this user
-      let query = db.collection(getCollectionName(COLLECTIONS.PAYOUTS))
+      // Query usdPayouts collection (matches where PayoutService writes)
+      let query = db.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS))
         .where('userId', '==', userId)
-        .orderBy('createdAt', 'desc')
+        .orderBy('requestedAt', 'desc')
         .limit(limit);
 
       // Apply status filter if provided
@@ -59,45 +44,32 @@ export async function GET(request: NextRequest) {
 
       payouts = payoutsSnapshot.docs.map(doc => {
         const data = doc.data();
+        const amountCents = data.amountCents || 0;
         return {
           id: doc.id,
-          amount: data.amount || 0,
-          currency: data.currency || 'usd',
+          amount: amountCents / 100,
+          amountCents,
+          currency: 'usd',
           status: data.status || 'pending',
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
-          scheduledAt: data.scheduledAt?.toDate?.()?.toISOString() || data.scheduledAt,
-          completedAt: data.completedAt?.toDate?.()?.toISOString() || data.completedAt,
-          processedAt: data.processedAt?.toDate?.()?.toISOString() || data.processedAt,
-          description: data.description || `Payout for ${data.period || 'earnings'}`,
-          period: data.period || new Date().toISOString().slice(0, 7), // YYYY-MM format
-          bankAccount: data.bankAccount || 'Bank Account ****',
-          arrivalDate: data.arrivalDate || data.completedAt?.toDate?.()?.toISOString() || null,
-          failureReason: data.failureReason,
-          stripeTransferId: data.stripeTransferId,
-          metadata: data.metadata
+          createdAt: data.requestedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          completedAt: data.completedAt?.toDate?.()?.toISOString() || null,
+          description: `Payout ${doc.id}`,
+          failureReason: data.failureReason || null,
+          stripeTransferId: data.stripePayoutId || null,
         };
       });
 
-      console.log(`Found ${payouts.length} payouts for user ${userId}`);
 
     } catch (error) {
       console.error('Error querying payouts from Firestore:', error);
-
-      // If there's a Firestore error (like missing index), fall back to empty array
-      // but log the error for debugging
-      console.log('Falling back to empty payouts array due to Firestore error');
       payouts = [];
     }
-
-    // Return empty array if no real payouts found - no fake data in production
-    console.log(`Found ${payouts.length} real payouts for user ${userId}`);
-    // Only show real payouts - no fake data in production
 
     // Get summary statistics
     const totalPayouts = payouts.length;
     const totalAmount = payouts.reduce((sum, payout) => sum + payout.amount, 0);
     const completedPayouts = payouts.filter(p => p.status === 'paid' || p.status === 'completed').length;
-    const pendingPayouts = payouts.filter(p => p.status === 'pending' || p.status === 'in_transit').length;
+    const pendingPayouts = payouts.filter(p => p.status === 'pending' || p.status === 'pending_approval').length;
     const failedPayouts = payouts.filter(p => p.status === 'failed' || p.status === 'canceled').length;
 
     return NextResponse.json({
@@ -151,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user data
-    const db = admin.firestore();
+    const db = getAdmin().firestore();
     const userDoc = await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).get();
     const userData = userDoc.data();
 
@@ -170,37 +142,30 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Create payout record in our database
+    // Create payout record in usdPayouts collection (matches PayoutService schema)
     const payoutId = `payout_${Date.now()}_${userId.substring(0, 8)}`;
+    const amountCents = Math.round(amount * 100);
     const payoutData = {
       id: payoutId,
       userId,
-      amount,
-      currency: 'usd',
+      amountCents,
       status: 'pending',
-      description: description || `Payout for ${period || 'earnings'}`,
-      period: period || null,
-      bankAccountId: primaryBankAccountId,
-      stripeConnectedAccountId,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      requestedAt: getAdmin().firestore.FieldValue.serverTimestamp(),
     };
 
-    await db.collection(getCollectionName(COLLECTIONS.PAYOUTS)).doc(payoutId).set(payoutData);
+    await db.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS)).doc(payoutId).set(payoutData);
 
-    // TODO: Integrate with actual Stripe payout creation
-    // For now, we'll just create the record and mark it as pending
-    // In production, this would trigger the actual Stripe payout
+    // Payout record created — Stripe payout transfer integration pending
 
     return NextResponse.json({
       success: true,
       payout: {
         id: payoutId,
         amount,
+        amountCents,
         currency: 'usd',
         status: 'pending',
         createdAt: new Date().toISOString(),
-        description: payoutData.description
       },
       message: 'Payout request created successfully'
     });

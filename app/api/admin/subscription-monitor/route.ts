@@ -8,14 +8,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { initAdmin } from '../../../firebase/admin';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../api/auth-helper';
+import { getCollectionName } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
 // Initialize Firebase Admin and Stripe
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'});
+const stripe = getStripe();
 
 interface CustomerIssue {
   customerId: string;
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const userRef = adminDb.collection('users').doc(userId);
+    const userRef = adminDb.collection(getCollectionName('users')).doc(userId);
     const userDoc = await userRef.get();
     const userData = userDoc.data();
     
@@ -156,7 +156,7 @@ async function analyzeCustomerSubscriptions(customer: Stripe.Customer): Promise<
     // Check for Firebase user association
     let userId: string | undefined;
     try {
-      const usersSnapshot = await adminDb.collection('users')
+      const usersSnapshot = await adminDb.collection(getCollectionName('users'))
         .where('stripeCustomerId', '==', customer.id)
         .limit(1)
         .get();

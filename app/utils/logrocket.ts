@@ -493,7 +493,6 @@ class LogRocketService {
   testRedactionLogic(): void {
     if (typeof window === 'undefined') return;
 
-    console.log('🧪 Testing LogRocket redaction logic...');
 
     // Test cases for elements that SHOULD be redacted
     const sensitiveTestCases = [
@@ -515,7 +514,6 @@ class LogRocketService {
       { id: 'page-description', name: 'description', type: 'text' }
     ];
 
-    console.log('🔒 Elements that SHOULD be redacted:');
     sensitiveTestCases.forEach(testCase => {
       const mockElement = document.createElement('input');
       Object.entries(testCase).forEach(([key, value]) => {
@@ -527,10 +525,8 @@ class LogRocketService {
       });
 
       const shouldRedact = this.isSensitiveFinancialElement(mockElement);
-      console.log(`  ${JSON.stringify(testCase)} → ${shouldRedact ? '✅ REDACTED' : '❌ NOT REDACTED'}`);
     });
 
-    console.log('✅ Elements that should NOT be redacted:');
     publicTestCases.forEach(testCase => {
       const mockElement = document.createElement('input');
       Object.entries(testCase).forEach(([key, value]) => {
@@ -538,7 +534,6 @@ class LogRocketService {
       });
 
       const shouldRedact = this.isSensitiveFinancialElement(mockElement);
-      console.log(`  ${JSON.stringify(testCase)} → ${shouldRedact ? '❌ REDACTED' : '✅ NOT REDACTED'}`);
     });
   }
 

@@ -119,13 +119,6 @@ export async function testMapTileAccess(isDarkMode: boolean = false): Promise<bo
   const config = getMapTileConfig(isDarkMode);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-  console.log('🗺️ Map Diagnostics:', {
-    isDarkMode,
-    hasMapboxToken: !!mapboxToken,
-    mapboxTokenPrefix: mapboxToken ? mapboxToken.substring(0, 10) + '...' : 'none',
-    tileUrl: config.url,
-    attribution: config.attribution
-  });
 
   // Test both Mapbox and fallback URLs
   const testUrls = [];
@@ -145,14 +138,12 @@ export async function testMapTileAccess(isDarkMode: boolean = false): Promise<bo
 
   for (const { name, url } of testUrls) {
     try {
-      console.log(`🧪 Testing ${name} tiles:`, url);
 
       const response = await fetch(url, {
         method: 'HEAD',
         mode: 'no-cors'
       });
 
-      console.log(`✅ ${name} tiles accessible`);
       return true;
     } catch (error) {
       console.warn(`❌ ${name} tile test failed:`, {

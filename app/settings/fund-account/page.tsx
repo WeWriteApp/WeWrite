@@ -70,14 +70,6 @@ export default function FundAccountPage() {
             amount = data.amount;
           }
 
-          console.log('[Fund Account] Subscription data:', {
-            hasSubscription: data.hasSubscription,
-            status: data.status,
-            amount: amount,
-            fullDataAmount: data.fullData?.amount,
-            apiAmount: data.amount,
-            stripeAmount: data.fullData?.items?.data?.[0]?.price?.unit_amount
-          });
 
           if (data.hasSubscription && data.fullData) {
             // Active subscription - use current amount
@@ -112,7 +104,6 @@ export default function FundAccountPage() {
     if (updateSubscriptionId && updateAmount && currentSubscription) {
       const amount = parseInt(updateAmount);
       if (amount && amount !== currentSubscription.amount) {
-        console.log(`Auto-triggering subscription update from ${currentSubscription.amount} to ${amount}`);
         setSelectedAmount(amount);
 
         // Auto-trigger the update after a short delay to ensure UI is ready

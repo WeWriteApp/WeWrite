@@ -137,7 +137,6 @@ const initialWidgets = [
 ];
 
 export default function AdminDashboardPage() {
-  console.log('🚀🚀🚀 AdminDashboardPage component is rendering! 🚀🚀🚀');
 
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -185,7 +184,6 @@ export default function AdminDashboardPage() {
           const endDate = new Date(parsed.endDate);
           // Validate dates are valid
           if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-            console.log('🗓️ [Admin Dashboard] Restored date range from localStorage:', { startDate, endDate });
             return { startDate, endDate };
           }
         }
@@ -197,7 +195,6 @@ export default function AdminDashboardPage() {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 6);
-    console.log('🗓️ [Admin Dashboard] Initial date range:', { startDate, endDate });
     return { startDate, endDate };
   });
 
@@ -231,20 +228,8 @@ export default function AdminDashboardPage() {
   // Removed view mode state - now only desktop-optimized mode
 
   // Debug logging for admin dashboard state
-  console.log('📊 [Admin Dashboard] Current state:', {
-    dateRange,
-    granularity,
-    globalFilters,
-    dashboardLoading
-  });
 
   // Debug current user authentication
-  console.log('🔐 [Admin Dashboard] Current user:', {
-    user: user?.user,
-    email: user?.user?.email,
-    uid: user?.user?.uid,
-    isAdmin: user?.user?.email ? isAdmin(user.user.email) : false
-  });
 
   // Removed view mode and list items handlers - now using desktop-optimized component
 
@@ -312,14 +297,11 @@ export default function AdminDashboardPage() {
       // Use user.isAdmin from auth context for consistency with sidebar
       setIsAdminUser(user.isAdmin === true);
       if (!user.isAdmin) {
-        console.log('❌ [Admin Dashboard] User is not admin, redirecting to home');
         router.push('/');
       } else {
-        console.log('✅ [Admin Dashboard] User is admin, loading dashboard');
         setDashboardLoading(false);
       }
     } else {
-      console.log('❌ [Admin Dashboard] No user, redirecting to login');
       router.push('/auth/login?redirect=/admin/product-kpis');
     }
   }, [user, authLoading, router]);
@@ -384,14 +366,12 @@ export default function AdminDashboardPage() {
           <UnifiedErrorBoundary>
             {(() => {
               if (dashboardLoading) {
-                console.log('🔄🔄🔄 Dashboard is loading, showing skeleton 🔄🔄🔄');
                 return (
                   <>
                     <DashboardGridSkeleton />
                   </>
                 );
               } else {
-                console.log('🎯🎯🎯 Dashboard loaded, rendering desktop-optimized mode! 🎯🎯🎯');
 
                 // Always use desktop-optimized dashboard (no grid mode)
                 return (

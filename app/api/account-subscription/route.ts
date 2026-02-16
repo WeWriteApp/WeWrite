@@ -24,7 +24,6 @@ export { subscriptionCache };
 export const invalidateSubscriptionCache = (userId: string): void => {
   const cacheKey = `subscription:${userId}`;
   subscriptionCache.delete(cacheKey);
-  console.log(`🔄 Invalidated subscription cache for user: ${userId}`);
 };
 
 export async function GET(request: NextRequest) {
@@ -44,7 +43,6 @@ export async function GET(request: NextRequest) {
     const cacheKey = `subscription:${targetUserId}`;
     const cached = subscriptionCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < SUBSCRIPTION_CACHE_TTL) {
-      console.log(`🚀 EMERGENCY COST OPTIMIZATION: Returning cached subscription for ${targetUserId}`);
       return NextResponse.json({
         ...cached.data,
         cached: true,
@@ -63,24 +61,12 @@ export async function GET(request: NextRequest) {
     const enableDebugLogging = process.env.SUBSCRIPTION_DEBUG === 'true';
 
     if (enableDebugLogging) {
-      console.log(`[ACCOUNT SUBSCRIPTION] 🔍 VERBOSE: Subscription data for user ${targetUserId}:`, {
-        hasSubscription: !!subscription,
-        status: subscription?.status,
-        amount: subscription?.amount,
-        tokens: (subscription as any)?.tokens,
-        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
-        subscriptionExists: subscription !== null,
-        subscriptionType: typeof subscription,
-        subscriptionKeys: subscription ? Object.keys(subscription) : null,
-        fullData: subscription
-      });
     } else {
       // Minimal logging for normal operation
       console.log(`[ACCOUNT SUBSCRIPTION] User ${targetUserId}: ${subscription?.status || 'no subscription'} (${subscription?.amount || 0} tokens)`);
     }
 
     if (!subscription) {
-      console.log(`[ACCOUNT SUBSCRIPTION] 🔴 No subscription data found for user ${targetUserId} - treating as inactive user`);
       // Instead of returning an error, treat this as an inactive user
       // This handles cases where subscription data is corrupted or missing
       const inactiveResponse = {
@@ -142,7 +128,6 @@ export async function GET(request: NextRequest) {
     };
     // Log full response for debugging
     if (enableDebugLogging) {
-      console.log(`[ACCOUNT SUBSCRIPTION] ✅ Returning active subscription response:`, activeResponse);
     }
 
     // EMERGENCY COST OPTIMIZATION: Cache the response
@@ -170,7 +155,6 @@ export async function POST(request: NextRequest) {
       const cacheKey = `subscription:${userId}`;
       if (subscriptionCache.has(cacheKey)) {
         subscriptionCache.delete(cacheKey);
-        console.log(`🗑️ Subscription cache invalidated for user: ${userId}`);
       }
 
       return NextResponse.json({

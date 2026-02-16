@@ -37,10 +37,8 @@ export default function SolidColorPicker({ className }: SolidColorPickerProps) {
 
   const handleImageUpload = () => {
     if (imageUrl.trim()) {
-      console.log('Setting image background:', imageUrl.trim());
       const newBackground: ImageBackground = { type: 'image', url: imageUrl.trim() };
       setBackground(newBackground);
-      console.log('Background set to:', newBackground);
     }
   };
 

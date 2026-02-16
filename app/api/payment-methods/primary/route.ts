@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin } from '../../../firebase/admin';
 import { getUserIdFromRequest } from '../../auth-helper';
-import Stripe from 'stripe';
-import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getStripe } from '../../../lib/stripe';
 
 // Initialize Firebase Admin lazily
 let db: any;
@@ -27,8 +27,7 @@ function initializeFirebase() {
   return { db };
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil' as any});
+const stripe = getStripe();
 
 // POST /api/payment-methods/primary - Set a payment method as primary
 export async function POST(request: NextRequest) {
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the user's customer ID from Firestore
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
 
     if (!userData || !userData.stripeCustomerId) {
@@ -77,16 +76,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the payment methods metadata
-    const paymentMethodsDoc = await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').get();
+    const paymentMethodsDoc = await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').get();
     const paymentMethodsData = paymentMethodsDoc.exists ? paymentMethodsDoc.data() : { primary: null, order: [] };
 
     // Update the primary payment method
-    await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').set({
+    await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').set({
       primary: paymentMethodId}, { merge: true });
 
     // If the payment method is not in the order array, add it
     if (!paymentMethodsData.order.includes(paymentMethodId)) {
-      await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').update({
+      await db.collection(getCollectionName('users')).doc(userId).collection('paymentMethods').doc('metadata').update({
         order: [...paymentMethodsData.order, paymentMethodId]});
     }
 

@@ -99,7 +99,6 @@ export async function createTestPageLinks(links: TestLinkData[]) {
     }
 
     await batch.commit();
-    console.log(`✅ Created ${links.length} test links successfully`);
     
     return { success: true, linksCreated: links.length };
   } catch (error) {

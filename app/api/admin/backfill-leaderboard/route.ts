@@ -62,7 +62,6 @@ export async function POST(request: NextRequest) {
       collections: {}
     };
 
-    console.log(`🔄 Starting leaderboard backfill for ${targetEnv} (dryRun: ${dryRun})`);
 
     // Backfill pages
     if (collection === 'pages' || collection === 'all') {
@@ -103,7 +102,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('✅ Backfill complete:', JSON.stringify(results, null, 2));
 
     return NextResponse.json({
       success: true,
@@ -129,7 +127,6 @@ async function backfillTimestamps(
 ): Promise<{ total: number; needsUpdate: number; updated: number; errors: number; sample: any[] }> {
   const admin = await import('firebase-admin');
   
-  console.log(`📦 Processing collection: ${collectionName}`);
   
   const snapshot = await db.collection(collectionName).get();
   
@@ -208,7 +205,6 @@ async function backfillTimestamps(
         if (batchCount >= MAX_BATCH) {
           await batch.commit();
           updated += batchCount;
-          console.log(`  Committed batch of ${MAX_BATCH} for ${collectionName}`);
           // Create a new batch for the next set of updates
           batch = db.batch();
           batchCount = 0;
@@ -221,7 +217,6 @@ async function backfillTimestamps(
   if (!dryRun && batchCount > 0) {
     await batch.commit();
     updated += batchCount;
-    console.log(`  Committed final batch of ${batchCount} for ${collectionName}`);
   }
   
   return {
@@ -238,7 +233,6 @@ async function checkPageViews(
   collectionName: string,
   dryRun: boolean
 ): Promise<{ total: number; withDate: number; withoutDate: number; sample: any[] }> {
-  console.log(`📦 Checking collection: ${collectionName}`);
   
   const snapshot = await db.collection(collectionName).get();
   

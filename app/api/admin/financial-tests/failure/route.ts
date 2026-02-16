@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { failureCode = 'test_failure', note } = await request.json();
-    console.log('🧪 [ADMIN] Simulate test payout failure request', { envType, host, devBypass, failureCode, note, userId });
 
     const adminSdk = getFirebaseAdmin();
     if (!adminSdk) {
@@ -51,7 +50,6 @@ export async function POST(request: NextRequest) {
     };
 
     const batchRef = await adminDb.collection(TEST_BATCH_COLLECTION).add(payload);
-    console.log('🧪 [ADMIN] Test payout failure recorded', { id: batchRef.id, ...payload });
 
     return NextResponse.json({
       success: true,

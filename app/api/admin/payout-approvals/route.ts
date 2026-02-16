@@ -16,32 +16,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 
 async function handleGetApprovals(req: NextRequest) {
   try {
-    // Get admin user from request
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminCheck = await checkAdminPermissions(req);
+    if (!adminCheck.success) {
+      return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
     const admin = getFirebaseAdmin();
     if (!admin) {
       return NextResponse.json({ error: 'Server not available' }, { status: 500 });
-    }
-
-    // Verify admin token
-    const token = authHeader.split('Bearer ')[1];
-    let decodedToken;
-    try {
-      decodedToken = await admin.auth().verifyIdToken(token);
-    } catch (error) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    if (!decodedToken.admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
     // Parse query params

@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
     const admin = initAdmin();
     const db = admin.firestore();
 
-    console.log(`🔍 Getting what-links-here for page ${pageId} (limit: ${limit})`);
 
     // Query the what-links-here index (collection named 'backlinks' for historical reasons)
     let whatLinksHereQuery = db.collection(getCollectionName('backlinks'))
@@ -63,7 +62,6 @@ export async function GET(request: NextRequest) {
     const whatLinksHereSnapshot = await whatLinksHereQuery.get();
 
     if (whatLinksHereSnapshot.empty) {
-      console.log(`📭 No linking pages found for page ${pageId}`);
       return createApiResponse({
         backlinks: [], // Keep response field name for API compatibility
         count: 0,
@@ -145,7 +143,6 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    console.log(`✅ Found ${linkedPages.length} pages linking to page ${pageId}`);
 
     return createApiResponse({
       backlinks: linkedPages, // Keep 'backlinks' field name for API compatibility
@@ -185,7 +182,6 @@ export async function POST(request: NextRequest) {
     const admin = initAdmin();
     const db = admin.firestore();
 
-    console.log(`🔄 Updating what-links-here index for page ${pageId}`);
 
     // Extract links from content nodes
     const extractedLinks = extractLinksFromContent(contentNodes);
@@ -221,7 +217,6 @@ export async function POST(request: NextRequest) {
 
     await batch.commit();
 
-    console.log(`✅ Updated what-links-here index for page ${pageId}: ${extractedLinks.length} links`);
 
     return createApiResponse({
       success: true,

@@ -305,7 +305,6 @@ export default function NotificationItem({ notification }) {
                           }),
                         });
                         if (response.ok) {
-                          console.log('Verification email sent via Resend');
                         } else {
                           console.error('Failed to send verification email');
                         }
@@ -340,7 +339,6 @@ export default function NotificationItem({ notification }) {
                       dismissEmailVerificationNotifications();
                       // Mark this notification as read
                       await markAsRead(notification.id);
-                      console.log('Email verification notifications dismissed');
                     } catch (error) {
                       console.error('Error dismissing email verification notifications:', error);
                     }
@@ -469,7 +467,6 @@ export default function NotificationItem({ notification }) {
                       if (response.ok && data.success) {
                         // Mark notification as read on success
                         await markAsRead(notification.id);
-                        console.log('Payment retry successful');
                       } else {
                         console.error('Payment retry failed:', data.error);
                       }

@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
     // Default to previous month if no period specified
     const targetPeriod = period || getPreviousMonth();
 
-    console.log(`Processing writer USD earnings for period: ${targetPeriod} (dry run: ${dryRun})`);
 
     let result;
     if (!dryRun) {

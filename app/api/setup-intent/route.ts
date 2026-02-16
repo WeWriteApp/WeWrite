@@ -3,9 +3,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '../../firebase/admin';
 import { getUserIdFromRequest } from '../auth-helper';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../utils/stripeConfig';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import { getStripe } from '../../lib/stripe';
 
 // Initialize Firebase Admin lazily
 let auth: any;
@@ -31,10 +30,7 @@ function initializeFirebase() {
   return { auth, db };
 }
 
-// Get the appropriate Stripe key based on environment
-const stripeSecretKey = getStripeSecretKey();
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-04-30.basil' as any});
+const stripe = getStripe();
 
 // POST /api/setup-intent - Create a setup intent for adding a payment method
 export async function POST(request: NextRequest) {
@@ -86,7 +82,6 @@ export async function POST(request: NextRequest) {
         // Keep email local part only for backend metadata clarity, never surface as username
         const email_local_part = emailLocalPart || undefined;
         if (email_local_part) {
-          console.log('Using email_local_part for Stripe metadata only');
         }
       } catch (error) {
         console.warn('Could not fetch username for Stripe customer:', error);

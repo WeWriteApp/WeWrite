@@ -23,7 +23,6 @@ export async function createUsernameHistoryIndex(): Promise<IndexResult> {
   try {
     // Check if we're in a browser environment
     if (typeof window !== 'undefined') {
-      console.log('Creating Firestore index can only be done in a server environment');
       return {
         success: false,
         message: 'Index creation must be done in a server environment with appropriate credentials'
@@ -49,14 +48,11 @@ export async function createUsernameHistoryIndex(): Promise<IndexResult> {
       ]
     };
 
-    console.log('Index configuration that needs to be created:', indexConfig);
 
-    // TODO: Implement actual index creation when firebase-mcp is available
-    // await mcp.createIndex(indexConfig);
-    
+    // Programmatic index creation not available — create manually via Firebase Console
     return {
       success: true,
-      message: 'Index configuration logged - manual creation required until firebase-mcp is available'
+      message: 'Index configuration logged — create manually via Firebase Console'
     };
   } catch (error: any) {
     console.error('Error creating Firestore index:', error);

@@ -28,16 +28,13 @@ export async function GET(
       currentUserId = await getUserIdFromRequest(request);
     } catch (error) {
       // Anonymous access is allowed for public user data
-      console.log('🔓 Anonymous access to user data:', userId);
     }
 
-    console.log(`👤 [User API] Fetching user ${userId} for ${currentUserId || 'anonymous'}`);
 
     // Check enhanced cache first
     const cachedUserData = userCache.get(userId, 'profile');
     if (cachedUserData) {
       const responseTime = Date.now() - startTime;
-      console.log(`🚀 [User API] Cache hit for ${userId} (${responseTime}ms)`);
 
       // Only use username field - displayName and email are deprecated for display
       const safeUsername = sanitizeUsername(
@@ -80,7 +77,6 @@ export async function GET(
       return response;
     }
 
-    console.log(`💸 [User API] Cache miss for ${userId} - fetching from database`);
 
     // Track this read for cost monitoring
     trackFirebaseRead('users', 'getUserById', 1, 'api-user-profile-data');
@@ -138,7 +134,6 @@ export async function GET(
     userCache.set(userId, { ...userData, username: safeUsername }, 'profile');
 
     const responseTime = Date.now() - startTime;
-    console.log(`✅ [User API] Successfully fetched ${userId} (${responseTime}ms)`);
 
     // Return successful result with enhanced cache headers
     const response = NextResponse.json({

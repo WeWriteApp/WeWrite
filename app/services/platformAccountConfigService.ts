@@ -6,7 +6,7 @@
  */
 
 import Stripe from 'stripe';
-import { getStripeSecretKey } from '../utils/stripeConfig';
+import { getStripe } from '../lib/stripe';
 
 export interface PlatformAccountConfig {
   payoutSchedule: 'manual' | 'daily' | 'weekly' | 'monthly';
@@ -34,9 +34,7 @@ export class PlatformAccountConfigService {
   private static instance: PlatformAccountConfigService;
 
   constructor() {
-    this.stripe = new Stripe(getStripeSecretKey() || '', {
-      apiVersion: '2024-06-20'
-    });
+    this.stripe = getStripe();
   }
 
   static getInstance(): PlatformAccountConfigService {

@@ -32,10 +32,8 @@ function cleanLinkElements(content: any[]): any[] {
         }
       }
 
-      // 🔧 CRITICAL FIX: Repair links with undefined pageId
+      // Mark links with undefined pageId for identification (render handles gracefully)
       if (cleanElement.type === 'link' && cleanElement.pageId === undefined && cleanElement.pageTitle) {
-        // TODO: Implement actual repair logic here
-        // For now, we'll mark these for manual repair
         cleanElement = {
           ...cleanElement,
           needsRepair: true,
@@ -412,11 +410,10 @@ export async function PATCH(
     // Track this write for cost monitoring
     trackFirebaseRead('pages', 'updatePage', 1, 'api-update');
 
-    // TODO: Implement page update logic
-    // For now, return not implemented
+    // Page updates are handled via direct Firestore writes in the editor
     return NextResponse.json(
-      { error: 'Page updates not yet implemented in this endpoint' },
-      { status: 501 }
+      { error: 'Page updates use direct Firestore writes — this endpoint is read-only' },
+      { status: 405 }
     );
 
   } catch (error) {

@@ -38,7 +38,6 @@ export async function getUserPages(
         const cachedData = getCacheItem(cacheKey);
 
         if (cachedData) {
-          console.log(`Using cached data for user pages (${userId})`);
           return cachedData;
         }
       }
@@ -145,7 +144,6 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
       const cachedData = getCacheItem(cacheKey);
 
       if (cachedData) {
-        console.log(`Using cached user profile for ${userId}`);
         return cachedData;
       }
     }

@@ -352,10 +352,21 @@ export class PayoutErrorLogger {
   private async sendToExternalMonitoring(errorLog: PayoutErrorLog): Promise<void> {
     try {
       // Only send high/critical errors to external monitoring to avoid noise
-      if (errorLog.severity === PayoutErrorSeverity.HIGH || 
+      if (errorLog.severity === PayoutErrorSeverity.HIGH ||
           errorLog.severity === PayoutErrorSeverity.CRITICAL) {
-        
-        // TODO: Integrate with external monitoring service (Sentry, DataDog, etc.)
+
+        // LogRocket is client-side only
+        if (typeof window !== 'undefined') {
+          const { default: logRocketService } = await import('../utils/logrocket');
+          logRocketService.logError(new Error(errorLog.message), {
+            correlationId: errorLog.correlationId,
+            category: errorLog.category,
+            severity: errorLog.severity,
+            payoutId: errorLog.context.payoutId,
+            userId: errorLog.context.userId,
+            operation: errorLog.context.operation,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to send to external monitoring:', error);

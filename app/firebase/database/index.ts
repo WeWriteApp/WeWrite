@@ -189,7 +189,6 @@ export const getPageMetadata = async (pageId: string): Promise<any> => {
   } catch (error) {
     // Handle permission denied errors gracefully - this is expected for private pages
     if (error?.code === 'permission-denied') {
-      console.log('Permission denied getting page metadata - this is expected for private pages');
     } else {
       console.error('Error getting page metadata:', error);
     }

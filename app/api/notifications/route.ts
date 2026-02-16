@@ -66,7 +66,6 @@ export async function GET(request: NextRequest) {
           try {
             // In a real implementation, you'd need to reconstruct the document reference
             // For now, we'll skip pagination and just return the first page
-            console.log('Pagination not fully implemented in API - returning first page');
           } catch (error) {
             console.warn('Error handling pagination:', error);
           }

@@ -118,7 +118,6 @@ class EnhancedSearchCache {
     this.stats.hits++;
     this.stats.costSavings += this.calculateSearchCost(entry.resultCount);
 
-    console.log(`🚀 SEARCH CACHE: Hit for "${searchTerm}" ${searchType} (tier: ${entry.tier}, results: ${entry.resultCount})`);
     return entry.data;
   }
 
@@ -159,7 +158,6 @@ class EnhancedSearchCache {
     // Update average result count
     this.updateAverageResultCount();
 
-    console.log(`💾 SEARCH CACHE: Stored "${searchTerm}" ${searchType} (tier: ${tier}, results: ${data.length}, size: ${this.cache.size})`);
   }
 
   /**
@@ -203,7 +201,6 @@ class EnhancedSearchCache {
     if (leastUsefulKey) {
       this.cache.delete(leastUsefulKey);
       this.stats.evictions++;
-      console.log(`🗑️  SEARCH CACHE: Evicted search (score: ${leastUsefulScore.toFixed(3)})`);
     }
   }
 
@@ -259,7 +256,6 @@ class EnhancedSearchCache {
     }
     
     keysToDelete.forEach(key => this.cache.delete(key));
-    console.log(`🗑️  SEARCH CACHE: Cleared ${keysToDelete.length} ${searchType} entries`);
   }
 
   /**
@@ -268,7 +264,6 @@ class EnhancedSearchCache {
   clear(): void {
     this.cache.clear();
     this.stats = { hits: 0, misses: 0, evictions: 0, totalRequests: 0, costSavings: 0, averageResultCount: 0 };
-    console.log('🧹 SEARCH CACHE: Cleared all entries');
   }
 
   /**
@@ -288,7 +283,6 @@ class EnhancedSearchCache {
     keysToDelete.forEach(key => this.cache.delete(key));
     
     if (keysToDelete.length > 0) {
-      console.log(`🧹 SEARCH CACHE: Cleaned up ${keysToDelete.length} expired entries`);
       this.updateAverageResultCount();
     }
   }

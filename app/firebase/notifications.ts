@@ -31,7 +31,6 @@ import { createNotification as apiCreateNotification } from '../services/notific
  */
 export const createTestNotification = async (userId: string): Promise<string | null> => {
   try {
-    console.log('🔔 createTestNotification: Creating test notification for user:', userId);
 
     if (!userId) {
       return null;
@@ -75,7 +74,6 @@ export const createTestNotification = async (userId: string): Promise<string | n
     };
 
     const notificationId = await apiCreateNotification(notificationData);
-    console.log('🔔 createTestNotification: Created test notification:', notificationId);
 
     return notificationId;
   } catch (error) {

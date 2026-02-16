@@ -197,7 +197,6 @@ export default function ContentPageFooter({
                         // Update the page object to reflect the change
                         page.customDate = newDate;
 
-                        console.log('Custom date updated successfully to:', newDate);
                       } catch (error) {
                         console.error('Error updating custom date:', error);
                         toast({

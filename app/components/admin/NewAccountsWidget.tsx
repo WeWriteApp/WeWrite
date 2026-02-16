@@ -23,26 +23,15 @@ interface NewAccountsWidgetProps {
 }
 
 export function NewAccountsWidget({ dateRange, granularity, className = "", globalFilters }: NewAccountsWidgetProps) {
-  console.log('🔥🔥🔥 NewAccountsWidget is rendering! 🔥🔥🔥');
-  console.log('📊 NewAccountsWidget props:', { dateRange, granularity, globalFilters });
 
   const { data: rawData, loading, error } = useAccountsMetrics(dateRange, granularity);
 
-  console.log('📈 NewAccountsWidget data state:', {
-    rawDataLength: rawData?.length,
-    loading,
-    error,
-    hasData: !!rawData
-  });
 
   // Debug: Log what filters we received
-  console.log('🔍 NewAccountsWidget received filters:', globalFilters);
 
   // Debug: Check if widget is rendering at all
   if (globalFilters) {
-    console.log('✅ NewAccountsWidget: Global filters are present');
   } else {
-    console.log('❌ NewAccountsWidget: No global filters received');
   }
 
   // Apply global filters if provided
@@ -58,11 +47,6 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
 
     // Debug: Log the transformation to verify cumulative mode works
     if (globalFilters.timeDisplayMode === 'cumulative') {
-      console.log('🔄 Cumulative Mode Active:', {
-        mode: globalFilters.timeDisplayMode,
-        rawDataSample: rawData.slice(0, 5).map(d => ({ date: d.date, count: d.count })),
-        processedDataSample: processedData.slice(0, 5).map(d => ({ date: d.date, count: d.count }))
-      });
     }
 
     // Get appropriate display labels

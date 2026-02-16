@@ -8,6 +8,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { withAdminContext } from '../../../utils/adminRequestContext';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface AdminUser {
   id: string;
@@ -31,10 +32,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: adminCheck.error || 'Admin access required' }, { status: 403 });
     }
 
-    console.log('Loading admin users from Firestore via API...');
 
     // Get admin users from config
-    const adminUsersRef = db.collection('config').doc('adminUsers');
+    const adminUsersRef = db.collection(getCollectionName('config')).doc('adminUsers');
     const adminUsersDoc = await adminUsersRef.get();
 
     if (!adminUsersDoc.exists) {
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     
     for (const adminUserId of adminUserIds) {
       try {
-        const userRef = db.collection('users').doc(adminUserId);
+        const userRef = db.collection(getCollectionName('users')).doc(adminUserId);
         const userDoc = await userRef.get();
 
         if (userDoc.exists) {
@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`Successfully loaded ${adminUsers.length} admin users`);
 
     return NextResponse.json({
       success: true,
@@ -122,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current admin users
-    const adminUsersRef = db.collection('config').doc('adminUsers');
+    const adminUsersRef = db.collection(getCollectionName('config')).doc('adminUsers');
     const adminUsersDoc = await adminUsersRef.get();
     
     let currentAdminIds: string[] = [];

@@ -41,7 +41,6 @@ export default function TrendingPageClient() {
     const fetchTrendingPages = async () => {
       try {
         setLoading(true);
-        console.log('TrendingPageClient: Fetching trending pages with limit: 50');
 
         // Get trending pages for the last 24 hours using API endpoint
         const apiResponse = await fetch('/api/trending?limit=50');
@@ -70,17 +69,14 @@ export default function TrendingPageClient() {
         // Get pages from standardized API response
         const pages = response.data?.trendingPages || [];
 
-        console.log('TrendingPageClient: Received pages:', pages.length);
 
         if (pages.length === 0) {
-          console.log('TrendingPageClient: No trending pages found');
           setTrendingPages([]);
           setLoading(false);
           return;
         }
 
         // The API now provides hourlyViews data for all pages, so we can use it directly
-        console.log('TrendingPageClient: Using hourly data from API');
 
         // Extract unique user IDs and fetch subscription data
         const uniqueUserIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];

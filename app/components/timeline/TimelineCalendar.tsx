@@ -40,7 +40,6 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
   // Fetch timeline pages for the current month
   const fetchPagesForMonth = useCallback(async (date: Date) => {
     if (!user?.uid) {
-      console.log('📅 TimelineCalendar: No current account, skipping fetch');
       return;
     }
 
@@ -50,12 +49,6 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
       const startDate = startOfMonth(date);
       const endDate = endOfMonth(date);
 
-      console.log('📅 TimelineCalendar: Fetching timeline pages for month:', {
-        month: format(date, 'yyyy-MM'),
-        startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd'),
-        userId: user.uid
-      });
 
       // Use the timeline API endpoint
       const apiUrl = '/api/timeline?' + new URLSearchParams({
@@ -71,7 +64,6 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
       }
 
       const result = await response.json();
-      console.log('📅 TimelineCalendar: API response:', result);
 
       const pages = result.pages || [];
       
@@ -88,11 +80,6 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
         }
       });
 
-      console.log('📅 TimelineCalendar: Processed pages by date:', {
-        totalPages: pages.length,
-        datesWithPages: pagesByDateMap.size,
-        dateKeys: Array.from(pagesByDateMap.keys()).sort()
-      });
 
       setPagesByDate(pagesByDateMap);
 
@@ -131,8 +118,7 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
       // Single page - navigate directly
       router.push(`/${pagesForDay[0].id}`);
     } else {
-      // Multiple pages - for now, navigate to the first one
-      // TODO: Could show a modal to select which page to view
+      // Multiple pages — navigate to the first one
       router.push(`/${pagesForDay[0].id}`);
     }
   };

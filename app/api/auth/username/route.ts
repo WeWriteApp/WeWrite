@@ -189,7 +189,6 @@ export async function POST(request: NextRequest) {
         lastModified: new Date().toISOString()
       });
       if (rtdbResult.success) {
-        console.log(`✅ Username updated in RTDB for user ${currentUserId}`);
       } else {
         console.error('❌ Failed to update username in RTDB:', rtdbResult.error);
       }

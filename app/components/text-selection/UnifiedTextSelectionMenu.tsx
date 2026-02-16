@@ -289,11 +289,9 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
         return;
       }
 
-      console.log('🔗 TEXT_SELECTION: Append succeeded', { targetPageId });
       toast.success(`Appended to "${page.title || 'page'}"`);
       // Redirect to target page in edit mode to show the appended quote
       const targetUrl = `/${targetPageId}?edit=true#appended`;
-      console.log('🔗 TEXT_SELECTION: Redirecting to appended page', { targetPageId, targetUrl });
       // Use both router.push and hard redirect as a safety net
       try {
         await router.push(targetUrl);
@@ -493,9 +491,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
 
   // Debug effect to track modal state changes
   useEffect(() => {
-    console.log('🔗 TEXT_SELECTION: showLinkModal changed to:', showLinkModal);
     if (showLinkModal) {
-      console.log('🔗 TEXT_SELECTION: Modal is now open, selectedText:', selectedText);
     }
   }, [showLinkModal, selectedText]);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -537,15 +533,8 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      console.log('🔗 TEXT_SELECTION: Click outside handler triggered', {
-        showLinkModal,
-        showModal,
-        target: event.target,
-        targetClass: (event.target as Element)?.className
-      });
       // Don't close if link modal is open
       if (showLinkModal) {
-        console.log('🔗 TEXT_SELECTION: Link modal is open, not closing menu');
         return;
       }
       // Keep menu open while add-to-page modal is open
@@ -558,7 +547,6 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
       }
 
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        console.log('🔗 TEXT_SELECTION: Closing menu due to click outside');
         onClose();
       }
     };
@@ -636,7 +624,6 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   };
 
   const handleOpenLinkModal = (e: React.MouseEvent) => {
-    console.log('🔗 TEXT_SELECTION: handleOpenLinkModal called');
     e.preventDefault();
     e.stopPropagation();
     e.nativeEvent.stopImmediatePropagation();
@@ -644,16 +631,12 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     // If we have an onInsertLink callback (from the editor), use it instead of showing our own modal
     // This allows the editor's native link insertion to work with the current selection
     if (onInsertLink) {
-      console.log('🔗 TEXT_SELECTION: Using editor onInsertLink callback');
       onInsertLink();
       onClose();
       return;
     }
 
-    console.log('🔗 TEXT_SELECTION: Event prevented, current showLinkModal:', showLinkModal);
-    console.log('🔗 TEXT_SELECTION: Setting showLinkModal to true...');
     setShowLinkModal(true);
-    console.log('🔗 TEXT_SELECTION: setShowLinkModal(true) called');
   };
 
   const handleModalClose = () => {
@@ -663,10 +646,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   };
 
   const handleLinkModalClose = () => {
-    console.log('🔗 TEXT_SELECTION: handleLinkModalClose called');
-    console.log('🔗 TEXT_SELECTION: Setting showLinkModal to false...');
     setShowLinkModal(false);
-    console.log('🔗 TEXT_SELECTION: setShowLinkModal(false) called');
     // Don't close the text selection menu, just the link modal
   };
 

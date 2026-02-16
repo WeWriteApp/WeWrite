@@ -194,7 +194,6 @@ const shouldUseProductionCollectionsAsync = async (): Promise<boolean> => {
         }
 
         if (process.env.DEBUG_VERBOSE === 'true') {
-          console.log('[Environment Config] ✓ Force production data header accepted for admin route');
         }
       }
       return forceProduction;
