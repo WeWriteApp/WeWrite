@@ -74,6 +74,37 @@ async function storeTokenServerSide(
   }
 }
 
+// Deduplication cooldown: skip sending if a verification email was sent within this window
+const DEDUP_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Check if a verification email was recently sent to this user.
+ * Returns true if a recent token exists (meaning we should skip sending).
+ */
+async function wasRecentlySent(userId: string): Promise<boolean> {
+  try {
+    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+    const admin = getFirebaseAdmin();
+    if (!admin) return false;
+
+    const db = admin.firestore();
+    const collectionName = getCollectionName('email_verification_tokens');
+    const cutoff = new Date(Date.now() - DEDUP_WINDOW_MS);
+
+    const snap = await db.collection(collectionName)
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', cutoff)
+      .limit(1)
+      .get();
+
+    return !snap.empty;
+  } catch (error) {
+    // If dedup check fails, allow the send (fail-open)
+    console.warn('[Send Verification] Dedup check failed, allowing send:', error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -89,12 +120,25 @@ export async function POST(request: NextRequest) {
 
     // Check for admin bypass (for sending verification on behalf of other users)
     const isAdminBypass = idToken === 'admin-bypass';
-    
+
     if (!idToken && !isAdminBypass) {
       return NextResponse.json(
         { error: 'Authentication token is required' },
         { status: 401 }
       );
+    }
+
+    // Dedup: skip if a verification email was already sent to this user recently
+    if (!isAdminBypass) {
+      const recent = await wasRecentlySent(userId);
+      if (recent) {
+        console.log(`[Send Verification] Skipping duplicate for user ${userId} (sent within ${DEDUP_WINDOW_MS / 1000}s)`);
+        return NextResponse.json({
+          success: true,
+          message: 'Verification email already sent recently',
+          deduplicated: true,
+        });
+      }
     }
 
     // Generate a unique verification token
