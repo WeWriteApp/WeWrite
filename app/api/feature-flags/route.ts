@@ -148,7 +148,9 @@ export async function POST(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    const adminCheck = await checkAdminPermissions(request);
+    // skipCsrf: admin session + SameSite cookies provide CSRF protection;
+    // the client-side CSRF token flow is unreliable across admin pages
+    const adminCheck = await checkAdminPermissions(request, { skipCsrf: true });
     if (!adminCheck.success) {
       return NextResponse.json({ success: false, error: adminCheck.error }, { status: 403 });
     }

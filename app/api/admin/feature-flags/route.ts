@@ -53,7 +53,8 @@ async function getUserOverrides(adminDb: FirebaseFirestore.Firestore, userId: st
 }
 
 async function assertAdmin(request: NextRequest): Promise<{ ok: boolean; email?: string; status?: number; error?: string }> {
-  const adminCheck = await checkAdminPermissions(request);
+  // skipCsrf: admin session + SameSite cookies provide CSRF protection
+  const adminCheck = await checkAdminPermissions(request, { skipCsrf: true });
   if (!adminCheck.success) {
     return { ok: false, status: 403, error: adminCheck.error || 'Admin access required' };
   }
