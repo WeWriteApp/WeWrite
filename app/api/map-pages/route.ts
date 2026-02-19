@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const groupId = searchParams.get('groupId') || undefined;
+
     const query: MapPagesQuery = {
       userId: searchParams.get('userId') || undefined,
       global: isGlobal,
@@ -74,9 +76,9 @@ export async function GET(request: NextRequest) {
       bounds
     };
 
-    // Either global or userId must be provided
-    if (!query.global && !query.userId) {
-      return NextResponse.json({ error: 'Either global=true or userId parameter is required' }, { status: 400 });
+    // Either global, userId, or groupId must be provided
+    if (!query.global && !query.userId && !groupId) {
+      return NextResponse.json({ error: 'Either global=true, userId, or groupId parameter is required' }, { status: 400 });
     }
 
     const admin = getFirebaseAdmin();
@@ -191,6 +193,45 @@ export async function GET(request: NextRequest) {
           lastModified: data.lastModified || data.createdAt || new Date().toISOString()
         });
       }
+    } else if (groupId) {
+      // Group-specific query - fetch pages belonging to the group with location data
+      const groupPagesQuery = db.collection(getCollectionName('pages'))
+        .where('groupId', '==', groupId);
+
+      const groupPagesSnapshot = await groupPagesQuery.get();
+
+      groupPagesSnapshot.forEach(doc => {
+        const data = doc.data();
+
+        if (data.deleted === true) return;
+        if (!data.location || typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') return;
+
+        // Apply viewport bounds filter
+        if (bounds) {
+          const { lat, lng } = data.location;
+          if (lat < bounds.south || lat > bounds.north) return;
+          if (bounds.west <= bounds.east) {
+            if (lng < bounds.west || lng > bounds.east) return;
+          } else {
+            if (lng < bounds.west && lng > bounds.east) return;
+          }
+        }
+
+        mapPages.push({
+          id: doc.id,
+          title: data.title || 'Untitled',
+          location: {
+            lat: data.location.lat,
+            lng: data.location.lng,
+            zoom: data.location.zoom || undefined
+          },
+          username: data.username || 'Unknown',
+          userId: data.userId,
+          lastModified: data.lastModified || data.createdAt || new Date().toISOString()
+        });
+      });
+
+      mapPages.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
     } else {
       // User-specific query (original behavior - no subscription filter)
       const userPagesQuery = db.collection(getCollectionName('pages'))

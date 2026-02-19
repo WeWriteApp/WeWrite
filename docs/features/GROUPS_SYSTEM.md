@@ -4,7 +4,8 @@
 
 Groups are collections of pages and users under a single owner. They allow collaborative page management and shared earnings distribution.
 
-- Route: `/g/[slug]` (group landing page), `/groups` (user's groups list)
+- Route: **canonical** `/g/[id]` (group landing page), `/groups` (user's groups list)
+- `/group/[id]` is supported for backwards compatibility: it redirects to `/g/[id]` (so notifications, activity, and search links work).
 - Feature-flagged under `groups`, defaulted to **off** globally, **auto-enabled for admins**
 - Navigation: appears in mobile toolbar and desktop sidebar when enabled
 
@@ -144,9 +145,10 @@ All routes require authentication. Group creation requires the `groups` feature 
 
 | File | Description |
 |---|---|
-| `app/g/[slug]/page.tsx` | Group landing page (SSR + ISR, 60s revalidation) |
-| `app/g/[slug]/GroupPageClient.tsx` | Client component with pages/members tabs |
-| `app/g/[slug]/settings/page.tsx` | Group settings (owner only) |
+| `app/g/[id]/page.tsx` | Group landing page (SSR + ISR, 60s revalidation) |
+| `app/group/[id]/page.tsx` | Redirect to `/g/[id]` (so `/group/…` links resolve) |
+| `app/g/[id]/GroupPageClient.tsx` | Client component with 9 tabs (About, Pages, Members, Activity, Timeline, Map, Graph, External Links, Earnings) |
+| `app/g/[id]/settings/page.tsx` | Group settings (owner only) |
 | `app/groups/page.tsx` | User's groups list (owned vs joined sections) |
 | `app/components/groups/GroupCard.tsx` | Group card with name, badges, member/page counts |
 | `app/components/groups/GroupPageList.tsx` | Lists pages in a group |
@@ -154,6 +156,39 @@ All routes require authentication. Group creation requires the `groups` feature 
 | `app/components/groups/CreateGroupModal.tsx` | Create group form (AdaptiveModal) |
 | `app/components/groups/InviteMemberModal.tsx` | Invite by username (AdaptiveModal) |
 | `app/components/groups/GroupInvitationBanner.tsx` | Pending invitation notification banner |
+| `app/components/groups/GroupAboutTab.tsx` | About tab with auto-save description |
+| `app/components/groups/GroupProfileHeader.tsx` | Group profile header with avatar and settings link |
+| `app/components/groups/GroupStats.tsx` | KPI strip (member count, page count, created date) |
+| `app/components/groups/GroupMapTab.tsx` | Map tab showing group pages with locations (Leaflet) |
+| `app/components/groups/GroupGraphTab.tsx` | 3D force graph of connected group pages |
+| `app/components/groups/GroupTimelineTab.tsx` | Timeline tab with carousel and calendar views |
+| `app/components/groups/GroupExternalLinksTab.tsx` | Aggregated external links from group pages |
+
+## Group Page Tabs
+
+The group page (`/g/[id]`) has 9 tabs matching user profile feature parity:
+
+| Tab | Visible To | Description |
+|---|---|---|
+| About | Everyone | Group description with auto-save (1s debounce) for admins/owners |
+| Pages | Everyone | List of pages belonging to the group |
+| Members | Everyone | Member list with roles; invite button for admins |
+| Activity | Everyone | Recent page edit activity feed (`/api/activity-feed/group`) |
+| Timeline | Everyone | Pages organized by custom date (carousel + calendar views) |
+| Map | Everyone | Leaflet map showing pages with location data |
+| Graph | Everyone | 3D force-directed graph of page connections |
+| External Links | Everyone | Aggregated external links from group pages |
+| Earnings | Members only | Fund distribution editor + earnings summary |
+
+Tab navigation uses `useTabNavigation` hook with URL query params (`?tab=graph`).
+
+### API Support for Group Tabs
+
+- **Activity**: `GET /api/activity-feed/group?groupId=...` — dedicated endpoint
+- **Timeline**: `GET /api/timeline?groupId=...` — extended existing endpoint
+- **Map**: `GET /api/map-pages?groupId=...` — extended existing endpoint
+- **Graph**: `GET /api/user-graph?groupId=...` — extended existing endpoint (separate cache)
+- **External Links**: Client-side via `getGroupExternalLinksAggregated()` in `links.ts`
 
 ## Navigation Integration
 

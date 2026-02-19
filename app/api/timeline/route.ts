@@ -19,11 +19,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const groupId = searchParams.get('groupId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!userId && !groupId) {
+      return NextResponse.json({ error: 'User ID or Group ID is required' }, { status: 400 });
     }
 
     const admin = getFirebaseAdmin();
@@ -33,9 +34,15 @@ export async function GET(request: NextRequest) {
     }
     const db = admin.firestore();
 
-    // Build query to get ALL pages for the user first, then filter for custom dates
-    let pagesQuery = db.collection(getCollectionName('pages'))
-      .where('userId', '==', userId);
+    // Build query to get ALL pages for the user/group first, then filter for custom dates
+    let pagesQuery;
+    if (groupId) {
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .where('groupId', '==', groupId);
+    } else {
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .where('userId', '==', userId);
+    }
 
 
     const snapshot = await pagesQuery.get();

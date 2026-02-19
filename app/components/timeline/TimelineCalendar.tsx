@@ -18,6 +18,8 @@ interface TimelinePage {
 interface TimelineCalendarProps {
   accentColor?: string;
   onPageSelect?: (pageId: string) => void;
+  /** When provided, fetch timeline data for a group instead of the current user */
+  groupId?: string;
 }
 
 /**
@@ -29,7 +31,7 @@ interface TimelineCalendarProps {
  * - Click to navigate to page or show modal for multiple pages
  * - Navigation between months
  */
-export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect }: TimelineCalendarProps) {
+export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect, groupId }: TimelineCalendarProps) {
   const { user } = useAuth();
   const router = useRouter();
   
@@ -39,7 +41,8 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
 
   // Fetch timeline pages for the current month
   const fetchPagesForMonth = useCallback(async (date: Date) => {
-    if (!user?.uid) {
+    // Need either a user or a groupId
+    if (!groupId && !user?.uid) {
       return;
     }
 
@@ -50,12 +53,17 @@ export default function TimelineCalendar({ accentColor = '#1768FF', onPageSelect
       const endDate = endOfMonth(date);
 
 
-      // Use the timeline API endpoint
-      const apiUrl = '/api/timeline?' + new URLSearchParams({
-        userId: user.uid,
+      // Use the timeline API endpoint - support group mode
+      const params: Record<string, string> = {
         startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd')
-      });
+        endDate: format(endDate, 'yyyy-MM-dd'),
+      };
+      if (groupId) {
+        params.groupId = groupId;
+      } else {
+        params.userId = user!.uid;
+      }
+      const apiUrl = '/api/timeline?' + new URLSearchParams(params);
 
       const response = await fetch(apiUrl);
       

@@ -18,6 +18,10 @@ interface TimelineCarouselProps {
   className?: string;
   isFullPage?: boolean;
   focusDate?: string | null;
+  /** When provided, skip internal fetch and use this data directly (for group mode) */
+  externalNotesByDate?: Map<string, { id: string; title: string }[]>;
+  /** Loading state for external data */
+  externalLoading?: boolean;
 }
 
 /**
@@ -38,7 +42,9 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   accentColor = '#1768FF',
   className = '',
   isFullPage = false,
-  focusDate = null
+  focusDate = null,
+  externalNotesByDate,
+  externalLoading,
 }) => {
 
   const { user } = useAuth();
@@ -146,9 +152,20 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   }, [user?.uid]);
 
   // Load notes when component mounts or user changes
+  // When external data is provided (group mode), skip internal fetch
   useEffect(() => {
+    if (externalNotesByDate !== undefined) {
+      setNotesByDate(externalNotesByDate);
+      let maxCount = 0;
+      externalNotesByDate.forEach(notes => {
+        if (notes.length > maxCount) maxCount = notes.length;
+      });
+      setMaxNotesCount(maxCount);
+      setLoading(externalLoading ?? false);
+      return;
+    }
     checkExistingNotes();
-  }, [checkExistingNotes]);
+  }, [checkExistingNotes, externalNotesByDate, externalLoading]);
 
   // Handle note click
   const handleNoteClick = useCallback((noteId: string) => {

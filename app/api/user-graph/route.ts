@@ -73,19 +73,23 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
+    const groupId = searchParams.get('groupId');
     const limit = parseInt(searchParams.get('limit') || '100');
     const skipCache = searchParams.get('skipCache') === 'true';
 
-    if (!userId) {
+    if (!userId && !groupId) {
       return NextResponse.json({
-        error: 'userId parameter is required',
+        error: 'userId or groupId parameter is required',
         timestamp: new Date().toISOString(),
       }, { status: 400 });
     }
 
+    // Cache key: use group: prefix for group mode
+    const cacheKey = groupId ? `group:${groupId}` : userId!;
+
     // Check cache first (unless skipCache is set)
     if (!skipCache) {
-      const cached = getCachedGraph(userId);
+      const cached = getCachedGraph(cacheKey);
       if (cached) {
         return NextResponse.json({
           ...cached,
@@ -106,14 +110,28 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
 
 
-    // Step 1: Get all user's pages in one query - includes content for link extraction
-    // This eliminates the N+1 query for fetching page content separately
-    const pagesSnapshot = await db.collection(getCollectionName('pages'))
-      .where('userId', '==', userId)
+    // Step 1: Get all pages in one query - includes content for link extraction
+    // Supports both user mode (userId) and group mode (groupId)
+    let pagesQuery = db.collection(getCollectionName('pages'))
       .where('deleted', '==', false)
       .orderBy('lastModified', 'desc')
-      .limit(limit)
-      .get();
+      .limit(limit);
+
+    if (groupId) {
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .where('groupId', '==', groupId)
+        .where('deleted', '==', false)
+        .orderBy('lastModified', 'desc')
+        .limit(limit);
+    } else {
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .where('userId', '==', userId)
+        .where('deleted', '==', false)
+        .orderBy('lastModified', 'desc')
+        .limit(limit);
+    }
+
+    const pagesSnapshot = await pagesQuery.get();
 
     const userPages: UserPage[] = pagesSnapshot.docs.map(doc => {
       const data = doc.data();
@@ -137,7 +155,7 @@ export async function GET(request: NextRequest) {
           computeTimeMs: Date.now() - startTime
         }
       };
-      setCachedGraph(userId, emptyResult);
+      setCachedGraph(cacheKey, emptyResult);
       return NextResponse.json({
         ...emptyResult,
         timestamp: new Date().toISOString()
@@ -269,7 +287,7 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    setCachedGraph(userId, result);
+    setCachedGraph(cacheKey, result);
 
     return NextResponse.json({
       ...result,

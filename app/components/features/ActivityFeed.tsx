@@ -45,7 +45,7 @@ interface ActivityItem {
   subscriptionAmount?: number;
 }
 
-type ActivityFeedMode = 'global' | 'user';
+type ActivityFeedMode = 'global' | 'user' | 'group';
 
 interface ActivityFeedProps {
   /**
@@ -64,6 +64,16 @@ interface ActivityFeedProps {
    * For 'user' mode: The username to display in titles
    */
   filterByUsername?: string;
+
+  /**
+   * For 'group' mode: The group ID to filter activity by
+   */
+  filterByGroupId?: string;
+
+  /**
+   * For 'group' mode: The group name to display in titles
+   */
+  filterByGroupName?: string;
 
   /**
    * Maximum number of items to fetch per page
@@ -111,6 +121,8 @@ export default function ActivityFeed({
   mode,
   filterByUserId,
   filterByUsername = 'this user',
+  filterByGroupId,
+  filterByGroupName,
   limit = mode === 'global' ? 15 : 20,
   title,
   subtitle,
@@ -241,6 +253,9 @@ export default function ActivityFeed({
         params.set('hideUnverified', hideUnverified.toString());
         params.set('hideLikelySpam', hideLikelySpam.toString());
         if (user?.uid) params.set('userId', user.uid);
+      } else if (mode === 'group') {
+        // Group mode parameters
+        if (filterByGroupId) params.set('groupId', filterByGroupId);
       } else {
         // User mode parameters
         if (filterByUserId) params.set('userId', filterByUserId);
@@ -252,6 +267,8 @@ export default function ActivityFeed({
       // Call the appropriate API endpoint
       const endpoint = mode === 'global'
         ? `/api/activity-feed/global?${params}`
+        : mode === 'group'
+        ? `/api/activity-feed/group?${params}`
         : `/api/activity-feed/user?${params}`;
 
       const response = await fetch(endpoint, {
@@ -268,7 +285,7 @@ export default function ActivityFeed({
         throw new Error(data.error);
       }
 
-      // Handle different response formats from global vs user APIs
+      // Handle different response formats from global vs user/group APIs
       const items = mode === 'global'
         ? (data.edits || [])
         : (data.pages || []).map((page: any) => ({
@@ -333,13 +350,14 @@ export default function ActivityFeed({
         setLoadingMoreState(false);
       }
     }
-  }, [mode, filterByUserId, includeOwn, followingOnly, hideUnverified, hideLikelySpam, user?.uid, limit]);
+  }, [mode, filterByUserId, filterByGroupId, includeOwn, followingOnly, hideUnverified, hideLikelySpam, user?.uid, limit]);
 
   // Initial load
   useEffect(() => {
     if (mode === 'user' && !filterByUserId) return;
+    if (mode === 'group' && !filterByGroupId) return;
     fetchActivities();
-  }, [fetchActivities, mode, filterByUserId]);
+  }, [fetchActivities, mode, filterByUserId, filterByGroupId]);
 
   // Listen for refresh events
   useEffect(() => {
@@ -366,7 +384,7 @@ export default function ActivityFeed({
 
   // Infinite scroll - only auto-load for first 3 times in global mode
   const { loadMore, targetRef, loadingMore } = useInfiniteScrollWithLoadMore({
-    hasMore: hasMore && (mode === 'user' || autoLoadCount < 3),
+    hasMore: hasMore && (mode === 'user' || mode === 'group' || autoLoadCount < 3),
     onLoadMore: () => fetchActivities(true, nextCursor || undefined),
   });
 
@@ -407,7 +425,11 @@ export default function ActivityFeed({
   };
 
   // Determine display title
-  const displayTitle = title || (mode === 'global' ? 'Activity Feed' : `${filterByUsername}'s Recent Activity`);
+  const displayTitle = title || (
+    mode === 'global' ? 'Activity Feed' :
+    mode === 'group' ? 'Group Activity' :
+    `${filterByUsername}'s Recent Activity`
+  );
 
   // Filter modal - rendered outside conditional returns to persist across loading states
   const filterModal = showFilters && isAuthenticated && (
@@ -549,7 +571,7 @@ export default function ActivityFeed({
               </Button>
             )}
           </div>
-          {mode === 'user' ? (
+          {(mode === 'user' || mode === 'group') ? (
             <div className="space-y-3">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
@@ -586,7 +608,7 @@ export default function ActivityFeed({
               </Button>
             )}
           </div>
-          <div className={mode === 'user'
+          <div className={(mode === 'user' || mode === 'group')
             ? "border border-destructive/20 rounded-lg p-4 text-center text-destructive"
             : "text-center py-8"
           }>
@@ -632,11 +654,13 @@ export default function ActivityFeed({
 
       {/* Activity list */}
       {activities.length === 0 ? (
-        mode === 'user' ? (
+        (mode === 'user' || mode === 'group') ? (
           <EmptyState
             icon="Activity"
             title="No recent activity"
-            description={`${filterByUsername} hasn't had any recent activity.`}
+            description={mode === 'group'
+              ? "This group doesn't have any recent page activity yet."
+              : `${filterByUsername} hasn't had any recent activity.`}
             size="md"
           />
         ) : (

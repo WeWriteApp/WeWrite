@@ -872,6 +872,167 @@ export const getUserExternalLinksAggregated = async (
 };
 
 /**
+ * Get aggregated external links from a group's pages with global counts
+ * Follows the same pattern as getUserExternalLinksAggregated but queries by groupId
+ */
+export const getGroupExternalLinksAggregated = async (
+  groupId: string,
+  currentUserId: string | null = null,
+  sortBy: 'recent' | 'oldest' | 'most_linked' | 'least_linked' = 'recent'
+): Promise<Array<{
+  url: string;
+  text: string;
+  globalCount: number;
+  userCount: number;
+  pages: Array<{
+    pageId: string;
+    pageTitle: string;
+    lastModified?: any;
+  }>;
+  mostRecentModified?: any;
+  oldestModified?: any;
+}>> => {
+  try {
+    const { db } = await import('../config');
+    const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const { getCollectionName } = await import('../../utils/environmentConfig');
+
+    // Get all group's pages
+    const pagesQuery = query(
+      collection(db, getCollectionName('pages')),
+      where('groupId', '==', groupId)
+    );
+
+    const snapshot = await getDocs(pagesQuery);
+
+    // Extract external links from each page
+    const externalLinkEntries: Array<{
+      url: string;
+      text: string;
+      pageId: string;
+      pageTitle: string;
+      lastModified?: any;
+    }> = [];
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      if (data.deleted === true) continue;
+      if (!data.content) continue;
+
+      try {
+        let content: EditorContent = [];
+        if (typeof data.content === 'string') {
+          content = JSON.parse(data.content);
+        } else if (Array.isArray(data.content)) {
+          content = data.content;
+        }
+
+        const links = extractLinksFromNodes(content);
+        const externalLinks = links.filter(link => {
+          if (link.type !== 'external') return false;
+          if (!link.url) return false;
+          const url = link.url.toLowerCase();
+          if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+          if (url.includes('wewrite.app') || url.includes('localhost:3000') || url.includes('localhost')) return false;
+          if (url.startsWith('/')) return false;
+          return true;
+        });
+
+        externalLinks.forEach(link => {
+          if (!link.url) return;
+          externalLinkEntries.push({
+            url: link.url,
+            text: link.text || link.url,
+            pageId: doc.id,
+            pageTitle: data.title || 'Untitled',
+            lastModified: data.lastModified,
+          });
+        });
+      } catch {
+        continue;
+      }
+    }
+
+    // Group by URL
+    const linkGroups = new Map<string, {
+      url: string;
+      text: string;
+      pages: Array<{ pageId: string; pageTitle: string; lastModified?: any }>;
+      mostRecentModified?: any;
+      oldestModified?: any;
+    }>();
+
+    externalLinkEntries.forEach(entry => {
+      if (!linkGroups.has(entry.url)) {
+        linkGroups.set(entry.url, {
+          url: entry.url,
+          text: entry.text,
+          pages: [],
+          mostRecentModified: entry.lastModified,
+          oldestModified: entry.lastModified,
+        });
+      }
+      const group = linkGroups.get(entry.url)!;
+      const existingPage = group.pages.find(p => p.pageId === entry.pageId);
+      if (!existingPage) {
+        group.pages.push({
+          pageId: entry.pageId,
+          pageTitle: entry.pageTitle,
+          lastModified: entry.lastModified,
+        });
+      }
+      if (entry.lastModified) {
+        if (!group.mostRecentModified || entry.lastModified > group.mostRecentModified) {
+          group.mostRecentModified = entry.lastModified;
+        }
+        if (!group.oldestModified || entry.lastModified < group.oldestModified) {
+          group.oldestModified = entry.lastModified;
+        }
+      }
+    });
+
+    // Get global counts
+    const urls = Array.from(linkGroups.keys());
+    const globalCounts = await getGlobalExternalLinkCounts(urls);
+
+    const aggregatedLinks = Array.from(linkGroups.values()).map(group => ({
+      url: group.url,
+      text: group.text,
+      globalCount: globalCounts.get(group.url) || 0,
+      userCount: group.pages.length,
+      pages: group.pages,
+      mostRecentModified: group.mostRecentModified,
+      oldestModified: group.oldestModified,
+    }));
+
+    aggregatedLinks.sort((a, b) => {
+      switch (sortBy) {
+        case 'recent':
+          if (!a.mostRecentModified && !b.mostRecentModified) return 0;
+          if (!a.mostRecentModified) return 1;
+          if (!b.mostRecentModified) return -1;
+          return b.mostRecentModified.localeCompare(a.mostRecentModified);
+        case 'oldest':
+          if (!a.oldestModified && !b.oldestModified) return 0;
+          if (!a.oldestModified) return 1;
+          if (!b.oldestModified) return -1;
+          return a.oldestModified.localeCompare(b.oldestModified);
+        case 'most_linked':
+          return b.globalCount - a.globalCount;
+        case 'least_linked':
+          return a.globalCount - b.globalCount;
+        default:
+          return 0;
+      }
+    });
+
+    return aggregatedLinks;
+  } catch (error) {
+    return [];
+  }
+};
+
+/**
  * Get the global count of how many times an external URL is linked across all pages
  * OPTIMIZED: Uses caching to reduce expensive full-collection scans
  */

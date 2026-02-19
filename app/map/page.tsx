@@ -704,9 +704,18 @@ function MapPageContent() {
           </div>
         )}
 
-        {/* Bottom Page Cards - Carousel with peeking cards */}
-        {pages.length > 0 && !showNewPinDrawer && (
-          <div className="absolute bottom-24 left-0 right-0 z-10" style={{ touchAction: 'pan-x' }}>
+        {/* Bottom Page Cards - Carousel with peeking cards (always rendered, animated in/out) */}
+        {mapReady && !showNewPinDrawer && (
+          <div
+            className="absolute bottom-24 left-0 right-0 z-10"
+            style={{
+              touchAction: 'pan-x',
+              transform: pages.length > 0 ? 'translateX(0)' : 'translateX(100%)',
+              opacity: pages.length > 0 ? 1 : 0,
+              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              pointerEvents: pages.length > 0 ? 'auto' : 'none',
+            }}
+          >
             {/* Floating Navigation Buttons - positioned relative to carousel */}
             {pages.length > 1 && (
               <>
@@ -815,17 +824,22 @@ function MapPageContent() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loading && pages.length === 0 && mapReady && !showNewPinDrawer && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
-            <div className="wewrite-card p-6 text-center space-y-3">
-              <Icon name="MapPin" size={48} className="mx-auto text-muted-foreground" />
-              <div>
-                <h3 className="font-semibold">No pages with locations</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Tap anywhere on the map to add a page.
-                </p>
-              </div>
+        {/* Empty State - passive fallback at bottom, slides down when pages arrive */}
+        {mapReady && !showNewPinDrawer && (
+          <div
+            className="absolute bottom-24 left-0 right-0 z-10 flex justify-center px-4"
+            style={{
+              transform: pages.length === 0 ? 'translateY(0)' : 'translateY(calc(100% + 6rem))',
+              opacity: pages.length === 0 ? 1 : 0,
+              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              pointerEvents: pages.length === 0 ? 'auto' : 'none',
+            }}
+          >
+            <div className="wewrite-card p-4 text-center space-y-1 max-w-xs">
+              <p className="text-sm font-medium">No pages with locations</p>
+              <p className="text-xs text-muted-foreground">
+                Tap the map to add a page
+              </p>
             </div>
           </div>
         )}

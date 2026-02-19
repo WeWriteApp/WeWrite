@@ -1,35 +1,102 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../../providers/AuthProvider';
-import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import NavPageLayout from '../../components/layout/NavPageLayout';
 import { Icon } from '../../components/ui/Icon';
-import { PageHeader } from '../../components/ui/PageHeader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { useTabNavigation } from '../../hooks/useTabNavigation';
+import GroupProfileHeader from '../../components/groups/GroupProfileHeader';
+import GroupStats from '../../components/groups/GroupStats';
+import GroupAboutTab from '../../components/groups/GroupAboutTab';
 import { GroupPageList } from '../../components/groups/GroupPageList';
 import { GroupMemberList } from '../../components/groups/GroupMemberList';
 import { InviteMemberModal } from '../../components/groups/InviteMemberModal';
 import { FundDistributionEditor } from '../../components/groups/FundDistributionEditor';
 import { GroupEarningsSummary } from '../../components/groups/GroupEarningsSummary';
+import ActivityFeed from '../../components/features/ActivityFeed';
 import type { Group, GroupMember } from '../../types/groups';
+
+// Dynamic imports for heavy tab components
+const GroupTimelineTab = dynamic(() => import('../../components/groups/GroupTimelineTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-28 bg-muted rounded mb-4" />
+      <div className="space-y-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted rounded" />)}
+      </div>
+    </div>
+  )
+});
+
+const GroupMapTab = dynamic(() => import('../../components/groups/GroupMapTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-24 bg-muted rounded mb-4" />
+      <div className="h-64 bg-muted rounded" />
+    </div>
+  )
+});
+
+const GroupGraphTab = dynamic(() => import('../../components/groups/GroupGraphTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-28 bg-muted rounded mb-4" />
+      <div className="h-64 bg-muted rounded" />
+    </div>
+  )
+});
+
+const GroupExternalLinksTab = dynamic(() => import('../../components/groups/GroupExternalLinksTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-32 bg-muted rounded mb-4" />
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => <div key={i} className="h-10 bg-muted rounded" />)}
+      </div>
+    </div>
+  )
+});
+
+const VALID_GROUP_TABS = ['about', 'pages', 'members', 'activity', 'timeline', 'map', 'graph', 'external-links', 'earnings'];
 
 interface GroupPageClientProps {
   initialGroup: Group;
 }
 
-export default function GroupPageClient({ initialGroup }: GroupPageClientProps) {
+function createdAtString(group: Group): string | undefined {
+  const raw = group.createdAt;
+  if (typeof raw === 'string') return raw;
+  if (raw && typeof (raw as any).toDate === 'function') {
+    return (raw as any).toDate().toISOString();
+  }
+  return undefined;
+}
+
+function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
   const { user } = useAuth();
   const [group, setGroup] = useState<Group>(initialGroup);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pages' | 'members' | 'earnings'>('pages');
+
+  const { activeTab, setActiveTab } = useTabNavigation({
+    defaultTab: 'about',
+    validTabs: VALID_GROUP_TABS,
+    migrateFromHash: true,
+  });
 
   const isMember = user?.uid ? group.memberIds.includes(user.uid) : false;
-  const isOwnerOrAdmin = isMember && members.some(
-    (m) => m.userId === user?.uid && (m.role === 'owner' || m.role === 'admin')
-  );
+  const isOwnerOrAdmin =
+    isMember &&
+    members.some((m) => m.userId === user?.uid && (m.role === 'owner' || m.role === 'admin'));
 
   useEffect(() => {
     const fetchGroupDetails = async () => {
@@ -70,127 +137,183 @@ export default function GroupPageClient({ initialGroup }: GroupPageClientProps) 
     }
   };
 
+  const tabTriggerClass =
+    'flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary';
+
   return (
-    <NavPageLayout>
-      <PageHeader
-        title={group.name}
-        description={group.description || undefined}
-        badges={
-          group.visibility === 'private' ? (
-            <Badge variant="secondary" size="sm">
-              <Icon name="Lock" size={12} className="mr-1" />
-              Private
-            </Badge>
-          ) : undefined
-        }
-        actions={
-          isOwnerOrAdmin ? (
-            <Link
-              href={`/g/${group.id}/settings`}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Icon name="Settings" size={18} />
-            </Link>
-          ) : undefined
-        }
-      >
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-          <span className="flex items-center gap-1">
-            <Icon name="Users" size={14} />
-            {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
-          </span>
-          <span className="flex items-center gap-1">
-            <Icon name="FileText" size={14} />
-            {group.pageCount} {group.pageCount === 1 ? 'page' : 'pages'}
-          </span>
+    <NavPageLayout header="userProfile">
+      <GroupProfileHeader
+        groupId={group.id}
+        groupName={group.name}
+        showSettings={isOwnerOrAdmin}
+      />
+
+      {/* Profile-style card: name, badge, owner, KPI strip */}
+      <div className="wewrite-card pb-4">
+        <div className="flex flex-col items-center">
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+            <h1 className="text-lg font-semibold text-foreground">{group.name}</h1>
+            {group.visibility === 'private' && (
+              <Badge variant="secondary" size="sm">
+                <Icon name="Lock" size={12} className="mr-1" />
+                Private
+              </Badge>
+            )}
+          </div>
           {group.ownerUsername && (
-            <span>
-              by <Link href={`/@${group.ownerUsername}`} className="hover:underline">{group.ownerUsername}</Link>
-            </span>
+            <p className="text-sm text-muted-foreground mb-2">
+              by{' '}
+              <Link
+                href={`/u/${group.ownerUsername}`}
+                className="hover:underline text-foreground"
+              >
+                {group.ownerUsername}
+              </Link>
+            </p>
           )}
         </div>
-      </PageHeader>
-
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 border-b border-border mb-4">
-        <button
-          onClick={() => setActiveTab('pages')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'pages'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Pages
-        </button>
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === 'members'
-              ? 'border-primary text-foreground'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Members
-        </button>
-        {isMember && (
-          <button
-            onClick={() => setActiveTab('earnings')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'earnings'
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Earnings
-          </button>
-        )}
-        {isOwnerOrAdmin && (
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="ml-auto px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            <Icon name="UserPlus" size={14} className="mr-1 inline" />
-            Invite
-          </button>
-        )}
+        <GroupStats
+          memberCount={group.memberCount}
+          pageCount={group.pageCount}
+          createdAt={createdAtString(group)}
+          visibility={group.visibility}
+        />
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'pages' && (
-        <GroupPageList groupId={group.id} isMember={isMember} />
-      )}
-
-      {activeTab === 'members' && (
-        <GroupMemberList
-          members={members}
-          ownerId={group.ownerId}
-          currentUserId={user?.uid || null}
-          canManage={isOwnerOrAdmin}
-          onRemoveMember={handleRemoveMember}
-        />
-      )}
-
-      {activeTab === 'earnings' && isMember && (
-        <div className="space-y-6">
-          <FundDistributionEditor
-            groupId={group.id}
-            members={members}
-            initialDistribution={group.fundDistribution || {}}
-            canEdit={isOwnerOrAdmin}
-            onSaved={(dist) => setGroup((prev) => ({ ...prev, fundDistribution: dist }))}
-          />
-          <GroupEarningsSummary groupId={group.id} />
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-border bg-background">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+            <TabsList className="flex w-max border-0 bg-transparent p-0 h-auto min-h-0">
+              <TabsTrigger value="about" data-value="about" className={tabTriggerClass}>
+                <Icon name="Info" size={16} />
+                <span>About</span>
+              </TabsTrigger>
+              <TabsTrigger value="pages" data-value="pages" className={tabTriggerClass}>
+                <Icon name="FileText" size={16} />
+                <span>Pages</span>
+              </TabsTrigger>
+              <TabsTrigger value="members" data-value="members" className={tabTriggerClass}>
+                <Icon name="Users" size={16} />
+                <span>Members</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" data-value="activity" className={tabTriggerClass}>
+                <Icon name="Activity" size={16} />
+                <span>Activity</span>
+              </TabsTrigger>
+              <TabsTrigger value="timeline" data-value="timeline" className={tabTriggerClass}>
+                <Icon name="Calendar" size={16} />
+                <span>Timeline</span>
+              </TabsTrigger>
+              <TabsTrigger value="map" data-value="map" className={tabTriggerClass}>
+                <Icon name="MapPin" size={16} />
+                <span>Map</span>
+              </TabsTrigger>
+              <TabsTrigger value="graph" data-value="graph" className={tabTriggerClass}>
+                <Icon name="Network" size={16} />
+                <span>Graph</span>
+              </TabsTrigger>
+              <TabsTrigger value="external-links" data-value="external-links" className={tabTriggerClass}>
+                <Icon name="Link" size={16} />
+                <span>External Links</span>
+              </TabsTrigger>
+              {isMember && (
+                <TabsTrigger value="earnings" data-value="earnings" className={tabTriggerClass}>
+                  <Icon name="DollarSign" size={16} />
+                  <span>Earnings</span>
+                </TabsTrigger>
+              )}
+            </TabsList>
+            {isOwnerOrAdmin && (
+              <Button
+                size="sm"
+                onClick={() => setShowInviteModal(true)}
+                className="ml-auto shrink-0"
+              >
+                <Icon name="UserPlus" size={14} />
+                Invite
+              </Button>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* Invite Modal */}
+        <div className="pt-4">
+          <TabsContent value="about" className="mt-0">
+            <GroupAboutTab
+              groupId={group.id}
+              initialDescription={group.description || ''}
+              canEdit={!!isOwnerOrAdmin}
+              onSaved={(description) => setGroup((prev) => ({ ...prev, description }))}
+            />
+          </TabsContent>
+
+          <TabsContent value="pages" className="mt-0">
+            <GroupPageList groupId={group.id} isMember={isMember} />
+          </TabsContent>
+
+          <TabsContent value="members" className="mt-0">
+            <GroupMemberList
+              members={members}
+              ownerId={group.ownerId}
+              currentUserId={user?.uid || null}
+              canManage={isOwnerOrAdmin}
+              onRemoveMember={handleRemoveMember}
+            />
+          </TabsContent>
+
+          <TabsContent value="activity" className="mt-0">
+            <ActivityFeed
+              mode="group"
+              filterByGroupId={group.id}
+              filterByGroupName={group.name}
+              limit={20}
+            />
+          </TabsContent>
+
+          <TabsContent value="timeline" className="mt-0">
+            <GroupTimelineTab groupId={group.id} groupName={group.name} />
+          </TabsContent>
+
+          <TabsContent value="map" className="mt-0">
+            {activeTab === 'map' && (
+              <GroupMapTab groupId={group.id} groupName={group.name} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="graph" className="mt-0">
+            <GroupGraphTab groupId={group.id} groupName={group.name} />
+          </TabsContent>
+
+          <TabsContent value="external-links" className="mt-0">
+            <GroupExternalLinksTab
+              groupId={group.id}
+              groupName={group.name}
+              currentUserId={user?.uid || null}
+            />
+          </TabsContent>
+
+          {isMember && (
+            <TabsContent value="earnings" className="mt-0">
+              <div className="space-y-6">
+                <FundDistributionEditor
+                  groupId={group.id}
+                  members={members}
+                  initialDistribution={group.fundDistribution || {}}
+                  canEdit={isOwnerOrAdmin}
+                  onSaved={(dist) => setGroup((prev) => ({ ...prev, fundDistribution: dist }))}
+                />
+                <GroupEarningsSummary groupId={group.id} />
+              </div>
+            </TabsContent>
+          )}
+        </div>
+      </Tabs>
+
       <InviteMemberModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         groupId={group.id}
         onInvited={() => {
-          // Refresh members
           fetch(`/api/groups/${group.id}`, { credentials: 'include' })
             .then((r) => r.json())
             .then((d) => {
@@ -200,5 +323,13 @@ export default function GroupPageClient({ initialGroup }: GroupPageClientProps) 
         }}
       />
     </NavPageLayout>
+  );
+}
+
+export default function GroupPageClient({ initialGroup }: GroupPageClientProps) {
+  return (
+    <Suspense fallback={<NavPageLayout header="userProfile"><div className="animate-pulse p-8"><div className="h-8 bg-muted rounded w-48 mx-auto" /></div></NavPageLayout>}>
+      <GroupPageClientInner initialGroup={initialGroup} />
+    </Suspense>
   );
 }
