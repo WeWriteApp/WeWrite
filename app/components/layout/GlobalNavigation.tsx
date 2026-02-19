@@ -14,7 +14,6 @@ import FinancialHeader from './FinancialHeader';
 import UsernameSetupBanner from '../utils/UsernameSetupBanner';
 import PWABanner from '../utils/PWABanner';
 import EmailVerificationTopBanner from './EmailVerificationTopBanner';
-import { TutorialOverlay } from '../onboarding/TutorialOverlay';
 
 
 /**
@@ -60,7 +59,6 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
       <FinancialHeader />
       <MobileBottomNav />
       <FloatingActionButton />
-      <TutorialOverlay />
 
       <SidebarProvider>
         <SidebarLayout>

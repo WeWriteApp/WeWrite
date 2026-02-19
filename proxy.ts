@@ -238,12 +238,7 @@ function handleUrlRedirects(path: string, url: URL): NextResponse | null {
   // The /user/[id] route redirects TO /u/[username] for backwards compatibility
   // Do NOT redirect /u/ to /user/ anymore
 
-  // Redirect /g/[id] to /group/[id]
-  if (path.startsWith('/g/')) {
-    const id = path.replace('/g/', '');
-    url.pathname = `/group/${id}`;
-    return NextResponse.redirect(url);
-  }
+  // Canonical group URL is /g/[id]. /group/[id] is handled by app/group/[id] (redirects to /g/[id]).
 
   return null;
 }

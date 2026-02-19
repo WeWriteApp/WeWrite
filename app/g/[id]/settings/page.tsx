@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../../c
 import NavPageLayout from '../../../components/layout/NavPageLayout';
 import { Icon } from '../../../components/ui/Icon';
 import { Input } from '../../../components/ui/input';
-import { Textarea } from '../../../components/ui/textarea';
 import { PageHeader } from '../../../components/ui/PageHeader';
 import type { Group } from '../../../types/groups';
 
@@ -21,7 +20,6 @@ export default function GroupSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -34,7 +32,6 @@ export default function GroupSettingsPage() {
         if (data.success && data.data) {
           setGroup(data.data);
           setName(data.data.name);
-          setDescription(data.data.description || '');
           setVisibility(data.data.visibility || 'public');
         }
       } catch {
@@ -58,7 +55,7 @@ export default function GroupSettingsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, description, visibility }),
+        body: JSON.stringify({ name, visibility }),
       });
 
       const data = await res.json();
@@ -137,16 +134,9 @@ export default function GroupSettingsPage() {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-1 block">Description</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="resize-none"
-              rows={3}
-              maxLength={500}
-            />
-          </div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Edit the group description on the group&apos;s <strong>About</strong> tab.
+          </p>
 
           <div>
             <label className="text-sm font-medium mb-2 block">Visibility</label>

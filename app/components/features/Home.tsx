@@ -11,6 +11,7 @@ import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
 import { EmailVerificationModal } from "../auth/EmailVerificationModal";
+import { OnboardingCard } from "../onboarding/OnboardingCard";
 
 
 
@@ -129,6 +130,9 @@ const Home: React.FC = () => {
         }}
       >
           <div className="container max-w-4xl mx-auto py-4 space-y-6">
+            {/* Onboarding Card - inline at top of feed */}
+            <OnboardingCard />
+
             {/* Daily Notes Section */}
             <DailyNotesSection />
 

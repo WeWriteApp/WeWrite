@@ -23,6 +23,8 @@ import { useNextPayoutCountdown, formatPayoutCountdown } from './useNextPayoutCo
 import { useUsernameStatus } from './useUsernameStatus';
 import { useEmailVerificationStatus } from './useEmailVerificationStatus';
 import { useAuth } from '../providers/AuthProvider';
+import { useFeatureFlags } from '../contexts/FeatureFlagContext';
+import { useTutorial, TUTORIAL_STEPS } from '../contexts/TutorialContext';
 
 // Icon wrapper components for settings sections
 const createIconComponent = (name: IconName) => {
@@ -44,6 +46,7 @@ const Shield = createIconComponent('Shield');
 const Trash2 = createIconComponent('Trash2');
 const SettingsIcon = createIconComponent('Settings');
 const Info = createIconComponent('Info');
+const ListChecks = createIconComponent('ListChecks');
 
 // Payout threshold in cents ($25)
 const PAYOUT_THRESHOLD_CENTS = 2500;
@@ -104,6 +107,7 @@ export interface SettingsSection {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   requiresPayments?: boolean;
+  requiresFeatureFlag?: string;
 }
 
 export interface SettingsSectionWithStatus extends SettingsSection {
@@ -181,6 +185,13 @@ const BASE_SECTIONS: SettingsSection[] = [
     href: '/settings/advanced'
   },
   {
+    id: 'onboarding-checklist',
+    title: 'Onboarding Checklist',
+    icon: ListChecks,
+    href: '/settings/onboarding-checklist',
+    requiresFeatureFlag: 'onboarding_tutorial',
+  },
+  {
     id: 'about',
     title: 'About WeWrite',
     icon: Info,
@@ -255,8 +266,18 @@ export function useSettingsSections(): {
   const { needsUsername } = useUsernameStatus();
   const emailVerificationStatus = useEmailVerificationStatus();
   const deletedPages = useDeletedPagesCount();
+  const { isEnabled } = useFeatureFlags();
+  const { progress: tutorialProgress } = useTutorial();
   const sections = useMemo(() => {
-    return BASE_SECTIONS.map((section): SettingsSectionWithStatus => {
+    // Filter out sections gated by feature flags
+    const visibleSections = BASE_SECTIONS.filter(section => {
+      if (section.requiresFeatureFlag) {
+        return isEnabled(section.requiresFeatureFlag);
+      }
+      return true;
+    });
+
+    return visibleSections.map((section): SettingsSectionWithStatus => {
       let statusIndicator: React.ReactNode = null;
       let showWarning = false;
       let warningVariant: 'warning' | 'error' | 'critical' = 'warning';
@@ -385,6 +406,17 @@ export function useSettingsSections(): {
           break;
         }
 
+        case 'onboarding-checklist': {
+          const completedCount = tutorialProgress.completedSteps.length;
+          const totalCount = TUTORIAL_STEPS.length;
+          statusIndicator = (
+            <span className="text-xs text-muted-foreground font-medium">
+              {completedCount}/{totalCount}
+            </span>
+          );
+          break;
+        }
+
         // Other sections don't have status indicators
         default:
           break;
@@ -407,7 +439,9 @@ export function useSettingsSections(): {
     payoutCountdown,
     needsUsername,
     emailVerificationStatus,
-    deletedPages
+    deletedPages,
+    isEnabled,
+    tutorialProgress
   ]);
 
   return {

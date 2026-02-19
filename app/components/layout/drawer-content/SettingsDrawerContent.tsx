@@ -26,6 +26,7 @@ const AdvancedContent = lazy(() => import('../../settings/drawer-content/Advance
 const DeletedContent = lazy(() => import('../../settings/drawer-content/DeletedContent'));
 const AboutContent = lazy(() => import('../../settings/drawer-content/AboutContent'));
 const FollowUsContent = lazy(() => import('../../settings/drawer-content/FollowUsContent'));
+const OnboardingChecklistContent = lazy(() => import('../../settings/drawer-content/OnboardingChecklistContent'));
 
 interface SettingsDrawerContentProps {
   isMenuView: boolean;
@@ -100,6 +101,7 @@ function SettingsSubContent({ subPath }: { subPath: string }) {
     'deleted': DeletedContent,
     'about': AboutContent,
     'about/follow-us': FollowUsContent,
+    'onboarding-checklist': OnboardingChecklistContent,
   };
 
   const ContentComponent = contentMap[basePath];

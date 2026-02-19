@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useFeatureFlags } from './FeatureFlagContext';
 
 /**
  * Tutorial step IDs - ordered sequence for onboarding
@@ -53,7 +54,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'bottom',
     actionLabel: 'Edit Profile',
     skipLabel: 'Later',
-    route: '/settings/profile',
+    // Route is dynamic — handled in OnboardingCard via user's profile URL
   },
   {
     id: 'setup-subscription',
@@ -128,6 +129,7 @@ const TutorialContext = createContext<TutorialContextType | undefined>(undefined
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<TutorialProgress>(defaultProgress);
   const [isHydrated, setIsHydrated] = useState(false);
+  const { isEnabled, isLoading: flagsLoading } = useFeatureFlags();
 
   // Load progress from localStorage on mount
   useEffect(() => {
@@ -144,6 +146,28 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }
     setIsHydrated(true);
   }, []);
+
+  // Auto-start tutorial when feature flag is enabled and user hasn't completed it yet
+  useEffect(() => {
+    if (!isHydrated || flagsLoading) return;
+
+    const flagEnabled = isEnabled('onboarding_tutorial');
+    if (!flagEnabled) return;
+
+    // Don't start if already active or already completed
+    if (progress.isActive || progress.completedAt) return;
+
+    // Don't re-start if user has already made any progress (completed or skipped steps)
+    if (progress.completedSteps.length > 0 || progress.skippedSteps.length > 0) return;
+
+    setProgress({
+      completedSteps: [],
+      skippedSteps: [],
+      currentStepIndex: 0,
+      isActive: true,
+      startedAt: new Date().toISOString(),
+    });
+  }, [isHydrated, flagsLoading, isEnabled, progress.isActive, progress.completedAt, progress.completedSteps.length, progress.skippedSteps.length]);
 
   // Save progress to localStorage when it changes
   useEffect(() => {

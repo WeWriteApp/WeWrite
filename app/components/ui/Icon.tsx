@@ -113,6 +113,7 @@ import {
   Inbox,
   Grid3X3,
   List,
+  ListChecks,
   Bookmark,
   Pin,
   Shuffle,
@@ -244,7 +245,7 @@ export type IconName =
   // Media & Files
   | "Eye" | "EyeOff" | "Search" | "Filter"
   | "Image" | "File" | "FileText" | "FilePlus" | "Folder" | "FolderOpen" | "Inbox"
-  | "Grid" | "Grid3X3" | "List"
+  | "Grid" | "Grid3X3" | "List" | "ListChecks"
   // Time & Calendar
   | "Calendar" | "Clock" | "History"
   // Location & Map
@@ -403,6 +404,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   Grid: Grid3X3,
   Grid3X3: Grid3X3,
   List: List,
+  ListChecks: ListChecks,
 
   // Time & Calendar
   Calendar: Calendar,

@@ -454,11 +454,19 @@ function SidebarContent({
             "pt-4 border-t border-border",
             !showContent && "flex flex-col items-center"
           )}>
-            {showContent && (
-              <div className="mb-2 text-sm font-medium text-foreground truncate">
-                {sanitizeUsername(user.username, 'Loading...', 'User')}
-              </div>
-            )}
+            <div
+              className={cn(
+                "flex items-center rounded-lg text-muted-foreground mb-2",
+                showContent ? "w-full h-10 px-3 gap-3" : "w-10 h-10 justify-center"
+              )}
+            >
+              <Icon name="User" size={20} className="flex-shrink-0" />
+              {showContent && (
+                <span className="text-sm font-medium text-foreground truncate">
+                  {sanitizeUsername(user.username, 'Loading...', 'User')}
+                </span>
+              )}
+            </div>
             <Button
               onClick={handleLogoutClick}
               variant="destructive-ghost"
