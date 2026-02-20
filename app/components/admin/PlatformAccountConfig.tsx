@@ -310,7 +310,7 @@ export const PlatformAccountConfig: React.FC = () => {
               disabled={actionLoading === 'initialize'}
               className="w-full"
             >
-              {actionLoading === 'initialize' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
+              {actionLoading === 'initialize' && <Icon name="Loader" size={16} className="mr-2" />}
               Initialize Fund Holding Model
             </Button>
             
@@ -320,7 +320,7 @@ export const PlatformAccountConfig: React.FC = () => {
               variant="secondary"
               className="w-full"
             >
-              {actionLoading === 'enable_manual_payouts' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
+              {actionLoading === 'enable_manual_payouts' && <Icon name="Loader" size={16} className="mr-2" />}
               Enable Manual Payouts
             </Button>
           </div>
@@ -360,7 +360,7 @@ export const PlatformAccountConfig: React.FC = () => {
             disabled={actionLoading === 'create_platform_payout'}
             className="w-full"
           >
-            {actionLoading === 'create_platform_payout' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
+            {actionLoading === 'create_platform_payout' && <Icon name="Loader" size={16} className="mr-2" />}
             Create Payout
           </Button>
         </CardContent>
@@ -389,7 +389,7 @@ export const PlatformAccountConfig: React.FC = () => {
                 onClick={handleCheckBalance}
                 disabled={actionLoading === 'check_balance'}
               >
-                {actionLoading === 'check_balance' && <Icon name="RefreshCw" size={16} className="mr-2 animate-spin" />}
+                {actionLoading === 'check_balance' && <Icon name="Loader" size={16} className="mr-2" />}
                 Check Balance
               </Button>
             </div>

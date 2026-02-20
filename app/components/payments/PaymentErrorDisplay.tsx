@@ -141,7 +141,7 @@ export function PaymentErrorDisplay({
               disabled={isRetrying}
               className="gap-2"
             >
-              <Icon name="RefreshCw" size={12} className={cn(isRetrying && "animate-spin")} />
+              <Icon name={isRetrying ? "Loader" : "RefreshCw"} size={12} />
               {isRetrying ? 'Retrying...' : 'Try Again'}
             </Button>
           )}
@@ -197,7 +197,7 @@ export function PaymentErrorDisplay({
               disabled={isRetrying}
               className="gap-2"
             >
-              <Icon name="RefreshCw" size={12} className={cn(isRetrying && "animate-spin")} />
+              <Icon name={isRetrying ? "Loader" : "RefreshCw"} size={12} />
               {isRetrying ? 'Retrying Payment...' : 'Try Payment Again'}
             </Button>
           )}

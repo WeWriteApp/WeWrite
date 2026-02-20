@@ -115,7 +115,7 @@ export function RemainingTokensCounter({
               strokeDasharray={`${circumference * 0.25} ${circumference}`}
               strokeDashoffset={0}
               strokeLinecap="round"
-              className="text-muted-foreground animate-spin"
+              className="text-muted-foreground animate-pulse"
             />
           )}
         </svg>

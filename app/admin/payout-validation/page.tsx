@@ -178,7 +178,7 @@ export default function PayoutValidationPage() {
 
         <Button onClick={validatePayout} disabled={isLoading} size="sm" className="w-full gap-1.5">
           {isLoading ? (
-            <Icon name="RefreshCw" size={14} className="animate-spin" />
+            <Icon name="Loader" size={14} />
           ) : (
             <Icon name="Calculator" size={14} />
           )}

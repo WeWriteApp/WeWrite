@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Icon } from '@/app/components/ui/Icon';
 
 interface ContentCarouselProps {
   children: React.ReactNode;
@@ -96,7 +96,7 @@ export default function ContentCarousel({
         className="flex items-center justify-center"
         style={{ height: `${height}px` }}
       >
-        <Loader2 className="h-6 w-6 text-muted-foreground" />
+        <Icon name="Loader" size={24} className="text-muted-foreground" />
       </div>
     );
   }

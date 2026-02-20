@@ -36,7 +36,7 @@ const ResponsiveGridLayout = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-64 flex items-center justify-center">
-        <Icon name="Loader" size={24} className="animate-spin" />
+        <Icon name="Loader" size={24} />
       </div>
     )
   }
@@ -57,7 +57,7 @@ export function DashboardGrid({ children, layouts, onLayoutChange, isMobile }: D
   if (!mounted) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <Icon name="Loader" size={24} className="animate-spin" />
+        <Icon name="Loader" size={24} />
       </div>
     );
   }

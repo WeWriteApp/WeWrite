@@ -351,7 +351,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
               size="sm"
               disabled={isLoading}
             >
-              <Icon name="RefreshCw" size={14} className={isLoading ? 'animate-spin' : ''} />
+              <Icon name={isLoading ? "Loader" : "RefreshCw"} size={14} />
             </Button>
             <Button
               onClick={() => setIsAddingNew(true)}
@@ -405,7 +405,7 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
       <div className="flex-1 min-h-0 overflow-auto border rounded-lg">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Icon name="RefreshCw" size={20} className="animate-spin mr-2" />
+            <Icon name="Loader" size={20} className="mr-2" />
             <span className="text-muted-foreground text-sm">Loading...</span>
           </div>
         ) : filteredIdeas.length === 0 ? (

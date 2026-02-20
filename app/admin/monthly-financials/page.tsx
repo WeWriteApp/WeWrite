@@ -44,7 +44,7 @@ export default function MonthlyFinancialsPage() {
         disabled={isLoading}
         className="w-full gap-1.5"
       >
-        <Icon name="RefreshCw" size={14} className={isLoading ? 'animate-spin' : ''} />
+        <Icon name={isLoading ? "Loader" : "RefreshCw"} size={14} />
         Refresh
       </Button>
 

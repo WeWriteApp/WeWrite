@@ -129,7 +129,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
             className="h-7 px-2 text-xs text-warning hover:text-warning hover:bg-warning/10"
             title="Check if your email has been verified"
           >
-            <Icon name="RefreshCw" size={12} className={`mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <Icon name={isRefreshing ? "Loader" : "RefreshCw"} size={12} className="mr-1" />
             Refresh
           </Button>
           <Button

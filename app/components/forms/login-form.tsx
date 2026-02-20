@@ -324,7 +324,7 @@ export function LoginForm() {
         >
           {isLoading ? 'Signing in...' : isLockedOut ? `Locked (${formatCountdown(countdown!)})` : !isTurnstileVerified ? (
             <span className="flex items-center gap-2">
-              <Icon name="Loader" size={16} className="animate-spin" />
+              <Icon name="Loader" size={16} />
               Verifying...
             </span>
           ) : 'Sign In'}

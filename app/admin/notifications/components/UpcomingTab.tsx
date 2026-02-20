@@ -247,7 +247,7 @@ export function UpcomingTab({
             className="ml-auto text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             title="Refresh upcoming notifications"
           >
-            <Icon name="RefreshCw" size={14} className={isLoadingRecipients ? 'animate-spin' : ''} />
+            <Icon name={isLoadingRecipients ? "Loader" : "RefreshCw"} size={14} />
           </button>
         </div>
         <p className="text-xs text-muted-foreground mb-3">

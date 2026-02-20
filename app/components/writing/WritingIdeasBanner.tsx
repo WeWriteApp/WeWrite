@@ -192,7 +192,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {isLoading && <Icon name="RefreshCw" size={16} className="text-muted-foreground animate-spin" />}
+          {isLoading && <Icon name="Loader" size={16} className="text-muted-foreground" />}
           {isExpanded ? (
             <Icon name="ChevronUp" size={16} className="text-muted-foreground transition-transform duration-200" />
           ) : (
@@ -225,7 +225,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
                     <div className="text-center">
                       {isLoading ? (
                         <>
-                          <Icon name="RefreshCw" size={24} className="animate-spin mx-auto mb-2 text-muted-foreground" />
+                          <Icon name="Loader" size={24} className="mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm text-muted-foreground">Loading ideas...</p>
                         </>
                       ) : (
@@ -292,7 +292,7 @@ export const WritingIdeasBanner = React.memo(function WritingIdeasBanner({ onIde
               <svg
                 className={`h-5 w-5 transition-transform duration-200 ${
                   isGenerating
-                    ? 'animate-spin'
+                    ? 'animate-pulse'
                     : 'group-hover:rotate-180'
                 }`}
                 fill="none"

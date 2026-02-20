@@ -276,7 +276,7 @@ export function UserManagement() {
           onClick={loadUsers}
           disabled={loading}
         >
-          <Icon name="RefreshCw" size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Icon name={loading ? "Loader" : "RefreshCw"} size={16} className="mr-2" />
           Refresh
         </Button>
       </div>
