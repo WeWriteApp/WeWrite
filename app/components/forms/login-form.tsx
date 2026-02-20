@@ -322,7 +322,12 @@ export function LoginForm() {
           className="w-full"
           disabled={isLoading || isLockedOut || !isTurnstileVerified}
         >
-          {isLoading ? 'Signing in...' : isLockedOut ? `Locked (${formatCountdown(countdown!)})` : 'Sign In'}
+          {isLoading ? 'Signing in...' : isLockedOut ? `Locked (${formatCountdown(countdown!)})` : !isTurnstileVerified ? (
+            <span className="flex items-center gap-2">
+              <Icon name="Loader" size={16} className="animate-spin" />
+              Verifying...
+            </span>
+          ) : 'Sign In'}
         </Button>
       </form>
 
