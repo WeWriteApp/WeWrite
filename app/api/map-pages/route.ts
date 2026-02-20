@@ -245,7 +245,7 @@ export async function GET(request: NextRequest) {
         if (data.deleted === true) return;
         if (!data.location || typeof data.location.lat !== 'number' || typeof data.location.lng !== 'number') return;
 
-        const canAccess = data.userId === currentUserId;
+        const canAccess = data.userId === currentUserId || data.isPublic === true;
         if (!canAccess) return;
 
         mapPages.push({
