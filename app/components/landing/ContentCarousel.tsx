@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { Icon } from '@/app/components/ui/Icon';
+import { Icon } from '@/components/ui/Icon';
 
 interface ContentCarouselProps {
   children: React.ReactNode;
