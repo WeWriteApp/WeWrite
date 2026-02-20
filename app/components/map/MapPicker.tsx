@@ -172,7 +172,7 @@ const MapPicker: React.FC<MapPickerProps> = ({
 
         // Create map instance with mobile Safari optimizations
         const map = L.map(mapRef.current, {
-          zoomControl: !disableZoom && showControls,
+          zoomControl: false,
           attributionControl: false,
           scrollWheelZoom: !disableZoom,
           doubleClickZoom: !disableZoom,

@@ -197,9 +197,9 @@ export default function LocationPickerPage({
                   </Button>
 
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     onClick={handleDeleteClick}
-                    className="flex-1 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                    className="flex-1"
                   >
                     <Icon name="Trash2" size={16} className="mr-2" />
                     Delete
@@ -209,9 +209,9 @@ export default function LocationPickerPage({
                 // When viewing without changes: show just Delete button
                 <div className="flex gap-3">
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     onClick={handleDeleteClick}
-                    className="flex-1 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                    className="flex-1"
                   >
                     <Icon name="Trash2" size={16} className="mr-2" />
                     Delete Location

@@ -511,9 +511,8 @@ export default function LocationField({
 
               {normalizedLocation && (
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   onClick={() => setShowDeleteConfirmation(true)}
-                  className="text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
                   size="sm"
                 >
                   <Icon name="Trash2" size={14} />
@@ -523,9 +522,9 @@ export default function LocationField({
           ) : normalizedLocation ? (
             // Viewing existing location without changes: show Delete
             <Button
-              variant="outline"
+              variant="destructive"
               onClick={() => setShowDeleteConfirmation(true)}
-              className="w-full text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+              className="w-full"
               size="sm"
             >
               <Icon name="Trash2" size={14} className="mr-1.5" />
