@@ -10,6 +10,7 @@ interface InternalLinkWithTitleProps {
   href: string;
   displayText: string;
   originalPageTitle: string | null;
+  isCustomText?: boolean; // Whether user set custom display text
   showAuthor: boolean;
   authorUsername: string | null;
   canEdit?: boolean;
@@ -101,6 +102,7 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
   href,
   displayText,
   originalPageTitle,
+  isCustomText = false,
   showAuthor,
   authorUsername,
   canEdit = false,
@@ -193,16 +195,18 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
   // Determine what text to display using a clear priority system
   let textToDisplay: React.ReactNode;
 
-  // CRITICAL FIX: Always prioritize displayText if it exists and is not empty
-  // The displayText comes from the link's children and represents what the user actually typed
-  if (displayText && displayText.trim() && displayText !== 'Link' && displayText !== 'Page Link') {
+  if (isCustomText && displayText && displayText.trim() && displayText !== 'Link' && displayText !== 'Page Link') {
+    // User set custom display text — always preserve it
     textToDisplay = displayText;
   }
-  // If we have a currentTitle from the database (updated page title), use it
+  // Auto-generated link: prefer the fresh title from the API
   else if (currentTitle && currentTitle.trim()) {
     textToDisplay = currentTitle;
   }
-  // If originalPageTitle is available, use it (original page title)
+  // Fall back to displayText / originalPageTitle while the API title is loading
+  else if (displayText && displayText.trim() && displayText !== 'Link' && displayText !== 'Page Link') {
+    textToDisplay = displayText;
+  }
   else if (originalPageTitle && originalPageTitle.trim()) {
     textToDisplay = originalPageTitle;
   }

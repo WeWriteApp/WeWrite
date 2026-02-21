@@ -184,10 +184,16 @@ const LinkNode: React.FC<LinkNodeProps> = ({
 
   // Effect to fetch page title dynamically when missing
   useEffect(() => {
+    // Fetch fresh title for:
+    // 1. Page links missing stored titles (original behavior)
+    // 2. Auto-generated compound links (need fresh title since InternalLinkWithTitle isn't used)
+    const missingTitle = !validatedNode.pageTitle && !validatedNode.originalPageTitle;
+    const isAutoCompoundLink = validatedNode.showAuthor &&
+                               (validatedNode.authorUsername || validatedNode.authorUserId) &&
+                               !validatedNode.isCustomText;
     const shouldFetchTitle = isPageLink &&
                             pageId &&
-                            !validatedNode.pageTitle &&
-                            !validatedNode.originalPageTitle &&
+                            (missingTitle || isAutoCompoundLink) &&
                             !isFetchingTitle &&
                             !fetchedPageTitle;
 
@@ -347,8 +353,13 @@ const LinkNode: React.FC<LinkNodeProps> = ({
     // Check if this is a compound link with author attribution
     if (validatedNode.showAuthor && (validatedNode.authorUsername || validatedNode.authorUserId)) {
       // Render compound link as two separate pills: [Page Title] by [Author Username]
-      // Use the extracted displayText which already handles custom text properly
-      let pageTitleText = displayText || originalPageTitle || 'Page';
+      // For auto-generated links, prefer the fresh fetched title over the stale displayText
+      let pageTitleText: string;
+      if (validatedNode.isCustomText) {
+        pageTitleText = displayText || originalPageTitle || 'Page';
+      } else {
+        pageTitleText = fetchedPageTitle || displayText || originalPageTitle || 'Page';
+      }
 
       // Remove @ symbol from username if present
       const cleanUsername = validatedNode.authorUsername
@@ -425,6 +436,7 @@ const LinkNode: React.FC<LinkNodeProps> = ({
           href={formattedHref}
           displayText={finalDisplayText}
           originalPageTitle={originalPageTitle}
+          isCustomText={!!validatedNode.isCustomText}
           showAuthor={false}
           authorUsername={null}
           canEdit={canEdit}
