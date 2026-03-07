@@ -73,8 +73,8 @@ export const getCurrentGitBranch = (): string | null => {
     if (typeof window === 'undefined') {
       try {
         const { execSync } = require('child_process');
-        const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
-        return branch;
+        const output = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' });
+        return typeof output === 'string' ? output.trim() : null;
       } catch (gitError) {
         console.warn('[Environment Detection] Git command failed:', gitError);
         return null;
