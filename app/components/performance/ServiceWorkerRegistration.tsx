@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 
 /**
@@ -31,21 +31,12 @@ export async function clearAllServiceWorkerCaches(): Promise<void> {
  * - Background sync for failed requests
  */
 export function ServiceWorkerRegistration() {
-  const updateToastId = useRef<string | number | null>(null);
-
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       return;
     }
 
     registerServiceWorker();
-
-    // Cleanup: dismiss any pending update toast on unmount
-    return () => {
-      if (updateToastId.current) {
-        toast.dismiss(updateToastId.current);
-      }
-    };
   }, []);
 
   const registerServiceWorker = async () => {
@@ -54,47 +45,16 @@ export function ServiceWorkerRegistration() {
         scope: '/'
       });
 
-
-      // Handle updates with non-blocking toast notification
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (!newWorker) return;
-
-        newWorker.addEventListener('statechange', () => {
-          // New service worker is installed and waiting
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-
-            // Show non-blocking toast notification
-            updateToastId.current = toast.info('Update available', {
-              description: 'A new version of WeWrite is ready.',
-              duration: Infinity, // Keep visible until user acts
-              action: {
-                label: 'Refresh',
-                onClick: () => {
-                  // Tell the new service worker to take over
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  // Reload the page to use the new version
-                  window.location.reload();
-                }
-              }
-            });
-          }
-        });
-      });
-
-      // Handle controller change (new SW took over)
+      // The service worker calls skipWaiting() during install, so it
+      // auto-activates immediately. No manual "Refresh" prompt is needed.
+      // We just listen for controllerchange to know when a new version took over.
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        // Dismiss update toast if visible
-        if (updateToastId.current) {
-          toast.dismiss(updateToastId.current);
-          updateToastId.current = null;
-        }
-      });
-
-      // Listen for messages from service worker
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data?.type === 'CACHE_UPDATED') {
-        }
+        // New SW activated — the update is already applied.
+        // Show a brief auto-dismissing toast so the user knows.
+        toast.info('App updated', {
+          description: 'A new version has been applied.',
+          duration: 3000,
+        });
       });
 
     } catch (error) {

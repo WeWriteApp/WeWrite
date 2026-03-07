@@ -72,6 +72,60 @@
   }
 }
 
+/* ============================================================================
+ * VIEWPORT-FILLING FIXED LAYOUT WITH SIDEBAR AWARENESS
+ * ============================================================================
+ * For fixed containers that fill the entire viewport (e.g. map page) and need
+ * to avoid overlapping the DesktopSidebar.
+ *
+ * This class sets ALL four sides of the fixed element:
+ *   top: 0, right: 0, bottom: 0, left: 0|sidebar-offset
+ *
+ * MOBILE  (<1024px):  left: 0  — no sidebar visible, full viewport.
+ * DESKTOP (>=1024px): left: var(--sidebar-content-offset) — clears the sidebar.
+ *
+ * The DesktopSidebar component uses `hidden lg:flex` (visible at 1024px+),
+ * so this class mirrors that breakpoint exactly.
+ *
+ * IMPORTANT: Use INSTEAD of `inset-0`, not alongside it.
+ * Tailwind's `inset-0` generates `inset: 0px` which conflicts with individual
+ * `left` overrides. This class replaces `inset-0` entirely.
+ *
+ * Usage:
+ *   ✅  <div className="fixed sidebar-inset">
+ *   ❌  <div className="fixed inset-0 sidebar-inset">  ← inset-0 will conflict
+ *
+ * For elements that only need a left offset (not full viewport fill),
+ * use the individual `sidebar-offset-left` class instead.
+ */
+.sidebar-inset {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transition: left 300ms ease-in-out;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-inset {
+    left: var(--sidebar-content-offset, 0px);
+  }
+}
+
+/* Individual left-offset only — use when you need sidebar awareness
+ * but are setting top/right/bottom yourself. Same caveat: do NOT
+ * combine with `inset-0` or `left-0` as they will conflict. */
+.sidebar-offset-left {
+  left: 0;
+  transition: left 300ms ease-in-out;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-offset-left {
+    left: var(--sidebar-content-offset, 0px);
+  }
+}
+
 .z-fixed-header { z-index: var(--z-fixed-header); }
 .z-fixed-toolbar { z-index: var(--z-fixed-toolbar); }
 .z-fixed-fab { z-index: var(--z-fixed-fab); }

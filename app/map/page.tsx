@@ -106,22 +106,19 @@ function MapPageContent() {
   const labelsRef = useRef<Map<string, any>>(new Map());
   const mapInitializedRef = useRef(false);
   const lastFetchBoundsRef = useRef<string | null>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const [pages, setPages] = useState<MapPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const firstFetchDoneRef = useRef(false);
   const [currentBounds, setCurrentBounds] = useState<MapBounds | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
-  // Touch handling for swipe
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const minSwipeDistance = 50;
-
-  // Track if selection change came from scroll (to avoid scroll loop)
-  const isScrollingRef = useRef(false);
+  // Track if selection came from list click (to avoid scroll-into-view loop)
+  const selectionFromListRef = useRef(false);
 
   // New pin placement state
   const [newPinLocation, setNewPinLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -179,7 +176,6 @@ function MapPageContent() {
 
   // Fetch pages with location data (works for both logged-in and logged-out users)
   const fetchMapPages = useCallback(async (bounds?: MapBounds) => {
-
     try {
       setLoading(true);
       setError(null);
@@ -210,6 +206,7 @@ function MapPageContent() {
       setError(err instanceof Error ? err.message : 'Failed to load map pages');
     } finally {
       setLoading(false);
+      firstFetchDoneRef.current = true;
     }
   }, [hideInactive, hideUnverified]);
 
@@ -217,6 +214,13 @@ function MapPageContent() {
   useEffect(() => {
     fetchMapPages();
   }, [fetchMapPages]);
+
+  // Mark initial load complete once map is ready and first fetch is done, with a buffer for tiles
+  useEffect(() => {
+    if (!mapReady || !firstFetchDoneRef.current || initialLoadComplete) return;
+    const timer = setTimeout(() => setInitialLoadComplete(true), 300);
+    return () => clearTimeout(timer);
+  }, [mapReady, loading, initialLoadComplete]);
 
   // Inject CSS for bouncing animation and labels
   useEffect(() => {
@@ -233,21 +237,18 @@ function MapPageContent() {
 
   // Prevent body scrolling on map page
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      // Save original styles
-      const originalOverflow = document.body.style.overflow;
-      const originalHtmlOverflow = document.documentElement.style.overflow;
+    if (typeof document === 'undefined') return;
 
-      // Disable scrolling
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
+    const originalOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
 
-      return () => {
-        // Restore original styles on unmount
-        document.body.style.overflow = originalOverflow;
-        document.documentElement.style.overflow = originalHtmlOverflow;
-      };
-    }
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+    };
   }, []);
 
   // Initialize map
@@ -258,11 +259,9 @@ function MapPageContent() {
       }
 
       try {
-        // Dynamic import to avoid SSR issues
         const leaflet = await import('leaflet');
         L = leaflet.default;
 
-        // Fix for default markers in webpack
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -270,26 +269,22 @@ function MapPageContent() {
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
         });
 
-        // Create map instance - no zoom controls for cleaner UI
         const map = L.map(mapRef.current, {
           zoomControl: false,
           attributionControl: false,
         });
 
-        // Add tile layer with theme support
         const isDarkMode = resolvedTheme === 'dark';
         const tileLayer = createTileLayer(L, isDarkMode);
         tileLayer.addTo(map);
 
-        // Set initial view - use URL params if available, otherwise world view
         if (initialViewport) {
           map.setView([initialViewport.lat, initialViewport.lng], initialViewport.zoom);
         } else {
-          const defaultView = getDefaultMapView(null);
+          const defaultView = getDefaultMapView(undefined);
           map.setView(defaultView.center, 2);
         }
 
-        // Handle map move/zoom - debounced
         let moveTimeout: NodeJS.Timeout;
         map.on('moveend', () => {
           clearTimeout(moveTimeout);
@@ -309,12 +304,10 @@ function MapPageContent() {
         map.on('click', (e: any) => {
           const { lat, lng } = e.latlng;
 
-          // Remove existing new pin marker if any
           if (newPinMarkerRef.current) {
             map.removeLayer(newPinMarkerRef.current);
           }
 
-          // Create a green marker icon for the new pin
           const greenIcon = L.icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
@@ -324,12 +317,10 @@ function MapPageContent() {
             shadowSize: [41, 41]
           });
 
-          // Add the new pin marker
           const newMarker = L.marker([lat, lng], { icon: greenIcon });
           newMarker.addTo(map);
           newPinMarkerRef.current = newMarker;
 
-          // Store the location and show the drawer
           setNewPinLocation({ lat, lng });
           setShowNewPinDrawer(true);
         });
@@ -364,25 +355,22 @@ function MapPageContent() {
 
     const map = mapInstanceRef.current;
 
-    // Clear existing markers and labels
     markersRef.current.forEach(marker => map.removeLayer(marker));
     markersRef.current.clear();
     labelsRef.current.forEach(label => map.removeLayer(label));
     labelsRef.current.clear();
 
-    // Add markers and labels for each page
     pages.forEach((page, index) => {
-      // Create marker
       const marker = L.marker([page.location.lat, page.location.lng]);
 
       marker.on('click', () => {
+        selectionFromListRef.current = false;
         setSelectedIndex(index);
       });
 
       marker.addTo(map);
       markersRef.current.set(page.id, marker);
 
-      // Attach a tooltip to the marker that appears below it
       const truncatedTitle = page.title.length > 15 ? page.title.substring(0, 15) + '...' : page.title;
       marker.bindTooltip(truncatedTitle, {
         permanent: true,
@@ -390,14 +378,11 @@ function MapPageContent() {
         offset: [0, 10],
         className: 'map-page-label-tooltip'
       });
-      labelsRef.current.set(page.id, marker); // Store reference to marker for label styling
+      labelsRef.current.set(page.id, marker);
     });
 
-    // If we have pages and map is at world view, fit to markers
     if (pages.length > 0) {
       const currentZoom = map.getZoom();
-
-      // Only auto-fit if at world view (zoom level 2-3)
       if (currentZoom <= 3) {
         const bounds = L.latLngBounds(pages.map(p => [p.location.lat, p.location.lng]));
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
@@ -405,7 +390,7 @@ function MapPageContent() {
     }
   }, [pages, mapReady]);
 
-  // Animate active marker and update label when selection changes
+  // Animate active marker and scroll list item into view when selection changes
   useEffect(() => {
     if (!mapReady || !L || !selectedPage) return;
 
@@ -413,12 +398,11 @@ function MapPageContent() {
     if (!map) return;
 
     // Reset all markers and tooltip labels
-    markersRef.current.forEach((marker, id) => {
+    markersRef.current.forEach((marker) => {
       const element = marker.getElement();
       if (element) {
         element.classList.remove('active-marker');
       }
-      // Reset tooltip styling
       const tooltip = marker.getTooltip();
       if (tooltip) {
         const tooltipElement = tooltip.getElement();
@@ -428,15 +412,13 @@ function MapPageContent() {
       }
     });
 
-    // Highlight the selected marker (pulsing effect via CSS)
+    // Highlight the selected marker
     const activeMarker = markersRef.current.get(selectedPage.id);
     if (activeMarker) {
       const element = activeMarker.getElement();
       if (element) {
         element.classList.add('active-marker');
       }
-
-      // Highlight the tooltip
       const tooltip = activeMarker.getTooltip();
       if (tooltip) {
         const tooltipElement = tooltip.getElement();
@@ -445,82 +427,31 @@ function MapPageContent() {
         }
       }
 
-      // Always pan to marker when selection changes
-      map.panTo([selectedPage.location.lat, selectedPage.location.lng], {
-        animate: true,
-        duration: 0.3
-      });
-    }
-
-    // Scroll carousel to the selected card (only if not triggered by scroll)
-    if (carouselRef.current && selectedIndex >= 0 && !isScrollingRef.current) {
-      const cards = carouselRef.current.querySelectorAll('[data-card-index]');
-      const targetCard = cards[selectedIndex] as HTMLElement;
-      if (targetCard) {
-        targetCard.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center'
+      // Pan map to marker (unless selection came from the list center button)
+      if (!selectionFromListRef.current) {
+        map.panTo([selectedPage.location.lat, selectedPage.location.lng], {
+          animate: true,
+          duration: 0.3
         });
       }
     }
-    isScrollingRef.current = false;
+
+    // Scroll list item into view when marker is clicked on the map
+    if (listRef.current && selectedIndex >= 0 && !selectionFromListRef.current) {
+      const item = listRef.current.querySelector(`[data-list-index="${selectedIndex}"]`);
+      if (item) {
+        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    selectionFromListRef.current = false;
   }, [selectedIndex, selectedPage, mapReady]);
-
-  // Handle carousel scroll to detect which card is centered
-  useEffect(() => {
-    const carousel = carouselRef.current;
-    if (!carousel || pages.length === 0) return;
-
-    let scrollTimeout: NodeJS.Timeout;
-
-    const handleScroll = () => {
-      // Debounce scroll detection
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        const cards = carousel.querySelectorAll('[data-card-index]');
-        if (cards.length === 0) return;
-
-        const carouselRect = carousel.getBoundingClientRect();
-        const carouselCenter = carouselRect.left + carouselRect.width / 2;
-
-        let closestIndex = 0;
-        let closestDistance = Infinity;
-
-        cards.forEach((card, index) => {
-          const cardRect = card.getBoundingClientRect();
-          const cardCenter = cardRect.left + cardRect.width / 2;
-          const distance = Math.abs(cardCenter - carouselCenter);
-
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestIndex = index;
-          }
-        });
-
-        // Only update if the index changed
-        if (closestIndex !== selectedIndex) {
-          isScrollingRef.current = true;
-          setSelectedIndex(closestIndex);
-        }
-      }, 100);
-    };
-
-    carousel.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      clearTimeout(scrollTimeout);
-      carousel.removeEventListener('scroll', handleScroll);
-    };
-  }, [pages.length, selectedIndex]);
 
   // Refetch when bounds change significantly
   useEffect(() => {
     if (currentBounds && mapInstanceRef.current && !loading) {
       const zoom = mapInstanceRef.current.getZoom();
-      // Only refetch when zoomed in enough (zoom > 5)
       if (zoom > 5) {
-        // Create a bounds key to prevent duplicate fetches
         const boundsKey = `${currentBounds.north.toFixed(2)},${currentBounds.south.toFixed(2)},${currentBounds.east.toFixed(2)},${currentBounds.west.toFixed(2)}`;
         if (boundsKey !== lastFetchBoundsRef.current) {
           lastFetchBoundsRef.current = boundsKey;
@@ -530,39 +461,19 @@ function MapPageContent() {
     }
   }, [currentBounds, fetchMapPages, loading]);
 
-  // Navigation functions
-  const navigateToPrevious = useCallback(() => {
-    if (pages.length === 0) return;
-    setSelectedIndex(prev => (prev <= 0 ? pages.length - 1 : prev - 1));
-  }, [pages.length]);
+  // Center map on a specific page location (triggered from list)
+  const centerOnPage = useCallback((index: number) => {
+    const page = pages[index];
+    if (!page || !mapInstanceRef.current) return;
 
-  const navigateToNext = useCallback(() => {
-    if (pages.length === 0) return;
-    setSelectedIndex(prev => (prev >= pages.length - 1 ? 0 : prev + 1));
-  }, [pages.length]);
+    selectionFromListRef.current = true;
+    setSelectedIndex(index);
 
-  // Touch handlers for swipe
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      navigateToNext();
-    } else if (isRightSwipe) {
-      navigateToPrevious();
-    }
-  };
+    mapInstanceRef.current.panTo([page.location.lat, page.location.lng], {
+      animate: true,
+      duration: 0.3
+    });
+  }, [pages]);
 
   // Cancel new pin placement
   const cancelNewPin = useCallback(() => {
@@ -577,7 +488,6 @@ function MapPageContent() {
   // Handle create new page at location
   const handleCreateNewPage = useCallback(() => {
     if (!newPinLocation) return;
-    // Navigate to new page with location data
     const locationData = encodeURIComponent(JSON.stringify({
       lat: newPinLocation.lat,
       lng: newPinLocation.lng,
@@ -589,7 +499,6 @@ function MapPageContent() {
   // Handle link existing page to location
   const handleLinkExistingPage = useCallback(() => {
     if (!newPinLocation) return;
-    // Navigate to search with location context
     const locationData = encodeURIComponent(JSON.stringify({
       lat: newPinLocation.lat,
       lng: newPinLocation.lng,
@@ -624,235 +533,199 @@ function MapPageContent() {
     }
   }, []);
 
+  // Invalidate map size when layout changes (needed for Leaflet in flex containers)
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    const timer = setTimeout(() => {
+      mapInstanceRef.current?.invalidateSize();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [mapReady]);
+
+  // ── List item component ──
+  const LocationListItem = ({ page, index }: { page: MapPage; index: number }) => {
+    const isActive = index === selectedIndex;
+    return (
+      <div
+        data-list-index={index}
+        className={cn(
+          "flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors",
+          isActive
+            ? "bg-primary/5"
+            : "hover:bg-muted/50"
+        )}
+        onClick={() => router.push(`/${page.id}`)}
+      >
+        {/* Center-on-map button */}
+        <button
+          className={cn(
+            "flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border transition-colors",
+            isActive
+              ? "bg-primary/10 border-primary/30 text-primary"
+              : "bg-muted border-transparent text-muted-foreground hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            centerOnPage(index);
+          }}
+          aria-label={`Center map on ${page.title}`}
+          title="Center on map"
+        >
+          <Icon name="Crosshair" size={15} />
+        </button>
+
+        {/* Page info — title and author inline */}
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+          <PillLink
+            href={`/${page.id}`}
+            pageId={page.id}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {page.title}
+          </PillLink>
+          <span className="text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+            by{' '}
+            <UsernameBadge
+              userId={page.userId}
+              username={page.username}
+              size="sm"
+              variant="link"
+              showBadge={false}
+            />
+          </span>
+        </div>
+
+        {/* Navigate arrow */}
+        <Icon name="ChevronRight" size={14} className="flex-shrink-0 text-muted-foreground/60" />
+      </div>
+    );
+  };
+
   return (
     <NavPageLayout maxWidth="full" className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
-      {/* Map Container - full viewport, fixed position to prevent scroll */}
+      {/* Loading Overlay */}
       <div
-        className="fixed inset-0 overflow-hidden"
+        className="fixed sidebar-inset bg-background flex items-center justify-center z-50 transition-opacity duration-500"
         style={{
-          top: 0, // Map goes to top, behind the floating header
-          touchAction: 'none' // Prevent browser handling of touch gestures
+          opacity: initialLoadComplete ? 0 : 1,
+          pointerEvents: initialLoadComplete ? 'none' : 'auto',
         }}
       >
-        {/* Map Area - full container */}
-        <div className="absolute inset-0">
-        {/* Loading Overlay */}
-        {loading && !mapReady && (
-          <div className="absolute inset-0 bg-background flex items-center justify-center z-10">
-            <div className="text-center space-y-2">
-              <Icon name="Loader" className="mx-auto text-primary" />
-              <p className="text-sm text-muted-foreground">Loading map...</p>
+        <div className="text-center space-y-2">
+          <Icon name="Loader" className="mx-auto text-primary" />
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+
+      {/* ── Main Layout ── */}
+      {/* Mobile: vertical stack (map top, list bottom) */}
+      {/* Desktop: horizontal (sidebar left, map right) */}
+      <div className="fixed sidebar-inset flex flex-col md:flex-row overflow-hidden">
+
+        {/* ── Sidebar / List Panel ── */}
+        <div className="order-2 md:order-1 flex-1 md:flex-none md:w-80 lg:w-96 flex flex-col border-t md:border-t-0 md:border-r border-border bg-background overflow-hidden">
+          {/* Panel header */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-background">
+            <div className="flex items-center gap-2">
+              <Icon name="MapPin" size={16} className="text-muted-foreground" />
+              <span className="text-sm font-medium">
+                {pages.length} {pages.length === 1 ? 'location' : 'locations'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsFilterModalOpen(true)}
+                className={cn(
+                  "flex items-center justify-center w-8 h-8 rounded-full border transition-colors",
+                  (!hideInactive || !hideUnverified)
+                    ? "bg-primary/10 border-primary text-primary"
+                    : "border-border hover:bg-muted text-muted-foreground"
+                )}
+                aria-label="Map filters"
+              >
+                <Icon name="SlidersHorizontal" size={15} />
+              </button>
+              <button
+                onClick={handleShare}
+                className="flex items-center justify-center w-8 h-8 rounded-full border border-border hover:bg-muted transition-colors text-muted-foreground"
+                aria-label="Share map view"
+              >
+                {shareSuccess ? (
+                  <Icon name="Check" size={15} className="text-green-600" />
+                ) : (
+                  <Icon name="Share2" size={15} />
+                )}
+              </button>
             </div>
           </div>
-        )}
 
-        {/* Error State */}
-        {error && (
-          <div className="absolute top-4 left-4 right-4 z-10">
-            <div className="wewrite-card p-3 flex items-center gap-3 bg-destructive/10 border-destructive/30">
-              <Icon name="AlertCircle" size={20} className="text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive flex-1">{error}</p>
-              <Button variant="outline" size="sm" onClick={() => fetchMapPages()}>
-                Retry
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Map */}
-        <div
-          ref={mapRef}
-          className="absolute inset-0 bg-muted"
-          style={{ zIndex: 1 }}
-        />
-
-        {/* Top hint text */}
-        {mapReady && !showNewPinDrawer && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="bg-background border border-border rounded-full px-4 py-2 shadow-lg">
-              <p className="text-sm text-muted-foreground">Tap to add to the map</p>
-            </div>
-          </div>
-        )}
-
-        {/* Top right buttons - Filter + Share */}
-        {mapReady && (
-          <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-            <button
-              onClick={() => setIsFilterModalOpen(true)}
-              className={cn(
-                "flex items-center justify-center w-10 h-10 rounded-full border shadow-lg transition-colors",
-                (!hideInactive || !hideUnverified)
-                  ? "bg-primary/10 border-primary text-primary"
-                  : "bg-background border-border hover:bg-muted"
-              )}
-              aria-label="Map filters"
-            >
-              <Icon name="SlidersHorizontal" size={20} />
-            </button>
-            <button
-              onClick={handleShare}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
-              aria-label="Share map view"
-            >
-              {shareSuccess ? (
-                <Icon name="Check" size={20} className="text-green-600" />
-              ) : (
-                <Icon name="Share2" size={20} />
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Bottom Page Cards - Carousel with peeking cards (always rendered, animated in/out) */}
-        {mapReady && !showNewPinDrawer && (
-          <div
-            className="absolute bottom-24 left-0 right-0 z-10"
-            style={{
-              touchAction: 'pan-x',
-              transform: pages.length > 0 ? 'translateX(0)' : 'translateX(100%)',
-              opacity: pages.length > 0 ? 1 : 0,
-              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              pointerEvents: pages.length > 0 ? 'auto' : 'none',
-            }}
-          >
-            {/* Floating Navigation Buttons - positioned relative to carousel */}
-            {pages.length > 1 && (
-              <>
-                <button
-                  onClick={navigateToPrevious}
-                  className="absolute left-2 bottom-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
-                  aria-label="Previous page"
-                >
-                  <Icon name="ChevronLeft" size={16} />
-                </button>
-                <button
-                  onClick={navigateToNext}
-                  className="absolute right-2 bottom-4 z-20 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-lg hover:bg-muted transition-colors"
-                  aria-label="Next page"
-                >
-                  <Icon name="ChevronRight" size={16} />
-                </button>
-              </>
+          {/* Scrollable list */}
+          <div ref={listRef} className="flex-1 overflow-y-auto divide-y divide-border/40">
+            {pages.length > 0 ? (
+              pages.map((page, index) => (
+                <LocationListItem key={page.id} page={page} index={index} />
+              ))
+            ) : (
+              !loading && (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <Icon name="MapPin" size={32} className="text-muted-foreground/50 mb-3" />
+                  <p className="text-sm font-medium">No pages with locations</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tap the map to add a page
+                  </p>
+                </div>
+              )
             )}
 
-            {/* Carousel Container - horizontally scrollable, bottom-aligned */}
-            <div
-              ref={carouselRef}
-              className="overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              <div
-                className="flex gap-3 px-4 md:px-0 items-end"
-                style={{
-                  // On mobile: 9% padding for peeking cards
-                  // On desktop: center the first card with calc((100vw - cardWidth) / 2)
-                  paddingLeft: 'max(9%, calc((100% - 400px) / 2))',
-                  paddingRight: '9%',
-                }}
-              >
-                {pages.map((page, index) => {
-                  const isActive = index === selectedIndex;
-                  return (
-                    <div
-                      key={page.id}
-                      data-card-index={index}
-                      className="flex-shrink-0 snap-center"
-                      style={{
-                        width: '80%',
-                        minWidth: '280px',
-                        maxWidth: '400px',
-                        opacity: isActive ? 1 : 0.7,
-                        transform: isActive ? 'scale(1)' : 'scale(0.95)',
-                        transition: 'opacity 0.3s ease, transform 0.3s ease'
-                      }}
-                    >
-                      <div
-                        className="wewrite-card p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => {
-                          if (isActive) {
-                            router.push(`/${page.id}`);
-                          } else {
-                            setSelectedIndex(index);
-                          }
-                        }}
-                      >
-                        {/* Content */}
-                        <div className="space-y-2">
-                          {/* Page Title as Pill Link */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <PillLink
-                              href={`/${page.id}`}
-                              pageId={page.id}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {page.title}
-                            </PillLink>
-                          </div>
+            {/* Loading state in list */}
+            {loading && pages.length === 0 && (
+              <div className="flex items-center justify-center p-8">
+                <Icon name="Loader" className="text-primary" />
+              </div>
+            )}
+          </div>
+        </div>
 
-                          {/* Username */}
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-sm text-muted-foreground">by</span>
-                            <UsernameBadge
-                              userId={page.userId}
-                              username={page.username}
-                              variant="pill"
-                              showBadge={false}
-                            />
-                          </div>
-
-                          {/* Embedded Allocation Bar - show on all cards */}
-                          <div onClick={(e) => e.stopPropagation()} className="pt-1">
-                            <EmbeddedAllocationBar
-                              pageId={page.id}
-                              authorId={page.userId}
-                              pageTitle={page.title}
-                              source="MapCard"
-                              disableDetailModal={false}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+        {/* ── Map Panel ── */}
+        <div className="order-1 md:order-2 h-[45vh] md:h-full flex-shrink-0 md:flex-1 relative">
+          {/* Error State */}
+          {error && (
+            <div className="absolute top-3 left-3 right-3 z-10">
+              <div className="wewrite-card p-3 flex items-center gap-3 bg-destructive/10 border-destructive/30">
+                <Icon name="AlertCircle" size={20} className="text-destructive flex-shrink-0" />
+                <p className="text-sm text-destructive flex-1">{error}</p>
+                <Button variant="outline" size="sm" onClick={() => fetchMapPages()}>
+                  Retry
+                </Button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Empty State - passive fallback at bottom, slides down when pages arrive */}
-        {mapReady && !showNewPinDrawer && (
+          {/* Map */}
           <div
-            className="absolute bottom-24 left-0 right-0 z-10 flex justify-center px-4"
-            style={{
-              transform: pages.length === 0 ? 'translateY(0)' : 'translateY(calc(100% + 6rem))',
-              opacity: pages.length === 0 ? 1 : 0,
-              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              pointerEvents: pages.length === 0 ? 'auto' : 'none',
-            }}
-          >
-            <div className="wewrite-card p-4 text-center space-y-1 max-w-xs">
-              <p className="text-sm font-medium">No pages with locations</p>
-              <p className="text-xs text-muted-foreground">
-                Tap the map to add a page
-              </p>
-            </div>
-          </div>
-        )}
+            ref={mapRef}
+            className="absolute inset-0 bg-muted"
+            style={{ zIndex: 1 }}
+          />
 
-        {/* Loading indicator for refetch */}
-        {loading && mapReady && (
-          <div className="absolute top-4 right-4 z-10">
-            <div className="wewrite-card p-2">
-              <Icon name="Loader" className="text-primary" />
+          {/* Top hint text */}
+          {mapReady && !showNewPinDrawer && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+              <div className="bg-background/90 backdrop-blur-sm border border-border rounded-full px-3 py-1.5 shadow-lg">
+                <p className="text-xs text-muted-foreground">Tap map to add a page</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
+          {/* Loading indicator for refetch */}
+          {loading && mapReady && (
+            <div className="absolute top-3 right-3 z-10">
+              <div className="wewrite-card p-2">
+                <Icon name="Loader" className="text-primary" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -899,7 +772,7 @@ function MapPageContent() {
         </div>
       </AdaptiveModal>
 
-      {/* New Pin Drawer - using proper Drawer component, no overlay to see pin */}
+      {/* New Pin Drawer */}
       <Drawer open={showNewPinDrawer && !!newPinLocation} onOpenChange={(open) => !open && cancelNewPin()}>
         <DrawerContent height="auto" noOverlay>
           <DrawerHeader className="border-b-0 pb-2">
@@ -940,7 +813,7 @@ export default function MapPage() {
   return (
     <Suspense fallback={
       <NavPageLayout maxWidth="full" className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
-        <div className="fixed inset-0 flex items-center justify-center" style={{ top: 0 }}>
+        <div className="fixed sidebar-inset bg-background flex items-center justify-center">
           <div className="text-center space-y-2">
             <Icon name="Loader" className="mx-auto text-primary" />
             <p className="text-sm text-muted-foreground">Loading map...</p>

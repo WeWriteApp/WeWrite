@@ -142,8 +142,10 @@ export default function ContentCarousel({
       >
         {/* Original content */}
         {children}
-        {/* Duplicate content for seamless infinite scrolling */}
-        {children}
+        {/* Duplicate content for seamless infinite scrolling - wrapped with aria-hidden to avoid duplicate keys */}
+        <div className="contents" aria-hidden="true">
+          {children}
+        </div>
       </div>
     </div>
   );

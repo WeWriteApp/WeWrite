@@ -18,6 +18,7 @@ import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useEarnings } from '../../contexts/EarningsContext';
 import { useEmailVerificationStatus } from '../../hooks/useEmailVerificationStatus';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
+import { MOBILE_BREAKPOINT } from '../../constants/layout';
 
 // ============================================================================
 // CONSTANTS
@@ -143,10 +144,24 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const sidebarWidth = user && (isExpanded || isHovering) ? EXPANDED_WIDTH : user ? COLLAPSED_WIDTH : 0;
   const contentOffset = user ? (isExpanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH) : 0;
 
+  // Set --sidebar-content-offset CSS variable, but ONLY on desktop (lg: 1024px+).
+  // The sidebar is `hidden lg:flex`, so the variable must be 0 on mobile to prevent
+  // fixed-position elements from being offset when no sidebar is visible.
+  // See constants/layout.ts "FIXED ELEMENTS & SIDEBAR AWARENESS" for full docs.
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.documentElement.style.setProperty('--sidebar-content-offset', `${contentOffset}px`);
-    }
+    if (typeof window === 'undefined') return;
+
+    const updateCSSVariable = () => {
+      const isDesktop = window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT}px)`).matches;
+      const value = isDesktop ? contentOffset : 0;
+      document.documentElement.style.setProperty('--sidebar-content-offset', `${value}px`);
+    };
+
+    updateCSSVariable();
+
+    const mql = window.matchMedia(`(min-width: ${MOBILE_BREAKPOINT}px)`);
+    mql.addEventListener('change', updateCSSVariable);
+    return () => mql.removeEventListener('change', updateCSSVariable);
   }, [contentOffset]);
 
   const contextValue: SidebarContextType = {

@@ -76,6 +76,38 @@ export function getSecondarySidebarOffset(isGlobalSidebarExpanded: boolean): str
  */
 export const SECONDARY_SIDEBAR_LEFT_OFFSET = 'var(--sidebar-content-offset, 72px)';
 
+/**
+ * FIXED ELEMENTS & SIDEBAR AWARENESS
+ * ====================================
+ * Fixed-position elements escape the normal document flow, so the SidebarLayout
+ * spacer div has no effect on them. They need explicit sidebar awareness.
+ *
+ * CSS classes (defined in `app/styles/fixed-layer.css`):
+ *
+ * 1. `.sidebar-inset` — Full viewport fill with sidebar awareness.
+ *    Sets top/right/bottom to 0, and left to 0 (mobile) or sidebar offset (desktop).
+ *    Use INSTEAD OF `inset-0` — never combine them (Tailwind's `inset: 0px`
+ *    shorthand will override the individual `left` property).
+ *
+ *    @example <div className="fixed sidebar-inset">...</div>
+ *
+ * 2. `.sidebar-offset-left` — Only sets left. Use when you control
+ *    top/right/bottom yourself. Same rule: do NOT combine with `inset-0`.
+ *
+ *    @example <div className="fixed top-0 right-0 bottom-0 sidebar-offset-left">
+ *
+ * 3. `.fixed-header-sidebar-aware` — For floating headers with padding.
+ *    Adds sidebar offset + 24px on desktop.
+ *
+ * Breakpoint: All classes use `lg:` (1024px) to match the DesktopSidebar's
+ * `hidden lg:flex` visibility. On mobile, left is always 0.
+ *
+ * WHY NOT inline styles? The `--sidebar-content-offset` CSS variable is set
+ * by DesktopSidebar's useEffect for ALL viewports (including mobile). But
+ * the sidebar is only visible at `lg:`. Inline styles can't use media queries,
+ * so they'd apply the offset on mobile too. Always use the CSS classes.
+ */
+
 // ============================================================================
 // CONTAINER WIDTHS
 // ============================================================================

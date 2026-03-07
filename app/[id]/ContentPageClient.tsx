@@ -120,23 +120,39 @@ export default function ContentPageClient({
     }
   }, [pageId, router]);
 
-  // Check if not-found ID might be a user ID
+  // When SSR returned not-found, verify client-side before giving up.
+  // SSR may have hit a different server (e.g. port mismatch in dev) or timed out.
+  // The client-side fetch uses the current origin, which is always correct.
   useEffect(() => {
-    if (shouldCheckUser && status === 'not-found') {
-      const checkUser = async () => {
-        try {
-          const response = await fetch(`/api/users/${pageId}/check`, {
-            method: 'HEAD',
-          });
-          if (response.ok) {
-            router.replace(`/u/${pageId}`);
+    if (!shouldCheckUser || status !== 'not-found') return;
+
+    const verifyNotFound = async () => {
+      try {
+        // Try fetching the page client-side (uses current origin)
+        const pageResponse = await fetch(`/api/pages/${encodeURIComponent(pageId)}`);
+        if (pageResponse.ok) {
+          const data = await pageResponse.json();
+          if (data.pageData && !data.pageData.deleted) {
+            // Page exists! SSR got a false 404. Switch to normal render path
+            // which will trigger ContentPageView to fetch data client-side.
+            setStatus('page');
+            return;
           }
-        } catch (error) {
-          // Failed to check user ID - non-fatal
         }
-      };
-      checkUser();
-    }
+
+        // Page truly not found — check if it might be a user ID
+        const userResponse = await fetch(`/api/users/${pageId}/check`, {
+          method: 'HEAD',
+        });
+        if (userResponse.ok) {
+          router.replace(`/u/${pageId}`);
+        }
+      } catch (error) {
+        // Failed to verify - non-fatal, keep showing not-found
+      }
+    };
+
+    verifyNotFound();
   }, [shouldCheckUser, status, pageId, router]);
 
   // Handle deleted state - redirect to search with the page title

@@ -20,6 +20,10 @@ interface CachedProfile {
 // Simple in-memory cache to prevent duplicate API calls
 const profileCache = new Map<string, CachedProfile>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const FAILED_CACHE_TTL = 30 * 1000; // 30 seconds for failed lookups
+
+// Cache for failed lookups to prevent infinite re-fetching
+const failedFetchCache = new Map<string, number>();
 
 interface UsernameBadgeProps {
   userId: string;
@@ -66,6 +70,15 @@ export function UsernameBadge({
   useEffect(() => {
     const fetchFreshProfile = async () => {
       if (!userId) return;
+
+      // Check if we recently failed to fetch this user (prevent infinite re-fetching)
+      const lastFailed = failedFetchCache.get(userId);
+      if (lastFailed && Date.now() - lastFailed < FAILED_CACHE_TTL) {
+        if (!freshUsername) {
+          setFreshUsername(`user_${userId.substring(0, 8)}`);
+        }
+        return;
+      }
 
       // Determine if we need tier data (when props not provided)
       const needsTier = tier === undefined;
@@ -150,11 +163,13 @@ export function UsernameBadge({
           }
         } else {
           console.error('Failed to fetch profile, status:', response.status);
+          failedFetchCache.set(userId, Date.now());
           // FALLBACK: Use a generated username
           setFreshUsername(`user_${userId.substring(0, 8)}`);
         }
       } catch (error) {
         console.error('Failed to fetch fresh profile:', error);
+        failedFetchCache.set(userId, Date.now());
         // FALLBACK: Use a generated username
         setFreshUsername(`user_${userId.substring(0, 8)}`);
       } finally {
