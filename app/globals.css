@@ -1860,10 +1860,10 @@ a.username-badge-link:has(.text-muted-foreground) {
     --foreground: 0.20 0 0;
 
     --card: 1.00 0 0;
-    --card-foreground: 0.20 0 0;
+    --card-foreground: 0.10 0 0;
 
     --popover: 1.00 0 0;
-    --popover-foreground: 0.20 0 0;
+    --popover-foreground: 0.10 0 0;
 
     /* Primary uses dynamic accent color */
     --primary: var(--accent-base);
@@ -1871,7 +1871,7 @@ a.username-badge-link:has(.text-muted-foreground) {
 
     /* Secondary - light grey background, dark text */
     --secondary: 0.95 0 0;
-    --secondary-foreground: 0.20 0 0;
+    --secondary-foreground: 0.15 0 0;
 
     /* Muted - subtle grey background, medium text */
     --muted: 0.95 0 0;
@@ -1972,10 +1972,10 @@ a.username-badge-link:has(.text-muted-foreground) {
 
     /* Card background in dark mode - visibly elevated from black background */
     --card: 0.21 0 0;
-    --card-foreground: 0.93 0 0;
+    --card-foreground: 0.98 0 0;
 
     --popover: 0.17 0 0;
-    --popover-foreground: 0.93 0 0;
+    --popover-foreground: 0.98 0 0;
 
     /* Primary uses dynamic accent color */
     --primary: var(--accent-base);
@@ -1983,7 +1983,7 @@ a.username-badge-link:has(.text-muted-foreground) {
 
     /* Secondary - dark grey background, light text */
     --secondary: 0.22 0 0;
-    --secondary-foreground: 0.93 0 0;
+    --secondary-foreground: 0.85 0 0;
 
     /* Muted - dark grey background, medium-light text */
     --muted: 0.22 0 0;
@@ -2140,8 +2140,7 @@ iframe[src*="js.stripe.com"] {
 
 /* Dark mode hover state for cards - enhanced shadow for dark mode */
 .dark .wewrite-card:hover:not([role="dialog"]):not([data-modal-content]):not([aria-modal="true"] *):not([data-expanded="true"]) {
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3), 0 2px 4px 0 rgba(0, 0, 0, 0.2); /* Stronger shadow for dark mode */
-  transform: translateY(-1px); /* Subtle lift effect */
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3), 0 2px 4px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* Base transition for smooth hover effects */

@@ -192,26 +192,26 @@ const config: Config = {
       animation: {
         'gradient-x': 'gradient-x 3s ease infinite',
         'gradient': 'gradient 3s ease infinite',
-        'fadeIn': 'fadeIn 0.5s ease-in-out forwards',
-        'fadeInSlow': 'fadeIn 0.8s ease-in-out forwards',
+        'fadeIn': 'fadeIn 0.5s ease-in-out',
+        'fadeInSlow': 'fadeIn 0.8s ease-in-out',
         'collapsible-down': 'collapsible-down 0.2s ease-out',
         'collapsible-up': 'collapsible-up 0.2s ease-out',
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'slide-up-fade': 'slide-up-fade 0.3s ease-out forwards',
+        'slide-up-fade': 'slide-up-fade 0.3s ease-out',
         'dialog-in': 'dialog-in 0.2s ease-out forwards',
         'dialog-out': 'dialog-out 0.15s ease-in forwards',
         // Element reveal animations for smooth layout shifts
-        'reveal-in': 'reveal-in 0.25s ease-out forwards',
+        'reveal-in': 'reveal-in 0.25s ease-out',
         'reveal-out': 'reveal-out 0.2s ease-in forwards',
-        'reveal-scale-in': 'reveal-scale-in 0.25s ease-out forwards',
+        'reveal-scale-in': 'reveal-scale-in 0.25s ease-out',
         'reveal-scale-out': 'reveal-scale-out 0.2s ease-in forwards',
         // Drawer animations
         'drawer-slide-up': 'drawer-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
         'drawer-slide-down': 'drawer-slide-down 0.3s ease-out forwards',
         // Navigation stack within-detail slide animations
-        'slide-in-from-right': 'slide-in-from-right 250ms ease-out forwards',
-        'slide-in-from-left': 'slide-in-from-left 250ms ease-out forwards',
+        'slide-in-from-right': 'slide-in-from-right 250ms ease-out',
+        'slide-in-from-left': 'slide-in-from-left 250ms ease-out',
       },
       keyframes: {
         'gradient-x': {

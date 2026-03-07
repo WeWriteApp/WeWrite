@@ -33,31 +33,36 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
     const lightMuted = '0.00 0.00 0.0 / 0.04';
     const lightMutedForeground = '0.00 0.00 0.0 / 0.55';
     const lightSecondary = '0.00 0.00 0.0 / 0.06';
-    const lightSecondaryForeground = '0.00 0.00 0.0 / 0.85';
+    const lightSecondaryForeground = '0.15 0.00 0';
     const lightBorder = '0.00 0.00 0.0 / 0.10';
     const lightInput = '0.00 0.00 0.0 / 0.02';
 
-    // Light mode cards: Pure white/black overlays
+    // Light mode cards
+    // --card: Semi-transparent Tailwind token for bg-card (119 usages, 45 files).
+    //   Format: "L C H / alpha" — consumed as oklch(var(--card)).
+    // --card-bg: Solid OKLCH for .wewrite-card class system (~40 usages).
+    //   Format: "oklch(L C H)" — consumed as var(--card-bg).
+    // These are NOT the same. Do not mix them up.
     const lightCard = '1.00 0.00 0.0 / 0.70';
-    const lightCardForeground = '0.00 0.00 0.0 / 0.90';
+    const lightCardForeground = '0.10 0.00 0';
     const lightCardBorder = '0.00 0.00 0.0 / 0.12';
-    const lightPopover = '1.00 0.00 0.0 / 0.85';
-    const lightPopoverForeground = '0.00 0.00 0.0 / 0.90';
+    const lightPopover = '1.00 0.00 0';
+    const lightPopoverForeground = '0.10 0.00 0';
 
     // Dark mode: Use pure white overlays with varying opacity
     const darkMuted = '1.00 0.00 0.0 / 0.04';
     const darkMutedForeground = '1.00 0.00 0.0 / 0.55';
     const darkSecondary = '1.00 0.00 0.0 / 0.06';
-    const darkSecondaryForeground = '1.00 0.00 0.0 / 0.85';
+    const darkSecondaryForeground = '0.85 0.00 0';
     const darkBorder = '1.00 0.00 0.0 / 0.08';
     const darkInput = '1.00 0.00 0.0 / 0.02';
 
     // Dark mode cards: Pure white overlays
     const darkCard = '1.00 0.00 0.0 / 0.06';
-    const darkCardForeground = '1.00 0.00 0.0 / 0.98';
+    const darkCardForeground = '0.98 0.00 0';
     const darkCardBorder = '1.00 0.00 0.0 / 0.08';
-    const darkPopover = '1.00 0.00 0.0 / 0.08';
-    const darkPopoverForeground = '1.00 0.00 0.0 / 0.98';
+    const darkPopover = '0.17 0.00 0';
+    const darkPopoverForeground = '0.98 0.00 0';
 
     // Store both light and dark variants
     root.style.setProperty('--neutral-muted-light', lightMuted);
@@ -102,7 +107,7 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
 
       // Card theme system variables - solid backgrounds
       root.style.setProperty('--card-bg', isDark ? 'oklch(0.16 0.00 0)' : 'oklch(1.00 0.00 0)');
-      root.style.setProperty('--card-bg-hover', isDark ? 'oklch(0.20 0.00 0)' : 'oklch(0.97 0.00 0)');
+      root.style.setProperty('--card-bg-hover', isDark ? 'oklch(0.20 0.00 0)' : 'oklch(1.00 0.00 0)');
 
       // Pure grayscale borders
       const borderL = isDark ? 1.0 : 0.0;

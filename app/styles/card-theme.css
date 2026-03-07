@@ -1,11 +1,16 @@
 /**
  * WeWrite Card Theme CSS
- * 
+ *
  * This file contains the CSS custom properties and classes for our
  * centralized card theme system. It provides consistent styling for
  * all card components across the application.
- * 
+ *
  * Based on Radix Colors design principles with semantic color tokens.
+ *
+ * IMPORTANT: --card-bg (used here by .wewrite-card) is a SOLID oklch color
+ * set by NeutralColorContext. It is NOT the same as --card, which is a
+ * semi-transparent Tailwind token consumed as oklch(var(--card)).
+ * See NeutralColorContext.tsx for the full explanation.
  */
 
 /* ===== CARD THEME CSS VARIABLES ===== */
@@ -13,7 +18,7 @@
 :root {
   /* Light theme card variables - solid backgrounds (NeutralColorContext will override) */
   --card-bg: oklch(1.00 0.00 0); /* Solid white */
-  --card-bg-hover: oklch(0.97 0.00 0); /* Very light gray */
+  --card-bg-hover: oklch(1.00 0.00 0); /* Stay white on hover */
   --card-border: oklch(0.00 0.00 0 / 0.1); /* Black with 10% opacity */
   --card-border-hover: oklch(0.00 0.00 0 / 0.15);
   --card-text: oklch(0.16 0.13 274.7);
@@ -69,8 +74,8 @@
 .wewrite-card:hover {
   background-color: var(--card-bg-hover);
   border-color: var(--card-border-hover);
-  /* Enhanced hover shadow */
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  /* Larger shadow on hover (light mode) */
+  box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.06);
 }
 
 .dark .wewrite-card {
@@ -213,7 +218,7 @@
 
 @media (min-width: 1024px) {
   .wewrite-card:hover:not([role="dialog"]):not([data-modal-content]):not([aria-modal="true"] *) {
-    transform: translateY(-1px);
+    transform: none;
   }
 }
 

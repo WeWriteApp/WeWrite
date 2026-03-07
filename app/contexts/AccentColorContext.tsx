@@ -198,12 +198,15 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
     // Update CSS variables for OKLCH using the final values
     const finalHex = oklchToHex(finalOklchValues);
     document.documentElement.style.setProperty('--accent-color', finalHex || '#2563EB');
-    // Use DECIMAL format for OKLCH values (not percentage) for browser compatibility
+    // --accent-l/c/h: Individual OKLCH components for fine-grained use (e.g. derived colors).
+    // --accent-base: Combined "L C H" string for the opacity-based Tailwind system
+    //   (consumed as oklch(var(--accent-base)) or oklch(var(--accent-base) / 0.5)).
+    // Both exist because Tailwind's color system needs the combined string,
+    // while some calculations need individual components.
     document.documentElement.style.setProperty('--accent-l', finalOklchValues.l.toFixed(2));
     document.documentElement.style.setProperty('--accent-c', finalOklchValues.c.toFixed(2));
     document.documentElement.style.setProperty('--accent-h', finalOklchValues.h.toFixed(1));
 
-    // Set base accent color for opacity-based system - DECIMAL format (e.g., "0.50 0.25 230")
     const baseAccent = `${finalOklchValues.l.toFixed(2)} ${finalOklchValues.c.toFixed(2)} ${finalOklchValues.h.toFixed(1)}`;
     document.documentElement.style.setProperty('--accent-base', baseAccent);
 
