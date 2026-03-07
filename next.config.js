@@ -121,6 +121,9 @@ const nextConfig = {
   // Experimental features for better error reporting
   experimental: {
     forceSwcTransforms: false,
+    // Enable server source maps so prerender errors show actual file/line
+    // instead of minified chunk positions (e.g. "33313.js:43:65987")
+    serverSourceMaps: true,
     // Disable optimizations that can cause hydration issues in production
     ...(process.env.NODE_ENV === 'development' && {
       optimizePackageImports: ['slate', 'slate-react']

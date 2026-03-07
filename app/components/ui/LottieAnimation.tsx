@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
-import Lottie from 'lottie-react';
+import dynamic from 'next/dynamic';
+
+// lottie-web is client-only (needs DOM). Use dynamic import with ssr:false
+// to prevent it from being bundled into server chunks during prerendering.
+const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
 interface LottieAnimationProps {
   animationData: any;
@@ -19,7 +22,7 @@ export function LottieAnimation({
   size = 24
 }: LottieAnimationProps) {
   return (
-    <div className={`inline-flex items-center justify-center ${className}`}>
+    <div className={`inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
       <Lottie
         animationData={animationData}
         loop={loop}
