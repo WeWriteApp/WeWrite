@@ -781,63 +781,6 @@ export function useCompositePagesMetrics(dateRange: DateRange, granularity?: num
   return { data, loading, error, refetch: fetchData };
 }
 
-export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: number) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Debounce date range changes
-  const debouncedDateRange = useDebounce(dateRange, 300);
-
-  const fetchData = useCallback(async () => {
-    // Early return if dateRange is not properly initialized
-    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate ||
-        !(debouncedDateRange.startDate instanceof Date) || !(debouncedDateRange.endDate instanceof Date) ||
-        isNaN(debouncedDateRange.startDate.getTime()) || isNaN(debouncedDateRange.endDate.getTime())) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      // Use API endpoint instead of direct service call
-      const response = await adminFetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
-        startDate: debouncedDateRange.startDate.toISOString(),
-        endDate: debouncedDateRange.endDate.toISOString(),
-        type: 'pages',
-        granularity: (granularity || 50).toString()
-      }), {
-        method: 'GET',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch cumulative pages data: ${response.status}`);
-      }
-
-      const apiResult = await response.json();
-      if (!apiResult.success) {
-        throw new Error(apiResult.error || 'Failed to fetch cumulative pages data');
-      }
-
-      // Fix: API returns nested structure {data: {data: [array]}}
-      const result = apiResult.data?.data || apiResult.data;
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch cumulative pages data');
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedDateRange, granularity]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return { data, loading, error, refetch: fetchData };
-}
-
 export function useTotalPagesEverCreated() {
   const [data, setData] = useState<number>(0);
   const [loading, setLoading] = useState(true);
