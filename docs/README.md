@@ -107,6 +107,11 @@ These READMEs live alongside the code they document:
 | [LEGACY_CODE_CLEANUP_GUIDE](./maintenance/LEGACY_CODE_CLEANUP_GUIDE.md) | Cleanup patterns |
 | [RECENT_CHANGES_SUMMARY](./maintenance/RECENT_CHANGES_SUMMARY.md) | Recent changes |
 
+### Testing
+| Doc | Description |
+|-----|-------------|
+| [TESTING_STRATEGY](./testing/TESTING_STRATEGY.md) | Testing layers: Jest, Playwright (web), Maestro (mobile) |
+
 ### Plans & Roadmaps
 | Doc | Description |
 |-----|-------------|

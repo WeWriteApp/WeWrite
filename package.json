@@ -17,6 +17,9 @@
     "dev:safe": "./scripts/start-dev.sh",
     "dev:port": "./scripts/ensure-port-3000.sh",
     "build": "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ) SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096 --require ./global-polyfill.js' next build --webpack",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "seo:audit": "bun run scripts/seo-audit.js",
     "subscription:cleanup": "bun run scripts/subscription-cleanup.js",
     "subscription:cleanup:dry": "bun run scripts/subscription-cleanup.js --dry-run",
@@ -204,6 +207,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
