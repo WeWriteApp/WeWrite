@@ -72,7 +72,6 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/timeline': 'Timeline View',
   '/invite': 'Invite Friends',
   '/support': 'Support',
-  '/onboarding': 'Onboarding',
   '/welcome': 'Welcome',
 
   // Auth pages
@@ -84,7 +83,6 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/auth/setup-username': 'Setup Username',
   '/auth/verify-email': 'Verify Email',
   '/auth/verify-email-pending': 'Email Verification Pending',
-  '/auth/switch-account': 'Switch Account',
 
   // Settings pages
   '/settings': 'Settings',
@@ -124,9 +122,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/admin/broadcast': 'Admin: Broadcast',
 
   // Monitoring/Testing pages
-  '/monitoring/database-reads': 'Monitoring: Database Reads',
-  '/test-colors': 'Test: Colors',
-  '/auth-test': 'Test: Auth'
+  '/monitoring/database-reads': 'Monitoring: Database Reads'
 };
 
 /**

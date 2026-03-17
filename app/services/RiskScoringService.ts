@@ -239,52 +239,6 @@ export class RiskScoringService {
   }
 
   /**
-   * Quick trust check without full assessment (for high-volume endpoints)
-   */
-  static async quickRiskCheck(input: {
-    userId?: string;
-    ip?: string;
-    userAgent?: string;
-    action: ActionType;
-  }): Promise<{ score: number; level: RiskLevel; shouldChallenge: boolean }> {
-    // Bot check is fast and reliable
-    const botResult = input.userAgent
-      ? BotDetectionService.detectBot(input.userAgent)
-      : { isBot: false, confidence: 0 };
-
-    // If clearly a bot, short-circuit with low trust
-    if (botResult.isBot && botResult.confidence > 0.8) {
-      return {
-        score: 10,  // Very low trust
-        level: 'block',
-        shouldChallenge: false // Block instead of challenge
-      };
-    }
-
-    // Quick account age check - higher = more trusted
-    let accountTrustScore = 50; // Default to medium
-    if (input.userId) {
-      const userData = await this.getCachedUserData(input.userId);
-      if (userData?.createdAt) {
-        const ageInDays = this.getAccountAgeDays(userData.createdAt);
-        accountTrustScore = ageInDays > ACCOUNT_AGE_THRESHOLDS.TRUSTED ? 80 : ageInDays > ACCOUNT_AGE_THRESHOLDS.REGULAR ? 60 : 40;
-      }
-    }
-
-    // Bot trust score: high confidence bot = low trust
-    const botTrustScore = Math.round((1 - botResult.confidence) * 100);
-
-    const score = Math.round(botTrustScore * 0.5 + accountTrustScore * 0.5);
-    const level = this.scoreToLevel(score);
-
-    return {
-      score,
-      level,
-      shouldChallenge: level === 'soft_challenge' || level === 'hard_challenge'
-    };
-  }
-
-  /**
    * Get trust level for a user (for display in admin)
    *
    * Uses weighted average based on RISK_FACTOR_IMPORTANCE
@@ -1162,60 +1116,6 @@ export class RiskScoringService {
   // ============================================================================
   // Public: Admin Actions
   // ============================================================================
-
-  /**
-   * Clear risk flags for a user (admin action)
-   */
-  static async clearUserRiskFlags(userId: string, adminId: string): Promise<void> {
-    try {
-      const userRef = doc(db, getCollectionName('users'), userId);
-      const userDoc = await getDoc(userRef);
-
-      if (!userDoc.exists()) {
-        throw new Error('User not found');
-      }
-
-      // Log the admin action
-      const eventId = `admin_clear_${Date.now()}`;
-      const eventRef = doc(db, getCollectionName('riskEvents'), eventId);
-      await setDoc(eventRef, {
-        action: 'admin_clear_risk',
-        userId,
-        adminId,
-        timestamp: Timestamp.now(),
-        score: 0,
-        level: 'allow',
-        reasons: ['Risk cleared by admin']
-      });
-
-      // Clear user cache
-      this.userCache.delete(userId);
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Flag a user for review (admin action)
-   */
-  static async flagUserForReview(userId: string, adminId: string, reason: string): Promise<void> {
-    try {
-      const eventId = `admin_flag_${Date.now()}`;
-      const eventRef = doc(db, getCollectionName('riskEvents'), eventId);
-      await setDoc(eventRef, {
-        action: 'admin_flag_review',
-        userId,
-        adminId,
-        reason,
-        timestamp: Timestamp.now(),
-        score: 100,
-        level: 'block',
-        reasons: [`Flagged by admin: ${reason}`]
-      });
-    } catch (error) {
-      throw error;
-    }
-  }
 
   /**
    * Get risk history for a user (admin view)
