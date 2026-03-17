@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)
 ![Node](https://img.shields.io/badge/node-20.x-green.svg)
-![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)
+![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)
 
 **A social wiki where every page you write is a fundraiser.**
@@ -240,13 +240,11 @@ graph TD
 - [Authentication Architecture](docs/architecture/AUTHENTICATION_ARCHITECTURE.md) - Environment-specific authentication rules
 - [Username Security Guidelines](docs/security/USERNAME_SECURITY_GUIDELINES.md) - Prevent email exposure vulnerabilities
 - [User Data Fetching Patterns](docs/architecture/USER_DATA_FETCHING_PATTERNS.md) - Standardized patterns for secure user data handling
-- [Security Audit Report](docs/security/SECURITY_AUDIT_REPORT.md) - Security posture and best practices
 
 #### Payment & Financial System
 - [Payments and Allocations](docs/payments/PAYMENTS_AND_ALLOCATIONS.md) - Main payments documentation
 - [Allocation System](docs/payments/ALLOCATION_SYSTEM.md) - USD allocation architecture
 - [Subscription System](docs/payments/SUBSCRIPTION_SYSTEM.md) - Subscription management and Stripe integration
-- [Payout Troubleshooting Guide](docs/payments/PAYOUT_TROUBLESHOOTING_GUIDE.md) - Common payout issues and solutions
 - [Financial Data Architecture](docs/payments/FINANCIAL_DATA_ARCHITECTURE.md) - Separated financial contexts architecture
 
 #### Content & Editor
@@ -282,9 +280,7 @@ graph TD
 
 ### Deployment & Operations
 
-- [Production Deployment Guide](docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md) - Deployment procedures and best practices
 - [Branch Aware Development](docs/deployment/BRANCH_AWARE_DEVELOPMENT.md) - Development workflow and environment switching
-- [Webhook Setup Guide](docs/deployment/WEBHOOK_SETUP_GUIDE.md) - Stripe webhook configuration
 
 ### Development Standards
 

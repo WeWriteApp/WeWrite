@@ -6,7 +6,7 @@
 bun install && bun dev
 ```
 
-**Tech Stack**: Next.js 15, TypeScript, TanStack Query v5, Firebase, Tailwind CSS
+**Tech Stack**: Next.js 16, TypeScript, TanStack Query v5, Firebase, Tailwind CSS
 
 ---
 
@@ -37,7 +37,7 @@ These READMEs live alongside the code they document:
 | Doc | Description |
 |-----|-------------|
 | [FIREBASE_REST_API_ARCHITECTURE](./firebase/FIREBASE_REST_API_ARCHITECTURE.md) | **Start here for auth** - Hybrid REST/Admin |
-| [AUTHENTICATION_ARCHITECTURE](./firebase/AUTHENTICATION_ARCHITECTURE.md) | Environment-specific auth |
+| [AUTHENTICATION_ARCHITECTURE](./architecture/AUTHENTICATION_ARCHITECTURE.md) | Environment-specific auth |
 | [SESSION_MANAGEMENT_ARCHITECTURE](./auth/SESSION_MANAGEMENT_ARCHITECTURE.md) | Session handling |
 
 ### Payments & Allocations
@@ -46,7 +46,6 @@ These READMEs live alongside the code they document:
 | [PAYMENTS_AND_ALLOCATIONS](./payments/PAYMENTS_AND_ALLOCATIONS.md) | **Main payments doc** - subscriptions, allocations, payouts |
 | [ALLOCATION_SYSTEM](./payments/ALLOCATION_SYSTEM.md) | Allocation architecture |
 | [ALLOCATION_API_REFERENCE](./payments/ALLOCATION_API_REFERENCE.md) | API reference |
-| [PAYOUT_TROUBLESHOOTING_GUIDE](./payments/PAYOUT_TROUBLESHOOTING_GUIDE.md) | Common issues |
 
 ### Search System
 | Doc | Description |
@@ -77,7 +76,6 @@ These READMEs live alongside the code they document:
 | [NOTIFICATION_SYSTEM](./features/NOTIFICATION_SYSTEM.md) | Notification types |
 | [EMAIL_SYSTEM_IMPLEMENTATION](./features/EMAIL_SYSTEM_IMPLEMENTATION.md) | Email templates |
 | [LEADERBOARD_SYSTEM](./features/LEADERBOARD_SYSTEM.md) | Leaderboard |
-| [RECENT_EDITS_SYSTEM](./features/RECENT_EDITS_SYSTEM.md) | Recent activity |
 
 ### Firebase
 | Doc | Description |
@@ -95,9 +93,7 @@ These READMEs live alongside the code they document:
 ### Deployment
 | Doc | Description |
 |-----|-------------|
-| [VERCEL_DEPLOYMENT](./deployment/VERCEL_DEPLOYMENT.md) | Deployment |
 | [CRON_JOB_SETUP](./deployment/CRON_JOB_SETUP.md) | Scheduled jobs |
-| [STRIPE_WEBHOOK_SETUP](./deployment/STRIPE_WEBHOOK_SETUP.md) | Webhooks |
 
 ### Security
 | Doc | Description |

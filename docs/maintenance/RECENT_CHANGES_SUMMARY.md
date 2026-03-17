@@ -81,10 +81,7 @@ This document provides a quick overview of major changes made to WeWrite in 2025
 - **UPDATED**: `app/services/VisitorTrackingService.ts` - Disabled subscribeToVisitorCount()
 - **UPDATED**: `app/services/UnifiedStatsService.ts` - Disabled subscribeToPageStats()
 - **UPDATED**: `app/services/LiveReadersService.ts` - Disabled subscribeToReaderCount()
-- **NEW**: `EMERGENCY_COST_OPTIMIZATION_SUMMARY.md` - Complete optimization guide
-
 #### Documentation
-- **[EMERGENCY_COST_OPTIMIZATION_SUMMARY.md](../EMERGENCY_COST_OPTIMIZATION_SUMMARY.md)** - Complete cost optimization guide
 - **[LEGACY_CODE_CLEANUP_GUIDE.md](./LEGACY_CODE_CLEANUP_GUIDE.md)** - Updated with cost optimization patterns
 
 ### ✅ Content Display System Unification (Jan 25, 2025)
@@ -107,9 +104,7 @@ This document provides a quick overview of major changes made to WeWrite in 2025
 - **UPDATED**: `app/components/pages/PageView.tsx` - Simplified logic
 
 #### Documentation
-- **[CONTENT_DISPLAY_ARCHITECTURE.md](./CONTENT_DISPLAY_ARCHITECTURE.md)** - Complete architecture guide
-- **[CONTENT_DISPLAY_MIGRATION_GUIDE.md](./CONTENT_DISPLAY_MIGRATION_GUIDE.md)** - Migration patterns
-- **[CONTENT_DISPLAY_REFACTORING_SUMMARY.md](./CONTENT_DISPLAY_REFACTORING_SUMMARY.md)** - Detailed summary
+- **[CONTENT_DISPLAY_ARCHITECTURE.md](../architecture/CONTENT_DISPLAY_ARCHITECTURE.md)** - Complete architecture guide
 
 ### ✅ Diff Algorithm Enhancement (Jan 25, 2025)
 **Impact**: Critical UX improvement
@@ -308,7 +303,7 @@ grep -A5 -B5 "accent-color.*setProperty" app/ | grep -v "accent-h\|accent-s\|acc
 - **[DOCUMENTATION_INDEX.md](./DOCUMENTATION_INDEX.md)** - Complete documentation navigation
 
 ### Architecture Changes
-- **[CONTENT_DISPLAY_ARCHITECTURE.md](./CONTENT_DISPLAY_ARCHITECTURE.md)** - Complete architecture guide
+- **[CONTENT_DISPLAY_ARCHITECTURE.md](../architecture/CONTENT_DISPLAY_ARCHITECTURE.md)** - Complete architecture guide
 - **[CONTENT_DISPLAY_MIGRATION_GUIDE.md](./CONTENT_DISPLAY_MIGRATION_GUIDE.md)** - Migration patterns
 - **[CONTENT_DISPLAY_REFACTORING_SUMMARY.md](./CONTENT_DISPLAY_REFACTORING_SUMMARY.md)** - Detailed summary
 

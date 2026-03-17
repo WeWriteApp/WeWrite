@@ -283,10 +283,10 @@ WeWrite implements a comprehensive SEO strategy with programmatic pages:
 
 ## 📚 Related Documentation
 
-- [PAYMENT_SYSTEM_GUIDE.md](./PAYMENT_SYSTEM_GUIDE.md) - Complete payment system overview
-- [FINANCIAL_DATA_ARCHITECTURE.md](./FINANCIAL_DATA_ARCHITECTURE.md) - Detailed financial context architecture
-- [SUBSCRIPTION_SYSTEM.md](./SUBSCRIPTION_SYSTEM.md) - Subscription management details
-- [SIMPLIFIED_PAYOUT_SYSTEM.md](./SIMPLIFIED_PAYOUT_SYSTEM.md) - Payout system architecture
+- [PAYMENT_SYSTEM_GUIDE.md](../payments/PAYMENT_SYSTEM_GUIDE.md) - Complete payment system overview
+- [FINANCIAL_DATA_ARCHITECTURE.md](../payments/FINANCIAL_DATA_ARCHITECTURE.md) - Detailed financial context architecture
+- [SUBSCRIPTION_SYSTEM.md](../payments/SUBSCRIPTION_SYSTEM.md) - Subscription management details
+- [PAYOUT_SYSTEM_V2.md](../payments/PAYOUT_SYSTEM_V2.md) - Payout system architecture
 
 ---
 
