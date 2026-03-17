@@ -12,10 +12,7 @@ import { getUserIdFromRequest } from '../../../api/auth-helper';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { getStripe } from '../../../lib/stripe';
 
-// Initialize Firebase Admin and Stripe
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
-const stripe = getStripe();
+export const dynamic = 'force-dynamic';
 
 interface CustomerIssue {
   customerId: string;
@@ -47,6 +44,10 @@ interface MonitoringReport {
 
 export async function GET(request: NextRequest) {
   try {
+    const adminApp = initAdmin();
+    const adminDb = adminApp.firestore();
+    const stripe = getStripe();
+
     // Get authenticated user and verify admin access
     const userId = await getUserIdFromRequest(request);
     if (!userId) {

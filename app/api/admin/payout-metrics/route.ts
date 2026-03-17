@@ -10,9 +10,7 @@ import { getCollectionName, COLLECTIONS, USD_COLLECTIONS } from '../../../utils/
 import { withAdminContext } from '../../../utils/adminRequestContext';
 import { getStripe } from '../../../lib/stripe';
 
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
-const stripe = getStripe();
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   return withAdminContext(request, async () => {
@@ -22,6 +20,10 @@ export async function GET(request: NextRequest) {
       if (!authResult.success) {
         return NextResponse.json({ error: authResult.error }, { status: 401 });
       }
+
+    const adminApp = initAdmin();
+    const adminDb = adminApp.firestore();
+    const stripe = getStripe();
 
     // Calculate date ranges
     const now = new Date();

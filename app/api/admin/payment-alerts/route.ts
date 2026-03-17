@@ -9,8 +9,7 @@ import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
 
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
+export const dynamic = 'force-dynamic';
 
 interface PaymentAlert {
   id: string;
@@ -37,6 +36,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: authResult.error }, { status: 401 });
       }
 
+    const adminApp = initAdmin();
+    const adminDb = adminApp.firestore();
     const alerts: PaymentAlert[] = [];
     const now = new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -159,8 +160,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Check for revenue anomalies
-    const todayRevenue = await calculateDailyRevenue(now);
-    const yesterdayRevenue = await calculateDailyRevenue(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    const todayRevenue = await calculateDailyRevenue(adminDb, now);
+    const yesterdayRevenue = await calculateDailyRevenue(adminDb, new Date(now.getTime() - 24 * 60 * 60 * 1000));
     
     if (yesterdayRevenue > 0 && todayRevenue < yesterdayRevenue * 0.5) {
       alerts.push({
@@ -198,7 +199,7 @@ export async function GET(request: NextRequest) {
   }); // End withAdminContext
 }
 
-async function calculateDailyRevenue(date: Date): Promise<number> {
+async function calculateDailyRevenue(adminDb: FirebaseFirestore.Firestore, date: Date): Promise<number> {
   const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 

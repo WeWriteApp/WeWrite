@@ -14,10 +14,7 @@ import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../uti
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { getStripe } from '../../../lib/stripe';
 
-// Initialize Firebase Admin and Stripe
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
-const stripe = getStripe();
+export const dynamic = 'force-dynamic';
 
 interface CleanupResult {
   customerId: string;
@@ -43,6 +40,10 @@ export async function POST(request: NextRequest) {
     if (!adminAuth.isAdmin) {
       return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
+
+    const adminApp = initAdmin();
+    const adminDb = adminApp.firestore();
+    const stripe = getStripe();
 
     const body = await request.json();
     const {

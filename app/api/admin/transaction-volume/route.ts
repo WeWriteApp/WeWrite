@@ -9,8 +9,7 @@ import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
 
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   return withAdminContext(request, async () => {
@@ -20,6 +19,9 @@ export async function GET(request: NextRequest) {
       if (!authResult.success) {
         return NextResponse.json({ error: authResult.error }, { status: 401 });
       }
+
+    const adminApp = initAdmin();
+    const adminDb = adminApp.firestore();
 
     // Get last 24 hours of transaction data
     const now = new Date();
