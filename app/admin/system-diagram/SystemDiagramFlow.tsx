@@ -620,29 +620,21 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
     title: 'Client Applications',
     description: 'End-user interfaces',
     details: [
-      'Web: Next.js 14 with App Router',
+      'Web: Next.js with App Router',
       'PWA: Service worker for offline support',
-      'iOS: Capacitor-wrapped native app',
-      'Android: Capacitor-wrapped native app',
     ],
     files: [
       { path: 'app/layout.tsx', description: 'Root layout component' },
       { path: 'public/sw.js', description: 'Service worker for PWA' },
-      { path: 'capacitor.config.ts', description: 'Capacitor configuration' },
-      { path: 'ios/', description: 'iOS native project' },
-      { path: 'android/', description: 'Android native project' },
     ],
     functions: [
       { name: 'registerServiceWorker()', description: 'PWA installation' },
-      { name: 'Capacitor.Plugins', description: 'Native platform APIs' },
     ],
     upstream: ['components', 'contexts', 'hooks', 'editor'],
     downstream: [],
     monitoring: [
       { tool: 'PWAStatusWidget', description: 'PWA installation tracking' },
       { tool: 'PWAInstallsAnalyticsWidget', description: 'Install metrics' },
-      { tool: 'App Store Connect', description: 'iOS app analytics' },
-      { tool: 'Google Play Console', description: 'Android app analytics' },
     ],
     links: [
       { label: 'PWA Status', path: '/admin' },
@@ -956,7 +948,6 @@ const createInitialNodes = (onNodeClick: (nodeId: string) => void): Node[] => [
       isGroup: true,
       items: [
         { name: 'Web & PWA', description: 'Next.js' },
-        { name: 'iOS & Android', description: 'Capacitor' },
       ],
       onNodeClick,
     },

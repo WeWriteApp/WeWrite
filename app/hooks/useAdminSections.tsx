@@ -167,13 +167,6 @@ const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Test earnings and payouts'
   },
   {
-    id: 'mobile-onboarding',
-    title: 'Mobile Onboarding',
-    icon: createIconComponent('TabletSmartphone'),
-    href: '/admin/mobile-onboarding',
-    description: 'Preview iOS/Android onboarding'
-  },
-  {
     id: 'onboarding-tutorial',
     title: 'Onboarding Tutorial',
     icon: createIconComponent('BookOpen'),

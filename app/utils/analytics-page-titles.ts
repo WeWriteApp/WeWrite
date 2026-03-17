@@ -118,7 +118,6 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/admin/financial-tests': 'Admin: Financial Tests',
   '/admin/writing-ideas': 'Admin: Writing Ideas',
   '/admin/monthly-financials': 'Admin: Monthly Financials',
-  '/admin/mobile-onboarding': 'Admin: Mobile Onboarding',
   '/admin/background-images': 'Admin: Background Images',
   '/admin/opengraph-images': 'Admin: OpenGraph Images',
   '/design-system': 'Design System',

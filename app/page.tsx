@@ -3,12 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './providers/AuthProvider';
-import { isNativeApp } from './utils/capacitor';
 
 /**
  * Root page - redirects to /welcome (logged out) or /home (logged in)
- * For native Capacitor apps, redirects to /onboarding if not completed
- * This allows for URL-based routing with explicit paths for each state
  */
 export default function RootPage() {
   const router = useRouter();
@@ -50,17 +47,6 @@ export default function RootPage() {
   // Perform redirect once auth state is known
   useEffect(() => {
     if (!mounted || isLoading || authRedirectPending) return;
-
-    const native = isNativeApp();
-
-    // Check for native app onboarding
-    if (native) {
-      const onboardingComplete = localStorage.getItem('wewrite_mobile_onboarding_complete');
-      if (onboardingComplete !== 'true') {
-        router.replace('/onboarding');
-        return;
-      }
-    }
 
     if (isAuthenticated) {
       router.replace('/home');
