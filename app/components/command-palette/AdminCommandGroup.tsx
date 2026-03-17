@@ -7,14 +7,28 @@ import { useAdminSections } from '../../hooks/useAdminSections';
 
 interface AdminCommandGroupProps {
   onSelectSection: (sectionId: string) => void;
+  inputValue?: string;
 }
 
-function AdminCommandGroupInner({ onSelectSection }: AdminCommandGroupProps) {
+function matchesQuery(value: string, query: string): boolean {
+  if (!query) return true;
+  return value.toLowerCase().includes(query.toLowerCase());
+}
+
+function AdminCommandGroupInner({ onSelectSection, inputValue = '' }: AdminCommandGroupProps) {
   const { sections } = useAdminSections();
+
+  const filtered = inputValue
+    ? sections.filter((section) =>
+        matchesQuery(`admin ${section.title} ${section.description ?? ''}`, inputValue)
+      )
+    : sections;
+
+  if (filtered.length === 0) return null;
 
   return (
     <CommandGroup heading="Admin">
-      {sections.map((section) => (
+      {filtered.map((section) => (
         <CommandItem
           key={section.id}
           value={`admin ${section.title} ${section.description ?? ''}`}

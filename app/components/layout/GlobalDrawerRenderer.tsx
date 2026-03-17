@@ -37,6 +37,7 @@ import { cn } from '../../lib/utils';
 import { isPWA } from '../../utils/pwa-detection';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
+import { useCommandPalette } from '../../providers/CommandPaletteProvider';
 
 // Lazy load drawer content components
 const MainMenuDrawerContent = lazy(() => import('./drawer-content/MainMenuDrawerContent'));
@@ -243,6 +244,7 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
   const { user } = useAuth();
   const { getToolbarItems } = useUnifiedMobileNav();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
+  const { openPalette } = useCommandPalette();
   const [isPWAMode, setIsPWAMode] = useState(false);
 
   const { handleButtonPress, isNavigatingTo, targetRoute } = useOptimisticNavigation({
@@ -298,8 +300,8 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
     },
     search: {
       icon: 'Search',
-      onClick: () => navigateIfNeeded('search', '/search'),
-      isActive: isRouteActive('/search'),
+      onClick: () => openPalette(),
+      isActive: false,
       label: 'Search',
     },
     notifications: {

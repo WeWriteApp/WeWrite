@@ -3,15 +3,31 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useCommandPaletteActions } from '../contexts/CommandPaletteActionsContext';
 
+export interface LinkLocationContext {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
 interface CommandPaletteContextType {
   isOpen: boolean;
+  inputValue: string;
+  setInputValue: (value: string) => void;
+  linkLocationContext: LinkLocationContext | null;
   openPalette: () => void;
+  openPaletteWithQuery: (query: string) => void;
+  openPaletteWithLocationLink: (location: LinkLocationContext) => void;
   closePalette: () => void;
 }
 
 const CommandPaletteContext = createContext<CommandPaletteContextType>({
   isOpen: false,
+  inputValue: '',
+  setInputValue: () => {},
+  linkLocationContext: null,
   openPalette: () => {},
+  openPaletteWithQuery: () => {},
+  openPaletteWithLocationLink: () => {},
   closePalette: () => {},
 });
 
@@ -32,10 +48,25 @@ function isInputTarget(e: KeyboardEvent): boolean {
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [linkLocationContext, setLinkLocationContext] = useState<LinkLocationContext | null>(null);
   const { pageActions } = useCommandPaletteActions();
 
   const openPalette = useCallback(() => setIsOpen(true), []);
-  const closePalette = useCallback(() => setIsOpen(false), []);
+  const openPaletteWithQuery = useCallback((query: string) => {
+    setInputValue(query);
+    setIsOpen(true);
+  }, []);
+  const openPaletteWithLocationLink = useCallback((location: LinkLocationContext) => {
+    setLinkLocationContext(location);
+    setInputValue('');
+    setIsOpen(true);
+  }, []);
+  const closePalette = useCallback(() => {
+    setIsOpen(false);
+    setInputValue('');
+    setLinkLocationContext(null);
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -45,7 +76,10 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       // Cmd/Ctrl+Shift+P — always works, even when editing
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
-        setIsOpen(prev => !prev);
+        setIsOpen(prev => {
+          if (prev) { setInputValue(''); setLinkLocationContext(null); }
+          return !prev;
+        });
         return;
       }
 
@@ -56,7 +90,10 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'k') {
         if (isEditingPage) return; // let editor handle it
         e.preventDefault();
-        setIsOpen(prev => !prev);
+        setIsOpen(prev => {
+          if (prev) { setInputValue(''); setLinkLocationContext(null); }
+          return !prev;
+        });
         return;
       }
 
@@ -74,7 +111,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   }, [pageActions?.isEditing]);
 
   return (
-    <CommandPaletteContext.Provider value={{ isOpen, openPalette, closePalette }}>
+    <CommandPaletteContext.Provider value={{ isOpen, inputValue, setInputValue, linkLocationContext, openPalette, openPaletteWithQuery, openPaletteWithLocationLink, closePalette }}>
       {children}
     </CommandPaletteContext.Provider>
   );

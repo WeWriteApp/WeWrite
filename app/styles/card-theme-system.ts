@@ -44,7 +44,7 @@ export const cardThemeTokens = {
   light: {
     // Primary card background - subtle, elevated feel
     cardBackground: radixColorToCssVar(slate.slate2),        // Very light gray-blue
-    cardBackgroundHover: radixColorToCssVar(slate.slate3),   // Slightly darker on hover
+    cardBackgroundHover: radixColorToCssVar(slate.slate2),   // Stay same color on hover (shadow increases instead)
 
     // Floating card background - translucent for glassmorphism (OKLCH with alpha)
     floatingBackground: 'oklch(100.00% 0.0000 158.2 / 0.85)',

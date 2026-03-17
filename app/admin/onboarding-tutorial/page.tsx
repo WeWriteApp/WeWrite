@@ -92,18 +92,30 @@ export default function OnboardingTutorialAdmin() {
         </div>
       </div>
 
+      {/* Admin Test Mode Badge */}
+      {isActive && progress.isAdminTest && (
+        <div className="wewrite-card bg-yellow-500/10 border-yellow-500/20">
+          <div className="flex items-center gap-2">
+            <Icon name="Shield" size={14} className="text-yellow-600 dark:text-yellow-400" />
+            <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+              Test Mode — all steps shown regardless of user state
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Control Buttons */}
       <div className="flex gap-2">
         <Button
           onClick={() => {
-            startTutorial();
+            startTutorial(true);
             router.push('/home');
           }}
           size="sm"
           className="gap-1.5 flex-1"
         >
           <Icon name="Play" size={14} />
-          {isActive ? 'Restart' : 'Start'}
+          {isActive ? 'Restart' : 'Start'} (Test Mode)
         </Button>
         <Button
           variant="outline"

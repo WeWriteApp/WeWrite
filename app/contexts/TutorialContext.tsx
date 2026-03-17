@@ -1,7 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { useFeatureFlags } from './FeatureFlagContext';
+import { useAuth } from '../providers/AuthProvider';
+import { useSubscription } from './SubscriptionContext';
 
 /**
  * Tutorial step IDs - ordered sequence for onboarding
@@ -84,6 +86,7 @@ interface TutorialProgress {
   skippedSteps: TutorialStepId[];
   currentStepIndex: number;
   isActive: boolean;
+  isAdminTest?: boolean;
   startedAt?: string;
   completedAt?: string;
 }
@@ -97,8 +100,11 @@ interface TutorialContextType {
   currentStep: TutorialStep | null;
   isActive: boolean;
 
+  // Filtered steps (hides already-accomplished steps unless admin test)
+  relevantSteps: TutorialStep[];
+
   // Actions
-  startTutorial: () => void;
+  startTutorial: (adminTest?: boolean) => void;
   resetTutorial: () => void;
   completeStep: (stepId: TutorialStepId) => void;
   skipStep: (stepId: TutorialStepId) => void;
@@ -129,7 +135,10 @@ const TutorialContext = createContext<TutorialContextType | undefined>(undefined
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<TutorialProgress>(defaultProgress);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [userHasPages, setUserHasPages] = useState<boolean | null>(null);
   const { isEnabled, isLoading: flagsLoading } = useFeatureFlags();
+  const { user } = useAuth();
+  const { hasActiveSubscription } = useSubscription();
 
   // Load progress from localStorage on mount
   useEffect(() => {
@@ -147,9 +156,58 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     setIsHydrated(true);
   }, []);
 
+  // Check if user has any pages (lightweight fetch)
+  useEffect(() => {
+    if (!user) {
+      setUserHasPages(null);
+      return;
+    }
+    // Skip check if tutorial is already completed and not admin testing
+    if (progress.completedAt && !progress.isAdminTest) return;
+
+    let cancelled = false;
+    fetch(`/api/my-pages?limit=1&userId=${user.uid}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled) {
+          setUserHasPages(Array.isArray(data.pages) ? data.pages.length > 0 : false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setUserHasPages(false);
+      });
+    return () => { cancelled = true; };
+  }, [user, progress.completedAt, progress.isAdminTest]);
+
+  // Check if a step is already accomplished by the user
+  const checkAlreadyAccomplished = useCallback((stepId: TutorialStepId, isAdminTest: boolean): boolean => {
+    if (isAdminTest) return false;
+    if (userHasPages === null) return false; // Data not ready — don't skip yet
+    switch (stepId) {
+      case 'write-page':
+      case 'link-pages':
+      case 'search':
+        return userHasPages;
+      case 'fill-bio':
+        return !!user?.bio;
+      case 'setup-subscription':
+        return hasActiveSubscription;
+      default:
+        return false;
+    }
+  }, [userHasPages, user?.bio, hasActiveSubscription]);
+
+  // Compute relevant steps (filtered to only those not already accomplished)
+  const relevantSteps = useMemo(() => {
+    if (progress.isAdminTest) return TUTORIAL_STEPS;
+    if (userHasPages === null) return TUTORIAL_STEPS;
+    return TUTORIAL_STEPS.filter(step => !checkAlreadyAccomplished(step.id, false));
+  }, [progress.isAdminTest, userHasPages, checkAlreadyAccomplished]);
+
   // Auto-start tutorial when feature flag is enabled and user hasn't completed it yet
   useEffect(() => {
     if (!isHydrated || flagsLoading) return;
+    if (userHasPages === null) return; // Wait for page data
 
     const flagEnabled = isEnabled('onboarding_tutorial');
     if (!flagEnabled) return;
@@ -160,14 +218,22 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     // Don't re-start if user has already made any progress (completed or skipped steps)
     if (progress.completedSteps.length > 0 || progress.skippedSteps.length > 0) return;
 
+    // Find first relevant step
+    let firstIndex = 0;
+    while (firstIndex < TUTORIAL_STEPS.length) {
+      if (!checkAlreadyAccomplished(TUTORIAL_STEPS[firstIndex].id, false)) break;
+      firstIndex++;
+    }
+    if (firstIndex >= TUTORIAL_STEPS.length) return; // No relevant steps
+
     setProgress({
       completedSteps: [],
       skippedSteps: [],
-      currentStepIndex: 0,
+      currentStepIndex: firstIndex,
       isActive: true,
       startedAt: new Date().toISOString(),
     });
-  }, [isHydrated, flagsLoading, isEnabled, progress.isActive, progress.completedAt, progress.completedSteps.length, progress.skippedSteps.length]);
+  }, [isHydrated, flagsLoading, isEnabled, progress.isActive, progress.completedAt, progress.completedSteps.length, progress.skippedSteps.length, userHasPages, checkAlreadyAccomplished]);
 
   // Save progress to localStorage when it changes
   useEffect(() => {
@@ -186,15 +252,26 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     : null;
 
   // Start the tutorial from the beginning
-  const startTutorial = useCallback(() => {
+  const startTutorial = useCallback((adminTest?: boolean) => {
+    const isAdmin = !!adminTest;
+    // Find first relevant step (admins see all steps)
+    let firstIndex = 0;
+    if (!isAdmin) {
+      while (firstIndex < TUTORIAL_STEPS.length) {
+        if (!checkAlreadyAccomplished(TUTORIAL_STEPS[firstIndex].id, false)) break;
+        firstIndex++;
+      }
+      if (firstIndex >= TUTORIAL_STEPS.length) return; // No relevant steps
+    }
     setProgress({
       completedSteps: [],
       skippedSteps: [],
-      currentStepIndex: 0,
+      currentStepIndex: firstIndex,
       isActive: true,
+      isAdminTest: isAdmin,
       startedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [checkAlreadyAccomplished]);
 
   // Reset tutorial (clear all progress)
   const resetTutorial = useCallback(() => {
@@ -204,14 +281,19 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Complete a step and move to next
+  // Complete a step and move to next (skipping already-accomplished steps)
   const completeStep = useCallback((stepId: TutorialStepId) => {
     setProgress(prev => {
       const newCompletedSteps = prev.completedSteps.includes(stepId)
         ? prev.completedSteps
         : [...prev.completedSteps, stepId];
 
-      const nextIndex = prev.currentStepIndex + 1;
+      // Scan forward to find the next non-accomplished step
+      let nextIndex = prev.currentStepIndex + 1;
+      while (nextIndex < TUTORIAL_STEPS.length) {
+        if (!checkAlreadyAccomplished(TUTORIAL_STEPS[nextIndex].id, !!prev.isAdminTest)) break;
+        nextIndex++;
+      }
       const isComplete = nextIndex >= TUTORIAL_STEPS.length;
 
       return {
@@ -222,16 +304,21 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         completedAt: isComplete ? new Date().toISOString() : undefined,
       };
     });
-  }, []);
+  }, [checkAlreadyAccomplished]);
 
-  // Skip a step and move to next
+  // Skip a step and move to next (skipping already-accomplished steps)
   const skipStep = useCallback((stepId: TutorialStepId) => {
     setProgress(prev => {
       const newSkippedSteps = prev.skippedSteps.includes(stepId)
         ? prev.skippedSteps
         : [...prev.skippedSteps, stepId];
 
-      const nextIndex = prev.currentStepIndex + 1;
+      // Scan forward to find the next non-accomplished step
+      let nextIndex = prev.currentStepIndex + 1;
+      while (nextIndex < TUTORIAL_STEPS.length) {
+        if (!checkAlreadyAccomplished(TUTORIAL_STEPS[nextIndex].id, !!prev.isAdminTest)) break;
+        nextIndex++;
+      }
       const isComplete = nextIndex >= TUTORIAL_STEPS.length;
 
       return {
@@ -242,7 +329,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         completedAt: isComplete ? new Date().toISOString() : undefined,
       };
     });
-  }, []);
+  }, [checkAlreadyAccomplished]);
 
   // Go to a specific step
   const goToStep = useCallback((stepIndex: number) => {
@@ -290,6 +377,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     progress,
     currentStep,
     isActive: progress.isActive,
+    relevantSteps,
     startTutorial,
     resetTutorial,
     completeStep,

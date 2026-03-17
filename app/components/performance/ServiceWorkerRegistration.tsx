@@ -36,6 +36,14 @@ export function ServiceWorkerRegistration() {
       return;
     }
 
+    // Never register the SW in development — and unregister any stale one
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(r => r.unregister());
+      });
+      return;
+    }
+
     registerServiceWorker();
   }, []);
 

@@ -7,7 +7,8 @@ export const SEARCH_CONTEXTS = {
   MAIN: 'main',
   LINK_EDITOR: 'link_editor',
   ADD_TO_PAGE: 'add_to_page',
-  AUTOCOMPLETE: 'autocomplete'
+  AUTOCOMPLETE: 'autocomplete',
+  COMMAND_PALETTE: 'command_palette'
 } as const;
 
 export type SearchContext = typeof SEARCH_CONTEXTS[keyof typeof SEARCH_CONTEXTS];

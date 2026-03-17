@@ -144,7 +144,8 @@ const SEARCH_CONTEXTS = {
   MAIN: 'main',
   LINK_EDITOR: 'link_editor',
   ADD_TO_PAGE: 'add_to_page',
-  AUTOCOMPLETE: 'autocomplete'
+  AUTOCOMPLETE: 'autocomplete',
+  COMMAND_PALETTE: 'command_palette'
 } as const;
 
 type SearchContext = typeof SEARCH_CONTEXTS[keyof typeof SEARCH_CONTEXTS];
@@ -180,6 +181,13 @@ const CONTEXT_DEFAULTS: Record<SearchContext, {
   },
   [SEARCH_CONTEXTS.AUTOCOMPLETE]: {
     maxResults: 10,
+    includeContent: false,
+    includeUsers: true,
+    includeGroups: false,
+    titleOnly: true
+  },
+  [SEARCH_CONTEXTS.COMMAND_PALETTE]: {
+    maxResults: 20,
     includeContent: false,
     includeUsers: true,
     includeGroups: false,

@@ -18,6 +18,7 @@ import { WarningDot } from '../ui/warning-dot';
 import { DockedToolbar } from '../ui/FloatingCard';
 import { shouldShowNavigation } from '../../constants/layout';
 import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
+import { useCommandPalette } from '../../providers/CommandPaletteProvider';
 import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 // Helper function to detect iOS devices
@@ -81,6 +82,7 @@ export default function MobileBottomNav() {
   const editorContext = useEditorContext();
   const { getToolbarItems } = useUnifiedMobileNav();
   const { openMenu, isGlobalDrawerActive, drawerConfig, navigationDepth } = useGlobalDrawer();
+  const { openPalette } = useCommandPalette();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
   const bankSetupStatus = useBankSetupStatus();
@@ -158,8 +160,8 @@ export default function MobileBottomNav() {
     },
     search: {
       icon: 'Search',
-      onClick: () => navigateIfNeeded('search', '/search'),
-      isActive: isRouteActive('/search'),
+      onClick: () => openPalette(),
+      isActive: false,
       label: 'Search',
     },
     notifications: {

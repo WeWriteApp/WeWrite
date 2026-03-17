@@ -11,6 +11,7 @@ import FollowingSuggestions from '../components/utils/FollowingSuggestions';
 import FollowedPages from '../components/pages/FollowedPages';
 import { Button } from '../components/ui/button';
 import { useRouter } from 'next/navigation';
+import { useCommandPalette } from '../providers/CommandPaletteProvider';
 
 /**
  * Following Page
@@ -24,6 +25,7 @@ import { useRouter } from 'next/navigation';
 export default function FollowingPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const { openPalette } = useCommandPalette();
   const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
@@ -94,7 +96,7 @@ export default function FollowingPage() {
         actions={
           <Button
             variant="secondary"
-            onClick={() => router.push('/search')}
+            onClick={() => openPalette()}
             className="flex items-center gap-2 rounded-2xl h-8 px-3"
           >
             <Icon name="Search" size={16} />

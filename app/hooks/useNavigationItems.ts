@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useNavigationOrder } from '../contexts/NavigationOrderContext';
 import { useFeatureFlags } from '../contexts/FeatureFlagContext';
 import { buildNewPageUrl } from '../utils/pageId';
+import { useCommandPalette } from '../providers/CommandPaletteProvider';
 
 export interface NavigationItem {
   id: string;
@@ -27,13 +28,14 @@ export function useNavigationItems(): NavigationItem[] {
   const router = useRouter();
   const { sidebarOrder } = useNavigationOrder();
   const { isEnabled } = useFeatureFlags();
+  const { openPalette } = useCommandPalette();
   const groupsEnabled = isEnabled('groups');
   const isUserAdmin = user?.isAdmin === true;
 
   return useMemo(() => {
     const allItems: Record<string, NavigationItem> = {
       'home': { id: 'home', icon: 'Home', label: 'Home', href: '/', keywords: ['dashboard', 'feed'] },
-      'search': { id: 'search', icon: 'Search', label: 'Search', href: '/search', keywords: ['find', 'query'] },
+      'search': { id: 'search', icon: 'Search', label: 'Search', href: '/search', action: () => openPalette(), keywords: ['find', 'query'] },
       'new': { id: 'new', icon: 'Plus', label: 'New Page', href: '/new', action: () => router.push(buildNewPageUrl()), keywords: ['create', 'write', 'draft'] },
       'notifications': { id: 'notifications', icon: 'Bell', label: 'Notifications', href: '/notifications', keywords: ['alerts', 'inbox'] },
       'map': { id: 'map', icon: 'Map', label: 'Map', href: '/map', keywords: ['location', 'geo'] },
@@ -52,5 +54,5 @@ export function useNavigationItems(): NavigationItem[] {
     return sidebarOrder
       .filter(id => allItems[id])
       .map(id => allItems[id]);
-  }, [user, router, sidebarOrder, groupsEnabled, isUserAdmin]);
+  }, [user, router, sidebarOrder, groupsEnabled, isUserAdmin, openPalette]);
 }

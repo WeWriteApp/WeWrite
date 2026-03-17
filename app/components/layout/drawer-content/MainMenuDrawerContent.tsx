@@ -14,6 +14,7 @@
 import React, { Suspense, lazy } from 'react';
 import { useGlobalDrawer } from '../../../providers/GlobalDrawerProvider';
 import { useAuth } from '../../../providers/AuthProvider';
+import { useCommandPalette } from '../../../providers/CommandPaletteProvider';
 import { useFeatureFlags } from '../../../contexts/FeatureFlagContext';
 import { useBankSetupStatus } from '../../../hooks/useBankSetupStatus';
 import { useSubscription } from '../../../contexts/SubscriptionContext';
@@ -40,6 +41,7 @@ interface NavItem {
   label: string;
   route?: string;
   action?: 'settings' | 'admin';
+  onClick?: () => void;
   badge?: React.ReactNode;
   warningDot?: boolean;
   requiresAdmin?: boolean;
@@ -51,7 +53,8 @@ interface NavItem {
  */
 function MainMenuList() {
   const { user, signOut } = useAuth();
-  const { navigateInDrawer, closeAndNavigate } = useGlobalDrawer();
+  const { navigateInDrawer, closeAndNavigate, closeDrawer } = useGlobalDrawer();
+  const { openPalette } = useCommandPalette();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
   // Settings warning indicators
@@ -67,7 +70,7 @@ function MainMenuList() {
   // Navigation items configuration
   const navItems: NavItem[] = [
     { id: 'home', icon: 'Home', label: 'Home', route: '/' },
-    { id: 'search', icon: 'Search', label: 'Search', route: '/search' },
+    { id: 'search', icon: 'Search', label: 'Search', onClick: () => { closeDrawer(); openPalette(); } },
     { id: 'profile', icon: 'User', label: 'Profile', route: user?.uid ? `/u/${user.uid}` : undefined },
     { id: 'notifications', icon: 'Bell', label: 'Notifications', route: '/notifications', badge: <NotificationBadge className="ml-2" /> },
     { id: 'leaderboard', icon: 'Trophy', label: 'Leaderboard', route: '/leaderboard' },
@@ -91,7 +94,9 @@ function MainMenuList() {
   });
 
   const handleItemClick = (item: NavItem) => {
-    if (item.action === 'settings') {
+    if (item.onClick) {
+      item.onClick();
+    } else if (item.action === 'settings') {
       navigateInDrawer('settings');
     } else if (item.action === 'admin') {
       navigateInDrawer('admin');

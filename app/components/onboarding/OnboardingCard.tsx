@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
-import { useTutorial, TUTORIAL_STEPS } from '../../contexts/TutorialContext';
+import { useTutorial } from '../../contexts/TutorialContext';
 import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
@@ -14,20 +14,21 @@ import { useRouter } from 'next/navigation';
  *
  * Inline onboarding section that sits at the top of the home feed.
  * Shows the current tutorial step with progress, description, and action buttons.
+ * Only displays steps the user hasn't already accomplished.
  */
 export function OnboardingCard() {
   const router = useRouter();
   const { user } = useAuth();
-  const { isActive, currentStep, progress, completeStep, skipStep, endTutorial, startTutorial } = useTutorial();
+  const { isActive, currentStep, progress, relevantSteps, completeStep, skipStep, endTutorial, startTutorial } = useTutorial();
   const { isEnabled } = useFeatureFlags();
   const [isDismissing, setIsDismissing] = useState(false);
 
   const flagEnabled = isEnabled('onboarding_tutorial');
-  const show = flagEnabled && isActive && !!currentStep && !isDismissing;
+  const show = flagEnabled && isActive && !!currentStep && relevantSteps.length > 0 && !isDismissing;
 
-  const currentIndex = progress.currentStepIndex;
-  const totalSteps = TUTORIAL_STEPS.length;
-  const progressPercent = ((currentIndex + 1) / totalSteps) * 100;
+  const currentIndex = currentStep ? relevantSteps.findIndex(s => s.id === currentStep.id) : 0;
+  const totalSteps = relevantSteps.length;
+  const progressPercent = totalSteps > 0 ? ((currentIndex + 1) / totalSteps) * 100 : 0;
   const isLastStep = currentIndex === totalSteps - 1;
 
   const handleDismiss = () => {
@@ -127,7 +128,7 @@ export function OnboardingCard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={isLastStep ? startTutorial : handleSkip}
+                      onClick={isLastStep ? () => startTutorial() : handleSkip}
                       className="text-muted-foreground"
                     >
                       {isLastStep ? 'Restart checklist' : (currentStep.skipLabel || 'Skip')}

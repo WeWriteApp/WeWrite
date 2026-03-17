@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { createTileLayer, getDefaultMapView } from '../utils/mapConfig';
 import PillLink from '../components/utils/PillLink';
+import { useCommandPalette } from '../providers/CommandPaletteProvider';
 import { UsernameBadge } from '../components/ui/UsernameBadge';
 import { EmbeddedAllocationBar } from '../components/payments/EmbeddedAllocationBar';
 import { cn } from '../lib/utils';
@@ -99,6 +100,7 @@ function MapPageContent() {
   const { resolvedTheme } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openPaletteWithLocationLink } = useCommandPalette();
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -499,13 +501,12 @@ function MapPageContent() {
   // Handle link existing page to location
   const handleLinkExistingPage = useCallback(() => {
     if (!newPinLocation) return;
-    const locationData = encodeURIComponent(JSON.stringify({
+    openPaletteWithLocationLink({
       lat: newPinLocation.lat,
       lng: newPinLocation.lng,
-      zoom: mapInstanceRef.current?.getZoom() || 15
-    }));
-    router.push(`/search?linkLocation=${locationData}`);
-  }, [newPinLocation, router]);
+      zoom: mapInstanceRef.current?.getZoom() || 15,
+    });
+  }, [newPinLocation, openPaletteWithLocationLink]);
 
   // Share current map viewport
   const handleShare = useCallback(async () => {

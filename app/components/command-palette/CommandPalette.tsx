@@ -127,8 +127,8 @@ export default function CommandPalette() {
     setSavedSearches((prev) => prev.filter((_, i) => i !== index));
   }, [user?.uid]);
 
-  const isSearching = inputValue.trim().length >= 2;
-  const hasInput = inputValue.trim().length > 0;
+  const isSearching = (inputValue ?? '').trim().length >= 2;
+  const hasInput = (inputValue ?? '').trim().length > 0;
 
   // Filter navigation items by query
   const filteredNavItems = useMemo(() => {

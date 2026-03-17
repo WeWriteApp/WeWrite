@@ -141,7 +141,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-[1099] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       // Dark overlay to match drawer
       "bg-black/50",
       className
@@ -163,7 +163,7 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, showOverlay = true, blurOverlay = false, showCloseButton = false, ...props }, ref) => {
+>(({ className, children, showOverlay = true, blurOverlay = false, showCloseButton = false, "aria-describedby": ariaDescribedBy, ...props }, ref) => {
   // Check if children includes DialogHeader, DialogBody, or DialogFooter
   // If so, don't add default padding (they handle their own padding)
   // If not, wrap with default padding
@@ -177,7 +177,7 @@ const DialogContent = React.forwardRef<
   });
   // Determine overlay classes based on options
   const overlayClasses = cn(
-    "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    "fixed inset-0 z-[1099] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     showOverlay && "bg-black/50",
     blurOverlay && "backdrop-blur-sm",
     // If blur but no dark overlay, add slight tint
@@ -191,9 +191,10 @@ const DialogContent = React.forwardRef<
     )}
     <DialogPrimitive.Content
       ref={ref}
+      aria-describedby={ariaDescribedBy}
       className={cn(
         // Position centered using inset + margin auto (avoids transform conflicts)
-        "fixed inset-0 z-[1100] flex flex-col w-[85%] max-w-lg m-auto h-fit rounded-2xl",
+        "fixed inset-0 z-[1101] flex flex-col w-[85%] max-w-lg m-auto h-fit rounded-2xl",
         // Subtle slide up + fade animation
         "transition-all duration-200 ease-out",
         "data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out",

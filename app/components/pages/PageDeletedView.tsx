@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
-import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
+import { useCommandPalette } from '../../providers/CommandPaletteProvider';
 
 interface PageDeletedViewProps {
   pageTitle?: string;
@@ -11,10 +11,10 @@ interface PageDeletedViewProps {
 }
 
 export default function PageDeletedView({ pageTitle = "Untitled", pageId }: PageDeletedViewProps) {
-  const router = useRouter();
+  const { openPaletteWithQuery } = useCommandPalette();
 
   const handleGoHome = () => {
-    router.push('/');
+    window.location.href = '/';
   };
 
   const handleBackToPrevious = () => {
@@ -22,8 +22,7 @@ export default function PageDeletedView({ pageTitle = "Untitled", pageId }: Page
   };
 
   const handleSearchPage = () => {
-    const searchQuery = encodeURIComponent(pageTitle);
-    router.push(`/search?q=${searchQuery}`);
+    openPaletteWithQuery(pageTitle);
   };
 
   return (

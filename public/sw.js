@@ -180,6 +180,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Skip caching entirely in development
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
+  }
+
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
