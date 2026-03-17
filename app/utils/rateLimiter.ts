@@ -117,7 +117,7 @@ export class RedisStore implements RateLimitStore {
 
       // Dynamic import to avoid bundling issues when package isn't installed
       try {
-        const upstashModule = await import('@upstash/redis').catch(() => null);
+        const upstashModule = await import(/* webpackIgnore: true */ '@upstash/redis').catch(() => null);
         if (upstashModule && upstashModule.Redis) {
           this.redis = new upstashModule.Redis({ url, token });
         }

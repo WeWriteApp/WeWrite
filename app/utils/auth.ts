@@ -10,7 +10,7 @@ try {
     auth = getAuth(admin);
   }
 } catch (error) {
-  console.warn('Firebase Admin initialization failed in auth utils:', error);
+  // Expected during build-time static page generation — Firebase Admin isn't available
   auth = null;
 }
 
