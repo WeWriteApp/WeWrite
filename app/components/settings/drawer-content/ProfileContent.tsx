@@ -237,6 +237,12 @@ export default function ProfileContent({ onClose }: ProfileContentProps) {
       }
 
       setUsername(newUsername);
+
+      // Notify all UsernameBadge instances to refresh
+      window.dispatchEvent(new CustomEvent('userDataUpdated', {
+        detail: { userId: user.uid, oldUsername: username, newUsername }
+      }));
+
       await showSuccess('Success', 'Username updated successfully!');
     } catch (error: any) {
       console.error('Error updating username:', error);

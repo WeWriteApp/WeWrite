@@ -187,6 +187,7 @@ export function UsernameBadge({
 
       // If this is for our user, refresh the profile
       if (updatedUserId === userId) {
+        profileCache.delete(userId); // Invalidate stale cache so new mounts don't read old data
         setFreshUsername(null); // Clear cached username
         setIsLoadingUsername(true);
 

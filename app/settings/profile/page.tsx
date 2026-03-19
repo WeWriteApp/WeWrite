@@ -261,6 +261,11 @@ export default function ProfilePage() {
       // Update local state
       setUsername(newUsername);
 
+      // Notify all UsernameBadge instances to refresh
+      window.dispatchEvent(new CustomEvent('userDataUpdated', {
+        detail: { userId: user.uid, oldUsername: username, newUsername }
+      }));
+
       // Show success message
       await showSuccess('Success', 'Username updated successfully!');
     } catch (error) {
