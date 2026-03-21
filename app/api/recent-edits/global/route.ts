@@ -5,6 +5,8 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { trackFirebaseRead } from '../../../utils/costMonitor';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
 import { getAdminFirestore } from '../../../firebase/firebaseAdmin';
+import { getBatchPageViewData } from '../../../services/pageViewService';
+import { computeFeedScore, passesQualityFilter, type FeedScore } from '../../../services/feedRankingService';
 
 // EMERGENCY COST OPTIMIZATION: Global cache for recent edits
 const globalRecentEditsCache = new Map<string, { data: any; timestamp: number }>();
@@ -18,240 +20,162 @@ function getDb() {
 /**
  * GLOBAL ACTIVITY FEED API
  *
- * This API provides global activity feed for the homepage.
- * It queries pages collection directly by lastModified.
+ * Supports two feed modes:
+ * - feedMode=latest: Chronological feed (ORDER BY lastModified DESC)
+ * - feedMode=top: Algorithmic feed ranked by engagement, quality, freshness, and trust
+ *
+ * Spam filtering uses a single feedQuality parameter:
+ * - strict: trust >= 70
+ * - balanced (default): trust >= 40
+ * - relaxed: trust >= 15
+ * - off: no filter
+ *
+ * Legacy parameters (hideUnverified, hideLikelySpam) are mapped to feedQuality for backward compatibility.
  *
  * @deprecated Use /api/activity-feed/global instead. This route is kept for backward compatibility.
  */
 
 export async function GET(request: NextRequest) {
-  // 🚨 NEVER RETURN MOCK DATA - ALWAYS USE REAL DATA
-
   try {
     const { searchParams } = new URL(request.url);
 
-    // FIXED: Get userId from query params (as frontend expects) AND try authentication as fallback
     let userId = searchParams.get('userId');
-
-    // If no userId in query params, try to get from authentication
     if (!userId) {
       userId = await getUserIdFromRequest(request);
     }
 
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 20); // REDUCED LIMIT FOR COST OPTIMIZATION
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 20);
     const includeOwn = searchParams.get('includeOwn') === 'true';
     const followingOnly = searchParams.get('followingOnly') === 'true';
-    // hideUnverified defaults to true for spam prevention - only show content from verified users
-    const hideUnverified = searchParams.get('hideUnverified') !== 'false';
-    // hideLikelySpam defaults to false - opt-in filter to hide accounts flagged as likely spam
-    const hideLikelySpam = searchParams.get('hideLikelySpam') === 'true';
     const cursor = searchParams.get('cursor');
 
-    // SMART CACHING: Only cache meaningful results to allow backfill to run
-    // Use the local cache (line 11) with conditional caching logic
-    const CACHE_TTL = 10 * 1000; // 10 seconds for good results
-    const EMPTY_CACHE_TTL = 2 * 1000; // 2 seconds for empty/sparse results (allows backfill retry)
-    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${hideUnverified}:${hideLikelySpam}:${cursor || 'first'}`;
+    // Feed mode: 'top' (algorithmic) or 'latest' (chronological)
+    const feedMode = searchParams.get('feedMode') === 'latest' ? 'latest' : 'top';
 
-    // Check cache first
+    // Feed quality filter — new unified parameter
+    // Backward compatibility: map old toggles to feedQuality if new param not provided
+    let feedQuality = searchParams.get('feedQuality');
+    if (!feedQuality) {
+      const hideUnverified = searchParams.get('hideUnverified') !== 'false';
+      const hideLikelySpam = searchParams.get('hideLikelySpam') === 'true';
+      if (hideLikelySpam && hideUnverified) feedQuality = 'strict';
+      else if (hideUnverified) feedQuality = 'balanced';
+      else feedQuality = 'relaxed';
+    }
+
+    // Cache
+    const CACHE_TTL = 10 * 1000;
+    const EMPTY_CACHE_TTL = 2 * 1000;
+    const cacheKey = `recent-edits:global:${userId || 'anon'}:${limit}:${includeOwn}:${followingOnly}:${feedMode}:${feedQuality}:${cursor || 'first'}`;
+
     const cached = globalRecentEditsCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < (cached.data?.edits?.length > 0 ? CACHE_TTL : EMPTY_CACHE_TTL)) {
       return NextResponse.json(cached.data);
     }
 
-    // Cache miss or expired - fetch fresh data
     const responseData = await (async () => {
+      const db = getDb();
+      const pagesCollectionName = await getCollectionNameAsync('pages');
 
-    // Use the same Firebase Admin instance as my-pages API
-    const db = getDb();
-
-    const pagesCollectionName = await getCollectionNameAsync('pages');
-
-    // Fetch followed users list if followingOnly filter is enabled
-    let followedUserIds: Set<string> | null = null;
-    if (followingOnly && userId) {
-      try {
-        const userFollowingCollectionName = await getCollectionNameAsync('userFollowing');
-        const userFollowingDoc = await db.collection(userFollowingCollectionName).doc(userId).get();
-        if (userFollowingDoc.exists) {
-          const followingData = userFollowingDoc.data();
-          followedUserIds = new Set(followingData?.following || []);
-        } else {
+      // Fetch followed users list if followingOnly filter is enabled
+      let followedUserIds: Set<string> | null = null;
+      if (followingOnly && userId) {
+        try {
+          const userFollowingCollectionName = await getCollectionNameAsync('userFollowing');
+          const userFollowingDoc = await db.collection(userFollowingCollectionName).doc(userId).get();
+          if (userFollowingDoc.exists) {
+            const followingData = userFollowingDoc.data();
+            followedUserIds = new Set(followingData?.following || []);
+          } else {
+            followedUserIds = new Set();
+          }
+        } catch (error) {
+          console.error('[Global Recent Edits] Failed to fetch followed users:', error);
           followedUserIds = new Set();
         }
-      } catch (error) {
-        console.error('[Global Recent Edits] Failed to fetch followed users:', error);
-        followedUserIds = new Set();
-      }
-    }
-
-    // BACKFILL LOGIC: When spam filters remove too much content, expand time window
-    // Start with 30 days and expand up to 180 days if needed
-    const MIN_RESULTS_BEFORE_BACKFILL = Math.ceil(limit * 0.5); // Trigger backfill if < 50% of requested limit
-    const MAX_BACKFILL_DAYS = 180; // Don't go back more than 6 months
-    const BACKFILL_INCREMENTS = [30, 60, 90, 180]; // Days to try
-
-    let currentTimeWindowDays = 30;
-    let allEnhancedEdits: any[] = [];
-    let hasMorePages = false;
-    let lastCursor: string | null = null;
-    let backfillAttempts = 0;
-    let didBackfill = false;
-
-    // Diagnostic counters for debugging filter behavior
-    let _diagnostics: {
-      totalPagesFetched: number;
-      afterBasicFilters: number;
-      afterUserDataEnhancement: number;
-      filteredByUnverified: number;
-      filteredByLikelySpam: number;
-      usersWithoutDocuments: number;
-      finalCount: number;
-      usedSafetyValve?: boolean;
-    } = {
-      totalPagesFetched: 0,
-      afterBasicFilters: 0,
-      afterUserDataEnhancement: 0,
-      filteredByUnverified: 0,
-      filteredByLikelySpam: 0,
-      usersWithoutDocuments: 0,
-      finalCount: 0
-    };
-
-    // Only backfill on initial request (no cursor) and when filters are active
-    const shouldAttemptBackfill = !cursor && (hideUnverified || hideLikelySpam);
-
-    for (const timeWindowDays of BACKFILL_INCREMENTS) {
-      currentTimeWindowDays = timeWindowDays;
-
-      // Skip backfill attempts if we already have enough results or this is a paginated request
-      if (allEnhancedEdits.length >= limit || (cursor && backfillAttempts > 0)) {
-        break;
       }
 
-      const cutoffDate = new Date(Date.now() - (timeWindowDays * 24 * 60 * 60 * 1000));
+      // BACKFILL LOGIC: When quality filter removes too much content, expand time window
+      const MIN_RESULTS_BEFORE_BACKFILL = Math.ceil(limit * 0.5);
+      // For algorithmic mode, start with a wider window since we're ranking anyway
+      const BACKFILL_INCREMENTS = feedMode === 'top' ? [7, 30, 90, 180] : [30, 60, 90, 180];
 
-      let pagesQuery = db.collection(pagesCollectionName)
-        .where('lastModified', '>=', cutoffDate.toISOString())
-        .orderBy('lastModified', 'desc');
+      let currentTimeWindowDays = BACKFILL_INCREMENTS[0];
+      let allEnhancedEdits: any[] = [];
+      let hasMorePages = false;
+      let backfillAttempts = 0;
+      let didBackfill = false;
 
-      // Add cursor support for pagination
-      if (cursor) {
-        pagesQuery = pagesQuery.startAfter(cursor);
-      }
+      let _diagnostics = {
+        totalPagesFetched: 0,
+        afterBasicFilters: 0,
+        filteredByQuality: 0,
+        finalCount: 0,
+        feedMode,
+        feedQuality,
+        usedSafetyValve: false,
+      };
 
-      // Fetch more documents to account for filtering
-      // When backfilling, fetch even more to increase chances of finding good content
-      const fetchMultiplier = backfillAttempts > 0 ? 5 : (userId ? 3 : 2);
-      const fetchLimit = Math.min(limit * fetchMultiplier, backfillAttempts > 0 ? 100 : 50);
-      pagesQuery = pagesQuery.limit(fetchLimit);
+      const shouldAttemptBackfill = !cursor && feedQuality !== 'off';
 
-      const queryStartTime = Date.now();
-      const pagesSnapshot = await pagesQuery.get();
-      const queryTime = Date.now() - queryStartTime;
+      for (const timeWindowDays of BACKFILL_INCREMENTS) {
+        currentTimeWindowDays = timeWindowDays;
 
-      // Track query for cost optimization monitoring
-      trackFirebaseRead('pages', 'global-recent-edits', pagesSnapshot.docs.length, 'api-recent-edits');
-
-      if (pagesSnapshot.empty) {
-        backfillAttempts++;
-        if (!shouldAttemptBackfill) break;
-        continue;
-      }
-
-      const pages: any[] = pagesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        // Only use username field - displayName and email are deprecated for display
-        const safeUsername = sanitizeUsername(
-          (data as any).username || (data as any).authorName,
-          'User',
-          `user_${doc.id.slice(0, 8)}`
-        );
-        return {
-          id: doc.id,
-          ...data,
-          username: safeUsername
-        };
-      });
-
-      _diagnostics.totalPagesFetched += pages.length;
-
-      // Filter pages based on criteria (same logic as homepage)
-      const filteredPages = pages.filter(page => {
-        // Skip deleted pages (double check)
-        if (page.deleted === true) {
-          return false;
+        if (allEnhancedEdits.length >= limit || (cursor && backfillAttempts > 0)) {
+          break;
         }
 
-        // Skip private pages (isPublic === false) unless it's the user's own page
-        if (page.isPublic === false && page.userId !== userId) {
-          return false;
+        const cutoffDate = new Date(Date.now() - (timeWindowDays * 24 * 60 * 60 * 1000));
+
+        let pagesQuery = db.collection(pagesCollectionName)
+          .where('lastModified', '>=', cutoffDate.toISOString())
+          .orderBy('lastModified', 'desc');
+
+        if (cursor) {
+          pagesQuery = pagesQuery.startAfter(cursor);
         }
 
-        // FIXED: Hide my edits logic - when includeOwn is false, exclude user's own pages
-        if (!includeOwn && page.userId === userId) {
-          return false;
+        const fetchMultiplier = backfillAttempts > 0 ? 5 : (userId ? 3 : 2);
+        const fetchLimit = Math.min(limit * fetchMultiplier, backfillAttempts > 0 ? 100 : 50);
+        pagesQuery = pagesQuery.limit(fetchLimit);
+
+        const pagesSnapshot = await pagesQuery.get();
+        trackFirebaseRead('pages', 'global-recent-edits', pagesSnapshot.docs.length, 'api-recent-edits');
+
+        if (pagesSnapshot.empty) {
+          backfillAttempts++;
+          if (!shouldAttemptBackfill) break;
+          continue;
         }
 
-        // FIXED: Following only filter - only show pages from users we follow
-        if (followingOnly && followedUserIds !== null) {
-          if (!page.userId || !followedUserIds.has(page.userId)) {
-            return false;
+        const pages: any[] = pagesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const safeUsername = sanitizeUsername(
+            (data as any).username || (data as any).authorName,
+            'User',
+            `user_${doc.id.slice(0, 8)}`
+          );
+          return { id: doc.id, ...data, username: safeUsername };
+        });
+
+        _diagnostics.totalPagesFetched += pages.length;
+
+        // Basic filters (deleted, private, own, following)
+        const filteredPages = pages.filter(page => {
+          if (page.deleted === true) return false;
+          if (page.isPublic === false && page.userId !== userId) return false;
+          if (!includeOwn && page.userId === userId) return false;
+          if (followingOnly && followedUserIds !== null) {
+            if (!page.userId || !followedUserIds.has(page.userId)) return false;
           }
-        }
+          return true;
+        });
 
-        return true;
-      });
+        _diagnostics.afterBasicFilters += filteredPages.length;
 
-      _diagnostics.afterBasicFilters += filteredPages.length;
-
-      // Convert to edits format
-      const edits = filteredPages
-        .slice(0, limit * 2) // Take more than needed for spam filtering
-        .map(page => {
-          // Derive a friendly preview for reply/agree/disagree pages
-          const deriveReplyPreview = () => {
-            const isReply = page.isReply || !!page.replyTo;
-            if (!isReply) return null;
-
-            // Try to read replyType from the stored content attribution block
-            let replyType: string | null = page.replyType || null;
-            if (!replyType && Array.isArray(page.content) && page.content.length > 0) {
-              replyType = page.content[0]?.replyType || page.content[0]?.reply_type || null;
-            }
-            if (!replyType && typeof page.content === 'string') {
-              try {
-                const parsed = JSON.parse(page.content);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  replyType = parsed[0]?.replyType || parsed[0]?.reply_type || null;
-                }
-              } catch (_err) {
-                // ignore parse errors
-              }
-            }
-
-            const author = page.username || 'Unknown user';
-            const pageTitle = page.title || 'Untitled';
-            const targetTitle = page.replyToTitle || 'the original page';
-
-            let action = 'as a reply to';
-            if (replyType === 'agree') action = 'to agree with';
-            if (replyType === 'disagree') action = 'to disagree with';
-
-            const message = `${pageTitle} was created by ${author} ${action} ${targetTitle}`;
-
-            return {
-              beforeContext: '',
-              addedText: message,
-              removedText: '',
-              afterContext: '',
-              hasAdditions: true,
-              hasRemovals: false
-            };
-          };
-
-          const replyPreview = deriveReplyPreview();
-
+        // Convert to edits format
+        const edits = filteredPages.slice(0, limit * 2).map(page => {
+          const replyPreview = deriveReplyPreview(page);
           return {
             id: page.id,
             title: page.title || 'Untitled',
@@ -262,186 +186,142 @@ export async function GET(request: NextRequest) {
             pledgeCount: page.pledgeCount || 0,
             lastDiff: page.lastDiff,
             diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null,
-            // Page quality score (admin-only visibility)
             pageScore: page.pageScore ?? null,
             pageScoreFactors: page.pageScoreFactors ?? null,
             source: 'pages-collection'
           };
         });
 
-      // Fetch subscription data for all unique user IDs
-      const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
-      const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
+        // Fetch user data
+        const uniqueUserIds = [...new Set(edits.map(edit => edit.userId).filter(Boolean))];
+        const batchUserData = await fetchBatchUserData(uniqueUserIds, db);
 
-      // Enhance edits with user and subscription data
-      const enhancedEditsPreFilter = edits
-        .map(edit => {
+        // Enhance edits with user data + internal fields for filtering
+        const enhancedEditsPreFilter = edits.map(edit => {
           const userData = batchUserData[edit.userId];
-          const hasUserDocument = userData !== undefined;
-
-          // Track users without documents
-          if (!hasUserDocument) {
-            _diagnostics.usersWithoutDocuments++;
-          }
-
           return {
             ...edit,
-            // Use username from user data if available, fallback to page username
             username: userData?.username || edit.username,
             hasActiveSubscription: userData?.hasActiveSubscription || false,
             subscriptionTier: userData?.tier || null,
             subscriptionAmount: userData?.subscriptionAmount || null,
-            // Include email verification status for filtering
-            _emailVerified: userData?.emailVerified ?? false,
             _isAdmin: userData?.isAdmin ?? false,
-            // Include risk score for spam filtering
-            _riskScore: userData?.riskScore ?? null,
-            // Include page count (single-page accounts are more likely spam)
-            _pageCount: userData?.pageCount ?? 0,
-            // Track if user document exists
-            _hasUserDocument: hasUserDocument
+            _riskScore: userData?.riskScore ?? 30, // Default to low-medium trust
+            _followerCount: userData?.followerCount ?? 0,
           };
         });
 
-      _diagnostics.afterUserDataEnhancement += enhancedEditsPreFilter.length;
+        // Apply unified quality filter
+        const afterQualityFilter = enhancedEditsPreFilter.filter(edit => {
+          const passes = passesQualityFilter(
+            edit._riskScore,
+            edit.pageScore,
+            feedQuality!,
+            edit._isAdmin
+          );
+          if (!passes) _diagnostics.filteredByQuality++;
+          return passes;
+        });
 
-
-      // Filter out pages from users with unverified email (admins bypass this check)
-      // Only apply this filter when hideUnverified is true
-      const afterUnverifiedFilter = enhancedEditsPreFilter.filter(edit => {
-        // If hideUnverified is false, skip email verification check
-        if (!hideUnverified) return true;
-        // Admins always show
-        if (edit._isAdmin) return true;
-        // CRITICAL FIX: Established users (multiple pages) should show even if not email verified
-        // This prevents filtering out legitimate users who just haven't verified email
-        if (edit._pageCount >= 3) return true;
-        // CRITICAL FIX: If user has no document but hideLikelySpam is OFF, be lenient
-        // Users without documents are "unknown" not "proven spam"
-        // The hideLikelySpam filter will handle them more aggressively if enabled
-        if (!edit._hasUserDocument && !hideLikelySpam) return true;
-        // Hide pages from unverified users with few pages
-        if (edit._emailVerified !== true) {
-          _diagnostics.filteredByUnverified++;
-          return false;
+        // SAFETY VALVE: If all content filtered, show most trusted items
+        let editsToUse = afterQualityFilter;
+        if (afterQualityFilter.length === 0 && enhancedEditsPreFilter.length > 0) {
+          editsToUse = [...enhancedEditsPreFilter]
+            .sort((a, b) => (b._riskScore) - (a._riskScore))
+            .slice(0, limit);
+          _diagnostics.usedSafetyValve = true;
         }
-        return true;
-      });
 
-      // Filter out likely spam accounts when hideLikelySpam is enabled
-      // Uses trust score threshold: < 50 means soft_challenge or lower (yellow/orange/red in admin)
-      // Trust levels: 75-100 = allow (trusted), 50-74 = soft_challenge, 25-49 = hard_challenge, 0-24 = block
-      const enhancedEdits = afterUnverifiedFilter
-        .filter(edit => {
-          // Skip filter if not enabled
-          if (!hideLikelySpam) return true;
-          // Admins always show
-          if (edit._isAdmin) return true;
-          // CRITICAL FIX: Established users should show even with lower trust score
-          if (edit._pageCount >= 5) return true;
-          // If we have a trust score, filter accounts at soft_challenge level or lower (score < 50)
-          // This hides yellow/orange/red trust users from the feed
-          if (edit._riskScore !== null && edit._riskScore < 50) {
-            _diagnostics.filteredByLikelySpam++;
-            return false;
+        // Fetch community signals for algorithmic ranking
+        let viewDataMap: Map<string, { total: number; hourly: number[] }> | null = null;
+        let replyCountMap: Map<string, number> | null = null;
+        let backlinkCountMap: Map<string, number> | null = null;
+        let supporterCountMap: Map<string, number> | null = null;
+
+        if (feedMode === 'top' && editsToUse.length > 0) {
+          const pageIds = editsToUse.map(e => e.id);
+          // Fetch all community signals in parallel
+          const [viewData, replyCounts, backlinkCounts, supporterCounts] = await Promise.all([
+            getBatchPageViewData(db, pageIds),
+            getBatchReplyCounts(db, pageIds),
+            getBatchBacklinkCounts(db, pageIds),
+            getBatchSupporterCounts(db, pageIds),
+          ]);
+          viewDataMap = viewData;
+          replyCountMap = replyCounts;
+          backlinkCountMap = backlinkCounts;
+          supporterCountMap = supporterCounts;
+        }
+
+        // Compute feed scores and strip internal fields
+        const finalEditsForWindow = editsToUse.map(({ _isAdmin, _riskScore, _followerCount, ...edit }) => {
+          let feedScore: FeedScore | undefined;
+          if (feedMode === 'top') {
+            feedScore = computeFeedScore({
+              replyCount: replyCountMap?.get(edit.id) ?? 0,
+              backlinkCount: backlinkCountMap?.get(edit.id) ?? 0,
+              supporterCount: supporterCountMap?.get(edit.id) ?? 0,
+              followerCount: _followerCount,
+              views24h: viewDataMap?.get(edit.id)?.total ?? 0,
+              pageScore: edit.pageScore,
+              lastModified: edit.lastModified,
+              authorTrustScore: _riskScore,
+            });
           }
-          // Single-page accounts from unverified users are more likely spam
-          if (edit._pageCount <= 1 && edit._emailVerified !== true) {
-            _diagnostics.filteredByLikelySpam++;
-            return false;
-          }
-          return true;
-        })
-        // Remove internal fields from response
-        .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, _hasUserDocument, ...edit }) => edit);
+          return { ...edit, feedScore: feedScore?.total ?? null };
+        });
 
-      // SAFETY VALVE: If all content was filtered and we have pre-filter pages,
-      // relax filtering to show SOME content (better than empty feed)
-      let editsToUse = enhancedEdits;
-      if (enhancedEdits.length === 0 && enhancedEditsPreFilter.length > 0) {
-        // Show the most trusted items from pre-filter results
-        // Sort by trust score (nulls last, higher is better) and take up to limit
-        const relaxedEdits = [...enhancedEditsPreFilter]
-          .sort((a, b) => {
-            // Prioritize: verified > has user doc > higher trust score
-            if (a._emailVerified && !b._emailVerified) return -1;
-            if (!a._emailVerified && b._emailVerified) return 1;
-            if (a._hasUserDocument && !b._hasUserDocument) return -1;
-            if (!a._hasUserDocument && b._hasUserDocument) return 1;
-            const aTrust = a._riskScore ?? 50;
-            const bTrust = b._riskScore ?? 50;
-            return bTrust - aTrust; // Higher trust score first
-          })
-          .slice(0, limit)
-          .map(({ _emailVerified, _isAdmin, _riskScore, _pageCount, _hasUserDocument, ...edit }) => edit);
+        // Deduplicate and merge
+        const existingIds = new Set(allEnhancedEdits.map(e => e.id));
+        const newEdits = finalEditsForWindow.filter(e => !existingIds.has(e.id));
+        allEnhancedEdits = [...allEnhancedEdits, ...newEdits];
 
-        editsToUse = relaxedEdits;
-        // Mark that we used the safety valve (for debugging)
-        _diagnostics.usedSafetyValve = true;
+        const totalFetched = pagesSnapshot.docs.length;
+        hasMorePages = (filteredPages.length > limit) || (totalFetched >= fetchLimit);
+
+        if (allEnhancedEdits.length >= MIN_RESULTS_BEFORE_BACKFILL || !shouldAttemptBackfill) {
+          break;
+        }
+
+        backfillAttempts++;
+        if (backfillAttempts > 0 && timeWindowDays < BACKFILL_INCREMENTS[BACKFILL_INCREMENTS.length - 1]) {
+          didBackfill = true;
+        }
       }
 
-      // Deduplicate and merge with existing results (for backfill)
-      const existingIds = new Set(allEnhancedEdits.map(e => e.id));
-      const newEdits = editsToUse.filter(e => !existingIds.has(e.id));
-      allEnhancedEdits = [...allEnhancedEdits, ...newEdits];
-
-      // Determine if there are more pages available
-      const totalFetched = pagesSnapshot.docs.length;
-      hasMorePages = (filteredPages.length > limit) || (totalFetched >= fetchLimit);
-
-      if (allEnhancedEdits.length > 0) {
-        lastCursor = allEnhancedEdits[allEnhancedEdits.length - 1].lastModified;
+      // Sort by feed score in algorithmic mode, chronological in latest mode
+      if (feedMode === 'top') {
+        allEnhancedEdits.sort((a, b) => (b.feedScore ?? 0) - (a.feedScore ?? 0));
       }
+      // In 'latest' mode, the Firestore query already returns in chronological order
 
-      // Check if we need to backfill
-      if (allEnhancedEdits.length >= MIN_RESULTS_BEFORE_BACKFILL || !shouldAttemptBackfill) {
-        break;
-      }
+      const finalEdits = allEnhancedEdits.slice(0, limit);
+      _diagnostics.finalCount = finalEdits.length;
 
-      // If we're about to try a longer time window, mark that we're backfilling
-      backfillAttempts++;
-      if (backfillAttempts > 0 && timeWindowDays < MAX_BACKFILL_DAYS) {
-        didBackfill = true;
-      }
-    }
+      hasMorePages = allEnhancedEdits.length > limit || hasMorePages;
 
-    // Trim to requested limit
-    const finalEdits = allEnhancedEdits.slice(0, limit);
+      const nextCursor = hasMorePages && finalEdits.length > 0
+        ? finalEdits[finalEdits.length - 1].lastModified
+        : null;
 
-    // Update diagnostics with final count
-    _diagnostics.finalCount = finalEdits.length;
-
-    // Update hasMore based on whether we have more than limit
-    hasMorePages = allEnhancedEdits.length > limit || hasMorePages;
-
-    // Update cursor to last item in final results
-    const nextCursor = hasMorePages && finalEdits.length > 0
-      ? finalEdits[finalEdits.length - 1].lastModified
-      : null;
-
-    const responseData = {
-      edits: finalEdits,
-      hasMore: hasMorePages,
-      nextCursor: nextCursor,
-      total: finalEdits.length,
-      timestamp: new Date().toISOString(),
-      // Include metadata about backfill and filtering (useful for debugging/UI hints)
-      _meta: {
-        timeWindowDays: currentTimeWindowDays,
-        didBackfill,
-        backfillAttempts,
-        // Include filter diagnostics to help debug empty results
-        diagnostics: _diagnostics
-      }
-    };
-
-    return responseData;
+      return {
+        edits: finalEdits,
+        hasMore: hasMorePages,
+        nextCursor,
+        total: finalEdits.length,
+        timestamp: new Date().toISOString(),
+        _meta: {
+          feedMode,
+          feedQuality,
+          timeWindowDays: currentTimeWindowDays,
+          didBackfill,
+          backfillAttempts,
+          diagnostics: _diagnostics
+        }
+      };
     })();
 
-    // Cache the result - use longer TTL for good results, shorter for empty
-    // This allows backfill to retry quickly when spam filters produce empty results
     globalRecentEditsCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
-
     return NextResponse.json(responseData);
 
   } catch (error) {
@@ -456,9 +336,46 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Calculate trust score server-side (mirrors client-side calculateClientRiskScore)
- * Used when riskScore/trustScore is not stored in the user document
- * Note: Higher scores = more trusted (100 = trusted, 0 = suspicious)
+ * Derive a friendly preview for reply/agree/disagree pages
+ */
+function deriveReplyPreview(page: any) {
+  const isReply = page.isReply || !!page.replyTo;
+  if (!isReply) return null;
+
+  let replyType: string | null = page.replyType || null;
+  if (!replyType && Array.isArray(page.content) && page.content.length > 0) {
+    replyType = page.content[0]?.replyType || page.content[0]?.reply_type || null;
+  }
+  if (!replyType && typeof page.content === 'string') {
+    try {
+      const parsed = JSON.parse(page.content);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        replyType = parsed[0]?.replyType || parsed[0]?.reply_type || null;
+      }
+    } catch (_err) { /* ignore */ }
+  }
+
+  const author = page.username || 'Unknown user';
+  const pageTitle = page.title || 'Untitled';
+  const targetTitle = page.replyToTitle || 'the original page';
+
+  let action = 'as a reply to';
+  if (replyType === 'agree') action = 'to agree with';
+  if (replyType === 'disagree') action = 'to disagree with';
+
+  return {
+    beforeContext: '',
+    addedText: `${pageTitle} was created by ${author} ${action} ${targetTitle}`,
+    removedText: '',
+    afterContext: '',
+    hasAdditions: true,
+    hasRemovals: false
+  };
+}
+
+/**
+ * Calculate trust score server-side
+ * Higher scores = more trusted (100 = trusted, 0 = suspicious)
  */
 function calculateServerRiskScore(userData: {
   createdAt?: any;
@@ -467,9 +384,8 @@ function calculateServerRiskScore(userData: {
   hasActiveSubscription?: boolean;
   isAdmin?: boolean;
 }): number {
-  let score = 50; // Start at medium trust
+  let score = 50;
 
-  // Account age increases trust (max +30 points)
   if (userData.createdAt) {
     const createdDate = userData.createdAt?.toDate?.()
       || (typeof userData.createdAt === 'string' ? new Date(userData.createdAt) : new Date());
@@ -477,36 +393,23 @@ function calculateServerRiskScore(userData: {
     if (ageInDays > 90) score += 30;
     else if (ageInDays > 30) score += 20;
     else if (ageInDays > 7) score += 10;
-    else score -= 10; // New accounts are less trusted
+    else score -= 10;
   } else {
-    score -= 10; // Unknown creation date
+    score -= 10;
   }
 
-  // Email verification increases trust (+15 points)
-  if (userData.emailVerified) {
-    score += 15;
-  } else {
-    score -= 5;
-  }
+  if (userData.emailVerified) score += 15;
+  else score -= 5;
 
-  // Content creation shows engagement (+15 points max)
   const pageCount = userData.pageCount || 0;
   if (pageCount > 50) score += 15;
   else if (pageCount > 10) score += 10;
   else if (pageCount > 0) score += 5;
-  else score -= 5; // No content yet
+  else score -= 5;
 
-  // Subscription shows commitment (+10 points)
-  if (userData.hasActiveSubscription) {
-    score += 10;
-  }
+  if (userData.hasActiveSubscription) score += 10;
+  if (userData.isAdmin) score += 20;
 
-  // Admin users are trusted (+20 points)
-  if (userData.isAdmin) {
-    score += 20;
-  }
-
-  // Clamp to 0-100
   return Math.max(0, Math.min(100, score));
 }
 
@@ -519,63 +422,46 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
   const results: Record<string, any> = {};
 
   try {
-    // Batch fetch from Firestore (max 10 per query due to 'in' limitation)
     const batchSize = 10;
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
 
       try {
-        // FIXED: Use environment-aware collection names
         const usersCollectionName = await getCollectionNameAsync('users');
         const usersQuery = db.collection(usersCollectionName).where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
-        // Fetch subscription data in parallel using environment-aware paths
-        const subscriptionPromises = batch.map(async (userId) => {
+        const subscriptionPromises = batch.map(async (uid) => {
           try {
-            // Use environment-aware collection paths
             const { parentPath, subCollectionName } = getSubCollectionPath(
-              PAYMENT_COLLECTIONS.USERS,
-              userId,
-              PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+              PAYMENT_COLLECTIONS.USERS, uid, PAYMENT_COLLECTIONS.SUBSCRIPTIONS
             );
-
             const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
-            const subscriptionData = subDoc.exists ? subDoc.data() : null;
-
-            return {
-              userId,
-              subscription: subscriptionData
-            };
-          } catch (error) {
-            return { userId, subscription: null };
+            return { userId: uid, subscription: subDoc.exists ? subDoc.data() : null };
+          } catch {
+            return { userId: uid, subscription: null };
           }
         });
 
         const subscriptionResults = await Promise.all(subscriptionPromises);
         const subscriptionMap = new Map(subscriptionResults.map(r => [r.userId, r.subscription]));
 
-        // Process Firestore results
-        usersSnapshot.forEach(doc => {
+        usersSnapshot.forEach((doc: any) => {
           const userData = doc.data();
           const subscription = subscriptionMap.get(doc.id);
 
-          // Use centralized tier determination logic
           const effectiveTier = getEffectiveTier(
             subscription?.amount || null,
             subscription?.tier || null,
             subscription?.status || null
           );
 
-          // Check if subscription is active
           const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
-
           const emailVerified = userData.emailVerified ?? false;
           const isAdmin = userData.isAdmin ?? false;
           const pageCount = userData.pageCount || userData.pagesCount || 0;
 
-          // Calculate risk score if not stored - mirrors client-side calculation
           const storedRiskScore = userData.riskScore;
           const calculatedRiskScore = calculateServerRiskScore({
             createdAt: userData.createdAt,
@@ -587,13 +473,11 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
 
           results[doc.id] = {
             uid: doc.id,
-            // Only use username field - displayName is deprecated
             username: userData.username,
-            emailVerified,  // For hiding unverified users' pages from feed
-            isAdmin,              // Admins bypass email verification check
-            // Use stored risk score if available, otherwise calculate it
+            emailVerified,
+            isAdmin,
             riskScore: storedRiskScore ?? calculatedRiskScore,
-            tier: String(effectiveTier), // Ensure tier is always a string
+            tier: String(effectiveTier),
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,
             hasActiveSubscription: isActive,
@@ -602,15 +486,132 @@ async function fetchBatchUserData(userIds: string[], db: any): Promise<Record<st
             viewCount: userData.viewCount || 0
           };
         });
-
-      } catch (error) {
+      } catch {
         // Silently continue to next batch
       }
     }
-
-  } catch (error) {
+  } catch {
     // Silently handle error
   }
 
   return results;
+}
+
+/**
+ * Batch fetch reply counts for multiple pages.
+ * Queries the pages collection for documents where replyTo is one of the given page IDs.
+ * Uses Firestore 'in' queries (max 30 per batch).
+ */
+async function getBatchReplyCounts(db: any, pageIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (pageIds.length === 0) return result;
+
+  // Initialize all to 0
+  for (const id of pageIds) result.set(id, 0);
+
+  try {
+    const pagesCollectionName = await getCollectionNameAsync('pages');
+    const batchSize = 30; // Firestore 'in' limit
+
+    for (let i = 0; i < pageIds.length; i += batchSize) {
+      const batch = pageIds.slice(i, i + batchSize);
+      const snapshot = await db.collection(pagesCollectionName)
+        .where('replyTo', 'in', batch)
+        .where('deleted', '!=', true)
+        .select('replyTo') // Only fetch the field we need
+        .get();
+
+      snapshot.forEach((doc: any) => {
+        const replyTo = doc.data().replyTo;
+        if (replyTo) {
+          result.set(replyTo, (result.get(replyTo) || 0) + 1);
+        }
+      });
+    }
+  } catch (error: any) {
+    console.warn('[Feed] Error fetching reply counts:', error?.message);
+  }
+
+  return result;
+}
+
+/**
+ * Batch fetch backlink counts for multiple pages.
+ * Queries the backlinks collection for documents where targetPageId is one of the given page IDs.
+ */
+async function getBatchBacklinkCounts(db: any, pageIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (pageIds.length === 0) return result;
+
+  for (const id of pageIds) result.set(id, 0);
+
+  try {
+    const backlinksCollectionName = await getCollectionNameAsync('backlinks');
+    const batchSize = 30;
+
+    for (let i = 0; i < pageIds.length; i += batchSize) {
+      const batch = pageIds.slice(i, i + batchSize);
+      const snapshot = await db.collection(backlinksCollectionName)
+        .where('targetPageId', 'in', batch)
+        .where('isPublic', '==', true)
+        .select('targetPageId')
+        .get();
+
+      snapshot.forEach((doc: any) => {
+        const targetPageId = doc.data().targetPageId;
+        if (targetPageId) {
+          result.set(targetPageId, (result.get(targetPageId) || 0) + 1);
+        }
+      });
+    }
+  } catch (error: any) {
+    console.warn('[Feed] Error fetching backlink counts:', error?.message);
+  }
+
+  return result;
+}
+
+/**
+ * Batch fetch supporter counts for multiple pages.
+ * Queries the usdAllocations collection for active allocations to the given page IDs.
+ */
+async function getBatchSupporterCounts(db: any, pageIds: string[]): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (pageIds.length === 0) return result;
+
+  for (const id of pageIds) result.set(id, 0);
+
+  try {
+    const allocationsCollectionName = await getCollectionNameAsync('usdAllocations');
+    const batchSize = 30;
+
+    for (let i = 0; i < pageIds.length; i += batchSize) {
+      const batch = pageIds.slice(i, i + batchSize);
+      const snapshot = await db.collection(allocationsCollectionName)
+        .where('resourceId', 'in', batch)
+        .where('status', '==', 'active')
+        .select('resourceId', 'userId')
+        .get();
+
+      // Count unique supporters per page
+      const supportersByPage = new Map<string, Set<string>>();
+      snapshot.forEach((doc: any) => {
+        const data = doc.data();
+        if (data.resourceId && data.userId) {
+          if (!supportersByPage.has(data.resourceId)) {
+            supportersByPage.set(data.resourceId, new Set());
+          }
+          supportersByPage.get(data.resourceId)!.add(data.userId);
+        }
+      });
+
+      for (const [pageId, supporters] of supportersByPage) {
+        result.set(pageId, supporters.size);
+      }
+    }
+  } catch (error: any) {
+    console.warn('[Feed] Error fetching supporter counts:', error?.message);
+  }
+
+  return result;
 }

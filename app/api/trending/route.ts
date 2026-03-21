@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
+import { getBatchPageViewData } from '../../services/pageViewService';
 import type { Page } from '../../types/database';
 
 export const dynamic = 'force-dynamic';
@@ -21,11 +22,6 @@ interface TrendingPage {
   userId: string;
   lastModified: string;
   hourlyViews: number[];
-}
-
-interface PageViewData {
-  total: number;
-  hourly: number[];
 }
 
 /**
@@ -179,142 +175,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 }
 
-// OPTIMIZED: Batch fetch page view data for multiple pages
-// Reduces N*2 reads to just 2 reads (one for today, one for yesterday)
-async function getBatchPageViewData(db: any, pageIds: string[]): Promise<Map<string, PageViewData>> {
-  const result = new Map<string, PageViewData>();
-
-  if (pageIds.length === 0) return result;
-
-  try {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const currentHour = now.getUTCHours(); // Use UTC to match how views are recorded in /api/analytics/page-view
-
-    // Build document IDs for batch retrieval
-    const todayDocIds = pageIds.map(id => `${id}_${todayStr}`);
-    const yesterdayDocIds = pageIds.map(id => `${id}_${yesterdayStr}`);
-
-    // Batch fetch using getAll (much more efficient than N individual reads)
-    const pageViewsCollection = db.collection(getCollectionName('pageViews'));
-    const todayRefs = todayDocIds.map(id => pageViewsCollection.doc(id));
-    const yesterdayRefs = yesterdayDocIds.map(id => pageViewsCollection.doc(id));
-
-    const [todayDocs, yesterdayDocs] = await Promise.all([
-      db.getAll(...todayRefs),
-      db.getAll(...yesterdayRefs)
-    ]);
-
-    // Build lookup maps
-    const todayDataMap = new Map();
-    const yesterdayDataMap = new Map();
-
-    todayDocs.forEach((doc, index) => {
-      if (doc.exists) {
-        todayDataMap.set(pageIds[index], doc.data());
-      }
-    });
-
-    yesterdayDocs.forEach((doc, index) => {
-      if (doc.exists) {
-        yesterdayDataMap.set(pageIds[index], doc.data());
-      }
-    });
-
-    // Process each page's view data
-    for (const pageId of pageIds) {
-      const hourlyViews = Array(24).fill(0);
-      let totalViews24h = 0;
-
-      const yesterdayData = yesterdayDataMap.get(pageId);
-      const todayData = todayDataMap.get(pageId);
-
-      // Add yesterday's hours that are within the last 24 hours
-      if (yesterdayData) {
-        for (let hour = currentHour + 1; hour < 24; hour++) {
-          const views = yesterdayData.hours?.[hour] || 0;
-          hourlyViews[hour - (currentHour + 1)] = views;
-          totalViews24h += views;
-        }
-      }
-
-      // Add today's hours up to current hour
-      if (todayData) {
-        for (let hour = 0; hour <= currentHour; hour++) {
-          const views = todayData.hours?.[hour] || 0;
-          hourlyViews[hour + (24 - (currentHour + 1))] = views;
-          totalViews24h += views;
-        }
-      }
-
-      result.set(pageId, {
-        total: totalViews24h,
-        hourly: hourlyViews
-      });
-    }
-
-    return result;
-  } catch (error) {
-    console.warn(`Error batch fetching page view data:`, error.message);
-    // Return empty data for all pages
-    for (const pageId of pageIds) {
-      result.set(pageId, { total: 0, hourly: Array(24).fill(0) });
-    }
-    return result;
-  }
-}
-
-// Helper function to get real page view data from pageViews collection (kept for backwards compatibility)
-async function getRealPageViewData(db: any, pageId: string): Promise<PageViewData> {
-  try {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const currentHour = now.getUTCHours(); // Use UTC to match how views are recorded
-
-    // Get today's and yesterday's pageViews documents
-    const [todayDoc, yesterdayDoc] = await Promise.all([
-      db.collection(getCollectionName('pageViews')).doc(`${pageId}_${todayStr}`).get(),
-      db.collection(getCollectionName('pageViews')).doc(`${pageId}_${yesterdayStr}`).get()
-    ]);
-
-    // Initialize 24-hour array
-    const hourlyViews = Array(24).fill(0);
-    let totalViews24h = 0;
-
-    // Add yesterday's hours that are within the last 24 hours
-    if (yesterdayDoc.exists) {
-      const yesterdayData = yesterdayDoc.data();
-      for (let hour = currentHour + 1; hour < 24; hour++) {
-        const views = yesterdayData.hours?.[hour] || 0;
-        hourlyViews[hour - (currentHour + 1)] = views;
-        totalViews24h += views;
-      }
-    }
-
-    // Add today's hours up to current hour
-    if (todayDoc.exists) {
-      const todayData = todayDoc.data();
-      for (let hour = 0; hour <= currentHour; hour++) {
-        const views = todayData.hours?.[hour] || 0;
-        hourlyViews[hour + (24 - (currentHour + 1))] = views;
-        totalViews24h += views;
-      }
-    }
-
-    return {
-      total: totalViews24h,
-      hourly: hourlyViews
-    };
-  } catch (error) {
-    console.warn(`Error getting real view data for page ${pageId}:`, error.message);
-    return {
-      total: 0,
-      hourly: Array(24).fill(0)
-    };
-  }
-}
 
 /**
  * Fetch email verification and admin status for a batch of user IDs

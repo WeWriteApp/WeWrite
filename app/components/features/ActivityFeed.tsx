@@ -43,9 +43,19 @@ interface ActivityItem {
   hasActiveSubscription?: boolean;
   subscriptionTier?: string;
   subscriptionAmount?: number;
+  feedScore?: number | null;
 }
 
 type ActivityFeedMode = 'global' | 'user' | 'group';
+type FeedSortMode = 'top' | 'latest';
+type FeedQuality = 'strict' | 'balanced' | 'relaxed' | 'off';
+
+const FEED_QUALITY_OPTIONS: { value: FeedQuality; label: string; description: string }[] = [
+  { value: 'strict', label: 'Strict', description: 'Only well-established users' },
+  { value: 'balanced', label: 'Balanced', description: 'Filters obvious spam' },
+  { value: 'relaxed', label: 'Relaxed', description: 'Very permissive' },
+  { value: 'off', label: 'Off', description: 'No filtering' },
+];
 
 interface ActivityFeedProps {
   /**
@@ -108,14 +118,9 @@ interface ActivityFeedProps {
  * - Homepage: mode="global" shows activity from all users
  * - Profile: mode="user" with filterByUserId shows activity for one user
  *
- * Currently supports one activity type:
- * - Page edits (with diffs showing what changed)
- *
- * Future activity types may include:
- * - New page creation
- * - Bio updates
- * - Following activity
- * - Comments/reactions
+ * Supports two feed sort modes (global only):
+ * - "Top": Algorithmic ranking by engagement, quality, freshness, and trust
+ * - "Latest": Chronological (most recent first)
  */
 export default function ActivityFeed({
   mode,
@@ -138,9 +143,21 @@ export default function ActivityFeed({
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [autoLoadCount, setAutoLoadCount] = useState(0);
-  const [didBackfill, setDidBackfill] = useState(false); // Track if older content was fetched
+  const [didBackfill, setDidBackfill] = useState(false);
 
-  // Filter state (only used in global mode)
+  // Feed sort mode (global only): 'top' or 'latest'
+  const [feedSortMode, setFeedSortMode] = useState<FeedSortMode>(() => {
+    if (mode !== 'global') return 'latest';
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('activityFeed_feedMode');
+        if (saved === 'latest' || saved === 'top') return saved;
+      } catch { /* ignore */ }
+    }
+    return 'top';
+  });
+
+  // Content filters
   const [includeOwn, setIncludeOwn] = useState(() => {
     if (mode !== 'global') return true;
     if (process.env.NODE_ENV === 'development') return true;
@@ -164,63 +181,43 @@ export default function ActivityFeed({
     return false;
   });
 
-  // Spam prevention filter - hide unverified users (default: true for spam protection)
-  const [hideUnverified, setHideUnverified] = useState(() => {
-    if (mode !== 'global') return true;
+  // Unified quality filter
+  const [feedQuality, setFeedQuality] = useState<FeedQuality>(() => {
+    if (mode !== 'global') return 'balanced';
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('activityFeed_hideUnverified');
-        // Default to true if not set
-        return saved === null ? true : saved === 'true';
+        const saved = localStorage.getItem('activityFeed_feedQuality');
+        if (saved && ['strict', 'balanced', 'relaxed', 'off'].includes(saved)) {
+          return saved as FeedQuality;
+        }
       } catch { /* ignore */ }
     }
-    return true;
-  });
-
-  // Spam prevention filter - hide likely spam accounts (default: true - opt-out)
-  const [hideLikelySpam, setHideLikelySpam] = useState(() => {
-    if (mode !== 'global') return false;
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('activityFeed_hideLikelySpam');
-        // Default to true (on) unless user explicitly set to false
-        return saved !== 'false';
-      } catch { /* ignore */ }
-    }
-    return true;
+    return 'balanced';
   });
 
   // Filter modal state
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Save filter preferences
+  // Save preferences
   useEffect(() => {
     if (mode !== 'global' || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('activityFeed_includeOwn', String(includeOwn));
-    } catch { /* ignore */ }
+    try { localStorage.setItem('activityFeed_feedMode', feedSortMode); } catch { /* ignore */ }
+  }, [feedSortMode, mode]);
+
+  useEffect(() => {
+    if (mode !== 'global' || typeof window === 'undefined') return;
+    try { localStorage.setItem('activityFeed_includeOwn', String(includeOwn)); } catch { /* ignore */ }
   }, [includeOwn, mode]);
 
   useEffect(() => {
     if (mode !== 'global' || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('activityFeed_followingOnly', String(followingOnly));
-    } catch { /* ignore */ }
+    try { localStorage.setItem('activityFeed_followingOnly', String(followingOnly)); } catch { /* ignore */ }
   }, [followingOnly, mode]);
 
   useEffect(() => {
     if (mode !== 'global' || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('activityFeed_hideUnverified', String(hideUnverified));
-    } catch { /* ignore */ }
-  }, [hideUnverified, mode]);
-
-  useEffect(() => {
-    if (mode !== 'global' || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem('activityFeed_hideLikelySpam', String(hideLikelySpam));
-    } catch { /* ignore */ }
-  }, [hideLikelySpam, mode]);
+    try { localStorage.setItem('activityFeed_feedQuality', feedQuality); } catch { /* ignore */ }
+  }, [feedQuality, mode]);
 
   const [showFollowSuggestions, setShowFollowSuggestions] = useState(false);
   const [followingCount, setFollowingCount] = useState(0);
@@ -243,28 +240,23 @@ export default function ActivityFeed({
         setLoadingMoreState(true);
       }
 
-      // Build query parameters
       const params = new URLSearchParams({ limit: limit.toString() });
 
       if (mode === 'global') {
-        // Global mode parameters
         params.set('includeOwn', includeOwn.toString());
         params.set('followingOnly', followingOnly.toString());
-        params.set('hideUnverified', hideUnverified.toString());
-        params.set('hideLikelySpam', hideLikelySpam.toString());
+        params.set('feedMode', feedSortMode);
+        params.set('feedQuality', feedQuality);
         if (user?.uid) params.set('userId', user.uid);
       } else if (mode === 'group') {
-        // Group mode parameters
         if (filterByGroupId) params.set('groupId', filterByGroupId);
       } else {
-        // User mode parameters
         if (filterByUserId) params.set('userId', filterByUserId);
       }
 
       if (cursor) params.set('cursor', cursor);
       if (bustCache) params.set('_t', Date.now().toString());
 
-      // Call the appropriate API endpoint
       const endpoint = mode === 'global'
         ? `/api/activity-feed/global?${params}`
         : mode === 'group'
@@ -285,7 +277,6 @@ export default function ActivityFeed({
         throw new Error(data.error);
       }
 
-      // Handle different response formats from global vs user/group APIs
       const items = mode === 'global'
         ? (data.edits || [])
         : (data.pages || []).map((page: any) => ({
@@ -305,7 +296,6 @@ export default function ActivityFeed({
           }));
 
       if (append) {
-        // Deduplicate
         setActivities(prev => {
           const existingIds = new Set(prev.map(a => a.id));
           const newItems = items.filter((item: ActivityItem) => !existingIds.has(item.id));
@@ -320,7 +310,6 @@ export default function ActivityFeed({
       setHasMore(data.hasMore || false);
       setNextCursor(data.nextCursor || null);
 
-      // Track if backfill occurred (older content fetched due to spam filtering)
       if (!append && data._meta?.didBackfill) {
         setDidBackfill(true);
       }
@@ -350,7 +339,7 @@ export default function ActivityFeed({
         setLoadingMoreState(false);
       }
     }
-  }, [mode, filterByUserId, filterByGroupId, includeOwn, followingOnly, hideUnverified, hideLikelySpam, user?.uid, limit]);
+  }, [mode, filterByUserId, filterByGroupId, includeOwn, followingOnly, feedSortMode, feedQuality, user?.uid, limit]);
 
   // Initial load
   useEffect(() => {
@@ -365,7 +354,6 @@ export default function ActivityFeed({
 
     const handleRefresh = (event?: CustomEvent) => {
       const eventUserId = event?.detail?.userId;
-      // For user mode, only refresh if it's for the same user
       if (mode === 'user' && eventUserId && eventUserId !== filterByUserId) return;
 
       setActivities([]);
@@ -382,7 +370,7 @@ export default function ActivityFeed({
     };
   }, [fetchActivities, mode, filterByUserId]);
 
-  // Infinite scroll - only auto-load for first 3 times in global mode
+  // Infinite scroll
   const { loadMore, targetRef, loadingMore } = useInfiniteScrollWithLoadMore({
     hasMore: hasMore && (mode === 'user' || mode === 'group' || autoLoadCount < 3),
     onLoadMore: () => fetchActivities(true, nextCursor || undefined),
@@ -390,6 +378,14 @@ export default function ActivityFeed({
 
   const handleManualLoadMore = () => {
     fetchActivities(true, nextCursor || undefined);
+  };
+
+  const handleFeedSortModeChange = (newMode: FeedSortMode) => {
+    if (newMode === feedSortMode) return;
+    setFeedSortMode(newMode);
+    setActivities([]);
+    setNextCursor(null);
+    setDidBackfill(false);
   };
 
   const handleIncludeOwnChange = (checked: boolean) => {
@@ -406,15 +402,8 @@ export default function ActivityFeed({
     setDidBackfill(false);
   };
 
-  const handleHideUnverifiedChange = (checked: boolean) => {
-    setHideUnverified(checked);
-    setActivities([]);
-    setNextCursor(null);
-    setDidBackfill(false);
-  };
-
-  const handleHideLikelySpamChange = (checked: boolean) => {
-    setHideLikelySpam(checked);
+  const handleFeedQualityChange = (quality: FeedQuality) => {
+    setFeedQuality(quality);
     setActivities([]);
     setNextCursor(null);
     setDidBackfill(false);
@@ -424,14 +413,43 @@ export default function ActivityFeed({
     setShowFollowSuggestions(false);
   };
 
-  // Determine display title
   const displayTitle = title || (
     mode === 'global' ? 'Activity Feed' :
     mode === 'group' ? 'Group Activity' :
     `${filterByUsername}'s Recent Activity`
   );
 
-  // Filter modal - rendered outside conditional returns to persist across loading states
+  // Feed mode toggle (Top / Latest)
+  const feedModeToggle = showFilters && mode === 'global' && (
+    <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5">
+      <button
+        onClick={() => handleFeedSortModeChange('top')}
+        className={`
+          px-3 py-1 text-xs font-medium rounded-full transition-all
+          ${feedSortMode === 'top'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+          }
+        `}
+      >
+        Top
+      </button>
+      <button
+        onClick={() => handleFeedSortModeChange('latest')}
+        className={`
+          px-3 py-1 text-xs font-medium rounded-full transition-all
+          ${feedSortMode === 'latest'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+          }
+        `}
+      >
+        Latest
+      </button>
+    </div>
+  );
+
+  // Filter modal
   const filterModal = showFilters && isAuthenticated && (
     <AdaptiveModal
       isOpen={isFilterModalOpen}
@@ -442,7 +460,7 @@ export default function ActivityFeed({
       showCloseButton
     >
       <div className="space-y-6">
-        {/* Content Filters Section */}
+        {/* Content Filters */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Content Filters
@@ -483,57 +501,48 @@ export default function ActivityFeed({
           </div>
         </div>
 
-        {/* Spam Prevention Section */}
+        {/* Content Quality */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Spam Prevention
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Content Quality
+            </h3>
+            <a
+              href="/settings/about/anti-spam"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="Learn how our anti-spam system works"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFilterModalOpen(false);
+              }}
+            >
+              <Icon name="HelpCircle" size={14} />
+            </a>
+          </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="hide-unverified" className="text-sm font-medium">
-                  Hide unverified users
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Only show content from users with verified emails
-                </p>
-              </div>
-              <Switch
-                id="hide-unverified"
-                checked={hideUnverified}
-                onCheckedChange={handleHideUnverifiedChange}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="hide-likely-spam" className="text-sm font-medium">
-                    Hide likely spam
-                  </Label>
-                  <a
-                    href="/settings/about/anti-spam"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                    title="Learn how our anti-spam system works"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsFilterModalOpen(false);
-                    }}
-                  >
-                    <Icon name="HelpCircle" size={14} />
-                  </a>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Filter out accounts that may be bots or spam based on our risk scoring system
-                </p>
-              </div>
-              <Switch
-                id="hide-likely-spam"
-                checked={hideLikelySpam}
-                onCheckedChange={handleHideLikelySpamChange}
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            {FEED_QUALITY_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                onClick={() => handleFeedQualityChange(option.value)}
+                className={`
+                  flex flex-col items-start p-3 rounded-lg border text-left transition-all
+                  ${feedQuality === option.value
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    : 'border-border hover:border-foreground/20'
+                  }
+                `}
+              >
+                <span className={`text-sm font-medium ${
+                  feedQuality === option.value ? 'text-primary' : 'text-foreground'
+                }`}>
+                  {option.label}
+                </span>
+                <span className="text-xs text-muted-foreground mt-0.5">
+                  {option.description}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -560,16 +569,19 @@ export default function ActivityFeed({
               icon="Activity"
               title={displayTitle}
             />
-            {showFilters && isAuthenticated && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-2xl"
-                onClick={() => setIsFilterModalOpen(true)}
-              >
-                Filter
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {feedModeToggle}
+              {showFilters && isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-2xl"
+                  onClick={() => setIsFilterModalOpen(true)}
+                >
+                  Filter
+                </Button>
+              )}
+            </div>
           </div>
           {(mode === 'user' || mode === 'group') ? (
             <div className="space-y-3">
@@ -597,16 +609,19 @@ export default function ActivityFeed({
               icon="Activity"
               title={displayTitle}
             />
-            {showFilters && isAuthenticated && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-2xl"
-                onClick={() => setIsFilterModalOpen(true)}
-              >
-                Filter
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {feedModeToggle}
+              {showFilters && isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-2xl"
+                  onClick={() => setIsFilterModalOpen(true)}
+                >
+                  Filter
+                </Button>
+              )}
+            </div>
           </div>
           <div className={(mode === 'user' || mode === 'group')
             ? "border border-destructive/20 rounded-lg p-4 text-center text-destructive"
@@ -634,17 +649,19 @@ export default function ActivityFeed({
             title={displayTitle}
           />
 
-          {/* Filter button (global mode only) */}
-          {showFilters && isAuthenticated && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-2xl"
-              onClick={() => setIsFilterModalOpen(true)}
-            >
-              Filter
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {feedModeToggle}
+            {showFilters && isAuthenticated && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-2xl"
+                onClick={() => setIsFilterModalOpen(true)}
+              >
+                Filter
+              </Button>
+            )}
+          </div>
         </div>
 
       {/* Follow suggestions (global mode only) */}
@@ -672,8 +689,8 @@ export default function ActivityFeed({
                 ? followingCount === 0
                   ? "You're not following anyone yet."
                   : "No recent activity from users you follow."
-                : (hideLikelySpam || hideUnverified)
-                  ? "Spam filters are active. Try adjusting your filters to see more content."
+                : feedQuality !== 'off'
+                  ? "Content quality filter is active. Try adjusting your filters to see more content."
                   : "Check back later for new updates from the community."
               }
             </p>
@@ -695,7 +712,7 @@ export default function ActivityFeed({
                   Follow more users
                 </Button>
               </div>
-            ) : (hideLikelySpam || hideUnverified) && (
+            ) : feedQuality !== 'off' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -746,8 +763,7 @@ export default function ActivityFeed({
             );
           })}
 
-          {/* Infinite scroll target - no separate loading indicator needed since
-              the fetch completes quickly and we deduplicate items anyway */}
+          {/* Infinite scroll target */}
           <div ref={targetRef} className="h-4" />
 
           {/* Manual load more button (global mode after 3 auto-loads) */}

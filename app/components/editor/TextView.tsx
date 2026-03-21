@@ -141,8 +141,10 @@ const AutoLinkedUrl: React.FC<{
     if (shouldDisable) {
       // Show toast instead of modal - matches LinkNode behavior
       toast({
-        title: "External link unavailable",
-        description: "This author doesn't have an active subscription. External links are a paid feature.",
+        title: isPageOwner ? "Subscription required" : "External link unavailable",
+        description: isPageOwner
+          ? "Set up your subscription to enable external links on your pages."
+          : "This author doesn't have an active subscription. External links are a paid feature.",
         ...(isPageOwner ? {
           action: {
             label: "Upgrade",

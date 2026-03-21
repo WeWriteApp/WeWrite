@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Navigation — unauthenticated', () => {
-  test('public pages return 200', async ({ page }) => {
-    const publicPages = ['/welcome', '/trending', '/leaderboard', '/topics', '/privacy', '/terms'];
+const publicPages = ['/welcome', '/trending', '/leaderboard', '/topics', '/privacy', '/terms'];
 
-    for (const path of publicPages) {
+test.describe('Navigation — unauthenticated', () => {
+  for (const path of publicPages) {
+    test(`${path} returns 200`, async ({ page }) => {
       const response = await page.goto(path);
-      expect(response?.status(), `${path} should return 200`).toBe(200);
-    }
-  });
+      expect(response?.status()).toBe(200);
+    });
+  }
 
   test('API health — search endpoint responds', async ({ request }) => {
     const response = await request.get('/api/search-unified?q=test&limit=1');

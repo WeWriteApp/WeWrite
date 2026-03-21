@@ -10,6 +10,7 @@ import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
+import { toast } from '../../components/ui/use-toast';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 
@@ -25,6 +26,55 @@ export default function FundAccountPage() {
     [key: string]: any;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReactivating, setIsReactivating] = useState(false);
+
+  // Reactivate a cancelled subscription by calling the reactivation API
+  const handleReactivateSubscription = async () => {
+    const subscriptionId = currentSubscription?.stripeSubscriptionId;
+    if (!subscriptionId) {
+      toast({
+        title: 'Unable to reactivate',
+        description: 'No subscription found to reactivate. Please start a new subscription instead.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsReactivating(true);
+    try {
+      const response = await fetch('/api/subscription/reactivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId,
+          newAmount: selectedAmount || currentSubscription?.amount || 10,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to reactivate (${response.status})`);
+      }
+
+      toast({
+        title: 'Subscription reactivated',
+        description: 'Your subscription is now active again.',
+      });
+
+      // Refresh the page to reflect the new subscription state
+      refreshUsdBalance();
+      window.location.href = '/settings/fund-account?success=true';
+    } catch (error) {
+      console.error('Reactivation error:', error);
+      toast({
+        title: 'Reactivation failed',
+        description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsReactivating(false);
+    }
+  };
 
   // Track page view
   useEffect(() => {
@@ -245,13 +295,17 @@ export default function FundAccountPage() {
               variant="default"
               size="sm"
               className="shrink-0 w-full sm:w-auto"
-              onClick={() => {
-                // Scroll to the funding slider or set a default amount
-                setSelectedAmount(10);
-                // The UsdFundingTierSlider will handle the reactivation flow
-              }}
+              onClick={handleReactivateSubscription}
+              disabled={isReactivating}
             >
-              Reactivate Subscription
+              {isReactivating ? (
+                <>
+                  <Icon name="Loader" size={14} className="mr-2 animate-spin" />
+                  Reactivating...
+                </>
+              ) : (
+                'Reactivate Subscription'
+              )}
             </Button>
           </AlertDescription>
         </Alert>

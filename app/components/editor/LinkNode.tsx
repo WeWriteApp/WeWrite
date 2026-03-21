@@ -482,8 +482,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({
 
         // Show toast explaining why the link is disabled
         toast({
-          title: "External link unavailable",
-          description: "This author doesn't have an active subscription. External links are a paid feature.",
+          title: isPageOwner ? "Subscription required" : "External link unavailable",
+          description: isPageOwner
+            ? "Set up your subscription to enable external links on your pages."
+            : "This author doesn't have an active subscription. External links are a paid feature.",
           ...(isPageOwner ? {
             action: {
               label: "Upgrade",
@@ -509,7 +511,10 @@ const LinkNode: React.FC<LinkNodeProps> = ({
             onEditLink={isEditing ? onEditLink : undefined}
             onClick={handleDisabledLinkClick}
             disabled={true}
-            disabledReason="External links are not supported for users without an active subscription"
+            disabledReason={isPageOwner
+              ? "Set up your subscription to enable external links"
+              : "External links are not supported for users without an active subscription"
+            }
           >
             {truncatedDisplayText}
           </PillLink>
