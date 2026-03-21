@@ -335,6 +335,7 @@ export default function ActivityFeed({
     } finally {
       if (!append) {
         setLoading(false);
+        setSwitchingFeed(false);
       } else {
         setLoadingMoreState(false);
       }
@@ -380,8 +381,15 @@ export default function ActivityFeed({
     fetchActivities(true, nextCursor || undefined);
   };
 
+  // Track how many items were showing before a mode switch, for skeleton placeholders
+  const [switchingFeed, setSwitchingFeed] = useState(false);
+  const [skeletonCount, setSkeletonCount] = useState(0);
+
   const handleFeedSortModeChange = (newMode: FeedSortMode) => {
     if (newMode === feedSortMode) return;
+    // Remember how many items were visible so we can show matching skeletons
+    setSkeletonCount(Math.max(activities.length, 3));
+    setSwitchingFeed(true);
     setFeedSortMode(newMode);
     setActivities([]);
     setNextCursor(null);
@@ -389,6 +397,8 @@ export default function ActivityFeed({
   };
 
   const handleIncludeOwnChange = (checked: boolean) => {
+    setSkeletonCount(Math.max(activities.length, 3));
+    setSwitchingFeed(true);
     setIncludeOwn(checked);
     setActivities([]);
     setNextCursor(null);
@@ -396,6 +406,8 @@ export default function ActivityFeed({
   };
 
   const handleFollowingOnlyChange = (checked: boolean) => {
+    setSkeletonCount(Math.max(activities.length, 3));
+    setSwitchingFeed(true);
     setFollowingOnly(checked);
     setActivities([]);
     setNextCursor(null);
@@ -403,6 +415,8 @@ export default function ActivityFeed({
   };
 
   const handleFeedQualityChange = (quality: FeedQuality) => {
+    setSkeletonCount(Math.max(activities.length, 3));
+    setSwitchingFeed(true);
     setFeedQuality(quality);
     setActivities([]);
     setNextCursor(null);
@@ -583,17 +597,11 @@ export default function ActivityFeed({
               )}
             </div>
           </div>
-          {(mode === 'user' || mode === 'group') ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-8">
-              <Icon name="Loader" size={24} className="text-muted-foreground" />
-            </div>
-          )}
+          <div className="space-y-4">
+            {[...Array(mode === 'global' ? 5 : 3)].map((_, i) => (
+              <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+            ))}
+          </div>
         </div>
       </>
     );
@@ -669,8 +677,14 @@ export default function ActivityFeed({
         <FollowUsersCard onDismiss={dismissFollowSuggestions} />
       )}
 
-      {/* Activity list */}
-      {activities.length === 0 ? (
+      {/* Loading skeletons when switching feed modes */}
+      {switchingFeed && activities.length === 0 ? (
+        <div className="space-y-4">
+          {[...Array(skeletonCount)].map((_, i) => (
+            <div key={i} className="h-24 bg-muted rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : activities.length === 0 ? (
         (mode === 'user' || mode === 'group') ? (
           <EmptyState
             icon="Activity"
