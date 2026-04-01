@@ -135,7 +135,7 @@ const CommandDialog = ({ children, shouldFilter, hashId, open, onOpenChange, ...
                   "pointer-events-auto w-full rounded-t-2xl",
                   "border-t border-x border-border shadow-lg bg-[var(--card-bg)]",
                   "overflow-hidden flex flex-col",
-                  "max-h-[90vh]"
+                  "h-[90vh]"
                 )}
                 style={{ animation: 'cmdDrawerSlideUp 250ms ease-out' }}
               >
