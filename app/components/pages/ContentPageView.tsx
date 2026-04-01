@@ -12,7 +12,10 @@ import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
 import { createLogger } from '../../utils/logger';
 import { extractNewPageReferences, createNewPagesFromLinks } from '../../utils/pageContentHelpers';
-import { createReplyContent } from '../../utils/replyUtils';
+import { useChangeDetection } from '../../hooks/useChangeDetection';
+import { useAutoSave } from '../../hooks/useAutoSave';
+import { usePageKeyboardShortcuts } from '../../hooks/usePageKeyboardShortcuts';
+import { useNewPageSetup } from '../../hooks/useNewPageSetup';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
@@ -191,14 +194,6 @@ export default function ContentPageView({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
-  // Auto-save state (only used when auto_save feature flag is enabled)
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'pending' | 'saving' | 'saved' | 'error'>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [autoSaveError, setAutoSaveError] = useState<string | null>(null);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Auto-save session ID for version batching - generated once per page load/session
-  // All auto-saves with the same session ID will be batched into a single version
-  const autoSaveSessionIdRef = useRef<string | null>(null);
   // NOTE: hasUnsavedChanges state removed - now computed via hasChanges memo for accuracy
   const [justSaved, setJustSaved] = useState(false); // Flag to prevent data reload after save
   const justSavedRef = useRef(false); // Ref-based flag for immediate sync access
@@ -261,29 +256,38 @@ export default function ContentPageView({
 
   // Constants - simplified loading approach
   const isPreviewingDeleted = searchParams?.get('preview') === 'deleted';
-  // New page mode: when navigating to /{pageId}?new=true, create the page first
-  // Also support legacy 'draft=true' param for backwards compatibility
-  const isNewPageMode = searchParams?.get('new') === 'true' || searchParams?.get('draft') === 'true';
-  const [isClosingNewPage, setIsClosingNewPage] = useState(false);
-  const [newPageCreated, setNewPageCreated] = useState(false);
-  // Track if we've scrolled to top - prevents rendering full page at wrong scroll position
-  const [isScrollReady, setIsScrollReady] = useState(!isNewPageMode);
 
-  // For new page mode, scroll to top and mark ready before rendering content
-  React.useLayoutEffect(() => {
-    if (isNewPageMode && !isScrollReady) {
-      window.scrollTo(0, 0);
-      setIsScrollReady(true);
-    }
-  }, [isNewPageMode, isScrollReady]);
+  // --- Extracted hooks ---
+
+  // New page setup (replaces inline isNewPageMode, scroll-to-top, setup effect)
+  const {
+    isNewPageMode, newPageCreated, isClosingNewPage,
+    setIsClosingNewPage, isScrollReady,
+  } = useNewPageSetup({
+    pageId, user, searchParams,
+    setPage, setTitle, setEditorState,
+    setCustomDate, setLocation, setIsLoading,
+    isNewPageRef,
+  });
+
+  // Computed edit permission - moved early so hooks below can use it
+  const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
+
+  // Change detection (replaces lastSaved*Refs, refsInitialized, hasChanges memo)
+  const {
+    hasChanges,
+    lastSavedContentRef,
+    lastSavedTitleRef,
+    lastSavedLocationRef,
+    lastSavedCustomDateRef,
+  } = useChangeDetection({
+    editorState, title, location, customDate,
+    page, justSaved, isSaving, pageId,
+  });
 
   // Handle location update from URL params (after returning from location picker)
   // Track if we've already processed the location update to prevent loops
   const locationUpdateProcessedRef = useRef(false);
-
-  // Ref to update lastSavedLocationRef when location is updated from picker
-  // This is declared before the refs are defined, so we use a callback pattern
-  const updateSavedLocationRef = useRef<((loc: Location | null) => void) | null>(null);
 
   useEffect(() => {
     const updatedLocationParam = searchParams?.get('updatedLocation');
@@ -296,13 +300,12 @@ export default function ContentPageView({
         setPage(prevPage => prevPage ? { ...prevPage, location: newLocation } : prevPage);
         // Update the saved location ref to match - this location was just saved in the picker
         // This prevents the save/revert bar from appearing after returning
-        if (updateSavedLocationRef.current) {
-          updateSavedLocationRef.current(newLocation);
-        }
+        lastSavedLocationRef.current = newLocation;
         // Clean up the URL by removing the param (use replace to avoid adding to history)
+        // Preserve window.history.state to avoid triggering Next.js ACTION_RESTORE
         const url = new URL(window.location.href);
         url.searchParams.delete('updatedLocation');
-        window.history.replaceState({}, '', url.toString());
+        window.history.replaceState(window.history.state, '', url.toString());
       } catch (e) {
         // Failed to parse location param - ignore
         locationUpdateProcessedRef.current = false;
@@ -311,7 +314,7 @@ export default function ContentPageView({
       // Reset the flag when there's no param
       locationUpdateProcessedRef.current = false;
     }
-  }, [searchParams]);
+  }, [searchParams, lastSavedLocationRef]);
 
   // PERFORMANCE: Hydrate from server-side pre-fetched data
   // This eliminates the client-side fetch waterfall for page loads
@@ -662,126 +665,7 @@ export default function ContentPageView({
     }
   };
 
-  // NEW PAGE MODE SETUP EFFECT
-  // When navigating to /{pageId}?new=true, set up the editor for a new page
-  // The page is NOT created in the database until the user saves
-  useEffect(() => {
-    if (!isNewPageMode || !pageId || !user || newPageCreated) {
-      return;
-    }
-
-    // Extract URL parameters for the new page
-    const replyTo = searchParams?.get('replyTo');
-    const replyToTitle = searchParams?.get('page');
-    // Note: pageUsername is the page owner's username, username is the reply author's username
-    // For the reply attribution, we need the page owner's username
-    const replyToUsername = searchParams?.get('pageUsername') || searchParams?.get('username');
-    const replyType = searchParams?.get('replyType');
-    const pageUserId = searchParams?.get('pageUserId');
-    const groupId = searchParams?.get('groupId');
-    const customDate = searchParams?.get('customDate');
-    const urlTitle = searchParams?.get('title');
-    const urlContent = searchParams?.get('content');
-    const initialContentParam = searchParams?.get('initialContent');
-    const pageType = searchParams?.get('type');
-    const locationParam = searchParams?.get('location');
-
-    // Build initial title
-    let initialTitle = '';
-    if (urlTitle && urlTitle.trim()) {
-      const trimmed = urlTitle.trim();
-      // For daily notes with date format, don't use as title
-      if (!(pageType === 'daily-note' && /^\d{4}-\d{2}-\d{2}$/.test(trimmed))) {
-        initialTitle = trimmed;
-      }
-    }
-
-    // Build initial content for replies
-    let initialContent = [{ type: "paragraph", children: [{ text: "" }] }];
-    if (replyTo) {
-      const decodedTitle = (() => {
-        try { return replyToTitle ? decodeURIComponent(replyToTitle) : ''; }
-        catch { return replyToTitle || ''; }
-      })();
-      const decodedUsername = (() => {
-        try { return replyToUsername ? decodeURIComponent(replyToUsername) : ''; }
-        catch { return replyToUsername || ''; }
-      })();
-
-      const sentiment = replyType === 'agree' || replyType === 'disagree' ? replyType : 'standard';
-
-      initialContent = [
-        ...createReplyContent({
-          pageId: replyTo,
-          pageTitle: decodedTitle || "Untitled",
-          userId: pageUserId || user?.uid || '',
-          username: decodedUsername || "Anonymous",
-          replyType: sentiment
-        }),
-        { type: "paragraph", children: [{ text: "" }] }
-      ];
-    } else if (urlContent && urlContent.trim()) {
-      initialContent = [{ type: "paragraph", children: [{ text: urlContent.trim() }] }];
-    } else if (initialContentParam) {
-      try {
-        initialContent = JSON.parse(decodeURIComponent(initialContentParam));
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    // Handle custom date from daily notes
-    let initialCustomDate: string | null = null;
-    if (pageType === 'daily-note' && customDate && /^\d{4}-\d{2}-\d{2}$/.test(customDate.trim())) {
-      initialCustomDate = customDate.trim();
-    } else if (pageType === 'daily-note' && urlTitle && /^\d{4}-\d{2}-\d{2}$/.test(urlTitle.trim())) {
-      initialCustomDate = urlTitle.trim();
-    }
-
-    // Parse location from URL param (from map flow)
-    let initialLocation: Location | null = null;
-    if (locationParam) {
-      try {
-        const parsed = JSON.parse(decodeURIComponent(locationParam));
-        if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
-          initialLocation = {
-            lat: parsed.lat,
-            lng: parsed.lng,
-            zoom: parsed.zoom || 15
-          };
-        }
-      } catch (e) {
-        // Failed to parse location param - ignore
-      }
-    }
-
-    // Set up local state for the new page (NOT saved to database yet)
-    const newPageData: Page = {
-      id: pageId,
-      title: initialTitle,
-      content: initialContent,
-      userId: user.uid,
-      username: user.username || 'Anonymous',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isNewPage: true, // Flag to indicate this is a new unsaved page
-      replyTo: replyTo || null,
-      replyToTitle: replyToTitle ? decodeURIComponent(replyToTitle) : null,
-      replyToUsername: replyToUsername ? decodeURIComponent(replyToUsername) : null,
-      groupId: groupId || null,
-      customDate: initialCustomDate,
-      location: initialLocation
-    } as any;
-
-    setPage(newPageData);
-    setTitle(initialTitle);
-    setEditorState(initialContent);
-    setCustomDate(initialCustomDate);
-    setLocation(initialLocation);
-    setIsLoading(false);
-    setNewPageCreated(true);
-    isNewPageRef.current = true; // Track new page status via ref to avoid re-renders on first save
-  }, [isNewPageMode, pageId, user, newPageCreated, searchParams]);
+  // New page setup effect is now handled by useNewPageSetup hook
 
   // Page loading effect - OPTIMIZED for faster loading
   useEffect(() => {
@@ -1052,8 +936,7 @@ export default function ContentPageView({
     }
   }, [isLoading, page, pageId, user?.uid, user, addRecentPage]);
 
-  // Computed values
-  const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
+  // Computed values (canEdit is now computed early, near the hook calls)
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt, page?.username]);
 
   // Extract linked page IDs from editor content
@@ -1175,122 +1058,11 @@ export default function ContentPageView({
     }
   }, []);
 
-  // Refs to track last saved state for change detection
-  // Must be defined before handleSave which uses hasChanges
-  const lastSavedContentRef = useRef<any>(null);
-  const lastSavedTitleRef = useRef<string>('');
-  const lastSavedLocationRef = useRef<Location | null>(null);
-  const lastSavedCustomDateRef = useRef<string | null>(null);
-
-  // Connect updateSavedLocationRef callback to lastSavedLocationRef
-  // This allows the URL param effect to update the saved location ref when returning from picker
-  useEffect(() => {
-    updateSavedLocationRef.current = (loc: Location | null) => {
-      lastSavedLocationRef.current = loc;
-    };
-  }, []);
-
-  // Track whether refs have been initialized (prevents false positives on initial load)
-  // This MUST be state (not ref) so that changes trigger re-render and useMemo recomputes
-  const [refsInitialized, setRefsInitialized] = useState(false);
-
-  // Initialize saved refs when page first loads - this MUST happen synchronously with content loading
-  // The key fix: we track initialization state separately from content
-  useEffect(() => {
-    // Only initialize refs once per page load, and only when we have valid page data
-    if (page && !refsInitialized && !isSaving) {
-      // CRITICAL: Parse content the same way as editorState to ensure accurate comparison
-      // page.content might be a JSON string, but editorState is always a parsed object
-      let parsedContent = page.content;
-      if (typeof page.content === 'string') {
-        try {
-          parsedContent = JSON.parse(page.content);
-        } catch {
-          // If parsing fails, use as-is
-          parsedContent = page.content;
-        }
-      }
-      lastSavedContentRef.current = parsedContent;
-      lastSavedTitleRef.current = page.title || '';
-      lastSavedLocationRef.current = page.location || null;
-      lastSavedCustomDateRef.current = page.customDate || null;
-      setRefsInitialized(true);
-    }
-  }, [page, isSaving, refsInitialized]);
-
-  // Reset refs when page ID changes (navigating to a different page)
-  useEffect(() => {
-    setRefsInitialized(false);
-  }, [pageId]);
-
-  // Compute if content differs from last saved state
-  // SIMPLIFIED: No fallbacks to hasUnsavedChanges - pure comparison only
-  const hasChanges = useMemo(() => {
-    // Don't show changes until refs are initialized (prevents flash on load)
-    if (!refsInitialized) {
-      return false;
-    }
-
-    // CRITICAL: Skip hasChanges check right after save to prevent false positives
-    // The justSaved flag is set after save and cleared after 2 seconds
-    // This prevents the "unsaved changes" warning immediately after saving
-    if (justSaved) {
-      return false;
-    }
-
-    // For new pages, check if any content has been added
-    if (page?.isNewPage) {
-      // New page has changes if content exists and isn't just empty paragraph
-      if (!editorState || !Array.isArray(editorState)) return false;
-      if (editorState.length === 0) return false;
-      if (editorState.length === 1) {
-        const firstBlock = editorState[0];
-        if (firstBlock?.type === 'paragraph' && firstBlock?.children) {
-          const text = firstBlock.children.map((c: any) => c.text || '').join('');
-          return text.trim().length > 0;
-        }
-      }
-      return true;
-    }
-
-    // Compare title against saved ref
-    const savedTitle = lastSavedTitleRef.current;
-    if (savedTitle !== '' && title !== savedTitle) {
-      return true;
-    }
-
-    // Compare location
-    const savedLocation = lastSavedLocationRef.current;
-    if (JSON.stringify(location) !== JSON.stringify(savedLocation)) {
-      return true;
-    }
-
-    // Compare custom date
-    const savedCustomDate = lastSavedCustomDateRef.current;
-    if (customDate !== savedCustomDate) {
-      return true;
-    }
-
-    // Compare content - expensive check, do last
-    const savedContent = lastSavedContentRef.current;
-    // Both null/undefined = no changes
-    if (!savedContent && !editorState) return false;
-    // One exists, other doesn't = changes (but wait for both to be loaded)
-    if (!savedContent || !editorState) return false;
-
-    try {
-      const savedStr = JSON.stringify(savedContent);
-      const currentStr = JSON.stringify(editorState);
-      return savedStr !== currentStr;
-    } catch {
-      // Serialization failed - assume no changes to avoid false positives
-      return false;
-    }
-  }, [title, location, customDate, editorState, page?.isNewPage, refsInitialized, justSaved]);
+  // Change detection (lastSaved*Refs, refsInitialized, hasChanges) is now handled by useChangeDetection hook
 
   // No need for handleSetIsEditing - always in edit mode
 
-  const handleSave = useCallback(async (passedContent?: any, options?: { isAutoSave?: boolean }) => {
+  const handleSave = useCallback(async (passedContent?: any, options?: { isAutoSave?: boolean; sessionId?: string | null }) => {
     const isAutoSave = options?.isAutoSave || false;
     pageLogger.info('Page save initiated', { pageId, hasPage: !!page, title, isAutoSave });
 
@@ -1319,10 +1091,9 @@ export default function ContentPageView({
 
     try {
       // Use API route instead of direct Firebase calls
-      // IMPORTANT: Use ref to get the most current content, avoiding stale closure issues
-      // The ref is kept in sync via useEffect and always has the latest editor state
-      // This fixes data loss on new page auto-save where closure captured empty initial state
-      const contentToSave = currentEditorStateRef.current || editorState;
+      // For auto-save, passedContent contains the latest editor state from the useAutoSave hook.
+      // For manual saves, we fall back to the closure-captured editorState.
+      const contentToSave = passedContent || editorState;
       const titleToSave = title.trim();
       const locationToSave = location;
       const customDateToSave = customDate;
@@ -1343,8 +1114,8 @@ export default function ContentPageView({
 
       // VERSION BATCHING: For auto-saves, include session ID and batch flag
       // This allows multiple auto-saves within a typing session to be combined into one version
-      if (isAutoSave && autoSaveSessionIdRef.current) {
-        updateData.groupId = autoSaveSessionIdRef.current;
+      if (isAutoSave && options?.sessionId) {
+        updateData.groupId = options.sessionId;
         updateData.batchWithGroup = true;
       }
 
@@ -1580,9 +1351,12 @@ export default function ContentPageView({
         // Update URL using history.replaceState to avoid triggering React re-renders
         // CRITICAL: Preserve any existing hash (e.g., #dialog-link-editor) to prevent
         // modals from closing and focus from being lost during save
+        // CRITICAL: Pass window.history.state (contains Next.js __NA flag) instead of null.
+        // Passing null causes Next.js to dispatch ACTION_RESTORE, which updates useSearchParams()
+        // and triggers re-renders that reset editor state, close modals, and lose focus.
         const currentHash = window.location.hash;
         const newUrl = `/${pageId}${currentHash}`;
-        window.history.replaceState(null, '', newUrl);
+        window.history.replaceState(window.history.state, '', newUrl);
         // The ref (isNewPageRef) was already set to false above to prevent double-triggers
         // Now we defer the page.isNewPage state update to transition the Delete/Cancel button
         // Using requestAnimationFrame ensures the critical focus-preserving code has completed
@@ -1649,220 +1423,19 @@ export default function ContentPageView({
     }
   }, [page, pageId, editorState, title, location, hasChanges]);
 
-  // Refs to hold current values for access inside setTimeout callbacks
-  // These avoid stale closure issues in async callbacks
-  const currentTitleRef = useRef(title);
-  const currentLocationRef = useRef(location);
-  const currentEditorStateRef = useRef(editorState);
-
-  // Track whether auto-save baseline has been initialized (separate from refsInitialized)
-  // This allows auto-save to work as soon as content is ready, without waiting for full page load
-  const autoSaveBaselineInitialized = useRef(false);
-  // Track when baseline was just initialized to skip the immediate effect run
-  const autoSaveBaselineJustInitialized = useRef(false);
-
-  // Keep current value refs in sync
-  useEffect(() => {
-    currentTitleRef.current = title;
-  }, [title]);
-
-  useEffect(() => {
-    currentLocationRef.current = location;
-  }, [location]);
-
-  useEffect(() => {
-    currentEditorStateRef.current = editorState;
-  }, [editorState]);
-
-  // Initialize auto-save baseline as soon as content is ready (don't wait for full page load)
-  // This allows auto-save to work even if the page object is still loading
-  useEffect(() => {
-    if (autoSaveBaselineInitialized.current) return;
-
-    // Initialize baseline as soon as we have valid editorState
-    if (editorState && Array.isArray(editorState)) {
-      lastSavedContentRef.current = editorState;
-      lastSavedTitleRef.current = title || '';
-      lastSavedLocationRef.current = location || null;
-      autoSaveBaselineInitialized.current = true;
-      // Mark that we just initialized - the next auto-save effect run should be skipped
-      // to avoid false positives from effect ordering
-      autoSaveBaselineJustInitialized.current = true;
-    }
-  }, [editorState, title, location]);
-
-  // Reset auto-save baseline and session ID when page ID changes (navigating to a different page)
-  useEffect(() => {
-    autoSaveBaselineInitialized.current = false;
-    autoSaveSessionIdRef.current = null; // Reset session ID for new page
-  }, [pageId]);
-
-  // Generate auto-save session ID when page is loaded for editing
-  // This groups all auto-saves within one editing session into a single version
-  useEffect(() => {
-    if (canEdit && pageId && !autoSaveSessionIdRef.current) {
-      // Generate a unique session ID: pageId + timestamp + random suffix
-      autoSaveSessionIdRef.current = `autosave-${pageId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    }
-  }, [canEdit, pageId]);
-
-  // Auto-save effect: triggers save after 2.5 seconds of inactivity when there are changes
-  useEffect(() => {
-    // Don't auto-save if:
-    // - Not the owner (canEdit is false)
-    // - Currently saving or just saved (prevent infinite loop)
-    // - Auto-save baseline not initialized yet (content not ready)
-    if (!canEdit || isSaving || !autoSaveBaselineInitialized.current) {
-      return;
-    }
-
-    // Skip the first run immediately after baseline initialization
-    // This prevents false positive "unsaved changes" on initial page load
-    if (autoSaveBaselineJustInitialized.current) {
-      autoSaveBaselineJustInitialized.current = false;
-      return;
-    }
-
-    // Prevent re-triggering while save is in progress or just completed
-    // This is the key guard against infinite loops
-    if (autoSaveStatus === 'saving' || autoSaveStatus === 'saved') {
-      return;
-    }
-
-    // For new pages, require explicit first save (user needs to set a title)
-    if (page?.isNewPage && !title?.trim()) {
-      return;
-    }
-
-    // Check for actual changes BEFORE setting pending status
-    // This prevents showing "Unsaved changes" on initial load
-    const currentTitle = currentTitleRef.current;
-    const currentLocation = currentLocationRef.current;
-    const currentContent = currentEditorStateRef.current;
-
-    // Check if title changed
-    const savedTitle = lastSavedTitleRef.current;
-    const titleChanged = savedTitle !== '' && currentTitle !== savedTitle;
-
-    // Check if location changed
-    const savedLocation = lastSavedLocationRef.current;
-    const locationChanged = JSON.stringify(currentLocation) !== JSON.stringify(savedLocation);
-
-    // Check if content changed
-    const savedContent = lastSavedContentRef.current;
-    let contentChanged = false;
-    if (savedContent && currentContent) {
-      try {
-        contentChanged = JSON.stringify(savedContent) !== JSON.stringify(currentContent);
-      } catch {
-        contentChanged = false;
-      }
-    }
-
-    // If no actual changes, don't proceed - stay in idle state
-    if (!titleChanged && !locationChanged && !contentChanged) {
-      return;
-    }
-
-    // Clear any existing timeout
-    if (autoSaveTimeoutRef.current) {
-      clearTimeout(autoSaveTimeoutRef.current);
-    }
-
-    // Show "pending" state IMMEDIATELY when changes are detected
-    // This gives instant feedback that there are unsaved changes
-    setAutoSaveStatus('pending');
-
-    // Set a new timeout for auto-save after 1 second of inactivity
-    // This is faster than before (was 2.5s) for a more responsive feel
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      // Re-check for actual changes using current refs vs saved refs
-      // This avoids stale closure issues by reading refs directly
-      const latestTitle = currentTitleRef.current;
-      const latestLocation = currentLocationRef.current;
-      const latestContent = currentEditorStateRef.current;
-
-      // Check if title changed
-      const latestSavedTitle = lastSavedTitleRef.current;
-      const latestTitleChanged = latestSavedTitle !== '' && latestTitle !== latestSavedTitle;
-
-      // Check if location changed
-      const latestSavedLocation = lastSavedLocationRef.current;
-      const latestLocationChanged = JSON.stringify(latestLocation) !== JSON.stringify(latestSavedLocation);
-
-      // Check if content changed
-      const latestSavedContent = lastSavedContentRef.current;
-      let latestContentChanged = false;
-      if (latestSavedContent && latestContent) {
-        try {
-          latestContentChanged = JSON.stringify(latestSavedContent) !== JSON.stringify(latestContent);
-        } catch {
-          latestContentChanged = false;
-        }
-      }
-
-      // If no actual changes, go back to idle state
-      if (!latestTitleChanged && !latestLocationChanged && !latestContentChanged) {
-        setAutoSaveStatus('idle');
-        return;
-      }
-
-      setAutoSaveStatus('saving');
-      setAutoSaveError(null);
-
-      try {
-        // Pass isAutoSave: true to enable version batching
-        await handleSave(undefined, { isAutoSave: true });
-
-        // After save completes, check if user typed more during save
-        // The refs were updated in handleSave to what was actually saved
-        // Compare current state to saved state to detect new changes
-        const postSaveContent = currentEditorStateRef.current;
-        const postSaveTitle = currentTitleRef.current;
-        const postSaveLocation = currentLocationRef.current;
-        const postSavedContent = lastSavedContentRef.current;
-        const postSavedTitle = lastSavedTitleRef.current;
-        const postSavedLocation = lastSavedLocationRef.current;
-
-        let stillHasChanges = false;
-        if (postSavedTitle !== '' && postSaveTitle !== postSavedTitle) {
-          stillHasChanges = true;
-        }
-        if (!stillHasChanges && JSON.stringify(postSaveLocation) !== JSON.stringify(postSavedLocation)) {
-          stillHasChanges = true;
-        }
-        if (!stillHasChanges && postSavedContent && postSaveContent) {
-          try {
-            stillHasChanges = JSON.stringify(postSavedContent) !== JSON.stringify(postSaveContent);
-          } catch {
-            // Ignore serialization errors
-          }
-        }
-
-        if (stillHasChanges) {
-          // User typed during save - go back to 'pending' immediately
-          // The auto-save effect will trigger another save after 1s
-          setAutoSaveStatus('pending');
-        } else {
-          // All changes were saved - show 'saved' status
-          setAutoSaveStatus('saved');
-          setLastSavedAt(new Date());
-          // Transition to idle after showing saved state
-          setTimeout(() => setAutoSaveStatus('idle'), 3000);
-        }
-      } catch (err) {
-        setAutoSaveStatus('error');
-        setAutoSaveError(err instanceof Error ? err.message : 'Auto-save failed');
-      }
-    }, 1000); // 1 second delay (reduced from 2.5s for faster saves)
-
-    // Cleanup on unmount or when dependencies change
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-      }
-    };
-  }, [editorState, title, location, canEdit, isSaving, handleSave, page?.isNewPage, autoSaveStatus]);
+  // Auto-save hook (replaces auto-save state, ref sync, baseline, debounce effect)
+  const {
+    autoSaveStatus, autoSaveError, lastSavedAt,
+  } = useAutoSave({
+    editorState, title, location,
+    canEdit, isSaving, pageId,
+    isNewPage: page?.isNewPage,
+    hasPageTitle: !!title?.trim(),
+    onSave: handleSave,
+    lastSavedContentRef,
+    lastSavedTitleRef,
+    lastSavedLocationRef,
+  });
 
   const handleCancel = useCallback(async () => {
     if (hasChanges) {
@@ -1903,34 +1476,12 @@ export default function ContentPageView({
     setError(null);
   }, [hasChanges, setEditorState, isNewPageMode, page?.isNewPage, router, confirm]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + S to save
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        handleSave();
-        return;
-      }
-
-      // Cmd/Ctrl + Enter to save
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        handleSave();
-        return;
-      }
-
-      // Escape to cancel editing
-      if (e.key === 'Escape' && isEditing) {
-        handleCancel();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleSave, handleCancel, isEditing, hasChanges, canEdit]);
+  // Keyboard shortcuts (extracted to hook)
+  usePageKeyboardShortcuts({
+    onSave: handleSave,
+    onCancel: handleCancel,
+    isEditing,
+  });
 
   // Unsaved changes protection - shows dialog when navigating away with unsaved changes
   const saveForUnsavedChangesDialog = useCallback(async () => {

@@ -36,7 +36,6 @@ import { Icon, IconName } from '@/components/ui/Icon';
 import { cn } from '../../lib/utils';
 import { isPWA } from '../../utils/pwa-detection';
 import NotificationBadge from '../utils/NotificationBadge';
-import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import { useCommandPalette } from '../../providers/CommandPaletteProvider';
 
 // Lazy load drawer content components
@@ -245,13 +244,8 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
   const { getToolbarItems } = useUnifiedMobileNav();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
   const { openPalette } = useCommandPalette();
+  const { closeAndNavigate } = useGlobalDrawer();
   const [isPWAMode, setIsPWAMode] = useState(false);
-
-  const { handleButtonPress, isNavigatingTo, targetRoute } = useOptimisticNavigation({
-    preloadDelay: 50,
-    maxNavigationTime: 3000,
-    enableHapticFeedback: true,
-  });
 
   useEffect(() => {
     setIsPWAMode(isPWA());
@@ -263,16 +257,9 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
   const isRouteActive = () => false;
 
   // Helper to navigate and close the drawer
-  // Closes drawer first, then navigates (avoids history conflicts)
+  // Uses closeAndNavigate for proper coordination between drawer close animation and navigation
   const navigateIfNeeded = (id: string, route: string) => {
-    if (pathname === route) {
-      // Already on this route, just close the drawer
-      onClose();
-      return;
-    }
-    // Close drawer and navigate
-    onClose();
-    handleButtonPress(id, route);
+    closeAndNavigate(route);
   };
 
   // Filter function for conditional nav items
@@ -300,7 +287,11 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
     },
     search: {
       icon: 'Search',
-      onClick: () => openPalette(),
+      onClick: () => {
+        onClose();
+        // Delay palette open slightly so drawer close animation starts first
+        setTimeout(() => openPalette(), 100);
+      },
       isActive: false,
       label: 'Search',
     },

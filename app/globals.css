@@ -4741,6 +4741,16 @@ button.bg-transparent[type] {
   }
 }
 
+/* Command palette mobile drawer slide-up */
+@keyframes cmdDrawerSlideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Side drawer animations */
 @keyframes slide-in-from-right {
   from {

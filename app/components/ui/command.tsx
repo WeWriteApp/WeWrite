@@ -8,6 +8,7 @@ import { Command as CommandPrimitive } from "cmdk"
 
 import { cn } from "../../lib/utils"
 import { Dialog } from "./dialog"
+import { useMediaQuery } from '../../hooks/use-media-query'
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -50,6 +51,7 @@ interface CommandDialogProps extends DialogProps {
  */
 const CommandDialog = ({ children, shouldFilter, hashId, open, onOpenChange, ...rest }: CommandDialogProps) => {
   const [mounted, setMounted] = React.useState(false);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   React.useEffect(() => setMounted(true), []);
 
   // Escape key to close
@@ -105,25 +107,53 @@ const CommandDialog = ({ children, shouldFilter, hashId, open, onOpenChange, ...
             onClick={() => onOpenChange?.(false)}
           />
 
-          {/* Card — pinned to top so height changes only affect the bottom edge */}
-          <div className="absolute inset-0 flex items-start justify-center pt-[min(18vh,140px)] pointer-events-none">
-            <div
-              className={cn(
-                "pointer-events-auto w-[85%] max-w-lg rounded-2xl",
-                "border border-border shadow-lg bg-[var(--card-bg)]",
-                "overflow-hidden"
-              )}
-            >
-              <div className="p-2">
-                <div id="command-dialog-description" className="sr-only">
-                  Search and select commands or options
+          {isDesktop ? (
+            /* Desktop: Centered modal card */
+            <div className="absolute inset-0 flex items-start justify-center pt-[min(18vh,140px)] pointer-events-none">
+              <div
+                className={cn(
+                  "pointer-events-auto w-[85%] max-w-lg rounded-2xl",
+                  "border border-border shadow-lg bg-[var(--card-bg)]",
+                  "overflow-hidden"
+                )}
+              >
+                <div className="p-2">
+                  <div id="command-dialog-description" className="sr-only">
+                    Search and select commands or options
+                  </div>
+                  <Command shouldFilter={shouldFilter} className="rounded-none bg-transparent text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:!bg-[var(--card-bg)] [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-1 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-10 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2 [&_[cmdk-item]>svg]:h-5 [&_[cmdk-item]>svg]:w-5">
+                    {children}
+                  </Command>
                 </div>
-                <Command shouldFilter={shouldFilter} className="rounded-none bg-transparent text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:!bg-[var(--card-bg)] [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-1 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-10 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2 [&_[cmdk-item]>svg]:h-5 [&_[cmdk-item]>svg]:w-5">
-                  {children}
-                </Command>
               </div>
             </div>
-          </div>
+          ) : (
+            /* Mobile: Full-width bottom drawer */
+            <div className="absolute inset-0 flex items-end pointer-events-none">
+              <div
+                className={cn(
+                  "pointer-events-auto w-full rounded-t-2xl",
+                  "border-t border-x border-border shadow-lg bg-[var(--card-bg)]",
+                  "overflow-hidden flex flex-col",
+                  "max-h-[90vh]"
+                )}
+                style={{ animation: 'cmdDrawerSlideUp 250ms ease-out' }}
+              >
+                {/* Drag handle visual */}
+                <div className="flex justify-center pt-3 pb-1">
+                  <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                </div>
+                <div className="px-2 pb-2 flex flex-col flex-1 min-h-0" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}>
+                  <div id="command-dialog-description" className="sr-only">
+                    Search and select commands or options
+                  </div>
+                  <Command shouldFilter={shouldFilter} className="rounded-none bg-transparent text-foreground flex flex-col flex-1 min-h-0 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:!bg-[var(--card-bg)] [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-1 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-10 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2 [&_[cmdk-item]>svg]:h-5 [&_[cmdk-item]>svg]:w-5 [&_[cmdk-list]]:flex-1 [&_[cmdk-list]]:!max-h-none">
+                    {children}
+                  </Command>
+                </div>
+              </div>
+            </div>
+          )}
         </div>,
         document.body
       )}
