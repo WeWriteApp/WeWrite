@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { useAsyncState } from '../../hooks/useAsyncState';
 import type { DateRange } from '../admin/DateRangeFilter';
 import type { GlobalAnalyticsFilters } from '../admin/GlobalAnalyticsFilters';
 
@@ -32,104 +33,71 @@ interface WidgetProps {
   className?: string;
 }
 
+/**
+ * Shared helper: build a URL-encoded params string for the date range + cumulative flag.
+ */
+function buildDateParams(dateRange: DateRange, cumulative: boolean): string {
+  return new URLSearchParams({
+    startDate: dateRange.startDate.toISOString(),
+    endDate: dateRange.endDate.toISOString(),
+    cumulative: cumulative.toString(),
+  }).toString();
+}
+
 // Hook for writer earnings data
 function useWriterEarnings(dateRange: DateRange, cumulative: boolean) {
-  const [data, setData] = useState<WriterEarningsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error, execute } = useAsyncState<WriterEarningsData>();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const params = new URLSearchParams({
-          startDate: dateRange.startDate.toISOString(),
-          endDate: dateRange.endDate.toISOString(),
-          cumulative: cumulative.toString()
-        });
-
-        const response = await fetch(`/api/admin/writer-earnings?${params}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        
-        if (result.success) {
-          setData(result.data);
-        } else {
-          throw new Error(result.error || 'Failed to fetch writer earnings data');
-        }
-      } catch (err) {
-        console.error('Error fetching writer earnings:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
+    execute(async () => {
+      const params = buildDateParams(dateRange, cumulative);
+      const response = await fetch(`/api/admin/writer-earnings?${params}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
-
-    fetchData();
-  }, [dateRange.startDate, dateRange.endDate, cumulative]);
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch writer earnings data');
+      }
+      return result.data as WriterEarningsData;
+    });
+    // `execute` is wrapped in `useCallback(fn, [])` inside useAsyncState, giving it a stable
+    // reference across renders.  Adding it to the dep array would cause an infinite loop because
+    // calling execute() updates loading state, which would re-run this effect.
+  }, [dateRange.startDate, dateRange.endDate, cumulative]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading, error };
 }
 
 // Hook for writer payouts data
 function useWriterPayouts(dateRange: DateRange, cumulative: boolean) {
-  const [data, setData] = useState<WriterPayoutsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, loading, error, execute } = useAsyncState<WriterPayoutsData>();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const params = new URLSearchParams({
-          startDate: dateRange.startDate.toISOString(),
-          endDate: dateRange.endDate.toISOString(),
-          cumulative: cumulative.toString()
-        });
-
-        const response = await fetch(`/api/admin/writer-payouts?${params}`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        
-        if (result.success) {
-          setData(result.data);
-        } else {
-          throw new Error(result.error || 'Failed to fetch writer payouts data');
-        }
-      } catch (err) {
-        console.error('Error fetching writer payouts:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
+    execute(async () => {
+      const params = buildDateParams(dateRange, cumulative);
+      const response = await fetch(`/api/admin/writer-payouts?${params}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
-
-    fetchData();
-  }, [dateRange.startDate, dateRange.endDate, cumulative]);
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch writer payouts data');
+      }
+      return result.data as WriterPayoutsData;
+    });
+    // `execute` is wrapped in `useCallback(fn, [])` inside useAsyncState, giving it a stable
+    // reference across renders.  Adding it to the dep array would cause an infinite loop because
+    // calling execute() updates loading state, which would re-run this effect.
+  }, [dateRange.startDate, dateRange.endDate, cumulative]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading, error };
 }

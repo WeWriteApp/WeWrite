@@ -272,15 +272,15 @@ const expensiveValue = useMemo(
 
 ## 📋 **Implementation Priority**
 
-### Phase 1 (Immediate - High Impact)
-1. Extract `useAsyncState` and `useApiCall` hooks
-2. Create `AsyncCard` component
-3. Implement `useFormField` hook
+### Phase 1 ✅ Completed
+1. ~~Extract `useAsyncState` and `useApiCall` hooks~~ → `app/hooks/useAsyncState.ts`
+2. ~~Create `AsyncCard` component~~ → `app/components/ui/AsyncCard.tsx`
+3. ~~Implement `useFormField` hook~~ → `app/hooks/useFormField.ts`
 
 ### Phase 2 (Next Sprint - Large Components)
-1. Refactor `PageView.tsx` into smaller components
-2. Split `new/page.tsx` into manageable pieces
-3. Break down `dashboardAnalytics.ts` service
+1. Finish refactoring `ContentPageView.tsx` — extract `usePageLoading` and `usePageSave` hooks (5 hooks already done; 2 remain)
+2. Migrate remaining admin widgets from manual loading/error state to `useAsyncState`
+3. Break down `useDashboardAnalytics.ts` (1,371 lines) into domain-specific sub-hooks
 
 ### Phase 3 (Ongoing - Incremental)
 1. Consolidate utility functions

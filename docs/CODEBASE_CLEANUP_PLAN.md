@@ -14,10 +14,12 @@
 | Duplicate Code - Validation | 21+ files | ✅ COMPLETED | ~200 lines |
 | Unused Error Boundaries | 3 files | ✅ COMPLETED | 410 lines |
 | Documentation Drift | 9 critical discrepancies | ✅ COMPLETED | N/A |
-| Spaghetti Code | 7 major files | ⏳ Pending | ~9,000 lines |
+| Shared Async State Pattern | 10+ components | ✅ COMPLETED | N/A (hooks created) |
+| Spaghetti Code - ContentPageView | 1 critical file | 🔄 IN PROGRESS | ~400 lines extracted |
+| Spaghetti Code - Remaining | 6 major files | ⏳ Pending | ~8,600 lines |
 
-**Completed Cleanup:** ~1,035 lines removed, validation centralized across 11 files
-**Remaining Potential:** ~45% reduction in spaghetti code areas
+**Completed Cleanup:** ~1,435 lines removed/consolidated; validation centralized; 6 shared hooks extracted
+**Remaining Potential:** ~40% reduction in remaining spaghetti code areas
 
 ---
 
@@ -261,28 +263,36 @@ Analysis revealed only 1 Error Boundary is actually used in production:
 
 ## PHASE 4: SPAGHETTI CODE REFACTORING
 
-### 4.1 ContentPageView.tsx (CRITICAL - 2,372 lines)
+### 4.1 ContentPageView.tsx (CRITICAL - was 2,372 lines → now ~2,000 lines) 🔄 IN PROGRESS
 
 **Location:** `app/components/pages/ContentPageView.tsx`
 
-**Problems:**
+**Problems (original):**
 - 40+ state variables
 - 6-level deep nesting
 - Functions over 200 lines
 - Mixed concerns (loading, saving, editing, keyboard shortcuts, location, dates)
 
-**Proposed split:**
+**Hooks extracted so far (completed):**
 
 | New File | Lines | Responsibility |
 |----------|-------|----------------|
-| `hooks/usePageState.ts` | ~150 | State initialization/sync |
-| `hooks/usePageLoading.ts` | ~100 | Page fetching/hydration |
-| `hooks/usePageSave.ts` | ~200 | Save/auto-save logic |
-| `hooks/useNewPageMode.ts` | ~80 | New page creation flow |
-| `hooks/usePageKeyboard.ts` | ~50 | Keyboard shortcuts |
-| `ContentPageView.tsx` | ~500 | UI composition only |
+| `hooks/useAutoSave.ts` | ~268 | Auto-save debouncing, session ID, status |
+| `hooks/usePageKeyboardShortcuts.ts` | ~44 | Cmd+S, Cmd+Enter, Escape shortcuts |
+| `hooks/useNewPageSetup.ts` | ~130+ | New page mode, scroll-to-top, URL params |
+| `hooks/useChangeDetection.ts` | ~100+ | lastSaved refs, hasChanges computation |
+| `hooks/useUnsavedChanges.ts` | ~213 | Unsaved changes dialog / navigation guard |
 
-**Estimated effort:** 8-12 hours
+**Remaining to extract:**
+
+| New File | Lines | Responsibility |
+|----------|-------|----------------|
+| `hooks/usePageLoading.ts` | ~200 | Page fetching, optimistic hydration, API fallback |
+| `hooks/usePageSave.ts` | ~360 | handleSave (includes auth retry, cache invalidation) |
+| `ContentPageView.tsx` | ~600 | UI composition only |
+
+**Estimated remaining effort:** 6-10 hours
+**Risk:** HIGH — handleSave has 10+ integrated state updates; ensure test coverage before extracting
 
 ### 4.2 links.ts (1,037 lines) ⏸️ DEFERRED - LOW ROI
 
@@ -396,22 +406,27 @@ File structure by handler:
 
 ## Implementation Priority
 
-### Week 1: Critical Fixes
-- [ ] Fix VisitorValidationService undefined variable
-- [ ] Update documentation discrepancies (subscription tiers, platform fee)
-- [ ] Delete TokenPieChart.tsx
+### ✅ Completed
+- Fix VisitorValidationService undefined variable
+- Update documentation discrepancies (subscription tiers, platform fee)
+- Delete TokenPieChart.tsx
+- Consolidate API client patterns (`apiClient.ts` 1,006 → 581 lines)
+- Centralize validation functions (`validationPatterns.ts`)
+- Remove unused error boundaries (3 files deleted)
+- Fix documentation drift (9 critical discrepancies)
+- Create shared utility hooks: `useAsyncState`, `useApiCall`, `useAsyncSubmit`
+- Create `AsyncCard` / `ListAsyncCard` / `FormAsyncCard` UI components
+- Extract `useAutoSave`, `usePageKeyboardShortcuts`, `useNewPageSetup`, `useChangeDetection`, `useUnsavedChanges` from ContentPageView
+- Create `useFormField` hook for consolidated form-field state management
+- Use `useAsyncState` in `WriterEarningsPayoutsWidget` — removed two duplicate inline hooks (100+ lines)
 
-### Week 2: Quick Wins
-- [ ] Consolidate logging systems
-- [ ] Remove fee calculation async duplicates
-- [ ] Extract ContentValidator from pages route
-
-### Week 3-4: Major Refactors
-- [ ] Split ContentPageView.tsx into hooks
-- [ ] Simplify links.ts extraction logic
-- [ ] Create generic CacheManager
+### Week 3-4: Major Refactors Remaining
+- [ ] Extract `usePageLoading` and `usePageSave` from ContentPageView
+- [ ] Simplify links.ts extraction logic (deferred — low ROI)
+- [ ] Create generic CacheManager (deferred — high risk)
 
 ### Ongoing
+- [ ] Migrate remaining admin/settings components from manual loading/error state to `useAsyncState`
 - [ ] Address TODO markers as features are built
 - [ ] Keep System Diagram updated per CLAUDE.md
 - [ ] Consider removing disabled visitor tracking services

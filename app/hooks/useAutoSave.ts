@@ -97,7 +97,7 @@ export function useAutoSave({
   useEffect(() => {
     if (canEdit && pageId && !autoSaveSessionIdRef.current) {
       // Generate a unique session ID: pageId + timestamp + random suffix
-      autoSaveSessionIdRef.current = `autosave-${pageId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      autoSaveSessionIdRef.current = `autosave-${pageId}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
     }
   }, [canEdit, pageId]);
 
