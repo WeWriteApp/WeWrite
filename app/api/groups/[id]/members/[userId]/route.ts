@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../../auth-helper';
 import { getFirebaseAdmin } from '../../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../../utils/environmentConfig';
+import { isGroupsEnabled, groupsDisabledResponse } from '../../../featureFlagCheck';
 
 /**
  * DELETE /api/groups/[id]/members/[userId] - Remove a member
@@ -14,6 +15,8 @@ export async function DELETE(
     const { id: groupId, userId: targetUserId } = await params;
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) return createErrorResponse('UNAUTHORIZED');
+
+    if (!(await isGroupsEnabled(currentUserId))) return groupsDisabledResponse();
 
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
@@ -51,11 +54,34 @@ export async function DELETE(
     // Remove from members subcollection
     await groupRef.collection('members').doc(targetUserId).delete();
 
+    // Disassociate the removed member's pages from the group
+    const { FieldValue } = await import('firebase-admin/firestore');
+    const memberPagesSnap = await db
+      .collection(getCollectionName('pages'))
+      .where('groupId', '==', groupId)
+      .where('userId', '==', targetUserId)
+      .get();
+
+    let removedPageCount = 0;
+    if (!memberPagesSnap.empty) {
+      const batch = db.batch();
+      for (const pageDoc of memberPagesSnap.docs) {
+        batch.update(pageDoc.ref, {
+          groupId: FieldValue.delete(),
+          visibility: FieldValue.delete(),
+          lastModified: new Date().toISOString(),
+        });
+        removedPageCount++;
+      }
+      await batch.commit();
+    }
+
     // Update memberIds and count
     const newMemberIds = (groupData.memberIds || []).filter((id: string) => id !== targetUserId);
     const updates: Record<string, any> = {
       memberIds: newMemberIds,
       memberCount: newMemberIds.length,
+      pageCount: Math.max((groupData.pageCount || 0) - removedPageCount, 0),
       updatedAt: new Date().toISOString(),
     };
 

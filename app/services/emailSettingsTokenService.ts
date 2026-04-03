@@ -12,7 +12,7 @@
  * - Tokens only grant access to email preferences, not full account access
  */
 
-import { getFirebaseAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { randomUUID } from 'crypto';
 
 const isDev = process.env.NODE_ENV === 'development';

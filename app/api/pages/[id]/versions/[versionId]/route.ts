@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../../auth-helper';
-import { initAdmin } from '../../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../../utils/environmentConfig';
 import { isUserAdmin } from '../../../../../utils/adminSecurity';
 
@@ -32,7 +32,7 @@ export async function GET(
 
 
     // Initialize Firebase Admin
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Get the page document first to check permissions

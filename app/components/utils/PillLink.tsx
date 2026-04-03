@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, forwardRef, useEffect, useMemo } from "react";
+import React, { useState, forwardRef, useEffect, useMemo, useRef } from "react";
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { ShimmerEffect } from "../ui/skeleton";
@@ -15,6 +15,7 @@ import PillLinkContextMenu from "./PillLinkContextMenu";
 import { SimpleTooltip } from "../ui/tooltip";
 import { getPageById } from "../../utils/apiClient";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
+import { usePillClickAnimation } from "../../hooks/usePillClickAnimation";
 
 // Simple skeleton loader
 const PillLinkSkeleton = () => (
@@ -84,6 +85,8 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   // Hooks
   const { user } = useAuth();
   const { getPillStyleClasses, pillStyle } = usePillStyle();
+  const { animateAndNavigate } = usePillClickAnimation();
+  const internalRef = useRef<HTMLAnchorElement>(null);
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -482,7 +485,12 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   return (
     <>
       <a
-        ref={ref}
+        ref={(node) => {
+          // Assign to both the forwarded ref and our internal ref
+          internalRef.current = node;
+          if (typeof ref === 'function') ref(node);
+          else if (ref) (ref as React.MutableRefObject<HTMLAnchorElement | null>).current = node;
+        }}
         href={safeHref}
         className={baseStyles}
         tabIndex={0}
@@ -540,11 +548,13 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           }
 
           // In edit mode: show context menu for editing options
-          // In view mode: navigate directly to the link
+          // In view mode: play pulse glow animation then navigate
           if (isEditing) {
             handleShowContextMenu(e);
           } else {
-            handleGoToLink();
+            e.preventDefault();
+            const el = internalRef.current || e.currentTarget as HTMLElement;
+            animateAndNavigate(el, () => handleGoToLink(), 'pulse-glow');
           }
         }}
       >

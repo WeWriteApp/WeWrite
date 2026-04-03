@@ -130,6 +130,8 @@ export interface ContentPageHeaderProps {
   isPublic?: boolean;
   /** Callback when visibility changes */
   onVisibilityChange?: (isPublic: boolean) => void;
+  /** Group ID if page belongs to a group */
+  groupId?: string | null;
 }
 
 export default function ContentPageHeader({
@@ -159,7 +161,8 @@ export default function ContentPageHeader({
   onInsertLink,
   onBack,
   isPublic = true,
-  onVisibilityChange
+  onVisibilityChange,
+  groupId = null,
 }: ContentPageHeaderProps) {
 
   // Fetch subscription data for the page author
@@ -514,7 +517,26 @@ export default function ContentPageHeader({
     }
   }, [user, user?.uid]);
 
-  // Groups functionality removed
+  // Fetch group name if page belongs to a group
+  const [groupName, setGroupName] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!groupId) {
+      setGroupName(null);
+      return;
+    }
+    const fetchGroup = async () => {
+      try {
+        const res = await fetch(`/api/groups/${groupId}`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.success && data.data?.name) {
+          setGroupName(data.data.name);
+        }
+      } catch {
+        // Silently fail - group badge just won't show
+      }
+    };
+    fetchGroup();
+  }, [groupId]);
 
   // No height calculation needed - header is static block element
 
@@ -1051,6 +1073,17 @@ export default function ContentPageHeader({
                       mode="page"
                       compact={false}
                     />
+                  )}
+
+                  {/* Group badge */}
+                  {groupId && groupName && (
+                    <Link
+                      href={`/g/${groupId}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                    >
+                      <Icon name="Users" size={12} />
+                      {groupName}
+                    </Link>
                   )}
                 </div>
               </div>

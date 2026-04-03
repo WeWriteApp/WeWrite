@@ -90,14 +90,7 @@ export function isValidUsdCents(cents: number): boolean {
   return Number.isInteger(cents) && cents >= 0;
 }
 
-// Legacy token functions - DEPRECATED, migration complete
-/**
- * @deprecated Use formatUsdCents instead - token system has been replaced with USD
- */
-export function formatTokens(tokens: number): string {
-  return `${tokens.toLocaleString()} token${tokens !== 1 ? 's' : ''}`;
-}
-
+// Legacy migration function - still used for data migration
 /**
  * @deprecated Use centsToDollars instead - token system has been replaced with USD cents
  */

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
@@ -10,7 +10,7 @@ const stripe = getStripe();
 // Updated API route for embedded Stripe components
 export async function POST(request: NextRequest) {
   try {
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       console.error('Firebase Admin initialization returned null');
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });

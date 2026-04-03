@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { isUserAdmin } from '../../../utils/adminSecurity';
 import { DEV_TEST_USER_UIDS } from '../../../utils/testUsers';

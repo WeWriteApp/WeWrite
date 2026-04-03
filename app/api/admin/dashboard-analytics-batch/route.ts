@@ -42,7 +42,7 @@ interface BatchResponse {
   contentChanges: ChartDataPoint[];
   pwaInstalls: ChartDataPoint[];
   visitors: ChartDataPoint[];
-  replies: ChartDataPoint[];
+  replies: { date: string; label: string; agree: number; disagree: number; neutral: number; total: number }[];
   links: ChartDataPoint[];
   notifications: ChartDataPoint[];
   followedUsers: ChartDataPoint[];
@@ -440,9 +440,17 @@ function processAnalyticsEvents(events: any[], dateRange: DateRange) {
 
 function processPagesData(pages: any[], dateRange: DateRange) {
   const pagesCreated = initializeDailyMap(dateRange);
-  const replies = initializeDailyMap(dateRange);
+  const repliesByType = new Map<string, { agree: number; disagree: number; neutral: number }>();
   const linksMap = initializeDailyMap(dateRange);
   const contentChanges = initializeDailyMap(dateRange);
+
+  // Initialize reply type map for all dates
+  const currentDate = new Date(dateRange.startDate);
+  while (currentDate <= dateRange.endDate) {
+    const dayKey = currentDate.toISOString().split('T')[0];
+    repliesByType.set(dayKey, { agree: 0, disagree: 0, neutral: 0 });
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
 
   for (const page of pages) {
     const createdAt = page.createdAt;
@@ -462,9 +470,18 @@ function processPagesData(pages: any[], dateRange: DateRange) {
     // Count all pages
     pagesCreated.set(dateStr, pagesCreated.get(dateStr)! + 1);
 
-    // Count replies (pages with replyTo)
-    if (page.replyTo) {
-      replies.set(dateStr, replies.get(dateStr)! + 1);
+    // Count replies by type (pages with replyTo)
+    if (page.replyTo && repliesByType.has(dateStr)) {
+      const dayData = repliesByType.get(dateStr)!;
+      const replyType = page.replyType;
+      if (replyType === 'agree') {
+        dayData.agree++;
+      } else if (replyType === 'disagree') {
+        dayData.disagree++;
+      } else {
+        // 'neutral', 'standard', null, undefined all count as neutral
+        dayData.neutral++;
+      }
     }
 
     // Count links in content
@@ -474,9 +491,19 @@ function processPagesData(pages: any[], dateRange: DateRange) {
     }
   }
 
+  // Convert replies to multi-series chart data
+  const repliesChartData = Array.from(repliesByType.entries()).map(([date, data]) => ({
+    date,
+    label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    agree: data.agree,
+    disagree: data.disagree,
+    neutral: data.neutral,
+    total: data.agree + data.disagree + data.neutral
+  }));
+
   return {
     pagesCreated: mapToChartData(pagesCreated),
-    replies: mapToChartData(replies),
+    replies: repliesChartData,
     links: mapToChartData(linksMap),
     contentChanges: mapToChartData(contentChanges)
   };

@@ -13,7 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { verifyAdminAccess } from '../../../utils/adminSecurity';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';

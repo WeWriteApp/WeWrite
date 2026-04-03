@@ -7,7 +7,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getFirebaseAdmin } from '../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import type { Page } from '../../../../types/database';

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useAuth } from '../../providers/AuthProvider';
 import { Badge } from '../../components/ui/badge';
@@ -13,11 +12,13 @@ import { useTabNavigation } from '../../hooks/useTabNavigation';
 import GroupProfileHeader from '../../components/groups/GroupProfileHeader';
 import GroupStats from '../../components/groups/GroupStats';
 import GroupAboutTab from '../../components/groups/GroupAboutTab';
+import { UsernameBadge } from '../../components/ui/UsernameBadge';
 import { GroupPageList } from '../../components/groups/GroupPageList';
 import { GroupMemberList } from '../../components/groups/GroupMemberList';
 import { InviteMemberModal } from '../../components/groups/InviteMemberModal';
 import { FundDistributionEditor } from '../../components/groups/FundDistributionEditor';
 import { GroupEarningsSummary } from '../../components/groups/GroupEarningsSummary';
+import GroupSettingsTab from '../../components/groups/GroupSettingsTab';
 import ActivityFeed from '../../components/features/ActivityFeed';
 import type { Group, GroupMember } from '../../types/groups';
 
@@ -66,7 +67,7 @@ const GroupExternalLinksTab = dynamic(() => import('../../components/groups/Grou
   )
 });
 
-const VALID_GROUP_TABS = ['about', 'pages', 'members', 'activity', 'timeline', 'map', 'graph', 'external-links', 'earnings'];
+const VALID_GROUP_TABS = ['about', 'pages', 'members', 'activity', 'timeline', 'map', 'graph', 'external-links', 'earnings', 'settings'];
 
 interface GroupPageClientProps {
   initialGroup: Group;
@@ -94,6 +95,7 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
   });
 
   const isMember = user?.uid ? group.memberIds.includes(user.uid) : false;
+  const isOwner = user?.uid === group.ownerId;
   const isOwnerOrAdmin =
     isMember &&
     members.some((m) => m.userId === user?.uid && (m.role === 'owner' || m.role === 'admin'));
@@ -145,7 +147,6 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
       <GroupProfileHeader
         groupId={group.id}
         groupName={group.name}
-        showSettings={isOwnerOrAdmin}
       />
 
       {/* Profile-style card: name, badge, owner, KPI strip */}
@@ -161,15 +162,14 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
             )}
           </div>
           {group.ownerUsername && (
-            <p className="text-sm text-muted-foreground mb-2">
-              by{' '}
-              <Link
-                href={`/u/${group.ownerUsername}`}
-                className="hover:underline text-foreground"
-              >
-                {group.ownerUsername}
-              </Link>
-            </p>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+              <span>by</span>
+              <UsernameBadge
+                userId={group.ownerId}
+                username={group.ownerUsername}
+                size="sm"
+              />
+            </div>
           )}
         </div>
         <GroupStats
@@ -223,17 +223,13 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
                   <span>Earnings</span>
                 </TabsTrigger>
               )}
+              {isOwner && (
+                <TabsTrigger value="settings" data-value="settings" className={tabTriggerClass}>
+                  <Icon name="Settings" size={16} />
+                  <span>Settings</span>
+                </TabsTrigger>
+              )}
             </TabsList>
-            {isOwnerOrAdmin && (
-              <Button
-                size="sm"
-                onClick={() => setShowInviteModal(true)}
-                className="ml-auto shrink-0"
-              >
-                <Icon name="UserPlus" size={14} />
-                Invite
-              </Button>
-            )}
           </div>
         </div>
 
@@ -245,6 +241,19 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
               canEdit={!!isOwnerOrAdmin}
               onSaved={(description) => setGroup((prev) => ({ ...prev, description }))}
             />
+            {isOwnerOrAdmin && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+                  onClick={() => setActiveTab('external-links')}
+                >
+                  <Icon name="Link" size={20} />
+                  <span>Insert Link</span>
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="pages" className="mt-0">
@@ -252,6 +261,17 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
           </TabsContent>
 
           <TabsContent value="members" className="mt-0">
+            {isOwnerOrAdmin && (
+              <div className="flex justify-end mb-3">
+                <Button
+                  size="sm"
+                  onClick={() => setShowInviteModal(true)}
+                >
+                  <Icon name="UserPlus" size={14} />
+                  Invite
+                </Button>
+              </div>
+            )}
             <GroupMemberList
               members={members}
               ownerId={group.ownerId}
@@ -304,6 +324,15 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
                 />
                 <GroupEarningsSummary groupId={group.id} />
               </div>
+            </TabsContent>
+          )}
+
+          {isOwner && (
+            <TabsContent value="settings" className="mt-0">
+              <GroupSettingsTab
+                group={group}
+                onGroupUpdated={(updates) => setGroup((prev) => ({ ...prev, ...updates }))}
+              />
             </TabsContent>
           )}
         </div>

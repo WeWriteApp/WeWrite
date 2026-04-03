@@ -147,47 +147,56 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* CRITICAL: Apply saved accent colors BEFORE React hydrates to prevent flash of default color */}
+        {/* CRITICAL: Apply theme class AND accent colors BEFORE React hydrates to prevent flash of wrong colors */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  // Determine current theme (dark/light)
+                  var d = document.documentElement;
+                  var style = d.style;
+
+                  // 1. THEME CLASS: Apply dark/light class immediately to prevent background flash
                   var storedTheme = localStorage.getItem('theme');
                   var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                   var isDark = storedTheme === 'dark' || (storedTheme !== 'light' && prefersDark);
+                  var themeClass = isDark ? 'dark' : 'light';
 
-                  // Get the appropriate saved color based on theme
+                  // Set class on <html> before CSS paints
+                  d.classList.add(themeClass);
+                  style.colorScheme = themeClass;
+
+                  // 2. BACKGROUND COLOR: Set background immediately to prevent flash
+                  // Dark: pure black (0.00 0 0), Light: pure white (1.00 0 0)
+                  style.setProperty('--background', isDark ? '0.00 0 0' : '1.00 0 0');
+                  style.setProperty('--foreground', isDark ? '0.93 0 0' : '0.20 0 0');
+                  // Set background color directly on html to cover the gap before CSS loads
+                  style.backgroundColor = isDark ? '#000' : '#fff';
+
+                  // 3. ACCENT COLORS: Apply saved accent colors to prevent flash of default blue
                   var colorKey = isDark ? 'accent-color-dark' : 'accent-color-light';
                   var savedColor = localStorage.getItem(colorKey);
 
                   if (savedColor) {
                     var color = JSON.parse(savedColor);
                     if (color.l !== undefined && color.c !== undefined && color.h !== undefined) {
-                      // Format as OKLCH base value (e.g., "0.50 0.25 230")
                       var base = color.l.toFixed(2) + ' ' + color.c.toFixed(2) + ' ' + color.h.toFixed(1);
-
-                      // Apply CSS variables immediately
-                      var style = document.documentElement.style;
                       style.setProperty('--accent-base', base);
                       style.setProperty('--primary', base);
                       style.setProperty('--accent-l', color.l.toFixed(2));
                       style.setProperty('--accent-c', color.c.toFixed(2));
                       style.setProperty('--accent-h', color.h.toFixed(1));
 
-                      // Set neutral base (reduced chroma for subtle appearance)
                       var neutralC = Math.min(color.c * 0.3, 0.05);
                       var neutralBase = color.l.toFixed(2) + ' ' + neutralC.toFixed(2) + ' ' + color.h.toFixed(1);
                       style.setProperty('--neutral-base', neutralBase);
 
-                      // Dynamic foreground color based on lightness
                       var fg = color.l > 0.70 ? '0.00 0.00 0.0' : '1.00 0.00 0.0';
                       style.setProperty('--primary-foreground', fg);
                     }
                   }
                 } catch (e) {
-                  // Silently fail - React will apply defaults
+                  // Silently fail - React/next-themes will apply defaults
                 }
               })();
             `

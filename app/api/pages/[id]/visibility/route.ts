@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../../auth-helper';
 import { getCollectionNameAsync } from '../../../../utils/environmentConfig';
-import { getFirebaseAdmin } from '../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 
 /**
  * Update page visibility (isPublic field)

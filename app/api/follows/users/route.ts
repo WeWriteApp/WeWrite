@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
 import { sendNewFollowerEmail } from '../../../services/emailService';
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('User ID is required', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     if (type === 'following') {
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Cannot follow yourself', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Check if target user exists
@@ -320,7 +320,7 @@ export async function DELETE(request: NextRequest) {
       return createErrorResponse('Target user ID is required', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Remove target user from current user's following list

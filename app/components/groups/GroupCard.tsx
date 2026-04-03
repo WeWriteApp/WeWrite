@@ -18,7 +18,7 @@ export function GroupCard({ group, className }: GroupCardProps) {
       <Card className={className}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">{group.name}</CardTitle>
+            <CardTitle>{group.name}</CardTitle>
             <div className="flex items-center gap-2">
               {group.visibility === 'private' && (
                 <Badge variant="secondary" size="sm">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { writingIdeas as defaultWritingIdeas, type WritingIdea } from '../../../data/writingIdeas';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';

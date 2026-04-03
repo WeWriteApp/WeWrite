@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import admin from 'firebase-admin';
 
 // ==================== CACHING LAYER ====================
@@ -692,7 +692,7 @@ export async function GET(request: NextRequest) {
 
 
   try {
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     if (type === 'user') {

@@ -32,7 +32,9 @@ import { LoadingStatesSection } from './LoadingStatesSection';
 import { NotificationCardSection } from './NotificationCardSection';
 import { PageHeaderSection } from './PageHeaderSection';
 import { PageLinksCardSection } from './PageLinksCardSection';
+import { PageListSection } from './PageListSection';
 import { PieChartSection } from './PieChartSection';
+import { PillClickAnimationsSection } from './PillClickAnimationsSection';
 import { PillLinkSection } from './PillLinkSection';
 import { RollingCounterSection } from './RollingCounterSection';
 import { SaveStatusSection } from './SaveStatusSection';
@@ -87,8 +89,10 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'notification-card', label: 'Notification Card', component: NotificationCardSection },
   { id: 'page-header', label: 'Page Header', component: PageHeaderSection },
   { id: 'page-links-card', label: 'Page Links Card', component: PageLinksCardSection },
+  { id: 'page-list', label: 'Page List', component: PageListSection },
   { id: 'page-stats', label: 'Page Stats', component: PageStatsSection },
   { id: 'pie-chart', label: 'Pie Chart', component: PieChartSection },
+  { id: 'pill-click-animations', label: 'PillLink Click Animations', component: PillClickAnimationsSection },
   { id: 'pill-link', label: 'PillLink', component: PillLinkSection },
   { id: 'rolling-counter', label: 'Rolling Counter', component: RollingCounterSection },
   { id: 'save-status', label: 'Save Status', component: SaveStatusSection },

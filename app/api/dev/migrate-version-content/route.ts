@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       useProduction
     });
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Use production collections if specified, otherwise use environment-aware collections

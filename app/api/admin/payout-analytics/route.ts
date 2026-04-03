@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
 
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: adminCheck.error || 'Unauthorized' }, { status: 401 });
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       return NextResponse.json({ error: 'Database not available' }, { status: 503 });
     }

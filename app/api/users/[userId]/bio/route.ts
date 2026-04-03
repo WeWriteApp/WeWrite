@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../auth-helper';
-import { initAdmin } from '../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 
 /**
  * Server-safe user profile loading (no client-side caching)
  */
 async function getServerUserProfile(userId: string) {
-  const admin = initAdmin();
+  const admin = getFirebaseAdmin();
   const db = admin.firestore();
 
   const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
@@ -36,7 +36,7 @@ export async function GET(
       return createErrorResponse('BAD_REQUEST', 'User ID is required');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Get user document from environment-aware collection
@@ -109,7 +109,7 @@ export async function PUT(
       return createErrorResponse('BAD_REQUEST', 'Bio content is required');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Update user document in environment-aware collection

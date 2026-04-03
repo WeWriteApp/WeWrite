@@ -13,7 +13,7 @@
 
 import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from '../api/auth-helper';
-import { getFirebaseAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from './environmentConfig';
 import { DEV_TEST_USER_UIDS, DEV_TEST_USER_EMAILS } from './testUsers';
 import { getClientIP as getClientIPFromHeaders } from './cookieUtils';

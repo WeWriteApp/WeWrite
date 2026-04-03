@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../../../api/auth-helper';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { getStripe } from '../../../lib/stripe';
@@ -44,7 +44,7 @@ interface MonitoringReport {
 
 export async function GET(request: NextRequest) {
   try {
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
     const adminDb = adminApp.firestore();
     const stripe = getStripe();
 

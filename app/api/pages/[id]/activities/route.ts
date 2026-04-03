@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../../../auth-helper';
 
@@ -21,7 +21,7 @@ export async function GET(
     // Get current user for permission checking
     const currentUserId = await getUserIdFromRequest(request);
     
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
     
     // Check if page exists and get page data

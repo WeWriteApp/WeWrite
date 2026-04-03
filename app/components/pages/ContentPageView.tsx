@@ -1678,6 +1678,7 @@ export default function ContentPageView({
                   setPage({ ...page, isPublic: newIsPublic });
                 }
               }}
+              groupId={(page as any)?.groupId || null}
           />
 
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}

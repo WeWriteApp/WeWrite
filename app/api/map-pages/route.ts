@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../auth-helper';
 import { getCollectionName } from '../../utils/environmentConfig';
 

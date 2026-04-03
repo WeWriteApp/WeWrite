@@ -413,8 +413,8 @@ export default function NotificationSettingsPage() {
           <div className="space-y-6">
             {/* Channel Legend */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Icon name="Bell" size={16} />
                   Notification Channels
                 </CardTitle>

@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { getFirebaseAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { DEV_TEST_USERS } from '../utils/testUsers';
 import { getCollectionName } from '../utils/environmentConfig';
 import { parseSignedCookieValue, type SessionCookieData } from '../utils/cookieUtils';
@@ -76,6 +76,16 @@ export const createErrorResponse = (
 ): Response => {
   const error = ApiErrors[errorType] || ApiErrors.INTERNAL_ERROR;
   return createApiResponse(extraData, customMessage || error.message, error.status);
+};
+
+/**
+ * Create standardized success response
+ */
+export const createSuccessResponse = <T>(
+  data: T,
+  message: string | null = null
+): Response => {
+  return createApiResponse(data, message, 200);
 };
 
 /**

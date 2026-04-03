@@ -12,8 +12,8 @@ const Card = React.forwardRef<
       "wewrite-card",
       // Increased roundness to match allocation bars better
       "rounded-2xl overflow-hidden",
-      // Mobile-first padding with better spacing
-      "p-4 md:p-4",
+      // Card provides all internal padding — children should NOT add their own
+      "p-4",
       // Ensure proper spacing between cards when used in grids
       "mb-4 md:mb-0",
       className
@@ -29,7 +29,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col space-y-1.5 pb-3", className)}
     {...props}
   />
 ))
@@ -42,17 +42,9 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
-      // Prevent unnecessary hyphenation in card titles
-      "hyphens-none overflow-wrap-break-word word-break-normal",
+      "text-base font-semibold leading-none tracking-tight",
       className
     )}
-    style={{
-      hyphens: 'none',
-      wordBreak: 'normal',
-      overflowWrap: 'break-word',
-      ...((props as any).style || {})
-    }}
     {...props}
   />
 ))
@@ -84,7 +76,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center pt-0", className)}
+    className={cn("flex items-center pt-3", className)}
     {...props}
   />
 ))

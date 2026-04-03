@@ -329,6 +329,433 @@ html, body {
 }
 
 /* ============================================
+   PILL LINK CLICK ANIMATIONS
+   Named animation variants for tap/click micro-interactions.
+   Apply via class: pill-anim-{name}
+   Each animation plays on click/tap via .is-animating class.
+   ============================================ */
+
+/* --- 1. "Pop" — quick scale up+down bounce --- */
+@keyframes pill-click-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.15); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.pill-anim-pop.is-animating {
+  animation: pill-click-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 2. "Squish" — horizontal squeeze + vertical stretch then spring back --- */
+@keyframes pill-click-squish {
+  0%   { transform: scale(1, 1); }
+  30%  { transform: scale(0.88, 1.08); }
+  60%  { transform: scale(1.04, 0.97); }
+  100% { transform: scale(1, 1); }
+}
+.pill-anim-squish.is-animating {
+  animation: pill-click-squish 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 3. "Jelly" — wobbly elastic bounce --- */
+@keyframes pill-click-jelly {
+  0%   { transform: scale(1, 1); }
+  20%  { transform: scale(0.9, 1.1); }
+  40%  { transform: scale(1.1, 0.9); }
+  60%  { transform: scale(0.97, 1.03); }
+  80%  { transform: scale(1.02, 0.98); }
+  100% { transform: scale(1, 1); }
+}
+.pill-anim-jelly.is-animating {
+  animation: pill-click-jelly 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 4. "Pulse Glow" — scale + accent-colored ring pulse outward --- */
+@keyframes pill-click-pulse-glow {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0.5); }
+  50%  { transform: scale(1.05); box-shadow: 0 0 0 6px oklch(var(--accent-base) / 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0); }
+}
+.pill-anim-pulse-glow.is-animating {
+  animation: pill-click-pulse-glow 0.45s ease-out forwards;
+}
+
+/* --- 5. "Ripple Out" — accent ring expands outward (Material-inspired) --- */
+@keyframes pill-click-ripple-ring {
+  0%   { box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0.4); transform: scale(0.97); }
+  60%  { box-shadow: 0 0 0 8px oklch(var(--accent-base) / 0); transform: scale(1.02); }
+  100% { box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0); transform: scale(1); }
+}
+.pill-anim-ripple-out.is-animating {
+  animation: pill-click-ripple-ring 0.5s ease-out forwards;
+}
+
+/* --- 6. "Bounce Drop" — drops down, bounces back up --- */
+@keyframes pill-click-bounce-drop {
+  0%   { transform: translateY(0) scale(1); }
+  25%  { transform: translateY(3px) scale(0.97, 1.03); }
+  50%  { transform: translateY(-2px) scale(1.02, 0.98); }
+  75%  { transform: translateY(1px) scale(0.99, 1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+.pill-anim-bounce-drop.is-animating {
+  animation: pill-click-bounce-drop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 7. "Magnetic Snap" — subtle pull-in then sharp release --- */
+@keyframes pill-click-magnetic-snap {
+  0%   { transform: scale(1); filter: brightness(1); }
+  35%  { transform: scale(0.92); filter: brightness(1.15); }
+  55%  { transform: scale(1.06); filter: brightness(1); }
+  75%  { transform: scale(0.99); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.pill-anim-magnetic-snap.is-animating {
+  animation: pill-click-magnetic-snap 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* --- 8. "Confetti Burst" — quick pop with multi-ring expanding outward --- */
+@keyframes pill-click-confetti-burst {
+  0%   {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 oklch(var(--accent-base) / 0.3),
+      0 0 0 0 oklch(var(--accent-base) / 0.2);
+  }
+  40%  {
+    transform: scale(1.1);
+    box-shadow:
+      0 0 0 4px oklch(var(--accent-base) / 0.2),
+      0 0 0 8px oklch(var(--accent-base) / 0.1);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 10px oklch(var(--accent-base) / 0),
+      0 0 0 16px oklch(var(--accent-base) / 0);
+  }
+}
+.pill-anim-confetti-burst.is-animating {
+  animation: pill-click-confetti-burst 0.5s ease-out forwards;
+}
+
+/* Common properties for all pill click animation classes */
+.pill-anim-pop,
+.pill-anim-squish,
+.pill-anim-jelly,
+.pill-anim-pulse-glow,
+.pill-anim-ripple-out,
+.pill-anim-bounce-drop,
+.pill-anim-magnetic-snap,
+.pill-anim-confetti-burst {
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* ============================================
+   PULSE GLOW REVEAL VARIANTS
+   The pill glows, text fades out, and the pill expands to reveal
+   the destination page — like "clicking into" the content.
+
+   These use a portal overlay (.pill-reveal-overlay) that gets
+   positioned over the pill, then scales to fill the viewport.
+   ============================================ */
+
+/* --- Shared reveal overlay (created by JS, positioned over the pill) --- */
+.pill-reveal-overlay {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* --- Variant A: "Glow Fade" — pulse glow + text fades out, pill holds then fades --- */
+@keyframes pill-reveal-glow-fade-pill {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0.5); opacity: 1; }
+  30%  { transform: scale(1.06); box-shadow: 0 0 0 8px oklch(var(--accent-base) / 0.3); opacity: 1; }
+  60%  { transform: scale(1.06); box-shadow: 0 0 0 12px oklch(var(--accent-base) / 0); opacity: 0.8; }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0); opacity: 0; }
+}
+@keyframes pill-reveal-text-fade {
+  0%   { opacity: 1; filter: blur(0); }
+  40%  { opacity: 0; filter: blur(4px); }
+  100% { opacity: 0; filter: blur(4px); }
+}
+.pill-anim-glow-fade.is-animating {
+  animation: pill-reveal-glow-fade-pill 0.5s ease-out forwards;
+}
+.pill-anim-glow-fade.is-animating .pill-text {
+  animation: pill-reveal-text-fade 0.35s ease-out forwards;
+}
+
+/* --- Variant B: "Glow Expand" — pill expands into a full content page replica --- */
+/* The overlay transitions from accent bg → page bg while expanding.
+   Once full-screen, a replica of ContentPageHeader (back, logo, share, title, byline)
+   and skeleton content lines fade in. The back button reverses the animation. */
+
+@keyframes pill-reveal-overlay-text-out {
+  0%   { opacity: 1; transform: scale(1); filter: blur(0); }
+  50%  { opacity: 0; transform: scale(0.85); filter: blur(4px); }
+  100% { opacity: 0; transform: scale(0.85); filter: blur(4px); }
+}
+
+/* Base expand overlay */
+.pill-reveal-overlay.variant-glow-expand {
+  background: oklch(var(--accent-base));
+  transition: top 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.38s cubic-bezier(0.4, 0, 0.2, 1),
+              border-radius 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.3s ease-out 0.1s,
+              box-shadow 0.2s ease-out;
+}
+
+/* Expanding: accent → page background */
+.pill-reveal-overlay.variant-glow-expand.is-expanding {
+  background: oklch(var(--background));
+}
+
+/* Collapsing: page background → accent */
+.pill-reveal-overlay.variant-glow-expand.is-collapsing {
+  background: oklch(var(--accent-base));
+  transition: top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.25s ease-in;
+}
+
+/* Pill text fades out during expand */
+.pill-reveal-overlay.variant-glow-expand .pill-reveal-text {
+  animation: pill-reveal-overlay-text-out 0.22s ease-out forwards;
+}
+
+/* ─── Page content container ─── */
+.pill-expand-page-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.22s ease-out, transform 0.25s ease-out;
+  pointer-events: none;
+  overflow: hidden;
+}
+.pill-reveal-overlay.variant-glow-expand.is-page-visible .pill-expand-page-content {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+/* When collapsing, fade content out quickly */
+.pill-reveal-overlay.variant-glow-expand.is-collapsing .pill-expand-page-content {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.12s ease-in, transform 0.15s ease-in;
+  pointer-events: none;
+}
+
+/* ─── Header bar (matches ContentPageHeader) ─── */
+.pill-expand-header-bar {
+  padding: 0.5rem 1rem;
+}
+
+/* Row 1: Back + Logo + Share (matches ContentPageHeader row1 layout) */
+.pill-expand-header-row1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Back button — styled to match the real Button ghost/icon */
+.pill-expand-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: oklch(var(--foreground));
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+.pill-expand-back-btn:hover {
+  background: oklch(var(--muted));
+}
+.pill-expand-back-btn:active {
+  background: oklch(var(--muted) / 0.8);
+}
+
+/* Logo container — shows theme-appropriate logo */
+.pill-expand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid oklch(var(--border) / 0.3);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: oklch(var(--background));
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+}
+.pill-expand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Show correct logo per theme */
+.pill-expand-logo-dark  { display: none; }
+.pill-expand-logo-light { display: block; }
+:root.dark .pill-expand-logo-dark  { display: block; }
+:root.dark .pill-expand-logo-light { display: none; }
+html.dark .pill-expand-logo-dark  { display: block; }
+html.dark .pill-expand-logo-light { display: none; }
+
+/* Share button */
+.pill-expand-share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: oklch(var(--foreground));
+  cursor: default;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* ─── Title (matches text-2xl font-semibold text-center) ─── */
+.pill-expand-title {
+  text-align: center;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 600;
+  color: oklch(var(--foreground));
+  padding: 0.5rem 1rem 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Slide up from below */
+  opacity: 0;
+  transform: translateY(16px);
+  animation: pill-expand-title-arrive 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation-delay: 0.04s;
+}
+
+@keyframes pill-expand-title-arrive {
+  0%   { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Byline placeholder ─── */
+.pill-expand-byline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem 0;
+  opacity: 0;
+  animation: pill-expand-fade-in 0.25s ease-out forwards;
+  animation-delay: 0.18s;
+}
+.pill-expand-byline-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: oklch(var(--muted-foreground) / 0.4);
+}
+.pill-expand-byline-bar {
+  width: 4rem;
+  height: 0.625rem;
+  border-radius: 0.25rem;
+  background: oklch(var(--muted));
+}
+
+@keyframes pill-expand-fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ─── Skeleton content lines ─── */
+.pill-expand-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1.5rem 1rem 0;
+}
+.pill-expand-line {
+  height: 0.75rem;
+  border-radius: 0.25rem;
+  background: oklch(var(--muted));
+  opacity: 0;
+  animation: pill-expand-line-in 0.28s ease-out forwards;
+}
+.pill-expand-line:nth-child(1) { animation-delay: 0.08s; }
+.pill-expand-line:nth-child(2) { animation-delay: 0.12s; }
+.pill-expand-line:nth-child(3) { animation-delay: 0.16s; }
+.pill-expand-line:nth-child(4) { animation-delay: 0.20s; }
+.pill-expand-line:nth-child(5) { animation-delay: 0.28s; }
+.pill-expand-line:nth-child(6) { animation-delay: 0.32s; }
+.pill-expand-line:nth-child(7) { animation-delay: 0.36s; }
+.pill-expand-line-gap {
+  height: 0.625rem;
+}
+
+@keyframes pill-expand-line-in {
+  0%   { opacity: 0; transform: translateX(-4px); }
+  100% { opacity: 0.45; transform: translateX(0); }
+}
+
+/* --- Variant C: "Glow Morph" — glow, pill morphs into page-width bar, fades to bg color --- */
+@keyframes pill-reveal-overlay-morph-text {
+  0%   { opacity: 1; transform: translateY(0); }
+  40%  { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+.pill-reveal-overlay.variant-glow-morph {
+  background: oklch(var(--accent-base));
+  transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.5s ease-out;
+}
+.pill-reveal-overlay.variant-glow-morph .pill-reveal-text {
+  animation: pill-reveal-overlay-morph-text 0.25s ease-out forwards;
+}
+
+/* --- Variant D: "Glow Zoom" — glow, content zooms toward viewer and fades, reveal underneath --- */
+@keyframes pill-reveal-zoom-pill {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0.5); }
+  30%  { transform: scale(1.08); box-shadow: 0 0 0 8px oklch(var(--accent-base) / 0.3); }
+  100% { transform: scale(1.08); box-shadow: 0 0 0 14px oklch(var(--accent-base) / 0); }
+}
+@keyframes pill-reveal-zoom-text {
+  0%   { opacity: 1; transform: scale(1) translateZ(0); filter: blur(0); }
+  100% { opacity: 0; transform: scale(1.5) translateZ(50px); filter: blur(8px); }
+}
+.pill-anim-glow-zoom.is-animating {
+  animation: pill-reveal-zoom-pill 0.45s ease-out forwards;
+}
+.pill-anim-glow-zoom.is-animating .pill-text {
+  animation: pill-reveal-zoom-text 0.35s ease-out forwards;
+}
+
+/* ============================================
    SHINY SHIMMER BASE SYSTEM
    Single source of truth for shimmer effects.
    All shiny components inherit from .shiny-shimmer-base
@@ -1748,24 +2175,11 @@ a.username-badge-link:has(.text-muted-foreground) {
 
 /* PWA Interface Improvements */
 /* PWA styles - light and dark mode support */
+/* Note: The inline <head> script in layout.tsx sets --background and the dark/light class
+   BEFORE CSS paints, so these variables are already correct by the time this runs. */
 @media (display-mode: standalone) {
-  :root {
-    --pwa-background: #ffffff;
-    --pwa-status-bar: #000000;
-  }
-
-  .dark {
-    --pwa-background: #000000;
-    --pwa-status-bar: #ffffff;
-  }
-
   body {
-    background-color: var(--pwa-background);
-  }
-
-  /* Status bar styling for PWA */
-  meta[name="theme-color"] {
-    content: var(--pwa-background);
+    background-color: oklch(var(--background));
   }
 }
 

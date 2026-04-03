@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { handleSubscriptionStatusChange } from '../../../services/pledgeBudgetService';
 import { getCollectionName, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getStripe } from '../../../lib/stripe';

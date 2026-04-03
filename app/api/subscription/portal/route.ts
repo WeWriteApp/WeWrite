@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { StripeUrls } from '../../../utils/urlConfig';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
@@ -17,7 +17,7 @@ const stripe = getStripe();
 export async function POST(request: NextRequest) {
   try {
     // Initialize Firebase Admin inside function to avoid build-time issues
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const adminDb = admin.firestore();
 
     // Get authenticated user

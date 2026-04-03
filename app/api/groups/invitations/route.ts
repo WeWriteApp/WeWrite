@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { isGroupsEnabled, groupsDisabledResponse } from '../featureFlagCheck';
 
 /**
  * GET /api/groups/invitations - Get pending invitations for current user
@@ -11,21 +12,43 @@ export async function GET(request: NextRequest) {
     const userId = await getUserIdFromRequest(request);
     if (!userId) return createErrorResponse('UNAUTHORIZED');
 
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
+
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
     const db = admin.firestore();
 
-    const snap = await db
-      .collection(getCollectionName('groupInvitations'))
-      .where('inviteeId', '==', userId)
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'desc')
-      .get();
+    let invitations: any[] = [];
+    try {
+      const snap = await db
+        .collection(getCollectionName('groupInvitations'))
+        .where('inviteeId', '==', userId)
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .get();
 
-    const invitations = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+      invitations = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+    } catch (indexError: any) {
+      // Composite index may not exist yet - fall back to simpler query
+      if (indexError?.code === 9 || indexError?.message?.includes('index')) {
+        console.warn('[Groups API] Missing composite index for groupInvitations, falling back to simple query');
+        const snap = await db
+          .collection(getCollectionName('groupInvitations'))
+          .where('inviteeId', '==', userId)
+          .where('status', '==', 'pending')
+          .get();
+
+        invitations = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+      } else {
+        throw indexError;
+      }
+    }
 
     return createApiResponse({ invitations });
   } catch (error: any) {

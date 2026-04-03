@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 import { syncPageToTypesenseServer } from '../../../../lib/typesenseSync';

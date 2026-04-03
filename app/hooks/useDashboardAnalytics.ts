@@ -1284,7 +1284,7 @@ export interface DashboardBatchData {
   contentChanges: ChartDataPoint[];
   pwaInstalls: ChartDataPoint[];
   visitors: ChartDataPoint[];
-  replies: ChartDataPoint[];
+  replies: { date: string; label: string; agree: number; disagree: number; neutral: number; total: number }[];
   links: ChartDataPoint[];
   notifications: ChartDataPoint[];
   followedUsers: ChartDataPoint[];

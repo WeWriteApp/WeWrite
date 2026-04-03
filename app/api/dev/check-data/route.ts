@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Checking test data...');
     
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
     
     // Check users

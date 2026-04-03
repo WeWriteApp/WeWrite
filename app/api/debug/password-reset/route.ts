@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { requireDevelopmentEnvironment } from '../debugHelper';
 import { isValidEmailStrict } from '@/utils/validationPatterns';
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 [Password Reset Debug] Debug request received');
     
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
     }

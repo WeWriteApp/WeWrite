@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../../auth-helper';
-import { initAdmin } from '../../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
 
 interface Location {
@@ -42,7 +42,7 @@ export async function PATCH(
 
 
     // Initialize Firebase Admin
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Get the page to check ownership
@@ -207,7 +207,7 @@ export async function GET(
     }
 
     // Initialize Firebase Admin
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Get the page

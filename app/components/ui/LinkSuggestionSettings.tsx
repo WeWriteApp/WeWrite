@@ -24,7 +24,7 @@ export function LinkSuggestionSettings({
 }: LinkSuggestionSettingsProps) {
   return (
     <Card className={className}>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Icon name="Sparkles" size={16} className="text-primary" />
           Link Suggestions

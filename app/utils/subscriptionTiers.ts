@@ -104,19 +104,6 @@ export const USD_ECONOMY = {
   PROCESSING_TIMEZONE: 'UTC'
 } as const;
 
-// DEPRECATED: Legacy token economy constants for backward compatibility
-export const TOKEN_ECONOMY = {
-  TOKENS_PER_DOLLAR: 10,
-  MONTHLY_PROCESSING_DAY: USD_ECONOMY.MONTHLY_PROCESSING_DAY,
-  PROCESSING_HOUR: USD_ECONOMY.PROCESSING_HOUR,
-  PROCESSING_MINUTE: USD_ECONOMY.PROCESSING_MINUTE,
-  WEWRITE_PLATFORM_ALLOCATION: USD_ECONOMY.WEWRITE_PLATFORM_ALLOCATION,
-  MIN_ALLOCATION_TOKENS: 1,
-  MAX_ALLOCATION_PERCENTAGE: USD_ECONOMY.MAX_ALLOCATION_PERCENTAGE,
-  ALLOCATION_ADJUSTMENT_CUTOFF_HOUR: USD_ECONOMY.ALLOCATION_ADJUSTMENT_CUTOFF_HOUR,
-  PROCESSING_TIMEZONE: USD_ECONOMY.PROCESSING_TIMEZONE
-} as const;
-
 /**
  * Get tier by ID
  */
@@ -247,7 +234,7 @@ export const getNextMonth = (): string => {
  */
 export const isMonthlyProcessingTime = (): boolean => {
   const today = new Date();
-  return today.getDate() === TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY;
+  return today.getDate() === USD_ECONOMY.MONTHLY_PROCESSING_DAY;
 };
 
 /**
@@ -255,8 +242,8 @@ export const isMonthlyProcessingTime = (): boolean => {
  */
 export const shouldRunMonthlyProcessing = (): boolean => {
   const now = new Date();
-  const isCorrectDay = now.getDate() === TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY;
-  const isCorrectHour = now.getHours() >= TOKEN_ECONOMY.PROCESSING_HOUR;
+  const isCorrectDay = now.getDate() === USD_ECONOMY.MONTHLY_PROCESSING_DAY;
+  const isCorrectHour = now.getHours() >= USD_ECONOMY.PROCESSING_HOUR;
   return isCorrectDay && isCorrectHour;
 };
 
@@ -301,13 +288,13 @@ export const getNextMonthlyProcessingDate = (): Date => {
   const targetDate = new Date(
     currentYear,
     currentMonth,
-    TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY,
-    TOKEN_ECONOMY.PROCESSING_HOUR,
-    TOKEN_ECONOMY.PROCESSING_MINUTE,
+    USD_ECONOMY.MONTHLY_PROCESSING_DAY,
+    USD_ECONOMY.PROCESSING_HOUR,
+    USD_ECONOMY.PROCESSING_MINUTE,
     0
   );
 
-  if (currentDay >= TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY) {
+  if (currentDay >= USD_ECONOMY.MONTHLY_PROCESSING_DAY) {
     targetDate.setMonth(currentMonth + 1);
   }
 

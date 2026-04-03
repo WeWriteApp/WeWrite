@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/button';
 import { cn } from '../../lib/utils';
+import { formatRelativeTime } from '@/utils/formatRelativeTime';
 
 interface DeviceInfo {
   browser: string;
@@ -36,29 +37,6 @@ interface SessionsResponse {
   sessions: UserSession[];
   currentSessionId: string;
   totalSessions: number;
-}
-
-/**
- * Get a human-readable relative time string
- */
-function getRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-  });
 }
 
 /**
@@ -126,12 +104,12 @@ function SessionCard({
           <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
             <div className="flex items-center gap-1.5">
               <Icon name="Clock" size={12} />
-              <span>Last active: {getRelativeTime(session.lastActiveAt)}</span>
+              <span>Last active: {formatRelativeTime(session.lastActiveAt)}</span>
             </div>
             {session.createdAt && (
               <div className="flex items-center gap-1.5">
                 <Icon name="LogIn" size={12} />
-                <span>Signed in: {getRelativeTime(session.createdAt)}</span>
+                <span>Signed in: {formatRelativeTime(session.createdAt)}</span>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { DEV_TEST_USERS } from "../../../utils/testUsers";
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     const results = [];

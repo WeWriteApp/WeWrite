@@ -2,33 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
-
-/**
- * Check if the groups feature flag is enabled for a user
- */
-async function isGroupsEnabled(userId: string | null): Promise<boolean> {
-  try {
-    const admin = getFirebaseAdmin();
-    if (!admin) return false;
-    const db = admin.firestore();
-
-    // Check global defaults
-    const defaultsDoc = await db.collection(getCollectionName('featureFlags')).doc('defaults').get();
-    const defaults = defaultsDoc.exists ? defaultsDoc.data()?.flags || {} : {};
-
-    // Check user overrides
-    let overrides: Record<string, boolean> = {};
-    if (userId) {
-      const overridesDoc = await db.collection(getCollectionName('featureFlagOverrides')).doc(userId).get();
-      overrides = overridesDoc.exists ? overridesDoc.data()?.flags || {} : {};
-    }
-
-    const merged = { ...defaults, ...overrides };
-    return Boolean(merged.groups);
-  } catch {
-    return false;
-  }
-}
+import { isGroupsEnabled, groupsDisabledResponse } from './featureFlagCheck';
 
 /**
  * POST /api/groups - Create a new group
@@ -112,17 +86,39 @@ export async function GET(request: NextRequest) {
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
     const db = admin.firestore();
 
-    const snap = await db
-      .collection(getCollectionName('groups'))
-      .where('memberIds', 'array-contains', userId)
-      .where('deleted', '!=', true)
-      .orderBy('updatedAt', 'desc')
-      .get();
+    let groups: any[] = [];
+    try {
+      const snap = await db
+        .collection(getCollectionName('groups'))
+        .where('memberIds', 'array-contains', userId)
+        .where('deleted', '!=', true)
+        .orderBy('updatedAt', 'desc')
+        .get();
 
-    const groups = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+      groups = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (indexError: any) {
+      // Composite index may not exist yet - fall back to simpler query
+      if (indexError?.code === 9 || indexError?.message?.includes('index')) {
+        console.warn('[Groups API] Missing composite index for groups, falling back to simple query');
+        const snap = await db
+          .collection(getCollectionName('groups'))
+          .where('memberIds', 'array-contains', userId)
+          .get();
+
+        groups = snap.docs
+          .filter((doc) => doc.data().deleted !== true)
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+      } else {
+        throw indexError;
+      }
+    }
 
     return createApiResponse({ groups });
   } catch (error: any) {

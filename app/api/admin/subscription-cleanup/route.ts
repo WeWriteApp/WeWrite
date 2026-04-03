@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { verifyAdminAccess, createAdminUnauthorizedResponse } from '../../../utils/adminSecurity';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { getStripe } from '../../../lib/stripe';
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return createAdminUnauthorizedResponse(adminAuth.auditId);
     }
 
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
     const adminDb = adminApp.firestore();
     const stripe = getStripe();
 

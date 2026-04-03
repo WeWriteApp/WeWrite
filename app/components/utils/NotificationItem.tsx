@@ -377,8 +377,71 @@ export default function NotificationItem({ notification }) {
        * - Continues operation even if individual actions fail
        */
       case 'group_invite':
-        // Groups functionality removed - group invitations no longer supported
-        return null;
+        const groupName = notification.metadata?.groupName || 'a group';
+        const invitationId = notification.metadata?.invitationId;
+
+        return (
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {notification.metadata?.sourceUserId && (
+                <UserBadge userId={notification.metadata.sourceUserId} size="sm" />
+              )}
+            </div>
+            <p className="text-sm font-medium mb-1 text-foreground">
+              {notification.title || 'Group Invitation'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `You've been invited to join "${groupName}"`}
+            </p>
+            {!notification.read && invitationId && (
+              <div className="flex gap-2">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      const res = await fetch('/api/groups/invitations', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ invitationId, action: 'accept' }),
+                      });
+                      if (res.ok) {
+                        await markAsRead(notification.id);
+                        router.push(`/g/${notification.metadata?.groupId}`);
+                      }
+                    } catch (error) {
+                      console.error('Error accepting group invite:', error);
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Join Group
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      await fetch('/api/groups/invitations', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ invitationId, action: 'decline' }),
+                      });
+                      await markAsRead(notification.id);
+                    } catch (error) {
+                      console.error('Error rejecting group invite:', error);
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors border border-border hover:bg-muted"
+                >
+                  Ignore Invite
+                </button>
+              </div>
+            )}
+          </div>
+        );
 
       case 'allocation_threshold':
         const percentage = notification.metadata?.percentage || 90;

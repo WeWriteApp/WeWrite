@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { DEV_TEST_USERS, getDevTestUserPassword } from "../../../utils/testUsers";
 // Check if development environment
 const isDevelopmentEnvironment = () => {

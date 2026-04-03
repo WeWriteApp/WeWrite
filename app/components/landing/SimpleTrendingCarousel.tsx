@@ -140,7 +140,7 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
               onClick={() => window.location.href = `/${page.id}`}
             >
               <div className="wewrite-card h-full flex flex-col justify-between" style={{ transform: 'none' }}>
-                <CardHeader className="p-3">
+                <CardHeader>
                   <CardTitle className="text-lg mb-1 break-words h-[52px] overflow-hidden">
                     <PillLink href={`/${page.id}`}>
                       {page.title || 'Untitled'}

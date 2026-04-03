@@ -73,11 +73,13 @@ style={{
 
 ## Loader Animation Rules
 
+> **⚠️ CRITICAL RULE — This pattern is a recurring mistake. Read carefully.**
+
 ### 1. PulseLoader Has Built-In Animation
-The `<Icon name="Loader" />` component renders a PulseLoader with its own animation. **Never** add `animate-spin` or any other animation wrapper — doing so double-animates the icon (a pulse inside a spin).
+The `<Icon name="Loader" />` component renders a PulseLoader with its own animation. **Never** add `animate-spin` or any other animation wrapper — doing so double-animates the icon (a pulse inside a spin), creating a visually broken spinning container effect.
 
 ### 2. Animation Is Atomic, Not Molecular
-Animation belongs inside the loader component itself, not applied by a parent container. This keeps loading behavior consistent and predictable across the app.
+Animation belongs **inside** the loader component itself (the atomic level), **never** applied by a parent container (the molecular level). If you see a loader spinning as a whole, that's a bug — the individual dots/elements should animate, not the entire container. This is the single most important rule for loading states in this project.
 
 ### 3. Always Use `Loader`, Not `Loader2`
 Use `<Icon name="Loader" />` for all standard loading states. Do not use `Loader2` (a raw Lucide spinning icon) — it requires manual `animate-spin` and doesn't match the project's PulseLoader style.

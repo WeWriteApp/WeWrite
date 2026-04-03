@@ -162,21 +162,6 @@ export interface UsdAllocation {
   updatedAt: string | Timestamp;
 }
 
-// Legacy Token Types - DEPRECATED, will be removed after migration
-/**
- * @deprecated Use UsdBalance instead
- */
-export interface TokenBalance {
-  userId: string;
-  totalTokens: number;
-  allocatedTokens: number;
-  availableTokens: number;
-  monthlyAllocation: number;
-  lastAllocationDate: string;
-  createdAt: string | Timestamp;
-  updatedAt: string | Timestamp;
-}
-
 // Payment Analytics Types
 export interface SubscriptionConversionFunnelData {
   stage: string;

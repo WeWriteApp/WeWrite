@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Limit cannot exceed 100', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
 
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Missing required fields: pageId, title, username, contentNodes', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
 

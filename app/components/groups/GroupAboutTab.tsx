@@ -140,7 +140,7 @@ export default function GroupAboutTab({
 
   if (!canEdit) {
     return (
-      <div className="wewrite-card p-4">
+      <div>
         {description ? (
           <p className="text-sm text-foreground whitespace-pre-wrap">{description}</p>
         ) : (
@@ -151,7 +151,7 @@ export default function GroupAboutTab({
   }
 
   return (
-    <div className="wewrite-card p-4 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-end">
         <AutoSaveIndicator
           status={autoSaveStatus}

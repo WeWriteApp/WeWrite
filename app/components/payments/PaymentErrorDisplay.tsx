@@ -152,7 +152,7 @@ export function PaymentErrorDisplay({
 
   return (
     <Card className={cn('border-l-4', colors.border, colors.bg, className)} style={colors.borderStyle}>
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-full bg-background shadow-sm')}>

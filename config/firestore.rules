@@ -235,7 +235,7 @@ service cloud.firestore {
 
       // Reading rules: Public groups are visible to all, private groups only to members
       allow read: if
-        resource.data.isPublic == true ||
+        resource.data.visibility == 'public' ||
         (isAuthenticated() && isGroupMember());
 
       // Creating groups: Only authenticated users with subscription
@@ -277,7 +277,7 @@ service cloud.firestore {
       }
 
       allow read: if (envGroups.matches('.*groups') || envGroups == 'groups') && (
-        resource.data.isPublic == true ||
+        resource.data.visibility == 'public' ||
         (isAuthenticated() && isEnvGroupMember())
       );
 

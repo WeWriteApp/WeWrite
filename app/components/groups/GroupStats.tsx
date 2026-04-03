@@ -1,27 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Icon } from '@/components/ui/Icon';
-
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffMonths = Math.floor(diffDays / 30);
-  const diffYears = Math.floor(diffDays / 365);
-
-  if (diffYears > 0) {
-    return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
-  }
-  if (diffMonths > 0) {
-    return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
-  }
-  if (diffDays > 0) {
-    return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
-  }
-  return 'today';
-}
+import { formatRelativeTime } from '@/utils/formatRelativeTime';
 
 function StatItem({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
@@ -53,30 +34,109 @@ export default function GroupStats({
 }: GroupStatsProps) {
   const createdLabel = createdAt ? formatRelativeTime(createdAt) : '—';
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [needsCarousel, setNeedsCarousel] = useState(false);
+
+  // Check if content overflows container (needs carousel)
+  const checkOverflow = useCallback(() => {
+    if (!containerRef.current || !contentRef.current) return;
+    const containerWidth = containerRef.current.clientWidth;
+    const contentWidth = contentRef.current.offsetWidth;
+    setNeedsCarousel(contentWidth > containerWidth);
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(checkOverflow, 50);
+    window.addEventListener('resize', checkOverflow);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [checkOverflow]);
+
+  // Auto-scroll with seamless infinite loop
+  useEffect(() => {
+    if (!scrollContainerRef.current || !needsCarousel) return;
+
+    const scrollContainer = scrollContainerRef.current;
+    let animationId: number;
+    const originalContentWidth = scrollContainer.scrollWidth / 2;
+    const scrollSpeed = 0.3;
+
+    const scroll = () => {
+      if (scrollContainer) {
+        scrollContainer.scrollLeft += scrollSpeed;
+        if (scrollContainer.scrollLeft >= originalContentWidth) {
+          scrollContainer.scrollLeft = 0;
+        }
+      }
+      animationId = requestAnimationFrame(scroll);
+    };
+
+    const timeoutId = setTimeout(() => {
+      animationId = requestAnimationFrame(scroll);
+    }, 100);
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [needsCarousel]);
+
+  const statItems = [
+    {
+      label: 'Members',
+      value: memberCount.toString(),
+      icon: <Icon name="Users" size={18} className="text-muted-foreground flex-shrink-0" />,
+    },
+    {
+      label: 'Pages',
+      value: pageCount.toString(),
+      icon: <Icon name="FileText" size={18} className="text-muted-foreground flex-shrink-0" />,
+    },
+    {
+      label: 'Created',
+      value: createdLabel,
+      icon: <Icon name="Calendar" size={18} className="text-muted-foreground flex-shrink-0" />,
+    },
+    ...(visibility === 'private'
+      ? [
+          {
+            label: 'Visibility',
+            value: 'Private',
+            icon: <Icon name="Lock" size={18} className="text-muted-foreground flex-shrink-0" />,
+          },
+        ]
+      : []),
+  ];
+
+  const statElements = statItems.map((stat) => (
+    <StatItem key={stat.label} label={stat.label} value={stat.value} icon={stat.icon} />
+  ));
+
   return (
-    <div className="mt-4 overflow-hidden rounded-xl">
-      <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-        <StatItem
-          label="Members"
-          value={memberCount.toString()}
-          icon={<Icon name="Users" size={18} className="text-muted-foreground flex-shrink-0" />}
-        />
-        <StatItem
-          label="Pages"
-          value={pageCount.toString()}
-          icon={<Icon name="FileText" size={18} className="text-muted-foreground flex-shrink-0" />}
-        />
-        <StatItem
-          label="Created"
-          value={createdLabel}
-          icon={<Icon name="Calendar" size={18} className="text-muted-foreground flex-shrink-0" />}
-        />
-        {visibility === 'private' && (
-          <StatItem
-            label="Visibility"
-            value="Private"
-            icon={<Icon name="Lock" size={18} className="text-muted-foreground flex-shrink-0" />}
-          />
+    <div className="mt-4 overflow-hidden rounded-xl" ref={containerRef}>
+      <div
+        ref={scrollContainerRef}
+        className={`flex gap-2 overflow-x-auto scrollbar-hide ${!needsCarousel ? 'justify-center' : ''}`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        <div ref={contentRef} className="flex gap-2" style={{ flexShrink: 0 }}>
+          {statElements}
+        </div>
+        {needsCarousel && (
+          <div className="flex gap-2" style={{ flexShrink: 0 }}>
+            {statItems.map((stat) => (
+              <StatItem
+                key={`${stat.label}-dup`}
+                label={stat.label}
+                value={stat.value}
+                icon={stat.icon}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>

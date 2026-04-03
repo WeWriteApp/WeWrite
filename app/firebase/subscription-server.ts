@@ -1,7 +1,7 @@
 // Server-side only subscription functions
 // This file should ONLY be imported in API routes and server components
 
-import { initAdmin } from "./admin";
+import { getFirebaseAdmin } from "./firebaseAdmin";
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionNameAsync } from "../utils/environmentConfig";
 import { getStripe } from '../lib/stripe';
 
@@ -13,7 +13,7 @@ function initializeFirebase() {
   if (adminApp && adminDb) return { adminApp, adminDb }; // Already initialized
 
   try {
-    adminApp = initAdmin();
+    adminApp = getFirebaseAdmin();
     if (!adminApp) {
       return { adminApp: null, adminDb: null };
     }

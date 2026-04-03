@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { StatsCarouselSkeleton } from '../ui/LoadingState';
+import { formatRelativeTime } from '@/utils/formatRelativeTime';
 
 interface UserProfileStatsProps {
   userId: string;
@@ -52,27 +53,6 @@ function MiniSparkline({ data }: { data: number[] }) {
       />
     </svg>
   );
-}
-
-// Relative time formatting
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffMonths = Math.floor(diffDays / 30);
-  const diffYears = Math.floor(diffDays / 365);
-
-  if (diffYears > 0) {
-    return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
-  }
-  if (diffMonths > 0) {
-    return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
-  }
-  if (diffDays > 0) {
-    return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
-  }
-  return 'today';
 }
 
 // Single stat item component for carousel

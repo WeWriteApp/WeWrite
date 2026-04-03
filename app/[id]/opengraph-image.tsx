@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { getAdminFirestore } from '../firebase/admin';
+import { getAdminFirestore } from '../firebase/firebaseAdmin';
 import { getCollectionName } from '../utils/environmentConfig';
 
 export const runtime = 'nodejs';

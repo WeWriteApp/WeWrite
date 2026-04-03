@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../auth-helper';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
 import { getStripe } from '../../lib/stripe';
@@ -14,7 +14,7 @@ function initializeFirebase() {
   if (auth && db) return { auth, db }; // Already initialized
 
   try {
-    const app = initAdmin();
+    const app = getFirebaseAdmin();
     if (!app) {
       console.warn('Firebase Admin initialization skipped during build time');
       return { auth: null, db: null };

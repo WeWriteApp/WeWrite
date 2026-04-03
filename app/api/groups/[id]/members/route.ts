@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { isGroupsEnabled, groupsDisabledResponse } from '../../featureFlagCheck';
 
 /**
  * GET /api/groups/[id]/members - List group members
@@ -13,6 +14,8 @@ export async function GET(
   try {
     const { id: groupId } = await params;
     const userId = await getUserIdFromRequest(request);
+
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
 
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
@@ -53,6 +56,8 @@ export async function POST(
     const { id: groupId } = await params;
     const userId = await getUserIdFromRequest(request);
     if (!userId) return createErrorResponse('UNAUTHORIZED');
+
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
 
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
@@ -116,6 +121,38 @@ export async function POST(
     };
 
     const inviteRef = await db.collection(getCollectionName('groupInvitations')).add(invitation);
+
+    // Create notification for the invitee
+    const { FieldValue } = await import('firebase-admin/firestore');
+    await db
+      .collection(getCollectionName('users'))
+      .doc(inviteeId)
+      .collection('notifications')
+      .add({
+        type: 'group_invite',
+        title: `Group Invitation`,
+        message: `${inviterUsername} invited you to join "${groupData?.name || 'a group'}"`,
+        sourceUserId: userId,
+        actionUrl: `/g/${groupId}`,
+        metadata: {
+          groupId,
+          groupName: groupData?.name || '',
+          invitationId: inviteRef.id,
+          inviterId: userId,
+          inviterUsername,
+        },
+        read: false,
+        criticality: 'normal',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+    // Increment unread count
+    await db
+      .collection(getCollectionName('users'))
+      .doc(inviteeId)
+      .update({
+        unreadNotificationCount: FieldValue.increment(1),
+      });
 
     return createApiResponse({ id: inviteRef.id, ...invitation }, null, 201);
   } catch (error: any) {

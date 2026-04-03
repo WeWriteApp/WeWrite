@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionNameAsync } from '../../../utils/environmentConfig';
 
 // POST endpoint to save background preference (solid color vs image)
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Firebase Admin instance
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Save background preference to user document
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     const collectionName = await getCollectionNameAsync('users');

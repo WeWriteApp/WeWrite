@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../../auth-helper';
 import { getFirebaseAdmin } from '../../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../../utils/environmentConfig';
+import { isGroupsEnabled, groupsDisabledResponse } from '../../../featureFlagCheck';
 
 /**
  * DELETE /api/groups/[id]/pages/[pageId] - Remove a page from the group
@@ -14,6 +15,8 @@ export async function DELETE(
     const { id: groupId, pageId } = await params;
     const userId = await getUserIdFromRequest(request);
     if (!userId) return createErrorResponse('UNAUTHORIZED');
+
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
 
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');

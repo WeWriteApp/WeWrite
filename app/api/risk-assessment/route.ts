@@ -18,7 +18,7 @@ import {
   type RiskAssessmentInput
 } from '../../services/RiskScoringService';
 import { getUserIdFromRequest, createErrorResponse } from '../auth-helper';
-import { getFirebaseAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 
 /**

@@ -3,10 +3,10 @@
  * Comprehensive validation script to ensure systems are ready for production
  */
 
-import { initAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getStripe } from '../lib/stripe';
 
-const adminApp = initAdmin();
+const adminApp = getFirebaseAdmin();
 const adminDb = adminApp.firestore();
 const stripe = getStripe();
 

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { isGroupsEnabled, groupsDisabledResponse } from '../featureFlagCheck';
 
 /**
  * GET /api/groups/[id] - Get group details
@@ -13,6 +14,8 @@ export async function GET(
   try {
     const { id: groupId } = await params;
     const userId = await getUserIdFromRequest(request);
+
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
 
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
@@ -124,11 +127,58 @@ export async function DELETE(
       return createErrorResponse('FORBIDDEN', 'Only the group owner can delete a group');
     }
 
+    const { FieldValue } = await import('firebase-admin/firestore');
+
+    // Soft-delete the group
     await docRef.update({
       deleted: true,
       deletedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Clean up pages: remove groupId and visibility from all pages in this group
+    const pagesSnap = await db
+      .collection(getCollectionName('pages'))
+      .where('groupId', '==', groupId)
+      .get();
+
+    const batch = db.batch();
+    let batchCount = 0;
+
+    for (const pageDoc of pagesSnap.docs) {
+      batch.update(pageDoc.ref, {
+        groupId: FieldValue.delete(),
+        visibility: FieldValue.delete(),
+        lastModified: new Date().toISOString(),
+      });
+      batchCount++;
+    }
+
+    // Clean up member subcollection
+    const membersSnap = await docRef.collection('members').get();
+    for (const memberDoc of membersSnap.docs) {
+      batch.delete(memberDoc.ref);
+      batchCount++;
+    }
+
+    // Cancel pending invitations
+    const invitationsSnap = await db
+      .collection(getCollectionName('groupInvitations'))
+      .where('groupId', '==', groupId)
+      .where('status', '==', 'pending')
+      .get();
+
+    for (const inviteDoc of invitationsSnap.docs) {
+      batch.update(inviteDoc.ref, {
+        status: 'cancelled',
+        updatedAt: new Date().toISOString(),
+      });
+      batchCount++;
+    }
+
+    if (batchCount > 0) {
+      await batch.commit();
+    }
 
     return createApiResponse({ deleted: true });
   } catch (error: any) {

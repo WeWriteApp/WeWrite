@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
 
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Either userId or pageId is required', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     if (type === 'following' && userId) {
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Page ID is required', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Check if page exists
@@ -201,7 +201,7 @@ export async function DELETE(request: NextRequest) {
       return createErrorResponse('Page ID is required', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Remove page from user's followed pages

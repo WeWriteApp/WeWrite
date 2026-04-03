@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     const collectionName = await getCollectionNameAsync('users');
@@ -169,7 +169,7 @@ export async function DELETE(request: NextRequest) {
       return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
     // Get current user data

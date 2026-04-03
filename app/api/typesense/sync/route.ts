@@ -21,7 +21,7 @@ import {
   getCollectionStats,
   isTypesenseAdminConfigured,
 } from '../../../lib/typesense';
-import { getAdminFirestore } from '../../../firebase/admin';
+import { getAdminFirestore } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 
 // Force dynamic to prevent caching

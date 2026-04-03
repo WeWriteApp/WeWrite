@@ -10,7 +10,7 @@
 import { NextRequest } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { sendPasswordResetEmail as sendCustomResetEmail } from '../../../services/emailService';
 import { passwordResetRateLimiter } from '../../../utils/rateLimiter';
 import { isValidEmailStrict } from '@/utils/validationPatterns';
@@ -32,7 +32,7 @@ interface ConfirmResetRequest {
  */
 async function generateAndSendCustomResetEmail(email: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       console.error('[Password Reset] Firebase Admin not available, falling back to REST API');
       return await sendFirebaseDefaultResetEmail(email);

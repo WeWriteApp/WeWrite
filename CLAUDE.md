@@ -31,6 +31,7 @@ When making significant changes to the codebase, you MUST update the following:
 1. **No fake file paths**: Always verify file paths exist before referencing them
 2. **Keep docs in sync**: Documentation debt is real - update docs with code changes
 3. **Admin pages**: Use real data, not mocked data, in admin dashboards
+4. **Loader icons must NOT have `animate-spin`**: `<Icon name="Loader" />` renders a PulseLoader with built-in animation. Adding `animate-spin` creates a broken spinning-container effect. Animation is atomic (inside the loader), never molecular (on a parent/wrapper). See `docs/ui/LOADING_STRATEGY.md` for details.
 
 ## Key Files to Know
 

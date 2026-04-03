@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../auth-helper';
-import { initAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 
 /**
  * Real-time Database API Route
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Path must start with /', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const rtdb = admin.database();
 
     const snapshot = await rtdb.ref(path).once('value');
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Path must start with /', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const rtdb = admin.database();
 
     // Use push() to generate a new key if path ends with '/'
@@ -116,7 +116,7 @@ export async function PUT(request: NextRequest) {
       return createErrorResponse('Path must start with /', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const rtdb = admin.database();
 
     await rtdb.ref(path).update(data);
@@ -153,7 +153,7 @@ export async function DELETE(request: NextRequest) {
       return createErrorResponse('Path must start with /', 'BAD_REQUEST');
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     const rtdb = admin.database();
 
     await rtdb.ref(path).remove();

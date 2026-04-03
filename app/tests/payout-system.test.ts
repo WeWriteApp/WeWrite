@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/jest';
-import { initAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName } from '../utils/environmentConfig';
 import { PayoutService, payoutService } from '../services/payoutService';
 import { UnifiedFeeCalculationService } from '../services/unifiedFeeCalculationService';
@@ -49,7 +49,7 @@ describe('Payout System Integration Tests', () => {
 
   beforeAll(async () => {
     // Initialize Firebase Admin for testing
-    adminApp = initAdmin();
+    adminApp = getFirebaseAdmin();
     adminDb = adminApp.firestore();
     
     // Create test users

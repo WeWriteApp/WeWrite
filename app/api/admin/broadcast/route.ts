@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '../../../firebase/admin';
+import { getAdminFirestore } from '../../../firebase/firebaseAdmin';
 import { broadcastEmailTemplate } from '../../../lib/emailTemplates';
 import { Resend } from 'resend';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';

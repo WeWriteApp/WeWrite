@@ -350,15 +350,15 @@ export default function EarningsDashboard() {
 
       {/* Earnings Overview */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <Card>
-          <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+        <Card className="p-2 md:p-4">
+          <CardHeader className="pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center">
               <Icon name="DollarSign" size={12} className="md:w-4 md:h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Available Balance</span>
               <span className="sm:hidden">Available</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2 md:p-4 pt-0">
+          <CardContent>
             <div className="text-base md:text-2xl font-bold">
               ${(Number(earnings?.availableBalance) || 0).toFixed(2)}
             </div>
@@ -366,15 +366,15 @@ export default function EarningsDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+        <Card className="p-2 md:p-4">
+          <CardHeader className="pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center">
               <Icon name="Clock" size={12} className="md:w-4 md:h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Pending Balance</span>
               <span className="sm:hidden">Pending</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2 md:p-4 pt-0">
+          <CardContent>
             <div className="text-base md:text-2xl font-bold">
               ${(Number(earnings?.pendingBalance) || 0).toFixed(2)}
             </div>
@@ -382,15 +382,15 @@ export default function EarningsDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="p-2 md:p-4 pb-1 md:pb-2">
+        <Card className="p-2 md:p-4">
+          <CardHeader className="pb-1 md:pb-2">
             <CardTitle className="text-xs md:text-sm font-medium flex items-center">
               <Icon name="CheckCircle" size={12} className="md:w-4 md:h-4 mr-1 md:mr-2" />
               <span className="hidden sm:inline">Total Earned</span>
               <span className="sm:hidden">Total</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2 md:p-4 pt-0">
+          <CardContent>
             <div className="text-base md:text-2xl font-bold">
               ${(Number(earnings?.totalEarnings) || 0).toFixed(2)}
             </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
@@ -12,17 +11,15 @@ import { toast } from '../ui/use-toast';
 export interface GroupProfileHeaderProps {
   groupId: string;
   groupName?: string;
-  showSettings?: boolean;
 }
 
 /**
  * Header for group pages – matches UserProfileHeader layout:
- * Back | Logo | Share (and optional Settings link for owner/admin).
+ * Back | Logo | Share.
  */
 export default function GroupProfileHeader({
   groupId,
   groupName,
-  showSettings,
 }: GroupProfileHeaderProps) {
   const router = useRouter();
   const { sidebarWidth, isExpanded } = useSidebarContext();
@@ -91,15 +88,6 @@ export default function GroupProfileHeader({
                 <Logo size="lg" priority={true} styled={true} clickable={true} />
               </div>
               <div className="flex items-center gap-1 w-10 justify-end">
-                {showSettings && (
-                  <Link
-                    href={`/g/${groupId}/settings`}
-                    className="inline-flex items-center justify-center rounded-md hover:bg-muted p-2 text-foreground"
-                    title="Group settings"
-                  >
-                    <Icon name="Settings" size={20} />
-                  </Link>
-                )}
                 <Button
                   variant="ghost"
                   size="icon"

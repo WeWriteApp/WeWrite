@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getCollectionName, COLLECTIONS, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: authResult.error }, { status: 401 });
       }
 
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
     const adminDb = adminApp.firestore();
     const stripe = getStripe();
 

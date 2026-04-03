@@ -148,13 +148,13 @@ export function UsdAllocationBreakdown({
 
     return (
       <Card className={className}>
-        <CardHeader className="px-3 sm:px-4 pb-2">
+        <CardHeader className="pb-2">
           <CardTitle className="text-sm sm:text-base">Breakdown</CardTitle>
           <CardDescription className="text-xs sm:text-sm">
             Your monthly fund allocations to creators
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-3 sm:px-4 pb-3">
+        <CardContent>
           <div className="text-center py-4 sm:py-6 text-muted-foreground">
             <Icon name="FileText" size={32} className="sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-3 opacity-50" />
             <p className="text-sm sm:text-base font-medium mb-1">No allocations yet</p>
@@ -361,7 +361,7 @@ export function UsdAllocationBreakdown({
   if (showSectionHeader) {
     return (
       <Card className={className}>
-        <CardHeader className="px-3 sm:px-4 pb-2">
+        <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
             <div>
               <CardTitle className="text-sm sm:text-base">Breakdown</CardTitle>
@@ -372,7 +372,7 @@ export function UsdAllocationBreakdown({
 
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 px-3 sm:px-4 pb-3">
+        <CardContent className="space-y-3">
           {content}
         </CardContent>
         {activeAllocation && (

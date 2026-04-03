@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../../auth-helper';
 import { getFirebaseAdmin } from '../../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../../utils/environmentConfig';
+import { isGroupsEnabled, groupsDisabledResponse } from '../../featureFlagCheck';
 
 /**
  * GET /api/groups/[id]/pages - List pages in a group
@@ -13,6 +14,8 @@ export async function GET(
   try {
     const { id: groupId } = await params;
     const userId = await getUserIdFromRequest(request);
+
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
 
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
@@ -63,6 +66,8 @@ export async function POST(
     const userId = await getUserIdFromRequest(request);
     if (!userId) return createErrorResponse('UNAUTHORIZED');
 
+    if (!(await isGroupsEnabled(userId))) return groupsDisabledResponse();
+
     const admin = getFirebaseAdmin();
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
     const db = admin.firestore();
@@ -98,13 +103,33 @@ export async function POST(
       return createErrorResponse('FORBIDDEN', 'You can only add your own pages to a group');
     }
 
+    // Check if page is already in this group
+    const existingGroupId = pageSnap.data()?.groupId;
+    if (existingGroupId === groupId) {
+      return createErrorResponse('CONFLICT', 'Page is already in this group');
+    }
+
+    // Check if page is in a different group
+    if (existingGroupId) {
+      return createErrorResponse('BAD_REQUEST', 'Page is already in another group. Remove it from that group first.');
+    }
+
     // Set groupId on the page
+    const { FieldValue } = await import('firebase-admin/firestore');
     const groupData = groupSnap.data()!;
-    await pageRef.update({
+    const pageUpdate: Record<string, any> = {
       groupId,
-      visibility: groupData.visibility === 'private' ? 'private' : undefined,
       lastModified: new Date().toISOString(),
-    });
+    };
+
+    if (groupData.visibility === 'private') {
+      pageUpdate.visibility = 'private';
+    } else {
+      // For public groups, remove any existing visibility field
+      pageUpdate.visibility = FieldValue.delete();
+    }
+
+    await pageRef.update(pageUpdate);
 
     // Increment page count
     await groupRef.update({

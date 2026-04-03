@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { extractTextContent } from '../../../utils/text-extraction';
 
@@ -356,7 +356,7 @@ function sanitizeDiffPreview(preview: any): any {
  */
 async function fetchPageStats(pageId: string) {
   try {
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
     const db = adminApp.firestore();
 
     // Get recent edits for the page (last 24 hours)

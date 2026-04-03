@@ -1,64 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '../../../providers/AuthProvider';
-import { useFeatureFlags } from '../../../contexts/FeatureFlagContext';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../../components/ui/card';
-import NavPageLayout from '../../../components/layout/NavPageLayout';
-import { Icon } from '../../../components/ui/Icon';
-import { Input } from '../../../components/ui/input';
-import { PageHeader } from '../../../components/ui/PageHeader';
-import type { Group } from '../../../types/groups';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/card';
+import { Icon } from '../ui/Icon';
+import { Input } from '../ui/input';
+import type { Group } from '../../types/groups';
 
-export default function GroupSettingsPage() {
-  const params = useParams();
+interface GroupSettingsTabProps {
+  group: Group;
+  onGroupUpdated: (updates: Partial<Group>) => void;
+}
+
+export default function GroupSettingsTab({ group, onGroupUpdated }: GroupSettingsTabProps) {
   const router = useRouter();
-  const { user } = useAuth();
-  const { isEnabled } = useFeatureFlags();
-  const groupId = params.id as string;
-
-  // Feature flag guard
-  if (!isEnabled('groups')) {
-    return (
-      <NavPageLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <p className="text-muted-foreground">Groups feature is not available.</p>
-        </div>
-      </NavPageLayout>
-    );
-  }
-
-  const [group, setGroup] = useState<Group | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [name, setName] = useState(group.name);
+  const [visibility, setVisibility] = useState<'public' | 'private'>(group.visibility || 'public');
   const [isSaving, setIsSaving] = useState(false);
-  const [name, setName] = useState('');
-  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    const fetchGroup = async () => {
-      try {
-        const res = await fetch(`/api/groups/${groupId}`, { credentials: 'include' });
-        const data = await res.json();
-        if (data.success && data.data) {
-          setGroup(data.data);
-          setName(data.data.name);
-          setVisibility(data.data.visibility || 'public');
-        }
-      } catch {
-        setError('Failed to load group');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGroup();
-  }, [groupId]);
-
   const handleSave = async () => {
-    if (!group) return;
     setIsSaving(true);
     setError(null);
     setSuccess(false);
@@ -78,6 +40,7 @@ export default function GroupSettingsPage() {
       }
 
       setSuccess(true);
+      onGroupUpdated({ name, visibility });
     } catch (err: any) {
       setError(err?.message || 'Network error');
     } finally {
@@ -86,7 +49,6 @@ export default function GroupSettingsPage() {
   };
 
   const handleDelete = async () => {
-    if (!group) return;
     if (!confirm('Are you sure you want to delete this group? This cannot be undone.')) return;
 
     try {
@@ -103,36 +65,9 @@ export default function GroupSettingsPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Icon name="Loader" size={24} />
-      </div>
-    );
-  }
-
-  if (!group) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-muted-foreground">Group not found</p>
-      </div>
-    );
-  }
-
-  // Only owner can access settings
-  if (group.ownerId !== user?.uid) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-muted-foreground">Only the group owner can access settings</p>
-      </div>
-    );
-  }
-
   return (
-    <NavPageLayout>
-      <PageHeader title="Group Settings" backHref={true} />
-
-      <Card className="mb-4">
+    <div className="space-y-4">
+      <Card>
         <CardHeader>
           <CardTitle>General</CardTitle>
         </CardHeader>
@@ -148,7 +83,7 @@ export default function GroupSettingsPage() {
           </div>
 
           <p className="text-sm text-muted-foreground mb-3">
-            Edit the group description on the group&apos;s <strong>About</strong> tab.
+            Edit the group description on the <strong>About</strong> tab.
           </p>
 
           <div>
@@ -196,7 +131,6 @@ export default function GroupSettingsPage() {
         </CardFooter>
       </Card>
 
-      {/* Danger Zone */}
       <Card className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -213,6 +147,6 @@ export default function GroupSettingsPage() {
           </button>
         </CardContent>
       </Card>
-    </NavPageLayout>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 import { sanitizeUsername } from '../../../utils/usernameSecurity';
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     let adminApp;
     try {
-      adminApp = initAdmin();
+      adminApp = getFirebaseAdmin();
       if (!adminApp) {
         return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
       }

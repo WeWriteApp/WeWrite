@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore, getFirebaseAdmin } from '../../../firebase/admin';
+import { getAdminFirestore, getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { firstPageActivationTemplate } from '../../../lib/emailTemplates';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { Resend } from 'resend';

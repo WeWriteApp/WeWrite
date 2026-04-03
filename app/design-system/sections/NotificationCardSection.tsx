@@ -4,6 +4,7 @@ import React from 'react';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock, DocsNote } from './shared';
 import { cn } from '../../lib/utils';
+import { formatRelativeTime } from '@/utils/formatRelativeTime';
 
 // Mock notification data for design system demos
 const MOCK_NOTIFICATIONS = {
@@ -112,19 +113,7 @@ function DemoNotificationCard({
   const isUnread = !notification.read;
   const { icon, color } = getNotificationTypeIcon(notification.type);
 
-  // Format relative time
-  const formatRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 60) return `${diffMins} minutes ago`;
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    return `${diffDays} days ago`;
-  };
 
   // Render content based on notification type
   const renderContent = () => {

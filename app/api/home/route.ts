@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeDeduplicatedOperation } from '../../utils/serverRequestDeduplication';
-import { initAdmin } from '../../firebase/admin';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../utils/environmentConfig';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: string | null): Promise<any[]> {
   try {
     // Initialize Firebase Admin
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
     const db = adminApp.firestore();
 
     // Define home page fields to reduce document size by 60-70%
@@ -229,7 +229,7 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
 async function getUserStatsOptimized(userId: string): Promise<any> {
   try {
     // Initialize Firebase Admin
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
 
     // Try to initialize realtime database, but don't fail if it's not available
     let rtdb = null;
@@ -266,7 +266,7 @@ export async function getBatchUserDataOptimized(userIds: string[]): Promise<Reco
       return {};
     }
 
-    const adminApp = initAdmin();
+    const adminApp = getFirebaseAdmin();
     const db = adminApp.firestore();
 
     // Try to initialize realtime database, but don't fail if it's not available

@@ -1,4 +1,4 @@
-import { getFirebaseAdmin } from '../firebase/admin';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionNameAsync } from '../utils/environmentConfig';
 
 /**

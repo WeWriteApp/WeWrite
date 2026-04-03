@@ -201,3 +201,135 @@
     border-top-color: oklch(var(--accent-base) / 0.4) !important;
   }
 }
+
+/* ============================================
+   PILL LINK CLICK ANIMATIONS
+   Named animation variants for tap/click micro-interactions.
+   Apply via data-pill-click-animation attribute or class.
+   Each animation plays on click/tap and returns to rest state.
+   ============================================ */
+
+/* --- 1. "Pop" — quick scale up+down bounce --- */
+@keyframes pill-click-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.15); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+.pill-anim-pop:active,
+.pill-anim-pop.is-animating {
+  animation: pill-click-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 2. "Squish" — horizontal squeeze + vertical stretch then spring back --- */
+@keyframes pill-click-squish {
+  0%   { transform: scale(1, 1); }
+  30%  { transform: scale(0.88, 1.08); }
+  60%  { transform: scale(1.04, 0.97); }
+  100% { transform: scale(1, 1); }
+}
+.pill-anim-squish:active,
+.pill-anim-squish.is-animating {
+  animation: pill-click-squish 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 3. "Jelly" — wobbly elastic bounce --- */
+@keyframes pill-click-jelly {
+  0%   { transform: scale(1, 1); }
+  20%  { transform: scale(0.9, 1.1); }
+  40%  { transform: scale(1.1, 0.9); }
+  60%  { transform: scale(0.97, 1.03); }
+  80%  { transform: scale(1.02, 0.98); }
+  100% { transform: scale(1, 1); }
+}
+.pill-anim-jelly:active,
+.pill-anim-jelly.is-animating {
+  animation: pill-click-jelly 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 4. "Pulse Glow" — scale + accent-colored ring pulse outward --- */
+@keyframes pill-click-pulse-glow {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0.5); }
+  50%  { transform: scale(1.05); box-shadow: 0 0 0 6px oklch(var(--accent-base) / 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0); }
+}
+.pill-anim-pulse-glow:active,
+.pill-anim-pulse-glow.is-animating {
+  animation: pill-click-pulse-glow 0.45s ease-out forwards;
+}
+
+/* --- 5. "Ripple Out" — accent ring expands outward (Material-inspired) --- */
+@keyframes pill-click-ripple-ring {
+  0%   { box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0.4); transform: scale(0.97); }
+  60%  { box-shadow: 0 0 0 8px oklch(var(--accent-base) / 0); transform: scale(1.02); }
+  100% { box-shadow: 0 0 0 0 oklch(var(--accent-base) / 0); transform: scale(1); }
+}
+.pill-anim-ripple-out:active,
+.pill-anim-ripple-out.is-animating {
+  animation: pill-click-ripple-ring 0.5s ease-out forwards;
+}
+
+/* --- 6. "Bounce Drop" — drops down, bounces back up --- */
+@keyframes pill-click-bounce-drop {
+  0%   { transform: translateY(0) scale(1); }
+  25%  { transform: translateY(3px) scale(0.97, 1.03); }
+  50%  { transform: translateY(-2px) scale(1.02, 0.98); }
+  75%  { transform: translateY(1px) scale(0.99, 1.01); }
+  100% { transform: translateY(0) scale(1); }
+}
+.pill-anim-bounce-drop:active,
+.pill-anim-bounce-drop.is-animating {
+  animation: pill-click-bounce-drop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 7. "Magnetic Snap" — subtle pull-in then sharp release --- */
+@keyframes pill-click-magnetic-snap {
+  0%   { transform: scale(1); filter: brightness(1); }
+  35%  { transform: scale(0.92); filter: brightness(1.15); }
+  55%  { transform: scale(1.06); filter: brightness(1); }
+  75%  { transform: scale(0.99); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.pill-anim-magnetic-snap:active,
+.pill-anim-magnetic-snap.is-animating {
+  animation: pill-click-magnetic-snap 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* --- 8. "Confetti Burst" — quick pop with multi-ring expanding outward --- */
+@keyframes pill-click-confetti-burst {
+  0%   {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 oklch(var(--accent-base) / 0.3),
+      0 0 0 0 oklch(var(--accent-base) / 0.2);
+  }
+  40%  {
+    transform: scale(1.1);
+    box-shadow:
+      0 0 0 4px oklch(var(--accent-base) / 0.2),
+      0 0 0 8px oklch(var(--accent-base) / 0.1);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 10px oklch(var(--accent-base) / 0),
+      0 0 0 16px oklch(var(--accent-base) / 0);
+  }
+}
+.pill-anim-confetti-burst:active,
+.pill-anim-confetti-burst.is-animating {
+  animation: pill-click-confetti-burst 0.5s ease-out forwards;
+}
+
+/* Disable all click animations during regular hover to avoid conflicts */
+.pill-anim-pop,
+.pill-anim-squish,
+.pill-anim-jelly,
+.pill-anim-pulse-glow,
+.pill-anim-ripple-out,
+.pill-anim-bounce-drop,
+.pill-anim-magnetic-snap,
+.pill-anim-confetti-burst {
+  transform-origin: center center;
+  will-change: transform;
+}

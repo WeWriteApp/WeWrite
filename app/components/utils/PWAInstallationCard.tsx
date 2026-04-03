@@ -22,11 +22,11 @@ export default function PWAInstallationCard() {
 
   return (
     <Card className="wewrite-card">
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Icon name="Phone" size={20} className="text-muted-foreground" />
-            <CardTitle className="text-base">PWA Installation</CardTitle>
+            <CardTitle>PWA Installation</CardTitle>
           </div>
           <Button
             variant="ghost"

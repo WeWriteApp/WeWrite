@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../../firebase/admin';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { FinancialUtils } from '../../../types/financial';
 import { getStripe } from '../../../lib/stripe';
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const admin = initAdmin();
+    const admin = getFirebaseAdmin();
     if (!admin) {
       return NextResponse.json({
         error: 'Database not available',

@@ -1,14 +1,14 @@
 "use client";
-import React, { useState, useRef, useContext, useEffect, useLayoutEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from '@/components/ui/Icon';
 import dynamic from "next/dynamic";
-import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import { InlineError } from '../ui/InlineError';
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useAuth } from '../../providers/AuthProvider';
-import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
+import { UnifiedPageList, PageListViewToggle } from '../pages/UnifiedPageList';
+import type { PageListView } from '../pages/UnifiedPageList';
 import ActivityFeed from "../features/ActivityFeed";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useUserPages from "../../hooks/useUserPages";
@@ -22,6 +22,7 @@ import SearchResultsDisplay from '../search/SearchResultsDisplay';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { useSidebarContext } from '../layout/DesktopSidebar';
 import { TAB_BAR_HEIGHT, HEADER_HEIGHTS } from '../../constants/layout';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 
 // PERFORMANCE: Lazy-load heavy tab components to reduce initial bundle size
 // These tabs are not visible on initial load, so we can defer their loading
@@ -74,35 +75,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger} from "../ui/dropdown-menu";
 
-// Component to display a list of pages
-function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
-  // Get the profile from the parent component context
-  const { profile } = useContext(ProfilePagesContext);
-  // Check if user is a supporter
-  const isSupporter = profile?.tier ? true : false;
+// Component to display a list of pages (uses shared UnifiedPageList)
+function PageList({ pageList, emptyMessage, isCurrentUserList = false, view, onViewChange }: {
+  pageList: any[];
+  emptyMessage: string;
+  isCurrentUserList?: boolean;
+  view: PageListView;
+  onViewChange: (v: PageListView) => void;
+}) {
   if (!pageList || pageList.length === 0) {
     return <div className="text-center text-muted-foreground py-8">{emptyMessage}</div>;
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-2 justify-start items-start content-start mt-4">
-        {pageList.map((page) => (
-          <div key={page.id} className="flex-none max-w-full">
-            <PillLink
-              href={`/${page.id}`}
-              variant="primary"
-              isPublic={page.isPublic}
-              className="max-w-full"
-              // Always show the actual title for private pages when viewing your own list
-              isOwned={isCurrentUserList}
-            >
-              {page.title || "Untitled"}
-            </PillLink>
-          </div>
-        ))}
-      </div>
-    </div>
+    <UnifiedPageList
+      pages={pageList}
+      view={view}
+      onViewChange={onViewChange}
+      isOwned={isCurrentUserList}
+      className="mt-4"
+    />
   );
 }
 
@@ -137,7 +129,7 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
         query={currentQuery}
         results={{ pages: userPages, users: [] }}
         isLoading={isLoading}
-        groupsEnabled={false}
+        groupsEnabled={groupsEnabled}
         userId={userId}
         onSave={() => {}}
       />
@@ -200,8 +192,23 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
     return "desc";
   });
 
+  // Page list view mode with persistence
+  const [pageListView, setPageListView] = useState<PageListView>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('profile-pages-view') as PageListView) || 'wrapped';
+    }
+    return 'wrapped';
+  });
+  const handleViewChange = (v: PageListView) => {
+    setPageListView(v);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile-pages-view', v);
+    }
+  };
+
   // Groups feature flag
-  const groupsEnabled = false; // Will be enabled via FeatureFlagContext when groups are active
+  const { isEnabled } = useFeatureFlags();
+  const groupsEnabled = isEnabled('groups');
 
   // Analytics tracking
   const { trackSortingInteraction, trackInteractionEvent, events } = useWeWriteAnalytics();
@@ -722,6 +729,7 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+                <PageListViewToggle view={pageListView} onViewChange={handleViewChange} />
               </div>
             </div>
 
@@ -731,7 +739,7 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
               </div>
             ) : (
               <>
-                <PageList pageList={sortedPages} emptyMessage="No pages yet" isCurrentUserList={isCurrentUser} />
+                <PageList pageList={sortedPages} emptyMessage="No pages yet" isCurrentUserList={isCurrentUser} view={pageListView} onViewChange={handleViewChange} />
                 {loadingError && (
                   <InlineError
                     variant="inline"

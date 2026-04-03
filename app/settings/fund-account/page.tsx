@@ -300,7 +300,7 @@ export default function FundAccountPage() {
             >
               {isReactivating ? (
                 <>
-                  <Icon name="Loader" size={14} className="mr-2 animate-spin" />
+                  <Icon name="Loader" size={14} className="mr-2" />
                   Reactivating...
                 </>
               ) : (
