@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getQuotaStatus, RESEND_LIMITS, DAILY_QUOTAS, EmailPriority } from '@/services/emailRateLimitService';
 import { withAdminContext } from '@/utils/adminRequestContext';
-import { getFirebaseAdmin } from '@/app/firebase/firebaseAdmin';
+import { getFirebaseAdmin } from '@/firebase/firebaseAdmin';
 import { getCollectionName, getEnvironmentType } from '@/utils/environmentConfig';
 
 /**
