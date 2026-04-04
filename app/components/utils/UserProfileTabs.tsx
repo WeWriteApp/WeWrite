@@ -100,6 +100,8 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false, view, onV
 
 // Search component for user pages
 const UserPagesSearch = ({ userId, username }: { userId: string; username: string }) => {
+  const { isEnabled } = useFeatureFlags();
+  const groupsEnabled = isEnabled('groups');
   const { currentQuery, results, isLoading, performSearch } = useUnifiedSearch(userId, {
     context: SEARCH_CONTEXTS.MAIN,
     includeContent: true,
