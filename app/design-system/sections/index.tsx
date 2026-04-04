@@ -3,10 +3,12 @@
 import React from 'react';
 
 // Import all section components
+import { AccordionSection } from './AccordionSection';
 import { ActivityCardSection } from './ActivityCardSection';
 import { AlertSection } from './AlertSection';
 import { AnimationsSection } from './AnimationsSection';
 import { AllocationBarSection } from './AllocationBarSection';
+import { AvatarSection } from './AvatarSection';
 import { BadgeSection } from './BadgeSection';
 import { BannerSystemSection } from './BannerSystemSection';
 import { BordersSeparatorsSection } from './BordersSeparatorsSection';
@@ -36,13 +38,16 @@ import { PageListSection } from './PageListSection';
 import { PieChartSection } from './PieChartSection';
 import { PillClickAnimationsSection } from './PillClickAnimationsSection';
 import { PillLinkSection } from './PillLinkSection';
+import { ProgressSection } from './ProgressSection';
 import { RollingCounterSection } from './RollingCounterSection';
 import { SaveStatusSection } from './SaveStatusSection';
 import { SearchResultsSection } from './SearchResultsSection';
 import { SegmentedControlSection } from './SegmentedControlSection';
+import { SelectSection } from './SelectSection';
 import { SurfaceElevationSection } from './SurfaceElevationSection';
 import { ShadowSystemSection } from './ShadowSystemSection';
 import { ShinyButtonSection } from './ShinyButtonSection';
+import { SliderSection } from './SliderSection';
 import { TableSection } from './TableSection';
 import { TabsSection } from './TabsSection';
 import { TextareaSection } from './TextareaSection';
@@ -52,6 +57,7 @@ import { TooltipSection } from './TooltipSection';
 import { TurnstileSection } from './TurnstileSection';
 import { TypographySection } from './TypographySection';
 import { UsernameBadgeSection } from './UsernameBadgeSection';
+import { WarningDotSection } from './WarningDotSection';
 
 export interface DesignSystemSection {
   id: string;
@@ -61,10 +67,12 @@ export interface DesignSystemSection {
 
 // Define all sections - they will be auto-sorted alphabetically by label
 const SECTIONS_UNSORTED: DesignSystemSection[] = [
+  { id: 'accordion', label: 'Accordion', component: AccordionSection },
   { id: 'activity-card', label: 'Activity Card', component: ActivityCardSection },
   { id: 'alert', label: 'Alert', component: AlertSection },
   { id: 'animations', label: 'Animations', component: AnimationsSection },
   { id: 'allocation-bar', label: 'Allocation Bar', component: AllocationBarSection },
+  { id: 'avatar', label: 'Avatar', component: AvatarSection },
   { id: 'badge', label: 'Badge', component: BadgeSection },
   { id: 'banner-system', label: 'Banner System', component: BannerSystemSection },
   { id: 'borders-separators', label: 'Borders & Separators', component: BordersSeparatorsSection },
@@ -94,12 +102,15 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'pie-chart', label: 'Pie Chart', component: PieChartSection },
   { id: 'pill-click-animations', label: 'PillLink Click Animations', component: PillClickAnimationsSection },
   { id: 'pill-link', label: 'PillLink', component: PillLinkSection },
+  { id: 'progress', label: 'Progress', component: ProgressSection },
   { id: 'rolling-counter', label: 'Rolling Counter', component: RollingCounterSection },
   { id: 'save-status', label: 'Save Status', component: SaveStatusSection },
   { id: 'search-results', label: 'Search Results', component: SearchResultsSection },
   { id: 'segmented-control', label: 'Segmented Control', component: SegmentedControlSection },
+  { id: 'select', label: 'Select', component: SelectSection },
   { id: 'shadow-system', label: 'Shadow System', component: ShadowSystemSection },
   { id: 'shiny-button', label: 'Shiny Button System', component: ShinyButtonSection },
+  { id: 'slider', label: 'Slider', component: SliderSection },
   { id: 'surface-elevation', label: 'Surface & Elevation', component: SurfaceElevationSection },
   { id: 'table', label: 'Table', component: TableSection },
   { id: 'tabs', label: 'Tabs', component: TabsSection },
@@ -110,6 +121,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'turnstile', label: 'Turnstile (Spam Prevention)', component: TurnstileSection },
   { id: 'typography', label: 'Typography', component: TypographySection },
   { id: 'username-badge', label: 'UsernameBadge', component: UsernameBadgeSection },
+  { id: 'warning-dot', label: 'Warning Dot', component: WarningDotSection },
 ];
 
 // Auto-sort alphabetically by label

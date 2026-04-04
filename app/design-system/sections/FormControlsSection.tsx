@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { ComponentShowcase, StateDemo } from './shared';
 
 export function FormControlsSection({ id }: { id: string }) {
   const [switchChecked, setSwitchChecked] = useState(false);
   const [checkboxChecked, setCheckboxChecked] = useState(false);
+  const [radioValue, setRadioValue] = useState('option-1');
 
   return (
     <ComponentShowcase
@@ -96,6 +98,37 @@ export function FormControlsSection({ id }: { id: string }) {
             Disabled Checkbox
           </label>
         </div>
+      </StateDemo>
+
+      <StateDemo label="Radio Group">
+        <RadioGroup value={radioValue} onValueChange={setRadioValue}>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="option-1" id="radio-1" />
+            <label htmlFor="radio-1" className="text-sm">Option 1</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="option-2" id="radio-2" />
+            <label htmlFor="radio-2" className="text-sm">Option 2</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="option-3" id="radio-3" />
+            <label htmlFor="radio-3" className="text-sm">Option 3</label>
+          </div>
+        </RadioGroup>
+        <span className="text-sm text-muted-foreground ml-2">Selected: {radioValue}</span>
+      </StateDemo>
+
+      <StateDemo label="Disabled Radio">
+        <RadioGroup defaultValue="disabled-1" disabled>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="disabled-1" id="radio-d1" />
+            <label htmlFor="radio-d1" className="text-sm text-muted-foreground">Disabled Selected</label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="disabled-2" id="radio-d2" />
+            <label htmlFor="radio-d2" className="text-sm text-muted-foreground">Disabled Unselected</label>
+          </div>
+        </RadioGroup>
       </StateDemo>
     </ComponentShowcase>
   );
