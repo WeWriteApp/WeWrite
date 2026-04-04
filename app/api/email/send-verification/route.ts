@@ -172,11 +172,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch the latest username from Firestore (don't trust client-sent username)
+    let freshUsername = username;
+    try {
+      const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+      const admin = getFirebaseAdmin();
+      if (admin) {
+        const userDoc = await admin.firestore()
+          .collection(getCollectionName('users'))
+          .doc(userId)
+          .get();
+        if (userDoc.exists) {
+          freshUsername = userDoc.data()?.username || username;
+        }
+      }
+    } catch (error) {
+      console.warn('[Send Verification] Could not fetch fresh username, using client-provided value:', error);
+    }
+
     // Send the verification email via Resend
     const emailSent = await sendVerificationEmail({
       to: email,
       verificationLink,
-      username: username || undefined,
+      username: freshUsername || undefined,
       userId,
     });
 

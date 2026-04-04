@@ -54,6 +54,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const { toast } = useToast();
   const { isEnabled } = useFeatureFlags();
   const showUILabels = isEnabled('ui_labels');
+  const showGroups = isEnabled('groups');
   const [isRestoring, setIsRestoring] = useState(false);
   const [showPageScoreBreakdown, setShowPageScoreBreakdown] = useState(false);
 
@@ -346,11 +347,43 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                     )}
                     {activity.userId && (
                       <>
-                        {activity.groupId && activity.groupName ? (
+                        <span className="text-foreground whitespace-nowrap">
+                          {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
+                        </span>
+                        {/* Don't make user links clickable for sample data */}
+                        {activity.isSample ? (
+                          <span className="text-primary flex-shrink-0">
+                            {sanitizeUsername(activity.username)}
+                          </span>
+                        ) : (
                           <>
-                            <span className="text-foreground whitespace-nowrap">
-                              {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}
-                            </span>
+                            <UsernameBadge
+                              userId={activity.userId}
+                              username={activity.username || "Missing username"}
+                              tier={activity.subscriptionTier}
+                              size="sm"
+                              showBadge={true}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex flex-shrink-0"
+                            />
+                            {/* PageScore badge - admin only */}
+                            {isAdmin && activity.pageScore !== undefined && activity.pageScore !== null && (
+                              <PageScoreBadge
+                                score={activity.pageScore}
+                                size="sm"
+                                showScore={true}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowPageScoreBreakdown(true);
+                                }}
+                                className="ml-1"
+                              />
+                            )}
+                          </>
+                        )}
+                        {showGroups && activity.groupId && activity.groupName && (
+                          <>
+                            <span className="text-foreground whitespace-nowrap">in</span>
                             <Link
                               href={`/group/${activity.groupId}`}
                               className="hover:underline text-primary flex-shrink-0"
@@ -358,43 +391,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                             >
                               {activity.groupName}
                             </Link>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-foreground whitespace-nowrap">
-                              {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
-                            </span>
-                            {/* Don't make user links clickable for sample data */}
-                            {activity.isSample ? (
-                              <span className="text-primary flex-shrink-0">
-                                {sanitizeUsername(activity.username)}
-                              </span>
-                            ) : (
-                              <>
-                                <UsernameBadge
-                                  userId={activity.userId}
-                                  username={activity.username || "Missing username"}
-                                  tier={activity.subscriptionTier}
-                                  size="sm"
-                                  showBadge={true}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex flex-shrink-0"
-                                />
-                                {/* PageScore badge - admin only */}
-                                {isAdmin && activity.pageScore !== undefined && activity.pageScore !== null && (
-                                  <PageScoreBadge
-                                    score={activity.pageScore}
-                                    size="sm"
-                                    showScore={true}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShowPageScoreBreakdown(true);
-                                    }}
-                                    className="ml-1"
-                                  />
-                                )}
-                              </>
-                            )}
                           </>
                         )}
                       </>

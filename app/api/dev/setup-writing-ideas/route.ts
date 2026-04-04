@@ -8,6 +8,11 @@ import { writingIdeas as defaultWritingIdeas } from '../../../data/writingIdeas'
  * This creates the initial writing ideas document in the DEV_admin_settings collection
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
+
   try {
     console.log('🔧 Setting up writing ideas for development...');
     

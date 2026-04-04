@@ -23,6 +23,11 @@ interface MigrationResult {
 }
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const dryRun = searchParams.get('dry-run') === 'true';

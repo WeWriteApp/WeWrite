@@ -1319,6 +1319,9 @@ export default function ContentPageView({
         const { invalidatePageCacheAfterSave } = await import('../../utils/apiClient');
         invalidatePageCacheAfterSave(pageId, user?.uid);
 
+        // Bust the Next.js Router Cache so navigating back shows fresh content
+        router.refresh();
+
         // Dispatch refresh event for components
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('refresh-recent-edits', {
@@ -1679,6 +1682,19 @@ export default function ContentPageView({
                 }
               }}
               groupId={(page as any)?.groupId || null}
+              onGroupChange={(newGroupId, newGroupName) => {
+                if (page) {
+                  const updated = { ...page } as any;
+                  if (newGroupId) {
+                    updated.groupId = newGroupId;
+                    updated.groupName = newGroupName;
+                  } else {
+                    delete updated.groupId;
+                    delete updated.groupName;
+                  }
+                  setPage(updated);
+                }
+              }}
           />
 
           {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}

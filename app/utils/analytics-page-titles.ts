@@ -89,7 +89,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/settings/profile': 'Profile Settings',
   '/settings/appearance': 'Appearance Settings',
   '/settings/notifications': 'Notification Settings',
-  '/settings/advanced': 'Advanced Settings',
+  '/settings/advanced': 'App Installation Settings',
   '/settings/deleted': 'Deleted Pages',
   '/settings/earnings': 'Earnings Dashboard',
   '/settings/spend': 'Spending Dashboard',

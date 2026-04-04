@@ -51,6 +51,9 @@ const TitleSettingsModal = dynamic(() => import('./TitleSettingsModal'), {
 import AddToPageButton from '../utils/AddToPageButton';
 import VisibilityDropdown from '../utils/VisibilityDropdown';
 import { useSubscriberFeature } from '../../hooks/useSubscriberFeature';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
+import { AdaptiveModal } from '../ui/adaptive-modal';
+import type { Group } from '../../types/groups';
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes
@@ -132,6 +135,8 @@ export interface ContentPageHeaderProps {
   onVisibilityChange?: (isPublic: boolean) => void;
   /** Group ID if page belongs to a group */
   groupId?: string | null;
+  /** Callback when group assignment changes */
+  onGroupChange?: (groupId: string | null, groupName: string | null) => void;
 }
 
 export default function ContentPageHeader({
@@ -163,6 +168,7 @@ export default function ContentPageHeader({
   isPublic = true,
   onVisibilityChange,
   groupId = null,
+  onGroupChange,
 }: ContentPageHeaderProps) {
 
   // Fetch subscription data for the page author
@@ -537,6 +543,78 @@ export default function ContentPageHeader({
     };
     fetchGroup();
   }, [groupId]);
+
+  // Groups feature flag and group picker state
+  const { isEnabled: isFeatureEnabled } = useFeatureFlags();
+  const groupsEnabled = isFeatureEnabled('groups');
+  const [showGroupPicker, setShowGroupPicker] = React.useState(false);
+  const [userGroups, setUserGroups] = React.useState<Group[]>([]);
+  const [loadingGroups, setLoadingGroups] = React.useState(false);
+  const [assigningGroup, setAssigningGroup] = React.useState(false);
+
+  // Pre-fetch user's groups on mount (via API to avoid Firestore permission issues)
+  React.useEffect(() => {
+    if (!groupsEnabled || !user?.uid) return;
+    let cancelled = false;
+    setLoadingGroups(true);
+    fetch('/api/groups', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && data.success) {
+          const groups = Array.isArray(data.data) ? data.data : data.data?.groups;
+          if (Array.isArray(groups)) setUserGroups(groups as Group[]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingGroups(false);
+      });
+    return () => { cancelled = true; };
+  }, [groupsEnabled, user?.uid]);
+
+  const handleAssignGroup = async (group: Group) => {
+    if (!pageId || assigningGroup) return;
+    setAssigningGroup(true);
+    try {
+      const res = await fetch(`/api/groups/${group.id}/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ pageId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGroupName(group.name);
+        setShowGroupPicker(false);
+        onGroupChange?.(group.id, group.name);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAssigningGroup(false);
+    }
+  };
+
+  const handleRemoveFromGroup = async () => {
+    if (!pageId || !groupId || assigningGroup) return;
+    setAssigningGroup(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}/pages/${pageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGroupName(null);
+        setShowGroupPicker(false);
+        onGroupChange?.(null, null);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAssigningGroup(false);
+    }
+  };
 
   // No height calculation needed - header is static block element
 
@@ -1046,10 +1124,10 @@ export default function ContentPageHeader({
               </div>
 
               {/* Row 3: Byline - slides up and fades out when collapsed */}
-              <div className={`transition-all duration-300 ease-out overflow-hidden ${
+              <div className={`transition-all duration-300 ease-out ${
                 isScrolled && !isEditing
-                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2'
-                  : 'opacity-100 max-h-[50px] mt-2 translate-y-0'
+                  ? 'opacity-0 max-h-0 mt-0 -translate-y-2 overflow-hidden'
+                  : 'opacity-100 mt-2 translate-y-0'
               }`}>
                 <div className="flex items-center justify-center gap-3">
                   <div className="text-sm text-muted-foreground">
@@ -1075,15 +1153,107 @@ export default function ContentPageHeader({
                     />
                   )}
 
-                  {/* Group badge */}
-                  {groupId && groupName && (
-                    <Link
-                      href={`/g/${groupId}`}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
-                    >
-                      <Icon name="Users" size={12} />
-                      {groupName}
-                    </Link>
+                  {/* Group badge / picker */}
+                  {groupsEnabled && (
+                    <>
+                      {groupId && groupName ? (
+                        canEdit ? (
+                          <button
+                            onClick={() => setShowGroupPicker(true)}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                          >
+                            <span className="whitespace-nowrap">in</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors">
+                              <Icon name="Users" size={12} />
+                              {groupName}
+                              <Icon name="ChevronDown" size={10} />
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="whitespace-nowrap">in</span>
+                            <Link
+                              href={`/g/${groupId}`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                            >
+                              <Icon name="Users" size={12} />
+                              {groupName}
+                            </Link>
+                          </span>
+                        )
+                      ) : canEdit ? (
+                        <button
+                          onClick={() => setShowGroupPicker(true)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                        >
+                          <Icon name="Users" size={12} />
+                          No group
+                          <Icon name="ChevronDown" size={10} />
+                        </button>
+                      ) : null}
+
+                      {/* Group picker modal/drawer */}
+                      <AdaptiveModal
+                        isOpen={showGroupPicker && canEdit}
+                        onClose={() => setShowGroupPicker(false)}
+                        title={groupId ? 'Change group' : 'Add to group'}
+                        subtitle="Select a group to assign this page to"
+                      >
+                        <div className="flex flex-col gap-1">
+                          {loadingGroups ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Icon name="Loader" size={20} />
+                            </div>
+                          ) : userGroups.length === 0 ? (
+                            <div className="py-8 text-sm text-muted-foreground text-center">
+                              You're not a member of any groups yet.
+                            </div>
+                          ) : (
+                            userGroups.filter(g => g.id !== groupId).map((group) => (
+                              <button
+                                key={group.id}
+                                onClick={() => handleAssignGroup(group)}
+                                disabled={assigningGroup}
+                                className="w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-muted transition-colors flex items-center gap-3 disabled:opacity-50"
+                              >
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 shrink-0">
+                                  <Icon name="Users" size={16} className="text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <span className="truncate font-medium">{group.name}</span>
+                                {group.visibility === 'private' && (
+                                  <Icon name="Lock" size={12} className="text-muted-foreground shrink-0 ml-auto" />
+                                )}
+                              </button>
+                            ))
+                          )}
+                          {groupId && (
+                            <button
+                              onClick={handleRemoveFromGroup}
+                              disabled={assigningGroup}
+                              className="w-full text-left px-4 py-3 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-3 disabled:opacity-50 mt-2 border-t border-border pt-4"
+                            >
+                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 shrink-0">
+                                <Icon name="X" size={16} className="text-destructive" />
+                              </div>
+                              <span className="font-medium">Remove from group</span>
+                            </button>
+                          )}
+                        </div>
+                      </AdaptiveModal>
+                    </>
+                  )}
+                  {/* Group badge fallback when groups feature is disabled */}
+                  {!groupsEnabled && groupId && groupName && (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="whitespace-nowrap">in</span>
+                      <Link
+                        href={`/g/${groupId}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                      >
+                        <Icon name="Users" size={12} />
+                        {groupName}
+                      </Link>
+                    </span>
                   )}
                 </div>
               </div>

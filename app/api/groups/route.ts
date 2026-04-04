@@ -75,10 +75,10 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) return createErrorResponse('UNAUTHORIZED');
+    const currentUserId = await getUserIdFromRequest(request);
+    if (!currentUserId) return createErrorResponse('UNAUTHORIZED');
 
-    if (!(await isGroupsEnabled(userId))) {
+    if (!(await isGroupsEnabled(currentUserId))) {
       return createErrorResponse('FEATURE_DISABLED', 'Groups feature is not enabled');
     }
 
@@ -86,14 +86,25 @@ export async function GET(request: NextRequest) {
     if (!admin) return createErrorResponse('INTERNAL_ERROR');
     const db = admin.firestore();
 
+    // Support querying another user's public groups via ?userId=xxx
+    const url = new URL(request.url);
+    const targetUserId = url.searchParams.get('userId') || currentUserId;
+    const publicOnly = targetUserId !== currentUserId;
+
     let groups: any[] = [];
     try {
-      const snap = await db
+      let q = db
         .collection(getCollectionName('groups'))
-        .where('memberIds', 'array-contains', userId)
-        .where('deleted', '!=', true)
-        .orderBy('updatedAt', 'desc')
-        .get();
+        .where('memberIds', 'array-contains', targetUserId);
+
+      // When viewing another user's groups, only return public ones
+      if (publicOnly) {
+        q = q.where('visibility', '==', 'public');
+      }
+
+      q = q.where('deleted', '!=', true).orderBy('updatedAt', 'desc');
+
+      const snap = await q.get();
 
       groups = snap.docs.map((doc) => ({
         id: doc.id,
@@ -105,11 +116,16 @@ export async function GET(request: NextRequest) {
         console.warn('[Groups API] Missing composite index for groups, falling back to simple query');
         const snap = await db
           .collection(getCollectionName('groups'))
-          .where('memberIds', 'array-contains', userId)
+          .where('memberIds', 'array-contains', targetUserId)
           .get();
 
         groups = snap.docs
-          .filter((doc) => doc.data().deleted !== true)
+          .filter((doc) => {
+            const data = doc.data();
+            if (data.deleted === true) return false;
+            if (publicOnly && data.visibility !== 'public') return false;
+            return true;
+          })
           .map((doc) => ({
             id: doc.id,
             ...doc.data(),

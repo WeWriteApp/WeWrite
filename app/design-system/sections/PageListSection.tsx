@@ -1,34 +1,104 @@
 "use client";
 
-import React, { useState } from 'react';
-import { UnifiedPageList, PageListViewToggle } from '../../components/pages/UnifiedPageList';
-import type { PageItem, PageListView } from '../../components/pages/UnifiedPageList';
+import React, { useState, useMemo } from 'react';
+import { UnifiedPageList, PageListViewToggle, ListMetadataSelector } from '../../components/pages/UnifiedPageList';
+import type { PageItem, PageListView, ListMetadata } from '../../components/pages/UnifiedPageList';
 import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 
 const SAMPLE_PAGES: PageItem[] = [
-  { id: 'p1', title: 'Getting Started with WeWrite', isPublic: true, userId: 'u1', username: 'alice', lastModified: '2026-03-28T12:00:00Z' },
-  { id: 'p2', title: 'Advanced Collaboration Tips', isPublic: true, userId: 'u2', username: 'bob', lastModified: '2026-03-25T08:30:00Z' },
-  { id: 'p3', title: 'My Private Notes', isPublic: false, userId: 'u1', username: 'alice', lastModified: '2026-03-20T14:00:00Z' },
-  { id: 'p4', title: 'Design System Documentation', isPublic: true, userId: 'u3', username: 'carol', lastModified: '2026-03-15T10:00:00Z' },
-  { id: 'p5', title: 'Project Roadmap 2026', isPublic: true, userId: 'u1', username: 'alice', lastModified: '2026-03-10T16:45:00Z' },
-  { id: 'p6', title: 'Meeting Notes — March', isPublic: false, userId: 'u2', username: 'bob', lastModified: '2026-03-05T09:00:00Z' },
+  { id: 'p1', title: 'Getting Started with WeWrite', isPublic: true, userId: 'u1', username: 'alice', lastModified: '2026-03-28T12:00:00Z', createdAt: '2026-03-01T10:00:00Z', earnings: 1250 },
+  { id: 'p2', title: 'Advanced Collaboration Tips', isPublic: true, userId: 'u2', username: 'bob', lastModified: '2026-03-25T08:30:00Z', createdAt: '2026-02-15T09:00:00Z', earnings: 890 },
+  { id: 'p3', title: 'My Private Notes', isPublic: false, userId: 'u1', username: 'alice', lastModified: '2026-03-20T14:00:00Z', createdAt: '2026-02-01T12:00:00Z', earnings: 0 },
+  { id: 'p4', title: 'Design System Documentation', isPublic: true, userId: 'u3', username: 'carol', lastModified: '2026-03-15T10:00:00Z', createdAt: '2026-01-20T08:00:00Z', earnings: 3400 },
+  { id: 'p5', title: 'Project Roadmap 2026', isPublic: true, userId: 'u1', username: 'alice', lastModified: '2026-03-10T16:45:00Z', createdAt: '2026-01-05T14:00:00Z', earnings: 560 },
+  { id: 'p6', title: 'Meeting Notes — March', isPublic: false, userId: 'u2', username: 'bob', lastModified: '2026-03-05T09:00:00Z', createdAt: '2025-12-10T11:00:00Z', earnings: 120 },
 ];
+
+type SortField = 'title' | 'date' | 'earnings' | 'author';
+type SortDirection = 'asc' | 'desc';
+
+const SORT_OPTIONS: { value: SortField; label: string }[] = [
+  { value: 'title', label: 'Title' },
+  { value: 'author', label: 'Author' },
+  { value: 'date', label: 'Date' },
+  { value: 'earnings', label: 'Earnings' },
+];
+
+function sortPages(pages: PageItem[], field: SortField, direction: SortDirection): PageItem[] {
+  return [...pages].sort((a, b) => {
+    let cmp = 0;
+    switch (field) {
+      case 'title':
+        cmp = (a.title || '').localeCompare(b.title || '');
+        break;
+      case 'author':
+        cmp = (a.username || '').localeCompare(b.username || '');
+        break;
+      case 'date': {
+        const da = new Date(a.createdAt || a.lastModified || 0).getTime();
+        const db = new Date(b.createdAt || b.lastModified || 0).getTime();
+        cmp = da - db;
+        break;
+      }
+      case 'earnings':
+        cmp = (a.earnings || 0) - (b.earnings || 0);
+        break;
+    }
+    return direction === 'asc' ? cmp : -cmp;
+  });
+}
 
 function InteractiveDemo() {
   const [view, setView] = useState<PageListView>('wrapped');
+  const [listMetadata, setListMetadata] = useState<ListMetadata>('none');
+  const [sortField, setSortField] = useState<SortField>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const sortedPages = useMemo(
+    () => sortPages(SAMPLE_PAGES, sortField, sortDirection),
+    [sortField, sortDirection]
+  );
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <div className="text-sm text-muted-foreground">
-          {SAMPLE_PAGES.length} pages
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-muted-foreground">
+            {SAMPLE_PAGES.length} pages
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Sort:</span>
+            <select
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value as SortField)}
+              className="text-xs bg-transparent border border-border rounded px-1.5 py-0.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setSortDirection(d => d === 'asc' ? 'desc' : 'asc')}
+              className="text-xs px-1.5 py-0.5 border border-border rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDirection === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
         </div>
-        <PageListViewToggle view={view} onViewChange={setView} />
+        <div className="flex items-center gap-3">
+          {view === 'list' && (
+            <ListMetadataSelector metadata={listMetadata} onMetadataChange={setListMetadata} />
+          )}
+          <PageListViewToggle view={view} onViewChange={setView} />
+        </div>
       </div>
       <UnifiedPageList
-        pages={SAMPLE_PAGES}
+        pages={sortedPages}
         view={view}
         onViewChange={setView}
+        listMetadata={listMetadata}
+        onListMetadataChange={setListMetadata}
       />
     </div>
   );
@@ -52,17 +122,31 @@ export function PageListSection({ id }: { id: string }) {
       </StateDemo>
 
       <StateDemo label="List View">
-        <p className="text-xs text-muted-foreground mb-2">Vertical list with author and date metadata.</p>
+        <p className="text-xs text-muted-foreground mb-2">One pill per line. Supports metadata display via the dropdown selector.</p>
         <UnifiedPageList pages={SAMPLE_PAGES} view="list" />
       </StateDemo>
 
-      <StateDemo label="Compact View">
-        <p className="text-xs text-muted-foreground mb-2">Dense vertical PillLinks — one per line.</p>
-        <UnifiedPageList pages={SAMPLE_PAGES} view="compact" />
+      <StateDemo label="List View — with Author">
+        <p className="text-xs text-muted-foreground mb-2">List view showing author byline on each pill.</p>
+        <UnifiedPageList pages={SAMPLE_PAGES} view="list" listMetadata="author" />
+      </StateDemo>
+
+      <StateDemo label="List View — with Date">
+        <p className="text-xs text-muted-foreground mb-2">List view showing created date on each pill.</p>
+        <UnifiedPageList pages={SAMPLE_PAGES} view="list" listMetadata="date" />
+      </StateDemo>
+
+      <StateDemo label="List View — with Earnings">
+        <p className="text-xs text-muted-foreground mb-2">List view showing page earnings on each pill.</p>
+        <UnifiedPageList pages={SAMPLE_PAGES} view="list" listMetadata="earnings" />
       </StateDemo>
 
       <StateDemo label="Empty State">
         <UnifiedPageList pages={[]} />
+      </StateDemo>
+
+      <StateDemo label="Custom Empty State">
+        <UnifiedPageList pages={[]} emptyIcon="PenLine" emptyTitle="No writing yet" emptyDescription="Start writing your first page!" />
       </StateDemo>
 
       <StateDemo label="Owned Pages (private visible)">
@@ -72,16 +156,18 @@ export function PageListSection({ id }: { id: string }) {
 
       <CollapsibleDocs title="Usage & API">
         <DocsCodeBlock>
-          {`import { UnifiedPageList, PageListViewToggle } from '@/components/pages/UnifiedPageList';
-import type { PageItem, PageListView } from '@/components/pages/UnifiedPageList';
+          {`import { UnifiedPageList, PageListViewToggle, ListMetadataSelector } from '@/components/pages/UnifiedPageList';
+import type { PageItem, PageListView, ListMetadata } from '@/components/pages/UnifiedPageList';
 
 // Basic usage — wrapped PillLinks (default)
 <UnifiedPageList pages={pages} />
 
 // With view toggle (controlled)
 const [view, setView] = useState<PageListView>('wrapped');
+const [metadata, setMetadata] = useState<ListMetadata>('none');
 <PageListViewToggle view={view} onViewChange={setView} />
-<UnifiedPageList pages={pages} view={view} onViewChange={setView} />
+{view === 'list' && <ListMetadataSelector metadata={metadata} onMetadataChange={setMetadata} />}
+<UnifiedPageList pages={pages} view={view} onViewChange={setView} listMetadata={metadata} onListMetadataChange={setMetadata} />
 
 // With built-in view toggle
 <UnifiedPageList pages={pages} showViewToggle />
@@ -89,8 +175,11 @@ const [view, setView] = useState<PageListView>('wrapped');
 // Show owned pages (private titles visible)
 <UnifiedPageList pages={pages} isOwned={true} />
 
-// Custom empty state
-<UnifiedPageList pages={[]} emptyState={<MyEmptyState />} />
+// Custom empty state props
+<UnifiedPageList pages={[]} emptyIcon="PenLine" emptyTitle="No writing yet" emptyDescription="Create your first page!" />
+
+// List view with specific metadata
+<UnifiedPageList pages={pages} view="list" listMetadata="author" />
 
 // List view with item actions
 <UnifiedPageList
@@ -103,8 +192,14 @@ const [view, setView] = useState<PageListView>('wrapped');
           <p><strong>Views:</strong></p>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
             <li><code className="text-foreground">wrapped</code> — PillLink pills in a flex-wrap layout (default)</li>
-            <li><code className="text-foreground">list</code> — Vertical rows with title, author, and date</li>
-            <li><code className="text-foreground">compact</code> — Dense vertical PillLinks, one per line</li>
+            <li><code className="text-foreground">list</code> — One PillLink per line with optional metadata byline</li>
+          </ul>
+          <p className="mt-3"><strong>List Metadata options:</strong></p>
+          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+            <li><code className="text-foreground">none</code> — No byline (default)</li>
+            <li><code className="text-foreground">author</code> — Show author username</li>
+            <li><code className="text-foreground">date</code> — Show created/modified date</li>
+            <li><code className="text-foreground">earnings</code> — Show page earnings</li>
           </ul>
           <p className="mt-3"><strong>Used in:</strong></p>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
@@ -114,7 +209,7 @@ const [view, setView] = useState<PageListView>('wrapped');
           <p className="mt-3"><strong>PageItem shape:</strong></p>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
             <li><code className="text-foreground">id</code>, <code className="text-foreground">title</code> (required)</li>
-            <li><code className="text-foreground">isPublic</code>, <code className="text-foreground">userId</code>, <code className="text-foreground">username</code>, <code className="text-foreground">lastModified</code>, <code className="text-foreground">createdAt</code> (optional)</li>
+            <li><code className="text-foreground">isPublic</code>, <code className="text-foreground">userId</code>, <code className="text-foreground">username</code>, <code className="text-foreground">lastModified</code>, <code className="text-foreground">createdAt</code>, <code className="text-foreground">earnings</code> (optional)</li>
           </ul>
         </div>
       </CollapsibleDocs>

@@ -183,18 +183,18 @@ export function MobilePageNav({ basePath, sections, title, children, headerExtra
                 {headerExtra}
               </div>
             )}
-            <nav className="py-2">
+            <nav className="divide-y divide-border">
               {sections.map((section) => {
                 const SectionIcon = section.icon;
                 return (
                   <button
                     key={section.id}
                     onClick={() => handleSectionClick(section.href)}
-                    className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-muted/50 active:bg-muted transition-colors touch-manipulation"
+                    className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none touch-manipulation"
                   >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="relative flex-shrink-0 flex items-center justify-center">
-                        <SectionIcon className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative flex-shrink-0 flex items-center justify-center w-6 h-6">
+                        <SectionIcon className="h-5 w-5 text-foreground" />
                         {section.showWarning && (
                           <WarningDot
                             variant={section.warningVariant || 'warning'}
@@ -205,7 +205,7 @@ export function MobilePageNav({ basePath, sections, title, children, headerExtra
                         )}
                       </div>
                       <div className="min-w-0">
-                        <span className="text-sm font-medium leading-5 block">{section.title}</span>
+                        <span className="font-medium leading-6 block">{section.title}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-3">

@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { DEV_TEST_USERS } from '../utils/testUsers';
 import { getCollectionName } from '../utils/environmentConfig';
 import { parseSignedCookieValue, type SessionCookieData } from '../utils/cookieUtils';
+import { verifyIdToken } from '../lib/firebase-rest';
 
 // Type definitions
 interface ApiResponse<T = any> {
@@ -136,13 +137,22 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
   // Only log auth debug when explicitly enabled (not just in development, to reduce console spam)
   const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true';
 
-  // SIMPLIFIED: Only use the simple session cookie - no complex Firebase verification
+  // 1. Try session cookie first (web app)
   const simpleSessionUserId = await trySimpleUserSessionCookie(request);
   if (simpleSessionUserId) {
     if (shouldLogAuthDebug) {
       console.log('[AUTH DEBUG] Using userId from simpleUserSession:', simpleSessionUserId);
     }
     return simpleSessionUserId;
+  }
+
+  // 2. Try Bearer token (mobile app / API clients)
+  const bearerUserId = await tryBearerToken(request);
+  if (bearerUserId) {
+    if (shouldLogAuthDebug) {
+      console.log('[AUTH DEBUG] Using userId from Bearer token:', bearerUserId);
+    }
+    return bearerUserId;
   }
 
   // No user ID found
@@ -176,6 +186,33 @@ async function trySimpleUserSessionCookie(request: NextRequest): Promise<string 
     return 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N';
   } else if (simpleSessionCookie === 'dev_test_user_1') {
     return 'dev_test_user_1';
+  }
+
+  return null;
+}
+
+/**
+ * Try to authenticate using Authorization Bearer token (mobile app / API clients)
+ * Accepts Firebase ID tokens passed as: Authorization: Bearer <idToken>
+ */
+async function tryBearerToken(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.substring(7).trim();
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const result = await verifyIdToken(token);
+    if (result.success && result.uid) {
+      return result.uid;
+    }
+  } catch (error) {
+    console.warn('[AUTH] Bearer token verification failed:', error);
   }
 
   return null;

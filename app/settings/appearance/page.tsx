@@ -8,6 +8,7 @@ import ColorSystemManager from '../../components/settings/ColorSystemManager';
 import SolidColorPicker from '../../components/settings/SolidColorPicker';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import UIStyleToggle from '../../components/utils/UIStyleToggle';
+import { Switch } from '../../components/ui/switch';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { usePillStyle, PILL_STYLES, UI_STYLES } from '../../contexts/PillStyleContext';
 import { cn } from "../../lib/utils";
@@ -16,7 +17,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '..
 export default function AppearancePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, highContrast, toggleHighContrast } = useTheme();
   const { accentColor, setAccentColor, getAccentColorValue } = useAccentColor();
   const { pillStyle, uiStyle } = usePillStyle();
 
@@ -150,6 +151,30 @@ export default function AppearancePage() {
 
         {/* Color System */}
         <ColorSystemManager />
+
+        {/* High Contrast Mode */}
+        <div className="wewrite-card wewrite-card-padding-sm">
+          <div className="flex items-center justify-between py-1">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold">High Contrast</span>
+                {highContrast && (
+                  <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground text-background">
+                    On
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Black and white mode with no shadows or accent colors. Great for e-ink readers.
+              </p>
+            </div>
+            <Switch
+              checked={highContrast}
+              onCheckedChange={toggleHighContrast}
+              size="md"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

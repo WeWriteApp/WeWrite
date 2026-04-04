@@ -10,6 +10,11 @@ import { SubscriptionTiersModal } from '../modals/SubscriptionTiersModal';
 import { cn } from '../../lib/utils';
 import { sanitizeUsername, needsUsernameRefresh, getDisplayUsername } from '../../utils/usernameSecurity';
 
+// Check if a username is a generated fallback (user_ + ID prefix)
+function isGeneratedFallback(name: string | null | undefined): boolean {
+  return !!name && /^user_[a-zA-Z0-9]{6,}$/.test(name);
+}
+
 // Cache structure for full profile data (username + tier)
 interface CachedProfile {
   username: string;
@@ -74,7 +79,7 @@ export function UsernameBadge({
       // Check if we recently failed to fetch this user (prevent infinite re-fetching)
       const lastFailed = failedFetchCache.get(userId);
       if (lastFailed && Date.now() - lastFailed < FAILED_CACHE_TTL) {
-        if (!freshUsername) {
+        if (!freshUsername && needsUsernameRefresh(username)) {
           setFreshUsername(`user_${userId.substring(0, 8)}`);
         }
         return;
@@ -86,7 +91,10 @@ export function UsernameBadge({
       // Check in-memory cache first
       const cached = profileCache.get(userId);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        setFreshUsername(cached.username);
+        // Don't override a valid prop username with a cached generated fallback
+        if (!isGeneratedFallback(cached.username) || needsUsernameRefresh(username)) {
+          setFreshUsername(cached.username);
+        }
         // Use cached tier data if we need it and props aren't provided
         if (needsTier) {
           setFetchedTier(cached.tier);
@@ -108,8 +116,8 @@ export function UsernameBadge({
           const response = await fetch(endpoint);
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.data?.username && result.data.username !== username) {
-              // Username has changed, update it
+            if (result.success && result.data?.username && result.data.username !== username && !isGeneratedFallback(result.data.username)) {
+              // Username has changed, update it (but never override with a generated fallback)
               const newUsername = result.data.username;
               setFreshUsername(newUsername);
               // Update cache
@@ -142,7 +150,10 @@ export function UsernameBadge({
           const result = await response.json();
           if (result.success && result.data?.username) {
             const newUsername = result.data.username;
-            setFreshUsername(newUsername);
+            // Only override prop if API returned a real username, not a generated fallback
+            if (!isGeneratedFallback(newUsername) || needsUsernameRefresh(username)) {
+              setFreshUsername(newUsername);
+            }
 
             // Update tier state if needed and data is available
             if (needsTier) {
@@ -151,27 +162,33 @@ export function UsernameBadge({
 
             // Update cache with all data
             profileCache.set(userId, {
-              username: newUsername,
+              username: !isGeneratedFallback(newUsername) ? newUsername : (username || newUsername),
               tier: result.data.tier,
               timestamp: Date.now()
             });
 
           } else {
             console.warn('No username found in API response for user:', userId);
-            // FALLBACK: Try to generate a reasonable username
-            setFreshUsername(`user_${userId.substring(0, 8)}`);
+            // FALLBACK: Only use generated username if prop is also invalid
+            if (needsUsernameRefresh(username)) {
+              setFreshUsername(`user_${userId.substring(0, 8)}`);
+            }
           }
         } else {
           console.error('Failed to fetch profile, status:', response.status);
           failedFetchCache.set(userId, Date.now());
-          // FALLBACK: Use a generated username
-          setFreshUsername(`user_${userId.substring(0, 8)}`);
+          // FALLBACK: Only use generated username if prop is also invalid
+          if (needsUsernameRefresh(username)) {
+            setFreshUsername(`user_${userId.substring(0, 8)}`);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch fresh profile:', error);
         failedFetchCache.set(userId, Date.now());
-        // FALLBACK: Use a generated username
-        setFreshUsername(`user_${userId.substring(0, 8)}`);
+        // FALLBACK: Only use generated username if prop is also invalid
+        if (needsUsernameRefresh(username)) {
+          setFreshUsername(`user_${userId.substring(0, 8)}`);
+        }
       } finally {
         setIsLoadingUsername(false);
       }

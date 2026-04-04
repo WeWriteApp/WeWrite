@@ -27,6 +27,7 @@ import { MenuSidebarSection } from './MenuSidebarSection';
 import { EmptyStateSection } from './EmptyStateSection';
 import { FormControlsSection } from './FormControlsSection';
 import { FullPageErrorSection } from './FullPageErrorSection';
+import { GroupSelectorSection } from './GroupSelectorSection';
 import { IconsSection } from './IconsSection';
 import { InlineErrorSection } from './InlineErrorSection';
 import { InputSection } from './InputSection';
@@ -90,6 +91,7 @@ const SECTIONS_UNSORTED: DesignSystemSection[] = [
   { id: 'empty-state', label: 'Empty State', component: EmptyStateSection },
   { id: 'form-controls', label: 'Form Controls', component: FormControlsSection },
   { id: 'full-page-error', label: 'Full Page Error', component: FullPageErrorSection },
+  { id: 'group-selector', label: 'Group Selector', component: GroupSelectorSection },
     { id: 'icons', label: 'Icons', component: IconsSection },
   { id: 'inline-error', label: 'Inline Error Cards', component: InlineErrorSection },
   { id: 'input', label: 'Input', component: InputSection },

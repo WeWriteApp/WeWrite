@@ -44,6 +44,8 @@ interface ActivityItem {
   subscriptionTier?: string;
   subscriptionAmount?: number;
   feedScore?: number | null;
+  groupId?: string;
+  groupName?: string;
 }
 
 type ActivityFeedMode = 'global' | 'user' | 'group';
@@ -293,6 +295,8 @@ export default function ActivityFeed({
             hasActiveSubscription: page.hasActiveSubscription,
             subscriptionTier: page.subscriptionTier,
             subscriptionAmount: page.subscriptionAmount,
+            groupId: page.groupId || undefined,
+            groupName: page.groupName || undefined,
           }));
 
       if (append) {

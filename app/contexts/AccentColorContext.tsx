@@ -70,7 +70,7 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
   const [accentColor, setAccentColor] = useState<ColorKey | string>('blue');
   const [lightColor, setLightColor] = useState<OKLCHColor>(DEFAULT_LIGHT_OKLCH);
   const [darkColor, setDarkColor] = useState<OKLCHColor>(DEFAULT_DARK_OKLCH);
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, highContrast } = useTheme();
 
   const getAccentColorValue = useCallback(() => {
     if (typeof accentColor === 'string' && accentColor.startsWith('#')) {
@@ -161,6 +161,25 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
       return;
     }
 
+    // High contrast mode: force black/white accent, skip normal color logic
+    if (highContrast) {
+      const isDark = resolvedTheme === 'dark';
+      const hcBase = isDark ? '1.00 0.00 0.0' : '0.00 0.00 0.0';
+      const hcForeground = isDark ? '0.00 0.00 0.0' : '1.00 0.00 0.0';
+      const hcHex = isDark ? '#FFFFFF' : '#000000';
+      const hcRgb = isDark ? '255, 255, 255' : '0, 0, 0';
+      document.documentElement.style.setProperty('--accent-base', hcBase);
+      document.documentElement.style.setProperty('--accent-color', hcHex);
+      document.documentElement.style.setProperty('--accent-l', isDark ? '1.00' : '0.00');
+      document.documentElement.style.setProperty('--accent-c', '0.00');
+      document.documentElement.style.setProperty('--accent-h', '0.0');
+      document.documentElement.style.setProperty('--primary', hcBase);
+      document.documentElement.style.setProperty('--primary-foreground', hcForeground);
+      document.documentElement.style.setProperty('--neutral-base', hcBase);
+      document.documentElement.style.setProperty('--accent-color-rgb', hcRgb);
+      return;
+    }
+
     // Use the memoized current theme color for CSS variables (already computed)
     const currentColor = currentThemeColor;
 
@@ -229,7 +248,7 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
     const g = parseInt(safeHex.substr(2, 2), 16) || 99;
     const b = parseInt(safeHex.substr(4, 2), 16) || 235;
     document.documentElement.style.setProperty('--accent-color-rgb', `${r}, ${g}, ${b}`);
-  }, [accentColor, currentThemeColor, getAccentColorValue, isCustomColor]);
+  }, [accentColor, currentThemeColor, getAccentColorValue, isCustomColor, highContrast, resolvedTheme]);
 
   return (
     <AccentColorContext.Provider value={{

@@ -65,7 +65,7 @@ function MobileDataSourceToggle() {
 
   if (!isHydrated) {
     return (
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
         <div className="flex items-center gap-3">
           <Icon name="Database" size={20} className="text-muted-foreground" />
           <span className="font-medium text-sm">Data Source</span>
@@ -76,7 +76,7 @@ function MobileDataSourceToggle() {
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    <div className="flex items-center justify-between px-5 py-4 border-b border-border">
       <div className="flex items-center gap-3">
         <Icon
           name="Database"
@@ -151,10 +151,10 @@ function AdminMenuList() {
             <button
               key={section.id}
               onClick={() => navigateInDrawer(`admin/${subPath || section.id}`)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left nav-hover-state nav-active-state transition-colors select-none"
+              className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none"
             >
               <div className="flex items-center gap-3">
-                <IconComponent className="h-5 w-5 text-muted-foreground" />
+                <IconComponent className="h-5 w-5 text-foreground" />
                 <span className="font-medium">{section.title}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -176,10 +176,10 @@ function AdminMenuList() {
             <button
               key={section.id}
               onClick={() => navigateInDrawer(`admin/${subPath || section.id}`)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left nav-hover-state nav-active-state transition-colors select-none"
+              className="w-full flex items-center justify-between px-4 py-4 text-left nav-hover-state nav-active-state transition-colors select-none"
             >
               <div className="flex items-center gap-3">
-                <IconComponent className="h-5 w-5 text-muted-foreground" />
+                <IconComponent className="h-5 w-5 text-foreground" />
                 <span className="font-medium text-sm">{section.title}</span>
               </div>
               <div className="flex items-center gap-2">

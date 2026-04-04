@@ -188,6 +188,8 @@ export async function GET(request: NextRequest) {
             diffPreview: replyPreview || page.diffPreview || page.lastDiff?.preview || null,
             pageScore: page.pageScore ?? null,
             pageScoreFactors: page.pageScoreFactors ?? null,
+            groupId: page.groupId || null,
+            groupName: page.groupName || null,
             source: 'pages-collection'
           };
         });

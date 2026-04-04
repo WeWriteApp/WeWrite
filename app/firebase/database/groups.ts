@@ -136,6 +136,29 @@ export async function getUserGroups(userId: string): Promise<Group[]> {
   }
 }
 
+/**
+ * List PUBLIC groups a user belongs to.
+ * Uses visibility=='public' in the query so Firestore security rules allow
+ * any authenticated user to read the results (not just group members).
+ */
+export async function getUserPublicGroups(userId: string): Promise<Group[]> {
+  try {
+    const q = query(
+      collection(db, getCollectionName('groups')),
+      where('memberIds', 'array-contains', userId),
+      where('visibility', '==', 'public'),
+      orderBy('updatedAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() } as Group))
+      .filter((g) => g.deleted !== true);
+  } catch (error) {
+    console.error('[Groups] Error getting user public groups:', error);
+    return [];
+  }
+}
+
 // ─── Members ───────────────────────────────────────────────────────
 
 /**

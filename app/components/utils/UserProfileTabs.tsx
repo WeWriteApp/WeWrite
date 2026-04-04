@@ -69,6 +69,18 @@ const TimelineSection = dynamic(() => import('../timeline/TimelineSection'), {
     </div>
   )
 });
+
+const PublicGroupsTab = dynamic(() => import('./PublicGroupsTab'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 animate-pulse">
+      <div className="h-6 w-32 bg-muted rounded mb-4" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[1, 2].map(i => <div key={i} className="h-24 bg-muted rounded" />)}
+      </div>
+    </div>
+  )
+});
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,16 +95,13 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false, view, onV
   view: PageListView;
   onViewChange: (v: PageListView) => void;
 }) {
-  if (!pageList || pageList.length === 0) {
-    return <div className="text-center text-muted-foreground py-8">{emptyMessage}</div>;
-  }
-
   return (
     <UnifiedPageList
       pages={pageList}
       view={view}
       onViewChange={onViewChange}
       isOwned={isCurrentUserList}
+      emptyTitle={emptyMessage}
       className="mt-4"
     />
   );
@@ -140,7 +149,7 @@ const UserPagesSearch = ({ userId, username }: { userId: string; username: strin
 };
 
 // Valid tabs for user profile
-const VALID_PROFILE_TABS = ["bio", "pages", "recent-activity", "timeline", "graph", "map", "external-links"];
+const VALID_PROFILE_TABS = ["bio", "pages", "recent-activity", "timeline", "graph", "map", "external-links", "public-groups"];
 
 interface UserProfileTabsProps {
   profile: {
@@ -197,7 +206,10 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
   // Page list view mode with persistence
   const [pageListView, setPageListView] = useState<PageListView>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('profile-pages-view') as PageListView) || 'wrapped';
+      const stored = localStorage.getItem('profile-pages-view');
+      // Migrate legacy 'compact' value to 'list'
+      if (stored === 'compact') return 'list';
+      if (stored === 'wrapped' || stored === 'list') return stored;
     }
     return 'wrapped';
   });
@@ -633,6 +645,18 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
                 <span>External Links</span>
               </TabsTrigger>
 
+              {/* Groups tab — only visible when groups feature flag is enabled */}
+              {groupsEnabled && (
+                <TabsTrigger
+                  value="public-groups"
+                  data-value="public-groups"
+                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+                >
+                  <Icon name="Users" size={16} />
+                  <span>{isCurrentUser ? 'Groups' : 'Public Groups'}</span>
+                </TabsTrigger>
+              )}
+
               {/* Groups tab removed - groups feature has been completely removed */}
               {/* Following tab removed - now available in sidebar */}
 
@@ -847,6 +871,24 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
 
           {/* Following tab content removed - now available in sidebar */}
           {/* Groups tab content removed - groups feature has been completely removed */}
+
+          {/* Public Groups tab content */}
+          {groupsEnabled && (
+            <TabsContent
+              value="public-groups"
+              className={`mt-0 transition-all duration-300 ${
+                activeTab === "public-groups"
+                  ? "block"
+                  : "hidden"
+              }`}
+            >
+              <PublicGroupsTab
+                userId={profile?.uid}
+                username={profile?.username}
+                isOwnProfile={!!isCurrentUser}
+              />
+            </TabsContent>
+          )}
 
         </div>
     </Tabs>

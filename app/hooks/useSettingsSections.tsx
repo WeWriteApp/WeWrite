@@ -44,7 +44,7 @@ const Bell = createIconComponent('Bell');
 const Mail = createIconComponent('Mail');
 const Shield = createIconComponent('Shield');
 const Trash2 = createIconComponent('Trash2');
-const SettingsIcon = createIconComponent('Settings');
+const Download = createIconComponent('Download');
 const Info = createIconComponent('Info');
 const ListChecks = createIconComponent('ListChecks');
 
@@ -180,8 +180,8 @@ const BASE_SECTIONS: SettingsSection[] = [
   },
   {
     id: 'advanced',
-    title: 'Advanced',
-    icon: SettingsIcon,
+    title: 'App Installation',
+    icon: Download,
     href: '/settings/advanced'
   },
   {
@@ -412,6 +412,24 @@ export function useSettingsSections(): {
           statusIndicator = (
             <span className="text-xs text-muted-foreground font-medium">
               {completedCount}/{totalCount}
+            </span>
+          );
+          break;
+        }
+
+        case 'advanced': {
+          // Show PWA installation status
+          const isPWA = typeof window !== 'undefined' && (
+            window.matchMedia('(display-mode: standalone)').matches ||
+            (window.navigator as any).standalone === true
+          );
+          statusIndicator = (
+            <span className={`text-xs font-medium ${
+              isPWA
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-muted-foreground'
+            }`}>
+              {isPWA ? 'Installed' : 'Not Installed'}
             </span>
           );
           break;

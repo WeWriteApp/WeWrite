@@ -310,9 +310,6 @@ export default function MobileBottomNav() {
 
         {/* Bottom toolbar - icons only */}
         <div className="grid grid-cols-5 gap-2 px-3 py-2">
-          {/* More button (always first) */}
-          <MoreButton />
-
           {/* Toolbar items */}
           {toolbarItems.map((itemId) => {
             const config = navigationButtons[itemId];
@@ -330,6 +327,9 @@ export default function MobileBottomNav() {
               </ToolbarIconButton>
             );
           })}
+
+          {/* More button (always last) */}
+          <MoreButton />
         </div>
       </DockedToolbar>
     </FixedPortal>

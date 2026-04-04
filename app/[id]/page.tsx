@@ -8,6 +8,7 @@ import { extractTextContent } from '../utils/text-extraction';
 
 // ISR: Revalidate pages every 60 seconds for better cache hit rate
 // Pages are served from cache and revalidated in background
+// Note: revalidatePath('/' + id) is called on save to bust this cache immediately
 export const revalidate = 60;
 
 // Allow dynamic params (page IDs)
@@ -31,8 +32,10 @@ async function getPageData(pageId: string, userId?: string | null) {
       headers: {
         'Cache-Control': 'no-cache',
       },
-      // Use Next.js cache with revalidation
-      next: { revalidate: 60 }
+      // Don't cache page content fetches — freshness is critical for the core product.
+      // ISR (revalidate=60 at route level) handles the Full Route Cache;
+      // this ensures the underlying data fetch is always fresh.
+      cache: 'no-store'
     });
 
     if (!response.ok) {

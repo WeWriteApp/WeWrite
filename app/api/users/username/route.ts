@@ -295,6 +295,23 @@ export async function POST(request: NextRequest) {
       console.warn('Failed to update username in RTDB:', rtdbError);
     }
 
+    // Propagate username to page documents owned by this user
+    try {
+      const pagesSnap = await db.collection(getCollectionName('pages'))
+        .where('userId', '==', currentUserId)
+        .get();
+
+      if (!pagesSnap.empty) {
+        const pageBatch = db.batch();
+        pagesSnap.forEach((doc) => {
+          pageBatch.set(doc.ref, { username }, { merge: true });
+        });
+        await pageBatch.commit();
+      }
+    } catch (pageErr) {
+      console.warn('Page username propagation failed (continuing):', pageErr);
+    }
+
     // Invalidate caches
     try {
       const { invalidateCache } = await import('../../../utils/serverCache');

@@ -1165,6 +1165,10 @@ export async function PUT(request: NextRequest) {
       // 2. Invalidate in-memory page cache (used by GET /api/pages/[id])
       const { pageCache } = await import('../../utils/serverCache');
       pageCache.invalidate(id);
+
+      // 3. Invalidate Next.js Full Route Cache + Data Cache for this page
+      const { revalidatePath } = await import('next/cache');
+      revalidatePath('/' + id);
     } catch (err) {
       // Cache invalidation failed - non-fatal
     }

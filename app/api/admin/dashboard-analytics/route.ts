@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { AdminAnalyticsService } from '../../../services/adminAnalytics';
+import { withAdminContext } from '../../../utils/adminRequestContext';
 
 /**
  * Admin Dashboard Analytics API
  * GET /api/admin/dashboard-analytics
  */
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     // Check admin permissions
     const adminCheck = await checkAdminPermissions(request);
@@ -117,4 +119,5 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching dashboard analytics:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch dashboard analytics');
   }
+  });
 }

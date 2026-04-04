@@ -47,7 +47,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
-import { usePage } from "../../contexts/PageContext";
+import { useOptionalPage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import { CONTENT_TYPES } from "../../utils/constants";
 import PillLink from "../utils/PillLink";
@@ -299,7 +299,8 @@ const TextView: React.FC<TextViewProps> = ({
   const [showEditTooltip, setShowEditTooltip] = useState<boolean>(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
   const { user } = useAuth();
-  const { page } = usePage();
+  const pageContext = useOptionalPage();
+  const page = pageContext?.page ?? null;
 
   // Check if current user can edit this page (enhanced for group support)
   // Use prop value if provided, otherwise calculate

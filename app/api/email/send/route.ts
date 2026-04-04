@@ -9,6 +9,30 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail, sendNotificationEmail, sendWelcomeEmail, sendTemplatedEmail } from '../../../services/emailService';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
+
+/**
+ * If a userId is provided, fetch the latest username from Firestore
+ * to ensure emails always use the most up-to-date username.
+ */
+async function getFreshUsername(userId?: string, fallbackUsername?: string): Promise<string | undefined> {
+  if (!userId) return fallbackUsername;
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) return fallbackUsername;
+    const userDoc = await admin.firestore()
+      .collection(getCollectionName('users'))
+      .doc(userId)
+      .get();
+    if (userDoc.exists) {
+      return userDoc.data()?.username || fallbackUsername;
+    }
+  } catch {
+    // Fall back to provided username if lookup fails
+  }
+  return fallbackUsername;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,12 +56,21 @@ export async function POST(request: NextRequest) {
 
     let success = false;
 
+    // If a userId is provided, resolve the freshest username from Firestore
+    const userId = emailData.userId || emailData.data?.userId;
+    const freshUsername = await getFreshUsername(userId, emailData.username || emailData.data?.username);
+
     // Handle template-based sending
     if (templateId) {
+      const templateData = emailData.data || {};
+      // Override username in template data with fresh value if available
+      if (freshUsername && templateData.username) {
+        templateData.username = freshUsername;
+      }
       success = await sendTemplatedEmail({
         templateId,
         to: emailData.to,
-        data: emailData.data || {},
+        data: templateData,
       });
     } else {
       // Handle legacy type-based sending
@@ -59,7 +92,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'welcome':
-        if (!emailData.username) {
+        if (!emailData.username && !freshUsername) {
           return NextResponse.json(
             { error: 'Username is required for welcome emails' },
             { status: 400 }
@@ -67,7 +100,7 @@ export async function POST(request: NextRequest) {
         }
         success = await sendWelcomeEmail({
           to: emailData.to,
-          username: emailData.username,
+          username: freshUsername || emailData.username,
         });
         break;
 
@@ -85,7 +118,7 @@ export async function POST(request: NextRequest) {
           body: emailData.body,
           ctaText: emailData.ctaText,
           ctaUrl: emailData.ctaUrl,
-          username: emailData.username,
+          username: freshUsername || emailData.username,
         });
         break;
 

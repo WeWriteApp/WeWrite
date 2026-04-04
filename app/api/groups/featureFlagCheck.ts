@@ -11,28 +11,29 @@ export async function isGroupsEnabled(userId: string | null): Promise<boolean> {
     if (!admin) return false;
     const db = admin.firestore();
 
-    // Check global defaults
-    const defaultsDoc = await db.collection(getCollectionName('featureFlags')).doc('defaults').get();
+    // Parallelize all Firestore reads for performance
+    const defaultsPromise = db.collection(getCollectionName('featureFlags')).doc('defaults').get();
+    const overridesPromise = userId
+      ? db.collection(getCollectionName('featureFlagOverrides')).doc(userId).get()
+      : Promise.resolve(null);
+    const userPromise = userId
+      ? db.collection(getCollectionName('users')).doc(userId).get()
+      : Promise.resolve(null);
+
+    const [defaultsDoc, overridesDoc, userDoc] = await Promise.all([defaultsPromise, overridesPromise, userPromise]);
+
     const defaults = defaultsDoc.exists ? defaultsDoc.data()?.flags || {} : {};
-
-    // Check user overrides
-    let overrides: Record<string, boolean> = {};
-    if (userId) {
-      const overridesDoc = await db.collection(getCollectionName('featureFlagOverrides')).doc(userId).get();
-      overrides = overridesDoc.exists ? overridesDoc.data()?.flags || {} : {};
-    }
-
+    const overrides: Record<string, boolean> = overridesDoc?.exists ? overridesDoc.data()?.flags || {} : {};
     const merged = { ...defaults, ...overrides };
 
-    // Auto-enable groups for admin users (matches feature-flags route logic)
-    if (userId && !merged.groups) {
-      const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-      if (userDoc.exists && userDoc.data()?.isAdmin === true) {
-        return true;
-      }
+    if (merged.groups) return true;
+
+    // Auto-enable groups for admin users
+    if (userId && userDoc?.exists && userDoc.data()?.isAdmin === true) {
+      return true;
     }
 
-    return Boolean(merged.groups);
+    return false;
   } catch {
     return false;
   }

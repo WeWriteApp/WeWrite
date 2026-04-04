@@ -60,3 +60,12 @@ export function usePage(): PageContextType {
   }
   return context;
 }
+
+/**
+ * Optional hook that returns null when used outside a PageProvider
+ * instead of throwing. Use this in components that may render
+ * both inside and outside a page context (e.g. TextView in group pages).
+ */
+export function useOptionalPage(): PageContextType | null {
+  return useContext(PageContext) ?? null;
+}

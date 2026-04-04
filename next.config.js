@@ -125,6 +125,13 @@ const nextConfig = {
     serverSourceMaps: process.env.NODE_ENV === 'development',
     // optimizePackageImports is designed for Turbopack — slows webpack builds
     // Re-enable when migrating to Turbopack
+
+    // Prevent the Next.js Router Cache from serving stale pages on client navigation.
+    // Pages are the core product — always serve fresh content.
+    staleTimes: {
+      dynamic: 0,
+      static: 0,
+    },
   },
 
   // External packages for server components
@@ -161,6 +168,28 @@ const nextConfig = {
   // Security headers for Stripe Connect embedded components
   async headers() {
     return [
+      // CORS headers for API routes (mobile app / external API clients)
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Requested-With'
+          },
+          {
+            key: 'Access-Control-Max-Age',
+            value: '86400'
+          }
+        ]
+      },
       {
         source: '/(.*)',
         headers: [

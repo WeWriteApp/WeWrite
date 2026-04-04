@@ -163,7 +163,7 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
           </div>
           {group.ownerUsername && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
-              <span>by</span>
+              <span>group created by</span>
               <UsernameBadge
                 userId={group.ownerId}
                 username={group.ownerUsername}

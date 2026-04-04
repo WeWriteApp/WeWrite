@@ -9,6 +9,11 @@ import { getCurrentMonth } from '../../../utils/usdConstants';
 import { centsToDollars } from '../../../utils/formatCurrency';
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || 'dev_test_user_1';
