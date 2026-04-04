@@ -2444,92 +2444,98 @@ a.username-badge-link:has(.text-muted-foreground) {
     --paragraph-number-opacity: 0.4;
   }
 
-  /* High Contrast Mode - Light */
+  /* High Contrast Mode - Light (e-ink friendly) */
   html[data-high-contrast="true"]:not(.dark) {
-    /* Maximum contrast for text - OKLCH format: L C H */
+    /* Pure black and white */
     --foreground: 0.00 0 0;
     --background: 1.00 0 0;
 
-    /* Card with visible borders */
+    /* Cards - white with black borders */
     --card: 1.00 0 0;
     --card-foreground: 0.00 0 0;
 
-    /* Popover with visible borders */
+    /* Popover - white with black borders */
     --popover: 1.00 0 0;
     --popover-foreground: 0.00 0 0;
 
-    /* Primary color with high contrast - blue hue 250 */
-    --primary: 0.50 0.30 250;
+    /* Primary - pure black */
+    --primary: 0.00 0 0;
     --primary-foreground: 1.00 0 0;
 
-    /* Secondary with higher contrast */
-    --secondary: 0.80 0.02 250;
+    /* Secondary - light gray */
+    --secondary: 0.92 0 0;
     --secondary-foreground: 0.00 0 0;
 
-    /* Muted with higher contrast */
-    --muted: 0.90 0.02 250;
-    --muted-foreground: 0.00 0 0;
+    /* Muted - light gray */
+    --muted: 0.92 0 0;
+    --muted-foreground: 0.30 0 0;
 
-    /* Accent with higher contrast */
-    --accent: 0.90 0.02 250;
+    /* Accent - remove color, use black */
+    --accent: 0.92 0 0;
     --accent-foreground: 0.00 0 0;
 
-    /* Destructive with higher contrast - red hue 25 */
-    --destructive: 0.50 0.25 25;
+    /* Override accent color scale to grayscale */
+    --accent-base: 0.00 0 0;
+
+    /* Destructive - dark gray instead of red */
+    --destructive: 0.30 0 0;
     --destructive-foreground: 1.00 0 0;
 
-    /* Borders and inputs with higher contrast */
+    /* Borders - solid black */
     --border: 0.00 0 0;
-    --input: 0.90 0 0;
-    --ring: 0.50 0.30 250;
+    --input: 0.85 0 0;
+    --ring: 0.00 0 0;
 
     /* Enhanced focus indicators */
-    --focus-ring-color: 0.50 0.30 250;
+    --focus-ring-color: 0.00 0 0;
     --focus-ring-width: 3px;
     --focus-ring-offset: 2px;
   }
 
-  /* High Contrast Mode - Dark */
+  /* High Contrast Mode - Dark (e-ink friendly) */
   html[data-high-contrast="true"].dark {
-    /* Maximum contrast for text - OKLCH format: L C H */
+    /* Pure black and white */
     --foreground: 1.00 0 0;
     --background: 0.00 0 0;
 
-    /* Card with visible borders */
+    /* Cards - black with white borders */
     --card: 0.00 0 0;
     --card-foreground: 1.00 0 0;
 
-    /* Popover with visible borders */
+    /* Popover - black with white borders */
     --popover: 0.00 0 0;
     --popover-foreground: 1.00 0 0;
 
-    /* Primary color with high contrast - blue hue 250 */
-    --primary: 0.60 0.30 250;
+    /* Primary - pure white */
+    --primary: 1.00 0 0;
     --primary-foreground: 0.00 0 0;
 
-    /* Secondary with higher contrast */
-    --secondary: 0.20 0.02 250;
+    /* Secondary - dark gray */
+    --secondary: 0.15 0 0;
     --secondary-foreground: 1.00 0 0;
 
-    /* Muted with higher contrast */
-    --muted: 0.20 0.02 250;
-    --muted-foreground: 1.00 0 0;
+    /* Muted - dark gray */
+    --muted: 0.15 0 0;
+    --muted-foreground: 0.70 0 0;
 
-    /* Accent with higher contrast */
-    --accent: 0.20 0.02 250;
+    /* Accent - remove color, use white */
+    --accent: 0.15 0 0;
     --accent-foreground: 1.00 0 0;
 
-    /* Destructive with higher contrast - red hue 25 */
-    --destructive: 0.60 0.25 25;
+    /* Override accent color scale to grayscale */
+    --accent-base: 1.00 0 0;
+
+    /* Destructive - light gray instead of red */
+    --destructive: 0.70 0 0;
     --destructive-foreground: 0.00 0 0;
 
-    /* Borders and inputs with higher contrast */
+    /* Borders - solid white */
     --border: 1.00 0 0;
     --input: 0.20 0 0;
-    --ring: 0.70 0.30 250;
+    --ring: 1.00 0 0;
 
     /* Enhanced focus indicators */
-    --focus-ring-color: 0.70 0.30 250;
+    --focus-ring-color: 1.00 0 0;
     --focus-ring-width: 3px;
     --focus-ring-offset: 2px;
   }
@@ -2609,8 +2615,8 @@ iframe[src*="js.stripe.com"] {
 
 .wewrite-card.wewrite-input:hover,
 .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
-  border-color: var(--card-border-hover) !important;
-  background-color: var(--card-bg-hover) !important;
+  border-color: var(--card-border-hover);
+  background-color: var(--card-bg-hover);
 }
 
 /* Expanded toolbar - ALWAYS solid card bg, NO hover/active states */
@@ -2618,10 +2624,10 @@ iframe[src*="js.stripe.com"] {
 .wewrite-card[data-expanded="true"]:hover,
 .wewrite-card[data-expanded="true"]:active,
 .wewrite-card[data-expanded="true"]:focus {
-  background-color: var(--card-bg) !important;
-  border-color: var(--card-border) !important;
-  transform: none !important;
-  box-shadow: var(--card-shadow) !important;
+  background-color: var(--card-bg);
+  border-color: var(--card-border);
+  transform: none;
+  box-shadow: var(--card-shadow);
 }
 
 /* Disable ALL hover/active states on mobile/touch devices to prevent sticky hover */
@@ -2630,10 +2636,10 @@ iframe[src*="js.stripe.com"] {
   .wewrite-card:active:not(.wewrite-input):not([data-expanded="true"]),
   .dark .wewrite-card:hover:not([data-expanded="true"]),
   .dark .wewrite-card:active:not([data-expanded="true"]) {
-    background-color: var(--card-bg) !important;
-    border-color: var(--card-border) !important;
-    box-shadow: var(--card-shadow) !important;
-    transform: none !important;
+    background-color: var(--card-bg);
+    border-color: var(--card-border);
+    box-shadow: var(--card-shadow);
+    transform: none;
   }
 
   /* Ensure expanded toolbar uses card-bg on mobile regardless of touch state */
@@ -2641,7 +2647,7 @@ iframe[src*="js.stripe.com"] {
   .wewrite-card[data-expanded="true"]:hover,
   .wewrite-card[data-expanded="true"]:active,
   .wewrite-card[data-expanded="true"]:focus {
-    background-color: var(--card-bg) !important;
+    background-color: var(--card-bg);
   }
 }
 
@@ -2916,12 +2922,288 @@ select.wewrite-input:focus-visible {
 
 /* Title input hover state is now handled by wewrite-input system */
 
-/* High contrast mode styling */
-html[data-high-contrast="true"] .wewrite-card,
-html[data-high-contrast="true"] [class*="border-theme-"],
-html[data-high-contrast="true"] [class*="border"] {
-  border-color: oklch(var(--border)) !important;
-  border-width: 1px !important;
+/* High contrast mode - border enforcement for cards and explicitly bordered elements */
+html[data-high-contrast="true"]:not(.dark) .wewrite-card,
+html[data-high-contrast="true"]:not(.dark) [class*="border-theme-"] {
+  border-color: black;
+  border-width: 2px;
+}
+
+html[data-high-contrast="true"].dark .wewrite-card,
+html[data-high-contrast="true"].dark [class*="border-theme-"] {
+  border-color: white;
+  border-width: 2px;
+}
+
+/* High contrast: card HOVER override
+   Specificity (0,6,1) naturally beats generic hover (0,4,0) — no !important needed */
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-input:hover,
+html[data-high-contrast="true"]:not(.dark) .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
+  border-color: black;
+  border-width: 3px;
+  background-color: var(--card-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-high-contrast="true"].dark .wewrite-card.wewrite-input:hover,
+html[data-high-contrast="true"].dark .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
+  border-color: white;
+  border-width: 3px;
+  background-color: var(--card-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+/* High contrast: wewrite-card directional border modifiers (must override the .wewrite-card rule above)
+   Specificity (0,4,1) beats HC base card (0,3,1) — no !important needed */
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-none {
+  border: none;
+}
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-top {
+  border: none;
+  border-top: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-bottom {
+  border: none;
+  border-bottom: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-x {
+  border: none;
+  border-left: 2px solid black;
+  border-right: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-y {
+  border: none;
+  border-top: 2px solid black;
+  border-bottom: 2px solid black;
+}
+
+html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-none {
+  border: none;
+}
+html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-top {
+  border: none;
+  border-top: 2px solid white;
+}
+html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-bottom {
+  border: none;
+  border-bottom: 2px solid white;
+}
+html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-x {
+  border: none;
+  border-left: 2px solid white;
+  border-right: 2px solid white;
+}
+html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-y {
+  border: none;
+  border-top: 2px solid white;
+  border-bottom: 2px solid white;
+}
+
+/* High contrast: strengthen existing borders (full border)
+   Specificity (0,2,1) beats Tailwind .border (0,1,0) */
+html[data-high-contrast="true"]:not(.dark) .border {
+  border-color: black;
+  border-width: 2px;
+}
+html[data-high-contrast="true"].dark .border {
+  border-color: white;
+  border-width: 2px;
+}
+
+/* High contrast: directional borders - only strengthen the specified side */
+html[data-high-contrast="true"]:not(.dark) .border-t {
+  border-top-color: black;
+  border-top-width: 2px;
+}
+html[data-high-contrast="true"]:not(.dark) .border-b {
+  border-bottom-color: black;
+  border-bottom-width: 2px;
+}
+html[data-high-contrast="true"]:not(.dark) .border-l {
+  border-left-color: black;
+  border-left-width: 2px;
+}
+html[data-high-contrast="true"]:not(.dark) .border-r {
+  border-right-color: black;
+  border-right-width: 2px;
+}
+
+html[data-high-contrast="true"].dark .border-t {
+  border-top-color: white;
+  border-top-width: 2px;
+}
+html[data-high-contrast="true"].dark .border-b {
+  border-bottom-color: white;
+  border-bottom-width: 2px;
+}
+html[data-high-contrast="true"].dark .border-l {
+  border-left-color: white;
+  border-left-width: 2px;
+}
+html[data-high-contrast="true"].dark .border-r {
+  border-right-color: white;
+  border-right-width: 2px;
+}
+
+/* High contrast: *-only directional border classes */
+html[data-high-contrast="true"]:not(.dark) .border-t-only {
+  border-top: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) .border-b-only {
+  border-bottom: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) .border-l-only {
+  border-left: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) .border-r-only {
+  border-right: 2px solid black;
+}
+
+html[data-high-contrast="true"].dark .border-t-only {
+  border-top: 2px solid white;
+}
+html[data-high-contrast="true"].dark .border-b-only {
+  border-bottom: 2px solid white;
+}
+html[data-high-contrast="true"].dark .border-l-only {
+  border-left: 2px solid white;
+}
+html[data-high-contrast="true"].dark .border-r-only {
+  border-right: 2px solid white;
+}
+
+/* High contrast: docked floating cards (bottom toolbar) - top border only
+   KEEP !important: fights Tailwind's !border-*-0 utilities which have their own !important */
+html[data-high-contrast="true"]:not(.dark) .wewrite-card.\!border-l-0.\!border-r-0.\!border-b-0 {
+  border: none !important;
+  border-top: 2px solid black !important;
+}
+html[data-high-contrast="true"].dark .wewrite-card.\!border-l-0.\!border-r-0.\!border-b-0 {
+  border: none !important;
+  border-top: 2px solid white !important;
+}
+
+/* High contrast: dividers between items (divide-y, divide-x)
+   Specificity (0,2,1) beats Tailwind divide utilities (0,1,0) */
+html[data-high-contrast="true"]:not(.dark) [class*="divide-"] > * + * {
+  border-color: black;
+}
+html[data-high-contrast="true"].dark [class*="divide-"] > * + * {
+  border-color: white;
+}
+
+/* High contrast: remove all shadows */
+html[data-high-contrast="true"] * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* High contrast: Switch component - unchecked state needs outlines for visibility
+   Specificity (0,4,1)+ easily beats Tailwind utilities (0,1,0).
+   box-shadow handled by wildcard rule above. */
+html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="false"] {
+  background-color: white;
+  border: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="false"] [data-high-contrast-thumb] {
+  background-color: white;
+  border: 2px solid black;
+}
+/* High contrast: Switch - checked state is solid, no outlines needed */
+html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="true"] {
+  background-color: black;
+  border: 2px solid black;
+}
+html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="true"] [data-high-contrast-thumb] {
+  background-color: white;
+  border: none;
+}
+
+/* High contrast dark: Switch - unchecked state needs outlines */
+html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="false"] {
+  background-color: black;
+  border: 2px solid white;
+}
+html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="false"] [data-high-contrast-thumb] {
+  background-color: black;
+  border: 2px solid white;
+}
+/* High contrast dark: Switch - checked state is solid white */
+html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="true"] {
+  background-color: white;
+  border: 2px solid white;
+}
+html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="true"] [data-high-contrast-thumb] {
+  background-color: black;
+  border: none;
+}
+
+/* High contrast: override any colored text/bg utilities to grayscale */
+html[data-high-contrast="true"] [class*="text-accent"],
+html[data-high-contrast="true"] [class*="bg-accent"] {
+  color: oklch(var(--foreground));
+}
+
+html[data-high-contrast="true"] [class*="bg-accent"] {
+  background-color: oklch(var(--accent));
+}
+
+/* High contrast: text-only pill links - no background, no padding, just bold text
+   Specificity (0,2,1)+ beats Tailwind utilities (0,1,0 to 0,2,0) */
+html[data-high-contrast="true"] .pill-text-style {
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  outline: none;
+  border-radius: 0;
+  font-weight: 700;
+  color: oklch(var(--foreground));
+}
+html[data-high-contrast="true"] .pill-text-style:hover {
+  background-color: transparent;
+  text-decoration: underline;
+}
+html[data-high-contrast="true"] .pill-text-style:active {
+  background-color: transparent;
+}
+
+/* High contrast: underlined pill links - same treatment, just keep the underline */
+html[data-high-contrast="true"] .pill-underlined-style {
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  outline: none;
+  border-radius: 0;
+  font-weight: 700;
+  color: oklch(var(--foreground));
+}
+html[data-high-contrast="true"] .pill-underlined-style:hover {
+  background-color: transparent;
+}
+html[data-high-contrast="true"] .pill-underlined-style:active {
+  background-color: transparent;
+}
+
+/* High contrast: outline pill links - black/white border, no color */
+html[data-high-contrast="true"] .pill-outline-style {
+  border-color: oklch(var(--foreground));
+  color: oklch(var(--foreground));
+  background-color: transparent;
+}
+html[data-high-contrast="true"] .pill-outline-style:hover {
+  background-color: oklch(var(--foreground) / 0.1);
+}
+
+/* High contrast: filled pill links - black/white background */
+html[data-high-contrast="true"] .pill-filled-style {
+  background-color: oklch(var(--foreground));
+  color: oklch(var(--background));
+  border-color: oklch(var(--foreground));
+}
+html[data-high-contrast="true"] .pill-filled-style:hover {
+  opacity: 0.85;
 }
 
 /* Mobile-specific card grid improvements */
@@ -3699,26 +3981,12 @@ input[type="search"], input[type="url"], input[type="tel"] {
 
 /* Removed redundant truncation rules - now handled globally by .pill-text */
 
-/* Truncate links in the editor only when they would cause layout issues */
-.truncate-link {
-  /* Only constrain width when absolutely necessary for layout */
-  max-width: calc(100vw - 4rem); /* Prevent viewport overflow with generous margin */
-  display: inline-flex !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-}
-
-.truncate-link > div {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* REMOVED: .truncate-link class — unused in codebase (confirmed via grep) */
 
 /* FIX: Allow pill links to use available space more generously */
 .paragraph-with-number a {
   /* PillStyleContext now uses inline-flex with proper alignment */
-  vertical-align: baseline !important; /* Ensure proper alignment with paragraph numbers */
+  vertical-align: baseline; /* Ensure proper alignment with paragraph numbers */
   /* Only constrain when absolutely necessary - allow links to use most of the available space */
   max-width: calc(100vw - 4rem); /* More generous space - only account for essential margins */
 }
@@ -3731,60 +3999,40 @@ button.bg-transparent,
 div.bg-transparent.pill-link,
 a.bg-transparent[href],
 button.bg-transparent[type] {
-  color: oklch(var(--accent-base)) !important;
+  color: oklch(var(--accent-base));
 }
 
 
 
 /* COMPOUND LINK FIXES - Ensure proper inline alignment with flexbox */
 .compound-link-container {
-  display: inline-flex !important;
-  align-items: center !important;
-  white-space: nowrap !important;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 /* Prevent any global link styles from merging compound link pills */
 .compound-link-container > a,
 .compound-link-container > span > a {
-  margin-left: 0.125rem !important;
-  margin-right: 0.125rem !important;
-  border-radius: 0.5rem !important; /* Maintain individual pill border radius */
+  margin-left: 0.125rem;
+  margin-right: 0.125rem;
+  border-radius: 0.5rem; /* Maintain individual pill border radius */
 }
 
 /* Ensure compound link "by" text is properly spaced and styled */
 .compound-link-container > .text-muted-foreground {
-  margin: 0 0.125rem !important;
-  padding: 0 !important;
+  margin: 0 0.125rem;
+  padding: 0;
 }
 
 /* REMOVED: Legacy contentEditable styles - using Slate.js now */
 
 /* REMOVED: Legacy contentEditable compound link styles - using Slate.js now */
 
-/* Comprehensive fix for text contrast issues */
-/* Ensure all text has sufficient contrast against its background */
-.text-muted-foreground {
-  color: oklch(var(--muted-foreground)) !important;
-}
-
-/* Ensure tab text is always readable */
-[role="tab"] {
-  color: oklch(var(--foreground)) !important;
-}
-
-/* Ensure text in light mode has sufficient contrast */
-.light [role="tab"],
-.light .text-muted-foreground,
-.light .text-foreground {
-  color: oklch(var(--foreground)) !important;
-}
-
-/* Ensure text in dark mode has sufficient contrast */
-.dark [role="tab"],
-.dark .text-muted-foreground,
-.dark .text-foreground {
-  color: oklch(var(--foreground)) !important;
-}
+/* Text contrast: Tailwind's text-muted-foreground already resolves to oklch(var(--muted-foreground)),
+   so a duplicate rule here is unnecessary. The .light/.dark overrides were making
+   text-muted-foreground resolve to foreground (not muted), defeating its purpose.
+   Tab text uses foreground by default. All removed as redundant/contradictory. */
 
 /* Systematic Color System - Opacity-based Utility Classes
  * Refactored: Removed !important declarations and consolidated duplicates
@@ -4215,112 +4463,44 @@ button.bg-transparent[type] {
 .text-error-100 { color: oklch(var(--error-base)); }
 
 /* Focus Ring Colors for Buttons */
-.focus-visible\:ring-accent:focus-visible { --tw-ring-color: oklch(var(--accent-base) / 0.5) !important; }
-.focus-visible\:ring-success:focus-visible { --tw-ring-color: oklch(var(--success-base) / 0.5) !important; }
-.focus-visible\:ring-error:focus-visible { --tw-ring-color: oklch(var(--error-base) / 0.5) !important; }
-.focus-visible\:ring-secondary:focus-visible { --tw-ring-color: oklch(var(--secondary) / 0.5) !important; }
-.focus-visible\:ring-muted:focus-visible { --tw-ring-color: oklch(var(--muted) / 0.5) !important; }
+.focus-visible\:ring-accent:focus-visible { --tw-ring-color: oklch(var(--accent-base) / 0.5); }
+.focus-visible\:ring-success:focus-visible { --tw-ring-color: oklch(var(--success-base) / 0.5); }
+.focus-visible\:ring-error:focus-visible { --tw-ring-color: oklch(var(--error-base) / 0.5); }
+.focus-visible\:ring-secondary:focus-visible { --tw-ring-color: oklch(var(--secondary) / 0.5); }
+.focus-visible\:ring-muted:focus-visible { --tw-ring-color: oklch(var(--muted) / 0.5); }
 
 /* Additional muted variants for interactive states */
-.bg-muted\/60 { background-color: oklch(var(--muted) / 0.6) !important; }
-.bg-muted\/70 { background-color: oklch(var(--muted) / 0.7) !important; }
-.bg-muted\/80 { background-color: oklch(var(--muted) / 0.8) !important; }
-.bg-muted\/130 { background-color: oklch(var(--muted) / 1.3) !important; }
-.bg-muted\/140 { background-color: oklch(var(--muted) / 1.4) !important; }
-.bg-muted\/150 { background-color: oklch(var(--muted) / 1.5) !important; }
-.bg-muted\/160 { background-color: oklch(var(--muted) / 1.6) !important; }
+.bg-muted\/60 { background-color: oklch(var(--muted) / 0.6); }
+.bg-muted\/70 { background-color: oklch(var(--muted) / 0.7); }
+.bg-muted\/80 { background-color: oklch(var(--muted) / 0.8); }
+.bg-muted\/130 { background-color: oklch(var(--muted) / 1.3); }
+.bg-muted\/140 { background-color: oklch(var(--muted) / 1.4); }
+.bg-muted\/150 { background-color: oklch(var(--muted) / 1.5); }
+.bg-muted\/160 { background-color: oklch(var(--muted) / 1.6); }
 
 /* Additional secondary variants for interactive states */
-.bg-secondary\/60 { background-color: oklch(var(--secondary) / 0.6) !important; }
-.bg-secondary\/70 { background-color: oklch(var(--secondary) / 0.7) !important; }
-.bg-secondary\/130 { background-color: oklch(var(--secondary) / 1.3) !important; }
-.bg-secondary\/150 { background-color: oklch(var(--secondary) / 1.5) !important; }
+.bg-secondary\/60 { background-color: oklch(var(--secondary) / 0.6); }
+.bg-secondary\/70 { background-color: oklch(var(--secondary) / 0.7); }
+.bg-secondary\/130 { background-color: oklch(var(--secondary) / 1.3); }
+.bg-secondary\/150 { background-color: oklch(var(--secondary) / 1.5); }
 
-/* Theme-Aware Hover States */
-/* These classes automatically get brighter in dark mode and darker in light mode */
-
-/* Primary/Accent Hover States */
-.hover-accent-theme {
-  transition: background-color 0.2s ease;
-}
-
-.hover-accent-theme:hover {
-  background-color: oklch(var(--accent-90)) !important;
-}
-
-[data-theme="dark"] .hover-accent-theme:hover {
-  background-color: oklch(var(--accent-110)) !important;
-}
-
-/* Secondary/Muted Hover States */
-.hover-secondary-theme {
-  transition: background-color 0.2s ease;
-}
-
-.hover-secondary-theme:hover {
-  background-color: oklch(var(--secondary) / 0.8) !important;
-}
-
-[data-theme="dark"] .hover-secondary-theme:hover {
-  background-color: oklch(var(--muted) / 0.3) !important;
-}
-
-/* Ghost/Transparent Hover States */
-.hover-ghost-theme {
-  transition: background-color 0.2s ease;
-}
-
-.hover-ghost-theme:hover {
-  background-color: oklch(var(--muted) / 0.08) !important;
-}
-
-[data-theme="dark"] .hover-ghost-theme:hover {
-  background-color: oklch(var(--muted) / 0.15) !important;
-}
-
-/* Success Hover States */
-.hover-success-theme {
-  transition: background-color 0.2s ease;
-}
-
-.hover-success-theme:hover {
-  background-color: oklch(var(--success-90)) !important;
-}
-
-[data-theme="dark"] .hover-success-theme:hover {
-  background-color: oklch(var(--success-110)) !important;
-}
-
-/* Error/Destructive Hover States */
-.hover-error-theme {
-  transition: background-color 0.2s ease;
-}
-
-.hover-error-theme:hover {
-  background-color: oklch(var(--error-90)) !important;
-}
-
-[data-theme="dark"] .hover-error-theme:hover {
-  background-color: oklch(var(--error-110)) !important;
-}
-
-/* Full Opacity Background Colors - Already included in complete system above */
+/* REMOVED: hover-*-theme classes were unused — delete candidates confirmed via grep */
 
 /* Border neutral alpha classes - very subtle borders for theme compatibility */
 .border-neutral-alpha-3 {
-  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .dark .border-neutral-alpha-3 {
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .hover\:border-neutral-alpha-5:hover {
-  border-color: rgba(0, 0, 0, 0.12) !important;
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .dark .hover\:border-neutral-alpha-5:hover {
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* ==========================================================================
@@ -4780,6 +4960,20 @@ button.bg-transparent[type] {
 .nav-selected-state {
   background-color: oklch(var(--accent-base) / 0.15);
   color: oklch(var(--accent-base));
+}
+
+/* High contrast: disable hover/active background changes to maintain contrast
+   Specificity (0,3,1) beats utility class (0,2,0) — no !important needed */
+html[data-high-contrast="true"] .nav-hover-state:hover {
+  background-color: transparent;
+}
+html[data-high-contrast="true"] .nav-active-state:active {
+  background-color: transparent;
+}
+html[data-high-contrast="true"] .nav-selected-state {
+  background-color: transparent;
+  color: oklch(var(--foreground));
+  font-weight: 700;
 }
 
 /* Mobile Bottom Navigation Icon and Text Alignment */

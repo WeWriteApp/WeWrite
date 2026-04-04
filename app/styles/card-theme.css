@@ -304,11 +304,9 @@ html[data-landing-page="true"].dark .wewrite-card.wewrite-floating {
 }
 
 /* ===== HIGH CONTRAST MODE SUPPORT ===== */
-
-html[data-high-contrast="true"] .wewrite-card {
-  border-width: 1px;
-  border-color: var(--card-text);
-}
+/* NOTE: Card border & hover rules for high contrast are in globals.css
+   (HC border enforcement section) with full-specificity selectors that
+   beat the generic !important hover rule. Only text overrides remain here. */
 
 html[data-high-contrast="true"] .wewrite-card-text-muted {
   color: var(--card-text);

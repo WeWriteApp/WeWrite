@@ -68,7 +68,7 @@ function CollapsibleColorCard({
 export default function ColorSystemManager({ className }: ColorSystemManagerProps) {
   const { accentColor, setAccentColor, getCurrentThemeColor } = useAccentColor();
   const { background, setBackground, lastUploadedImage } = useAppBackground();
-  const { theme } = useTheme();
+  const { theme, highContrast, resolvedTheme } = useTheme();
   const { hasActiveSubscription } = useSubscription();
 
   // State for color systems - initialize with actual context values
@@ -198,8 +198,8 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
       {/* Accent Colors - Independent Light/Dark Mode */}
       <CollapsibleColorCard
         title="Accent Color"
-        description="Set different accent colors for light and dark themes"
-        color={oklchToHex(accentOklch)}
+        description={highContrast ? "Overridden by high contrast mode" : "Set different accent colors for light and dark themes"}
+        color={highContrast ? (resolvedTheme === 'dark' ? '#ffffff' : '#000000') : oklchToHex(accentOklch)}
         isExpanded={expandedCard === 'accent'}
         onToggle={toggleAccent}
       >

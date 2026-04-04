@@ -48,6 +48,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         onClick={handleClick}
         id={id}
         ref={ref}
+        data-high-contrast-switch
         className={cn(
           // Base styles
           "peer inline-flex shrink-0 cursor-pointer items-center rounded-full transition-all duration-200 ease-in-out",
@@ -66,6 +67,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         {...props}
       >
         <span
+          data-high-contrast-thumb
           className={cn(
             // Base thumb styles
             "pointer-events-none block rounded-full shadow-md transition-transform duration-200 ease-in-out",
