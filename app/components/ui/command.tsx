@@ -76,11 +76,14 @@ const CommandDialog = ({ children, shouldFilter, hashId, open, onOpenChange, ...
   const containerRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!open) return;
-    // Wait for portal to mount, then focus the input
-    requestAnimationFrame(() => {
+    // Use a short setTimeout to ensure the portal is fully mounted.
+    // On mobile, the proxy input from CommandPaletteProvider holds keyboard
+    // activation; transferring focus here keeps the keyboard visible.
+    const timer = setTimeout(() => {
       const input = containerRef.current?.querySelector('input');
       input?.focus();
-    });
+    }, 50);
+    return () => clearTimeout(timer);
   }, [open]);
 
   return (

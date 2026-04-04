@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { formatUsdCents } from '../../utils/formatCurrency';
 import { Button } from './button';
-import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
 
 /**
  * Simple Financial Dropdown - Clean implementation with staggered animations
@@ -88,7 +87,6 @@ export function FinancialDropdown({
   demoMessage = 'Demo Mode: Sign up to use real funds!'
 }: FinancialDropdownProps) {
   const router = useRouter();
-  const { openDrawer, isGlobalDrawerActive } = useGlobalDrawer();
   const [isOpen, setIsOpen] = useState(false);
 
   const [isAnimating, setIsAnimating] = useState(false); // For enter animation
@@ -264,13 +262,7 @@ export function FinancialDropdown({
                   size="sm"
                   onClick={() => {
                     closeDropdown();
-                    // On mobile, use drawer system with topoff parameter in subPath
-                    // On desktop, use normal path navigation
-                    if (isGlobalDrawerActive) {
-                      openDrawer('settings', 'fund-account?topoff=true');
-                    } else {
-                      router.push('/settings/fund-account?topoff=true');
-                    }
+                    router.push('/settings/fund-account?topoff=true');
                   }}
                   className="w-full"
                 >

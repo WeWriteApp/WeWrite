@@ -53,7 +53,7 @@ interface NavItem {
  */
 function MainMenuList() {
   const { user, signOut } = useAuth();
-  const { navigateInDrawer, closeAndNavigate, closeDrawer } = useGlobalDrawer();
+  const { closeAndNavigate, closeDrawer } = useGlobalDrawer();
   const { openPalette } = useCommandPalette();
   const { isEnabled: isFeatureEnabled } = useFeatureFlags();
 
@@ -73,6 +73,7 @@ function MainMenuList() {
     { id: 'search', icon: 'Search', label: 'Search', onClick: () => { closeDrawer(); openPalette(); } },
     { id: 'profile', icon: 'User', label: 'Profile', route: user?.uid ? `/u/${user.uid}` : undefined },
     { id: 'notifications', icon: 'Bell', label: 'Notifications', route: '/notifications', badge: <NotificationBadge className="ml-2" /> },
+    { id: 'groups', icon: 'Users', label: 'Groups', route: '/groups', requiresFeatureFlag: 'groups' },
     { id: 'leaderboard', icon: 'Trophy', label: 'Leaderboard', route: '/leaderboard' },
     { id: 'random-pages', icon: 'Shuffle', label: 'Random', route: '/random-pages' },
     { id: 'trending-pages', icon: 'TrendingUp', label: 'Trending', route: '/trending-pages' },
@@ -80,9 +81,8 @@ function MainMenuList() {
     { id: 'recents', icon: 'Clock', label: 'Recents', route: '/recents' },
     { id: 'invite', icon: 'UserPlus', label: 'Invite', route: '/invite' },
     { id: 'map', icon: 'Map', label: 'Map', route: '/map' },
-    { id: 'groups', icon: 'Users', label: 'Groups', route: '/groups', requiresFeatureFlag: 'groups' },
-    { id: 'settings', icon: 'Settings', label: 'Settings', action: 'settings', warningDot: hasSettingsWarning },
-    { id: 'admin', icon: 'Shield', label: 'Admin', action: 'admin', requiresAdmin: true },
+    { id: 'settings', icon: 'Settings', label: 'Settings', route: '/settings', warningDot: hasSettingsWarning },
+    { id: 'admin', icon: 'Shield', label: 'Admin', route: '/admin', requiresAdmin: true },
   ];
 
   // Filter items based on permissions and feature flags
@@ -96,10 +96,6 @@ function MainMenuList() {
   const handleItemClick = (item: NavItem) => {
     if (item.onClick) {
       item.onClick();
-    } else if (item.action === 'settings') {
-      navigateInDrawer('settings');
-    } else if (item.action === 'admin') {
-      navigateInDrawer('admin');
     } else if (item.route) {
       closeAndNavigate(item.route);
     }
@@ -111,8 +107,6 @@ function MainMenuList() {
   return (
     <div className="h-full overflow-y-auto divide-y divide-border pb-safe">
       {filteredItems.map((item) => {
-        const hasChevron = !!item.action; // Show chevron for sub-menu items
-
         return (
           <button
             key={item.id}
@@ -135,9 +129,6 @@ function MainMenuList() {
               </span>
               {item.badge}
             </div>
-            {hasChevron && (
-              <Icon name="ChevronRight" size={20} className="text-muted-foreground" />
-            )}
           </button>
         );
       })}

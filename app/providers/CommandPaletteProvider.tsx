@@ -52,11 +52,41 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [linkLocationContext, setLinkLocationContext] = useState<LinkLocationContext | null>(null);
   const { pageActions } = useCommandPaletteActions();
 
-  const openPalette = useCallback(() => setIsOpen(true), []);
+  /**
+   * On mobile, programmatic .focus() from useEffect won't open the virtual
+   * keyboard because it happens outside a "user activation" context. To work
+   * around this, we create a temporary invisible <input>, focus it
+   * synchronously inside the tap handler (which IS a user activation), then
+   * let the CommandDialog transfer focus to the real input once mounted.
+   */
+  const claimMobileKeyboard = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    // Only needed on touch devices
+    if (!('ontouchstart' in window)) return;
+    const tmp = document.createElement('input');
+    tmp.style.position = 'fixed';
+    tmp.style.opacity = '0';
+    tmp.style.top = '0';
+    tmp.style.left = '0';
+    tmp.style.height = '0';
+    tmp.style.fontSize = '16px'; // prevents iOS auto-zoom
+    tmp.setAttribute('aria-hidden', 'true');
+    tmp.setAttribute('tabindex', '-1');
+    document.body.appendChild(tmp);
+    tmp.focus();
+    // Remove after the real input has had time to take focus
+    setTimeout(() => tmp.remove(), 1000);
+  }, []);
+
+  const openPalette = useCallback(() => {
+    claimMobileKeyboard();
+    setIsOpen(true);
+  }, [claimMobileKeyboard]);
   const openPaletteWithQuery = useCallback((query: string) => {
+    claimMobileKeyboard();
     setInputValue(query);
     setIsOpen(true);
-  }, []);
+  }, [claimMobileKeyboard]);
   const openPaletteWithLocationLink = useCallback((location: LinkLocationContext) => {
     setLinkLocationContext(location);
     setInputValue('');

@@ -19,8 +19,7 @@ import { useNavigationItems } from '../../hooks/useNavigationItems';
 import { useSettingsSections } from '../../hooks/useSettingsSections';
 import { useAuth } from '../../providers/AuthProvider';
 import { useHasKeyboard } from '../../hooks/useHasKeyboard';
-import { useGlobalDrawer } from '../../providers/GlobalDrawerProvider';
-import { useMediaQuery } from '../../hooks/use-media-query';
+
 import { buildNewPageUrl } from '../../utils/pageId';
 import { navigateToRandomPage } from '../../utils/randomPageNavigation';
 import { getRecentSearches, removeRecentSearch, clearRecentSearches } from '../../utils/recentSearches';
@@ -53,8 +52,6 @@ export default function CommandPalette() {
   const { user, signOut } = useAuth();
   const hasKeyboard = useHasKeyboard();
   const router = useRouter();
-  const { openDrawer } = useGlobalDrawer();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const isUserAdmin = user?.isAdmin === true;
 
   const [recentSearches, setRecentSearches] = useState<RecentSearchItem[]>([]);
@@ -82,20 +79,12 @@ export default function CommandPalette() {
   }, [runAction, router]);
 
   const openSettingsSection = useCallback((sectionId: string) => {
-    if (isDesktop) {
-      navigateTo(`/settings/${sectionId}`);
-    } else {
-      runAction(() => openDrawer('settings', `settings/${sectionId}`));
-    }
-  }, [isDesktop, navigateTo, runAction, openDrawer]);
+    navigateTo(`/settings/${sectionId}`);
+  }, [navigateTo]);
 
   const openAdminSection = useCallback((sectionId: string) => {
-    if (isDesktop) {
-      navigateTo(`/admin/${sectionId}`);
-    } else {
-      runAction(() => openDrawer('admin', `admin/${sectionId}`));
-    }
-  }, [isDesktop, navigateTo, runAction, openDrawer]);
+    navigateTo(`/admin/${sectionId}`);
+  }, [navigateTo]);
 
   const handleLogout = useCallback(() => {
     runAction(async () => {

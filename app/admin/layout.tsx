@@ -26,6 +26,7 @@ import { useMediaQuery } from '../hooks/use-media-query';
 import { useAdminSections, AdminSectionWithStatus, ADMIN_TOGGLES } from '../hooks/useAdminSections';
 import { useSidebarContext } from '../components/layout/DesktopSidebar';
 import { SECONDARY_SIDEBAR_LEFT_OFFSET } from '../constants/layout';
+import { MobilePageNav, type MobileNavSection } from '../components/layout/MobilePageNav';
 
 // ============================================================================
 // CONSTANTS
@@ -44,16 +45,14 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
   if (!isHydrated) {
     return (
       <div className={cn(
-        "flex items-center gap-2 bg-background border rounded-lg",
-        isCollapsed ? "p-2 justify-center" : "px-3 py-2"
+        "flex items-center justify-between wewrite-card wewrite-card-no-padding px-4 py-3",
+        isCollapsed ? "justify-center" : ""
       )}>
-        <Icon name="Database" size={16} className="text-muted-foreground" />
-        {!isCollapsed && (
-          <>
-            <span className="text-sm text-muted-foreground">Data:</span>
-            <Icon name="Loader" className="text-muted-foreground" size={14} />
-          </>
-        )}
+        <div className="flex items-center gap-2.5">
+          <Icon name="Database" size={18} className="text-muted-foreground" />
+          {!isCollapsed && <span className="text-sm font-medium">Data Source</span>}
+        </div>
+        {!isCollapsed && <Icon name="Loader" className="text-muted-foreground" size={14} />}
       </div>
     );
   }
@@ -64,7 +63,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
       <button
         onClick={() => setDataSource(isProduction ? 'dev' : 'production')}
         className={cn(
-          "flex items-center justify-center p-2 rounded-lg border transition-colors",
+          "flex items-center justify-center p-2 rounded-lg border border-border transition-colors",
           isProduction
             ? "border-green-500/30 bg-green-500/10 hover:bg-green-500/20"
             : "border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20"
@@ -81,18 +80,29 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
   }
 
   return (
-    <div className="flex items-center gap-2 bg-background border rounded-lg px-3 py-2">
-      <Icon name="Database" size={16} className="text-muted-foreground" />
-      <span className="text-xs text-muted-foreground">Data:</span>
-      <div className="flex items-center gap-1.5">
-        <span className={`text-xs ${!isProduction ? 'font-medium' : 'text-muted-foreground'}`}>
+    <div className={cn(
+      "flex items-center justify-between wewrite-card wewrite-card-no-padding px-4 py-3",
+      isProduction
+        ? "border-green-500/30 bg-green-500/5"
+        : "border-yellow-500/30 bg-yellow-500/5"
+    )}>
+      <div className="flex items-center gap-2.5">
+        <Icon
+          name="Database"
+          size={18}
+          className={isProduction ? "text-green-500" : "text-yellow-500"}
+        />
+        <span className="text-sm font-medium">Data Source</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className={cn("text-sm", !isProduction ? 'font-semibold text-yellow-600 dark:text-yellow-400' : 'text-muted-foreground')}>
           DEV
         </span>
         <Switch
           checked={isProduction}
           onCheckedChange={(checked) => setDataSource(checked ? 'production' : 'dev')}
         />
-        <span className={`text-xs ${isProduction ? 'font-medium' : 'text-muted-foreground'}`}>
+        <span className={cn("text-sm", isProduction ? 'font-semibold text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
           PROD
         </span>
       </div>
@@ -292,11 +302,28 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   // Calculate sidebar width
   const sidebarWidth = isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
 
-  // Mobile: GlobalDrawerRenderer handles the drawer UI
-  // This component returns null on mobile to avoid conflicting drawers
-  // The drawer overlay is rendered by GlobalDrawerRenderer at the root level
+  // Mobile: full-page nav with sliding transitions
   if (!isDesktop) {
-    return null;
+    const mobileNavSections: MobileNavSection[] = sections.map(s => ({
+      id: s.id,
+      title: s.title,
+      icon: s.icon,
+      href: s.href,
+      description: s.description,
+      statusIndicator: s.statusIndicator,
+      isPrimary: s.isPrimary,
+    }));
+
+    return (
+      <MobilePageNav
+        basePath="/admin"
+        sections={mobileNavSections}
+        title="Admin"
+        headerExtra={<AdminDataSourceToggle />}
+      >
+        {children}
+      </MobilePageNav>
+    );
   }
 
   // Desktop: Collapsible sidebar layout

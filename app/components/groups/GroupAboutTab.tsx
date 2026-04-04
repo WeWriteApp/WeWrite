@@ -1,19 +1,44 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Textarea } from '@/components/ui/textarea';
+import dynamic from 'next/dynamic';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/Icon';
 import { toast } from '@/components/ui/use-toast';
 import AutoSaveIndicator from '../layout/AutoSaveIndicator';
+import { PageProvider } from '../../contexts/PageContext';
+
+const ContentDisplay = dynamic(() => import('../content/ContentDisplay'), { ssr: false });
 
 export interface GroupAboutTabProps {
   groupId: string;
-  initialDescription: string;
+  initialDescription: any;
   canEdit: boolean;
-  onSaved?: (description: string) => void;
+  onSaved?: (description: any) => void;
 }
 
-const MAX_DESCRIPTION_LENGTH = 500;
 const DESCRIPTION_PLACEHOLDER = 'Add a short description for this group…';
+
+/** Convert a legacy plain-text description into Slate JSON */
+function toSlateContent(value: any): any {
+  if (!value) return [{ type: 'paragraph', children: [{ text: '' }] }];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    // Try to parse as Slate JSON first
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // plain text — wrap each line as a paragraph
+    }
+    const lines = value.split('\n');
+    return lines.map((line: string) => ({
+      type: 'paragraph',
+      children: [{ text: line }],
+    }));
+  }
+  return [{ type: 'paragraph', children: [{ text: '' }] }];
+}
 
 export default function GroupAboutTab({
   groupId,
@@ -21,7 +46,7 @@ export default function GroupAboutTab({
   canEdit,
   onSaved,
 }: GroupAboutTabProps) {
-  const [description, setDescription] = useState(initialDescription);
+  const [content, setContent] = useState<any>(() => toSlateContent(initialDescription));
   const [isSaving, setIsSaving] = useState(false);
 
   // Auto-save state
@@ -31,30 +56,37 @@ export default function GroupAboutTab({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Refs for auto-save comparison (avoids stale closures)
-  const currentContentRef = useRef<string>(initialDescription);
-  const lastSavedContentRef = useRef<string>(initialDescription);
+  const currentContentRef = useRef<any>(toSlateContent(initialDescription));
+  const lastSavedContentRef = useRef<any>(toSlateContent(initialDescription));
   const autoSaveBaselineInitialized = useRef<boolean>(false);
   const autoSaveBaselineJustInitialized = useRef<boolean>(false);
 
+  // Link insertion trigger (passed up from Editor via ContentDisplay)
+  const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
+
+  const handleInsertLinkRequest = useCallback((triggerFn: () => void) => {
+    setLinkInsertionTrigger(() => triggerFn);
+  }, []);
+
   // Initialize baseline when initialDescription arrives
   useEffect(() => {
-    setDescription(initialDescription);
-    currentContentRef.current = initialDescription;
-    lastSavedContentRef.current = initialDescription;
+    const slate = toSlateContent(initialDescription);
+    setContent(slate);
+    currentContentRef.current = slate;
+    lastSavedContentRef.current = slate;
     autoSaveBaselineInitialized.current = true;
     autoSaveBaselineJustInitialized.current = true;
   }, [initialDescription]);
 
-  const handleChange = (value: string) => {
-    const trimmed = value.slice(0, MAX_DESCRIPTION_LENGTH);
-    setDescription(trimmed);
-    currentContentRef.current = trimmed;
-  };
+  const handleContentChange = useCallback((newContent: any) => {
+    setContent(newContent);
+    currentContentRef.current = newContent;
+  }, []);
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      const contentToSave = currentContentRef.current.trim();
+      const contentToSave = currentContentRef.current;
       const res = await fetch(`/api/groups/${groupId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -89,12 +121,10 @@ export default function GroupAboutTab({
 
     if (autoSaveStatus === 'saving' || autoSaveStatus === 'saved') return;
 
-    // Check for actual changes
-    const currentContent = currentContentRef.current;
-    const savedContent = lastSavedContentRef.current;
-    const contentChanged = currentContent !== savedContent;
-
-    if (!contentChanged) return;
+    // Check for actual changes (compare JSON snapshots)
+    const currentJSON = JSON.stringify(currentContentRef.current);
+    const savedJSON = JSON.stringify(lastSavedContentRef.current);
+    if (currentJSON === savedJSON) return;
 
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
@@ -103,10 +133,9 @@ export default function GroupAboutTab({
     setAutoSaveStatus('pending');
 
     autoSaveTimeoutRef.current = setTimeout(async () => {
-      // Re-check for changes
-      const latestContent = currentContentRef.current;
-      const latestSaved = lastSavedContentRef.current;
-      if (latestContent === latestSaved) {
+      const latestJSON = JSON.stringify(currentContentRef.current);
+      const latestSavedJSON = JSON.stringify(lastSavedContentRef.current);
+      if (latestJSON === latestSavedJSON) {
         setAutoSaveStatus('idle');
         return;
       }
@@ -136,13 +165,19 @@ export default function GroupAboutTab({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [description, canEdit, isSaving, handleSave, autoSaveStatus]);
+  }, [content, canEdit, isSaving, handleSave, autoSaveStatus]);
 
   if (!canEdit) {
     return (
       <div>
-        {description ? (
-          <p className="text-sm text-foreground whitespace-pre-wrap">{description}</p>
+        {initialDescription ? (
+          <ContentDisplay
+            content={toSlateContent(initialDescription)}
+            isEditable={false}
+            showToolbar={false}
+            showLineNumbers={false}
+            className="prose dark:prose-invert max-w-none"
+          />
         ) : (
           <p className="text-sm text-muted-foreground italic">No description yet.</p>
         )}
@@ -152,25 +187,37 @@ export default function GroupAboutTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between">
+        <div>
+          {linkInsertionTrigger && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-2xl font-medium"
+              onClick={() => linkInsertionTrigger()}
+            >
+              <Icon name="Link" size={16} />
+              <span>Insert Link</span>
+            </Button>
+          )}
+        </div>
         <AutoSaveIndicator
           status={autoSaveStatus}
           lastSavedAt={lastSavedAt}
           error={autoSaveError}
         />
       </div>
-      <Textarea
-        value={description}
-        onChange={(e) => handleChange(e.target.value)}
-        placeholder={DESCRIPTION_PLACEHOLDER}
-        className="min-h-[120px] resize-none"
-        maxLength={MAX_DESCRIPTION_LENGTH}
-      />
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">
-          {description.length} / {MAX_DESCRIPTION_LENGTH}
-        </span>
-      </div>
+      <PageProvider>
+        <ContentDisplay
+          content={content}
+          isEditable={true}
+          onChange={handleContentChange}
+          isSaving={isSaving}
+          placeholder={DESCRIPTION_PLACEHOLDER}
+          showToolbar={false}
+          onInsertLinkRequest={handleInsertLinkRequest}
+        />
+      </PageProvider>
     </div>
   );
 }

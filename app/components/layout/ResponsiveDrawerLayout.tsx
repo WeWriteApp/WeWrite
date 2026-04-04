@@ -38,6 +38,7 @@ import { cn } from '../../lib/utils';
 import { useMediaQuery } from '../../hooks/use-media-query';
 import { WarningDot } from '../ui/warning-dot';
 import { SECONDARY_SIDEBAR_LEFT_OFFSET } from '../../constants/layout';
+import { MobilePageNav, type MobileNavSection } from './MobilePageNav';
 
 export interface ResponsiveSection {
   id: string;
@@ -63,14 +64,14 @@ export interface ResponsiveDrawerLayoutProps {
   footerContent?: React.ReactNode;
   /** Optional className for the container */
   className?: string;
-  // Legacy props - kept for backward compatibility but no longer used
-  /** @deprecated No longer used - mobile uses GlobalDrawerProvider */
+  /** Base path for mobile navigation (e.g., '/settings') */
   basePath?: string;
+  // Legacy props - kept for backward compatibility but no longer used
   /** @deprecated No longer used - sidebar has standard header */
   headerContent?: React.ReactNode;
-  /** @deprecated No longer used - mobile uses GlobalDrawerProvider */
+  /** @deprecated No longer used */
   analyticsId?: string;
-  /** @deprecated No longer used - mobile uses GlobalDrawerProvider */
+  /** @deprecated No longer used */
   drawerHeight?: string;
   /** @deprecated No longer used */
   showMenuOnBasePath?: boolean;
@@ -151,6 +152,7 @@ export function ResponsiveDrawerLayout({
   children,
   footerContent,
   className,
+  basePath,
 }: ResponsiveDrawerLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -187,11 +189,26 @@ export function ResponsiveDrawerLayout({
     );
   }
 
-  // Mobile layout - GlobalDrawerRenderer handles the drawer UI
-  // This component just needs to ensure the page doesn't show any blocking content
-  // The drawer overlay is rendered by GlobalDrawerRenderer at the root level
-  // which preserves the previous page behind it
-  return null;
+  // Mobile layout - full-page nav with sliding transitions
+  const mobileNavSections: MobileNavSection[] = sections.map(s => ({
+    id: s.id,
+    title: s.title,
+    icon: s.icon,
+    href: s.href,
+    statusIndicator: s.statusIndicator,
+    showWarning: s.showWarning,
+    warningVariant: s.warningVariant,
+  }));
+
+  return (
+    <MobilePageNav
+      basePath={basePath || '/' + title.toLowerCase()}
+      sections={mobileNavSections}
+      title={title}
+    >
+      {children}
+    </MobilePageNav>
+  );
 }
 
 export default ResponsiveDrawerLayout;

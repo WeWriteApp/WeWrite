@@ -241,19 +241,6 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
               canEdit={!!isOwnerOrAdmin}
               onSaved={(description) => setGroup((prev) => ({ ...prev, description }))}
             />
-            {isOwnerOrAdmin && (
-              <div className="flex justify-center mt-4">
-                <Button
-                  variant="default"
-                  size="lg"
-                  className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-                  onClick={() => setActiveTab('external-links')}
-                >
-                  <Icon name="Link" size={20} />
-                  <span>Insert Link</span>
-                </Button>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="pages" className="mt-0">

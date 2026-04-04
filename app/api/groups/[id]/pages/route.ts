@@ -35,17 +35,22 @@ export async function GET(
       }
     }
 
+    // Query by groupId only and filter/sort in memory.
+    // Using '!=' with orderBy on a different field requires a composite index
+    // that may not exist for all collection prefixes (e.g. DEV_pages).
     const pagesSnap = await db
       .collection(getCollectionName('pages'))
       .where('groupId', '==', groupId)
-      .where('deleted', '!=', true)
-      .orderBy('lastModified', 'desc')
       .get();
 
-    const pages = pagesSnap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const pages = pagesSnap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((p: any) => p.deleted !== true)
+      .sort((a: any, b: any) => {
+        const aTime = a.lastModified?.toMillis?.() ?? a.lastModified ?? 0;
+        const bTime = b.lastModified?.toMillis?.() ?? b.lastModified ?? 0;
+        return bTime - aTime;
+      });
 
     return createApiResponse({ pages });
   } catch (error: any) {

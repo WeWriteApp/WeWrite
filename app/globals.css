@@ -1435,7 +1435,7 @@ html.dark .pill-expand-logo-light { display: none; }
 /* Mobile zoom prevention and text selection */
 @media screen and (max-width: 768px) {
   /* Prevent zoom on interactive elements */
-  button, [role="button"], .button, input, select, textarea {
+  button:not([role="switch"]), [role="button"]:not([role="switch"]), .button, input, select, textarea {
     font-size: max(16px, 1rem); /* Consolidated: prevent zoom on input focus */
   }
 
@@ -1456,9 +1456,16 @@ html.dark .pill-expand-logo-light { display: none; }
   }
 
   /* Interactive elements - consolidated into single rule */
-  button, [role="button"], [tabindex] {
+  button:not([role="switch"]), [role="button"]:not([role="switch"]), [tabindex]:not([role="switch"]) {
     @apply touch-manipulation user-select-none;
     font-size: max(16px, 1rem);
+    pointer-events: auto;
+  }
+
+  /* Switch components - preserve touch-manipulation but skip font-size override */
+  [role="switch"] {
+    @apply touch-manipulation user-select-none;
+    font-size: 0;
     pointer-events: auto;
   }
 

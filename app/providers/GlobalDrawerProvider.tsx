@@ -167,20 +167,6 @@ function calculateNavigationDepth(config: DrawerConfig): number {
  * - /settings/profile -> redirects to #menu/settings/profile
  * - /admin/users -> redirects to #menu/admin/users
  */
-function parsePathToDrawerConfig(pathname: string): { type: 'settings' | 'admin' | null; subPath: string | null } {
-  if (!pathname) return { type: null, subPath: null };
-
-  const parts = pathname.split('/').filter(Boolean);
-  const type = parts[0];
-
-  if (type !== 'settings' && type !== 'admin') {
-    return { type: null, subPath: null };
-  }
-
-  const subPath = parts.slice(1).join('/') || null;
-  return { type, subPath };
-}
-
 // ============================================================================
 // CONTEXT
 // ============================================================================
@@ -226,11 +212,10 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
   // On mobile, use global drawer system
   const isGlobalDrawerActive = isHydrated && !isDesktop;
 
-  // Handle breakpoint changes and path/hash redirects
+  // Handle breakpoint changes and legacy hash redirects
   useEffect(() => {
     if (!isHydrated) return;
 
-    const pathConfig = parsePathToDrawerConfig(pathname || '');
     const hashResult = parseHashToDrawerConfig(typeof window !== 'undefined' ? window.location.hash : '');
 
     // Handle legacy hash redirects (#settings -> #menu/settings)
@@ -241,44 +226,14 @@ export function GlobalDrawerProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    // MOBILE: If user is on a drawer path (e.g., /settings/profile), redirect to hash version
-    if (!isDesktop && pathConfig.type) {
-      // Build the hash URL using the new #menu/... structure
-      const menuSubPath = pathConfig.subPath ? `${pathConfig.type}/${pathConfig.subPath}` : pathConfig.type;
-      const newConfig: DrawerConfig = { type: 'menu', subPath: menuSubPath };
-      const hash = buildHashFromConfig(newConfig);
-      // Replace the path-based URL with hash-based
-      router.replace('/home' + hash);
-      // Set the drawer config
-      setDrawerConfig(newConfig);
-      hashedStateDepthRef.current = calculateNavigationDepth(newConfig);
-      return;
-    }
-
-    // DESKTOP: If user has a drawer hash (e.g., #menu/settings/profile), redirect to path version
-    if (isDesktop && hashResult.config.type === 'menu' && hashResult.config.subPath) {
-      // Extract the path from subPath (e.g., 'settings/profile' -> /settings/profile)
-      const path = `/${hashResult.config.subPath}`;
-      // Replace the hash-based URL with path-based
-      router.replace(path);
-      // Clear hash from URL
-      if (typeof window !== 'undefined') {
-        window.history.replaceState(null, '', path);
-      }
-      return;
-    }
-
     // Handle breakpoint change while drawer is open
     if (prevIsDesktopRef.current !== null && prevIsDesktopRef.current !== isDesktop) {
-      if (drawerConfig.type === 'menu' && drawerConfig.subPath) {
+      if (drawerConfig.type === 'menu') {
         if (isDesktop) {
-          // Switched to desktop with drawer open -> navigate to path
-          const path = `/${drawerConfig.subPath}`;
-          router.replace(path);
+          // Switched to desktop with drawer open -> close the drawer
           setDrawerConfig({ type: null, subPath: null });
           hashedStateDepthRef.current = 0;
         }
-        // If switched to mobile with path -> already handled above
       }
     }
 

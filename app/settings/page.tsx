@@ -3,12 +3,8 @@
 /**
  * Settings Index Page
  *
- * This page is a placeholder that:
- * - On desktop: Redirects to the first settings section (since desktop shows sidebar)
- * - On mobile: Renders nothing (the layout handles showing the drawer with menu)
- *
- * The actual settings menu is now rendered by the layout's drawer on mobile,
- * using path-based navigation for proper analytics tracking and deep linking.
+ * - On desktop: Redirects to the first settings section (sidebar needs a selected section)
+ * - On mobile: Returns null (MobilePageNav in the layout handles the menu)
  */
 
 import { useAuth } from '../providers/AuthProvider';
@@ -48,19 +44,16 @@ export default function SettingsIndexPage() {
     }
 
     // On desktop, always redirect to first available settings page
-    // The sidebar needs a selected section to display
     if (isDesktop && sections.length > 0) {
       router.push(sections[0].href);
     }
-
-    // On mobile, do nothing - the layout's drawer shows the menu
   }, [user, router, sections, isDesktop]);
 
   if (!user) {
     return null;
   }
 
-  // On mobile, render nothing - the layout's drawer handles showing the menu
-  // On desktop, we'll redirect to the first section (handled in useEffect)
+  // On mobile, the layout's MobilePageNav shows the menu
+  // On desktop, we redirect to the first section (handled in useEffect)
   return null;
 }

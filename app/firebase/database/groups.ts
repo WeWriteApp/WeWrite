@@ -337,14 +337,21 @@ export async function getInvitationById(invitationId: string): Promise<GroupInvi
  */
 export async function getGroupPages(groupId: string): Promise<any[]> {
   try {
+    // Query by groupId only and filter/sort in memory to avoid composite
+    // index requirements that differ across collection prefixes (DEV_ vs prod).
     const q = query(
       collection(db, getCollectionName('pages')),
-      where('groupId', '==', groupId),
-      where('deleted', '!=', true),
-      orderBy('lastModified', 'desc')
+      where('groupId', '==', groupId)
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((p: any) => p.deleted !== true)
+      .sort((a: any, b: any) => {
+        const aTime = a.lastModified?.toMillis?.() ?? a.lastModified ?? 0;
+        const bTime = b.lastModified?.toMillis?.() ?? b.lastModified ?? 0;
+        return bTime - aTime;
+      });
   } catch (error) {
     console.error('[Groups] Error getting group pages:', error);
     return [];
