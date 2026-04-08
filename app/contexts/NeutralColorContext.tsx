@@ -89,10 +89,31 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
     root.style.setProperty('--neutral-popover-dark', darkPopover);
     root.style.setProperty('--neutral-popover-foreground-dark', darkPopoverForeground);
 
-    // Apply based on current theme
+    // Apply based on current theme and high contrast mode
     const applyThemeVariables = () => {
       const isDark = document.documentElement.classList.contains('dark');
+      const isHighContrast = document.documentElement.getAttribute('data-high-contrast') === 'true';
 
+      if (isHighContrast) {
+        // High contrast: solid borders and backgrounds, no alpha transparency
+        root.style.setProperty('--muted', isDark ? '0.15 0 0' : '0.92 0 0');
+        root.style.setProperty('--muted-foreground', isDark ? '0.70 0 0' : '0.30 0 0');
+        root.style.setProperty('--secondary', isDark ? '0.15 0 0' : '0.92 0 0');
+        root.style.setProperty('--secondary-foreground', isDark ? '1.00 0 0' : '0.00 0 0');
+        root.style.setProperty('--border', isDark ? '1.00 0 0' : '0.00 0 0');
+        root.style.setProperty('--input', isDark ? '0.20 0 0' : '0.85 0 0');
+        root.style.setProperty('--card', isDark ? '0.00 0 0' : '1.00 0 0');
+        root.style.setProperty('--card-foreground', isDark ? '1.00 0 0' : '0.00 0 0');
+        root.style.setProperty('--popover', isDark ? '0.00 0 0' : '1.00 0 0');
+        root.style.setProperty('--popover-foreground', isDark ? '1.00 0 0' : '0.00 0 0');
+        root.style.setProperty('--card-bg', isDark ? 'oklch(0.00 0 0)' : 'oklch(1.00 0 0)');
+        root.style.setProperty('--card-bg-hover', isDark ? 'oklch(0.10 0 0)' : 'oklch(0.95 0 0)');
+        root.style.setProperty('--card-border', isDark ? 'oklch(1.00 0 0)' : 'oklch(0.00 0 0)');
+        root.style.setProperty('--card-border-hover', isDark ? 'oklch(1.00 0 0)' : 'oklch(0.00 0 0)');
+        return;
+      }
+
+      // Normal mode: subtle alpha-based neutrals
       root.style.setProperty('--muted', isDark ? darkMuted : lightMuted);
       root.style.setProperty('--muted-foreground', isDark ? darkMutedForeground : lightMutedForeground);
       root.style.setProperty('--secondary', isDark ? darkSecondary : lightSecondary);
@@ -118,10 +139,10 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
     // Apply immediately
     applyThemeVariables();
 
-    // Listen for theme changes
+    // Listen for theme changes and high contrast toggles
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        if (mutation.type === 'attributes' && (mutation.attributeName === 'class' || mutation.attributeName === 'data-high-contrast')) {
           applyThemeVariables();
         }
       });
@@ -129,7 +150,7 @@ export function NeutralColorProvider({ children }: { children: React.ReactNode }
 
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ['class', 'data-high-contrast']
     });
 
     return () => observer.disconnect();

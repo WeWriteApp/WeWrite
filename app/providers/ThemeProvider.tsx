@@ -10,18 +10,17 @@
  * 4. When adding new UI elements, ensure they inherit theme colors through CSS variables
  * 5. All theme-related styling should use the CSS variables defined in globals.css
  *
- * Example usage:
- * ```
- * const { theme, setTheme } = useTheme();
- * // theme will be either "light", "dark", or "system"
- * ```
+ * HIGH CONTRAST MODE:
+ * High contrast is managed via a shared React context (HighContrastContext) inside ThemeProvider.
+ * All consumers of useTheme() share the same highContrast state. When toggled, ALL subscribers
+ * (AccentColorContext, NeutralColorContext, etc.) receive the update and re-apply CSS variables.
+ * The `data-high-contrast` attribute on <html> is set for CSS fallback/initial styles only;
+ * the JS-managed inline styles are the source of truth at runtime.
  */
 
 import * as React from "react";
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "next-themes";
-/**
- * Theme provider props interface
- */
+
 type ThemeProviderProps = {
   children: React.ReactNode;
   attribute?: string;
@@ -31,19 +30,27 @@ type ThemeProviderProps = {
   themes?: string[];
 };
 
-// Simple high contrast hook implementation
-function useHighContrast() {
+// Shared high contrast context — single source of truth for HC state
+const HighContrastContext = React.createContext<{
+  highContrast: boolean;
+  toggleHighContrast: () => void;
+}>({
+  highContrast: false,
+  toggleHighContrast: () => {},
+});
+
+function HighContrastProvider({ children }: { children: React.ReactNode }) {
   const [highContrast, setHighContrast] = React.useState(false);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
-  // Set hydration state after component mounts
   React.useEffect(() => {
     setIsHydrated(true);
-    // Load high contrast preference from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('high-contrast');
-      if (saved) {
+    const saved = localStorage.getItem('high-contrast');
+    if (saved) {
+      try {
         setHighContrast(JSON.parse(saved));
+      } catch {
+        // Invalid value — ignore
       }
     }
   }, []);
@@ -51,16 +58,14 @@ function useHighContrast() {
   const toggleHighContrast = React.useCallback(() => {
     setHighContrast(prev => {
       const newValue = !prev;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('high-contrast', JSON.stringify(newValue));
-      }
+      localStorage.setItem('high-contrast', JSON.stringify(newValue));
       return newValue;
     });
   }, []);
 
-  // Apply high contrast mode to document
+  // Sync attribute to DOM for CSS fallback rules
   React.useEffect(() => {
-    if (isHydrated && typeof window !== 'undefined') {
+    if (isHydrated) {
       if (highContrast) {
         document.documentElement.setAttribute('data-high-contrast', 'true');
       } else {
@@ -69,13 +74,22 @@ function useHighContrast() {
     }
   }, [highContrast, isHydrated]);
 
-  return { highContrast, toggleHighContrast };
+  const value = React.useMemo(
+    () => ({ highContrast, toggleHighContrast }),
+    [highContrast, toggleHighContrast]
+  );
+
+  return (
+    <HighContrastContext.Provider value={value}>
+      {children}
+    </HighContrastContext.Provider>
+  );
 }
 
-// Extended theme hook with high contrast mode support
+// Shared hook — all callers share the same HC state via context
 export function useTheme() {
   const nextTheme = useNextTheme();
-  const { highContrast, toggleHighContrast } = useHighContrast();
+  const { highContrast, toggleHighContrast } = React.useContext(HighContrastContext);
 
   return {
     ...nextTheme,
@@ -85,12 +99,6 @@ export function useTheme() {
   };
 }
 
-/**
- * ThemeProvider component that wraps the application with theme support
- *
- * @param props - The theme provider props
- * @param props.children - Child components to render
- */
 export function ThemeProvider({
   children,
   attribute = "class",
@@ -108,7 +116,9 @@ export function ThemeProvider({
       suppressHydrationWarning
       {...props}
     >
-      {children}
+      <HighContrastProvider>
+        {children}
+      </HighContrastProvider>
     </NextThemesProvider>
   );
 }

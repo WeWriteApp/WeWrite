@@ -2926,13 +2926,13 @@ select.wewrite-input:focus-visible {
 html[data-high-contrast="true"]:not(.dark) .wewrite-card,
 html[data-high-contrast="true"]:not(.dark) [class*="border-theme-"] {
   border-color: black;
-  border-width: 2px;
+  border-width: 1.5px;
 }
 
 html[data-high-contrast="true"].dark .wewrite-card,
 html[data-high-contrast="true"].dark [class*="border-theme-"] {
   border-color: white;
-  border-width: 2px;
+  border-width: 1.5px;
 }
 
 /* High contrast: card HOVER override
@@ -2940,7 +2940,7 @@ html[data-high-contrast="true"].dark [class*="border-theme-"] {
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-input:hover,
 html[data-high-contrast="true"]:not(.dark) .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
   border-color: black;
-  border-width: 3px;
+  border-width: 2.5px;
   background-color: var(--card-bg);
   box-shadow: none;
   transform: none;
@@ -2949,7 +2949,7 @@ html[data-high-contrast="true"]:not(.dark) .wewrite-card:not(.wewrite-input):hov
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-input:hover,
 html[data-high-contrast="true"].dark .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
   border-color: white;
-  border-width: 3px;
+  border-width: 2.5px;
   background-color: var(--card-bg);
   box-shadow: none;
   transform: none;
@@ -2962,21 +2962,21 @@ html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-non
 }
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-top {
   border: none;
-  border-top: 2px solid black;
+  border-top: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-bottom {
   border: none;
-  border-bottom: 2px solid black;
+  border-bottom: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-x {
   border: none;
-  border-left: 2px solid black;
-  border-right: 2px solid black;
+  border-left: 1.5px solid black;
+  border-right: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-card-border-y {
   border: none;
-  border-top: 2px solid black;
-  border-bottom: 2px solid black;
+  border-top: 1.5px solid black;
+  border-bottom: 1.5px solid black;
 }
 
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-none {
@@ -2984,105 +2984,105 @@ html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-none {
 }
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-top {
   border: none;
-  border-top: 2px solid white;
+  border-top: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-bottom {
   border: none;
-  border-bottom: 2px solid white;
+  border-bottom: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-x {
   border: none;
-  border-left: 2px solid white;
-  border-right: 2px solid white;
+  border-left: 1.5px solid white;
+  border-right: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-card-border-y {
   border: none;
-  border-top: 2px solid white;
-  border-bottom: 2px solid white;
+  border-top: 1.5px solid white;
+  border-bottom: 1.5px solid white;
 }
 
 /* High contrast: strengthen existing borders (full border)
    Specificity (0,2,1) beats Tailwind .border (0,1,0) */
 html[data-high-contrast="true"]:not(.dark) .border {
   border-color: black;
-  border-width: 2px;
+  border-width: 1.5px;
 }
 html[data-high-contrast="true"].dark .border {
   border-color: white;
-  border-width: 2px;
+  border-width: 1.5px;
 }
 
 /* High contrast: directional borders - only strengthen the specified side */
 html[data-high-contrast="true"]:not(.dark) .border-t {
   border-top-color: black;
-  border-top-width: 2px;
+  border-top-width: 1.5px;
 }
 html[data-high-contrast="true"]:not(.dark) .border-b {
   border-bottom-color: black;
-  border-bottom-width: 2px;
+  border-bottom-width: 1.5px;
 }
 html[data-high-contrast="true"]:not(.dark) .border-l {
   border-left-color: black;
-  border-left-width: 2px;
+  border-left-width: 1.5px;
 }
 html[data-high-contrast="true"]:not(.dark) .border-r {
   border-right-color: black;
-  border-right-width: 2px;
+  border-right-width: 1.5px;
 }
 
 html[data-high-contrast="true"].dark .border-t {
   border-top-color: white;
-  border-top-width: 2px;
+  border-top-width: 1.5px;
 }
 html[data-high-contrast="true"].dark .border-b {
   border-bottom-color: white;
-  border-bottom-width: 2px;
+  border-bottom-width: 1.5px;
 }
 html[data-high-contrast="true"].dark .border-l {
   border-left-color: white;
-  border-left-width: 2px;
+  border-left-width: 1.5px;
 }
 html[data-high-contrast="true"].dark .border-r {
   border-right-color: white;
-  border-right-width: 2px;
+  border-right-width: 1.5px;
 }
 
 /* High contrast: *-only directional border classes */
 html[data-high-contrast="true"]:not(.dark) .border-t-only {
-  border-top: 2px solid black;
+  border-top: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) .border-b-only {
-  border-bottom: 2px solid black;
+  border-bottom: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) .border-l-only {
-  border-left: 2px solid black;
+  border-left: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) .border-r-only {
-  border-right: 2px solid black;
+  border-right: 1.5px solid black;
 }
 
 html[data-high-contrast="true"].dark .border-t-only {
-  border-top: 2px solid white;
+  border-top: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark .border-b-only {
-  border-bottom: 2px solid white;
+  border-bottom: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark .border-l-only {
-  border-left: 2px solid white;
+  border-left: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark .border-r-only {
-  border-right: 2px solid white;
+  border-right: 1.5px solid white;
 }
 
 /* High contrast: docked floating cards (bottom toolbar) - top border only
    KEEP !important: fights Tailwind's !border-*-0 utilities which have their own !important */
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.\!border-l-0.\!border-r-0.\!border-b-0 {
   border: none !important;
-  border-top: 2px solid black !important;
+  border-top: 1.5px solid black !important;
 }
 html[data-high-contrast="true"].dark .wewrite-card.\!border-l-0.\!border-r-0.\!border-b-0 {
   border: none !important;
-  border-top: 2px solid white !important;
+  border-top: 1.5px solid white !important;
 }
 
 /* High contrast: dividers between items (divide-y, divide-x)
@@ -3105,16 +3105,16 @@ html[data-high-contrast="true"] * {
    box-shadow handled by wildcard rule above. */
 html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="false"] {
   background-color: white;
-  border: 2px solid black;
+  border: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="false"] [data-high-contrast-thumb] {
   background-color: white;
-  border: 2px solid black;
+  border: 1.5px solid black;
 }
 /* High contrast: Switch - checked state is solid, no outlines needed */
 html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="true"] {
   background-color: black;
-  border: 2px solid black;
+  border: 1.5px solid black;
 }
 html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-checked="true"] [data-high-contrast-thumb] {
   background-color: white;
@@ -3124,16 +3124,16 @@ html[data-high-contrast="true"]:not(.dark) [data-high-contrast-switch][aria-chec
 /* High contrast dark: Switch - unchecked state needs outlines */
 html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="false"] {
   background-color: black;
-  border: 2px solid white;
+  border: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="false"] [data-high-contrast-thumb] {
   background-color: black;
-  border: 2px solid white;
+  border: 1.5px solid white;
 }
 /* High contrast dark: Switch - checked state is solid white */
 html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="true"] {
   background-color: white;
-  border: 2px solid white;
+  border: 1.5px solid white;
 }
 html[data-high-contrast="true"].dark [data-high-contrast-switch][aria-checked="true"] [data-high-contrast-thumb] {
   background-color: black;
@@ -3204,6 +3204,266 @@ html[data-high-contrast="true"] .pill-filled-style {
 }
 html[data-high-contrast="true"] .pill-filled-style:hover {
   opacity: 0.85;
+}
+
+/* ==========================================================================
+   High Contrast: Component Overrides
+   Ensures all interactive components have solid, visible states in HC mode.
+   Uses oklch(var(--foreground)) / oklch(var(--background)) for pure B/W.
+   ========================================================================== */
+
+/* --- Buttons ------------------------------------------------------------ */
+/* Primary/default: solid foreground bg, background text */
+html[data-high-contrast="true"] .bg-primary {
+  background-color: oklch(var(--foreground)) !important;
+  color: oklch(var(--background)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .bg-primary:hover {
+  opacity: 0.85;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .bg-primary:active {
+  opacity: 0.75;
+  background-image: none !important;
+}
+
+/* Destructive: solid foreground bg (no color distinction needed in HC) */
+html[data-high-contrast="true"] .bg-error {
+  background-color: oklch(var(--foreground)) !important;
+  color: oklch(var(--background)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .bg-error:hover {
+  opacity: 0.85;
+  background-image: none !important;
+}
+
+/* Success: solid foreground bg */
+html[data-high-contrast="true"] .bg-success {
+  background-color: oklch(var(--foreground)) !important;
+  color: oklch(var(--background)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .bg-success:hover {
+  opacity: 0.85;
+  background-image: none !important;
+}
+
+/* Warning: solid foreground bg */
+html[data-high-contrast="true"] .bg-warning {
+  background-color: oklch(var(--foreground)) !important;
+  color: oklch(var(--background)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .bg-warning:hover {
+  opacity: 0.85;
+  background-image: none !important;
+}
+
+/* Secondary button: outlined style in HC */
+html[data-high-contrast="true"] .bg-neutral-5 {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .bg-neutral-5:hover {
+  background-color: oklch(var(--foreground) / 0.1) !important;
+  background-image: none !important;
+}
+
+/* Outline button: strong border */
+html[data-high-contrast="true"] .border-neutral-20 {
+  border-color: oklch(var(--foreground)) !important;
+  border-width: 1.5px !important;
+}
+
+/* Ghost button: no bg, visible hover */
+html[data-high-contrast="true"] .hover\:bg-alpha-5:hover {
+  background-color: oklch(var(--foreground) / 0.15) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .active\:bg-alpha-10:active {
+  background-color: oklch(var(--foreground) / 0.25) !important;
+  background-image: none !important;
+}
+
+/* Override all alpha hover/active overlays in HC - they're invisible */
+html[data-high-contrast="true"] .hover\:alpha-10:hover,
+html[data-high-contrast="true"] .hover\:alpha-15:hover,
+html[data-high-contrast="true"] .hover\:alpha-20:hover {
+  background-image: none !important;
+  opacity: 0.85;
+}
+html[data-high-contrast="true"] .active\:alpha-10:active,
+html[data-high-contrast="true"] .active\:alpha-15:active,
+html[data-high-contrast="true"] .active\:alpha-20:active,
+html[data-high-contrast="true"] .active\:alpha-25:active {
+  background-image: none !important;
+  opacity: 0.75;
+}
+
+/* Semantic color alpha overlays */
+html[data-high-contrast="true"] .hover\:success-alpha-10:hover,
+html[data-high-contrast="true"] .hover\:error-alpha-10:hover {
+  background-image: none !important;
+  opacity: 0.85;
+}
+html[data-high-contrast="true"] .active\:success-alpha-15:active,
+html[data-high-contrast="true"] .active\:error-alpha-15:active {
+  background-image: none !important;
+  opacity: 0.75;
+}
+
+/* Destructive-secondary / Success-secondary: outlined in HC */
+html[data-high-contrast="true"] .bg-error-10 {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+}
+html[data-high-contrast="true"] .bg-success-10 {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+}
+
+/* --- Badges ------------------------------------------------------------- */
+/* Badge neutral secondary: outlined */
+html[data-high-contrast="true"] .bg-neutral-10 {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+}
+
+/* Badge warning-secondary */
+html[data-high-contrast="true"] .bg-warning\/10 {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+}
+
+/* --- Alerts ------------------------------------------------------------- */
+/* All alert variants get solid borders and foreground text in HC */
+html[data-high-contrast="true"] [role="alert"] {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+}
+html[data-high-contrast="true"] [role="alert"] svg {
+  color: oklch(var(--foreground)) !important;
+}
+
+/* --- Inputs ------------------------------------------------------------- */
+/* Input fields: solid border, no glassmorphism in HC */
+html[data-high-contrast="true"] .wewrite-input {
+  background-color: oklch(var(--background)) !important;
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  color: oklch(var(--foreground)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+html[data-high-contrast="true"] .wewrite-input:focus,
+html[data-high-contrast="true"] .wewrite-input:focus-visible {
+  border-color: oklch(var(--foreground)) !important;
+  outline: 2px solid oklch(var(--foreground)) !important;
+  outline-offset: 1px !important;
+  box-shadow: none !important;
+}
+html[data-high-contrast="true"] .wewrite-input::placeholder {
+  color: oklch(var(--foreground) / 0.6) !important;
+}
+
+/* --- Select ------------------------------------------------------------- */
+/* Select trigger: solid border */
+html[data-high-contrast="true"] .border-theme-strong {
+  border-color: oklch(var(--foreground)) !important;
+}
+/* Select chevron: full opacity */
+html[data-high-contrast="true"] .opacity-50 {
+  opacity: 1 !important;
+}
+/* Select items hover */
+html[data-high-contrast="true"] .hover\:bg-accent:hover {
+  background-color: oklch(var(--foreground)) !important;
+  color: oklch(var(--background)) !important;
+}
+
+/* --- Dropdown Menu ------------------------------------------------------ */
+/* Dropdown items: solid hover bg */
+html[data-high-contrast="true"] .hover\:bg-alpha-10:hover {
+  background-color: oklch(var(--foreground) / 0.15) !important;
+  background-image: none !important;
+}
+html[data-high-contrast="true"] .focus\:bg-alpha-10:focus {
+  background-color: oklch(var(--foreground) / 0.15) !important;
+  background-image: none !important;
+}
+/* Dropdown separator: solid line */
+html[data-high-contrast="true"] .bg-muted {
+  background-color: oklch(var(--foreground) / 0.3) !important;
+}
+
+/* --- Separator ---------------------------------------------------------- */
+html[data-high-contrast="true"] .bg-border\/60 {
+  background-color: oklch(var(--foreground)) !important;
+}
+
+/* --- Skeleton ----------------------------------------------------------- */
+html[data-high-contrast="true"] .bg-muted\/20 {
+  background-color: oklch(var(--foreground) / 0.15) !important;
+}
+html[data-high-contrast="true"] .bg-muted\/40 {
+  background-color: oklch(var(--foreground) / 0.25) !important;
+}
+
+/* --- SubscriptionTierBadge ---------------------------------------------- */
+/* Star icons: use full foreground color instead of yellow with opacity */
+html[data-high-contrast="true"] .text-yellow-400\/70 {
+  color: oklch(var(--foreground)) !important;
+}
+html[data-high-contrast="true"] .text-yellow-400 {
+  color: oklch(var(--foreground)) !important;
+}
+html[data-high-contrast="true"] .text-yellow-500 {
+  color: oklch(var(--foreground)) !important;
+}
+/* Hide decorative particles in HC */
+html[data-high-contrast="true"] .particle-emit {
+  display: none !important;
+}
+/* Remove glow effects in HC */
+html[data-high-contrast="true"] .drop-shadow-\[0_0_4px_rgba\(250\,204\,21\,0\.6\)\] {
+  filter: none !important;
+}
+
+/* --- Disabled states ---------------------------------------------------- */
+/* Ensure disabled elements are distinguishable in HC */
+html[data-high-contrast="true"] [disabled],
+html[data-high-contrast="true"] .disabled\:opacity-50[disabled] {
+  opacity: 0.4 !important;
+  border-style: dashed !important;
+}
+
+/* --- Focus rings -------------------------------------------------------- */
+/* Ensure focus rings are fully visible in HC */
+html[data-high-contrast="true"] :focus-visible {
+  outline: 2px solid oklch(var(--foreground)) !important;
+  outline-offset: 2px !important;
+}
+html[data-high-contrast="true"] .focus-visible\:ring-2:focus-visible {
+  box-shadow: 0 0 0 2px oklch(var(--foreground)) !important;
+}
+
+/* --- Muted foreground text ---------------------------------------------- */
+/* Boost muted text that uses opacity - make it at least 60% visible */
+html[data-high-contrast="true"] .text-muted-foreground {
+  color: oklch(var(--foreground) / 0.7) !important;
 }
 
 /* Mobile-specific card grid improvements */

@@ -173,26 +173,52 @@ export default function RootLayout({
                   // Set background color directly on html to cover the gap before CSS loads
                   style.backgroundColor = isDark ? '#000' : '#fff';
 
-                  // 3. ACCENT COLORS: Apply saved accent colors to prevent flash of default blue
-                  var colorKey = isDark ? 'accent-color-dark' : 'accent-color-light';
-                  var savedColor = localStorage.getItem(colorKey);
+                  // 3. HIGH CONTRAST: Apply immediately if saved (before React hydrates)
+                  var hc = localStorage.getItem('high-contrast');
+                  var isHighContrast = false;
+                  if (hc) {
+                    try { isHighContrast = JSON.parse(hc); } catch(e) {}
+                    if (isHighContrast) {
+                      d.setAttribute('data-high-contrast', 'true');
+                      // Override foreground/background for HC
+                      style.setProperty('--foreground', isDark ? '1.00 0 0' : '0.00 0 0');
+                      style.setProperty('--background', isDark ? '0.00 0 0' : '1.00 0 0');
+                      // HC accent: pure black/white
+                      var hcBase = isDark ? '1.00 0.00 0.0' : '0.00 0.00 0.0';
+                      style.setProperty('--accent-base', hcBase);
+                      style.setProperty('--primary', hcBase);
+                      style.setProperty('--accent-l', isDark ? '1.00' : '0.00');
+                      style.setProperty('--accent-c', '0.00');
+                      style.setProperty('--accent-h', '0.0');
+                      var hcFg = isDark ? '0.00 0.00 0.0' : '1.00 0.00 0.0';
+                      style.setProperty('--primary-foreground', hcFg);
+                      style.setProperty('--neutral-base', hcBase);
+                    }
+                  }
 
-                  if (savedColor) {
-                    var color = JSON.parse(savedColor);
-                    if (color.l !== undefined && color.c !== undefined && color.h !== undefined) {
-                      var base = color.l.toFixed(2) + ' ' + color.c.toFixed(2) + ' ' + color.h.toFixed(1);
-                      style.setProperty('--accent-base', base);
-                      style.setProperty('--primary', base);
-                      style.setProperty('--accent-l', color.l.toFixed(2));
-                      style.setProperty('--accent-c', color.c.toFixed(2));
-                      style.setProperty('--accent-h', color.h.toFixed(1));
+                  // 4. ACCENT COLORS: Apply saved accent colors to prevent flash of default blue
+                  // (skip if HC is active — HC already set the accent above)
+                  if (!isHighContrast) {
+                    var colorKey = isDark ? 'accent-color-dark' : 'accent-color-light';
+                    var savedColor = localStorage.getItem(colorKey);
 
-                      var neutralC = Math.min(color.c * 0.3, 0.05);
-                      var neutralBase = color.l.toFixed(2) + ' ' + neutralC.toFixed(2) + ' ' + color.h.toFixed(1);
-                      style.setProperty('--neutral-base', neutralBase);
+                    if (savedColor) {
+                      var color = JSON.parse(savedColor);
+                      if (color.l !== undefined && color.c !== undefined && color.h !== undefined) {
+                        var base = color.l.toFixed(2) + ' ' + color.c.toFixed(2) + ' ' + color.h.toFixed(1);
+                        style.setProperty('--accent-base', base);
+                        style.setProperty('--primary', base);
+                        style.setProperty('--accent-l', color.l.toFixed(2));
+                        style.setProperty('--accent-c', color.c.toFixed(2));
+                        style.setProperty('--accent-h', color.h.toFixed(1));
 
-                      var fg = color.l > 0.70 ? '0.00 0.00 0.0' : '1.00 0.00 0.0';
-                      style.setProperty('--primary-foreground', fg);
+                        var neutralC = Math.min(color.c * 0.3, 0.05);
+                        var neutralBase = color.l.toFixed(2) + ' ' + neutralC.toFixed(2) + ' ' + color.h.toFixed(1);
+                        style.setProperty('--neutral-base', neutralBase);
+
+                        var fg = color.l > 0.70 ? '0.00 0.00 0.0' : '1.00 0.00 0.0';
+                        style.setProperty('--primary-foreground', fg);
+                      }
                     }
                   }
                 } catch (e) {

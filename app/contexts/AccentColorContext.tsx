@@ -177,8 +177,19 @@ export function AccentColorProvider({ children }: { children: React.ReactNode })
       document.documentElement.style.setProperty('--primary-foreground', hcForeground);
       document.documentElement.style.setProperty('--neutral-base', hcBase);
       document.documentElement.style.setProperty('--accent-color-rgb', hcRgb);
+      // Also set foreground/background — the inline <head> script sets these as inline
+      // styles which override CSS `html[data-high-contrast]` rules, so we must set them here
+      document.documentElement.style.setProperty('--foreground', isDark ? '1.00 0 0' : '0.00 0 0');
+      document.documentElement.style.setProperty('--background', isDark ? '0.00 0 0' : '1.00 0 0');
+      document.documentElement.style.backgroundColor = isDark ? '#000' : '#fff';
       return;
     }
+
+    // Restore foreground/background to normal theme values when leaving HC
+    const isDarkNormal = resolvedTheme === 'dark';
+    document.documentElement.style.setProperty('--foreground', isDarkNormal ? '0.93 0 0' : '0.20 0 0');
+    document.documentElement.style.setProperty('--background', isDarkNormal ? '0.00 0 0' : '1.00 0 0');
+    document.documentElement.style.backgroundColor = isDarkNormal ? '#000' : '#fff';
 
     // Use the memoized current theme color for CSS variables (already computed)
     const currentColor = currentThemeColor;

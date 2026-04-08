@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { useTheme } from 'next-themes';
 import { getBestTextColor } from "../utils/accessibility";
 import { useAccentColor } from "./AccentColorContext";
-import { hexToOklch } from "../lib/oklch-utils";
 
 // Define the available pill/link styles (link appearance only)
 export const PILL_STYLES = {
@@ -27,7 +26,7 @@ export type UIStyle = typeof UI_STYLES[keyof typeof UI_STYLES];
 interface PillStyleContextType {
   pillStyle: PillStyle;
   changePillStyle: (style: PillStyle) => void;
-  getPillStyleClasses: (context?: string) => string;
+  getPillStyleClasses: (context?: string, styleOverride?: PillStyle) => string;
   getTextColorForPill: (backgroundColor: string) => string;
   // UI style (shiny vs flat) - affects buttons, chips, and other UI elements
   uiStyle: UIStyle;
@@ -61,15 +60,13 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   const { theme } = useTheme();
   const { accentColor } = useAccentColor();
 
-  // Determine text color for filled pills based on accent color lightness
-  // Returns Tailwind class with ! prefix for important to override other styles
+  // Determine text color for filled pills
+  // Uses text-primary-foreground which is automatically set by AccentColorContext
+  // based on accent lightness (>0.70 = black text, else = white text), and also
+  // correctly handles HC mode where it's set to the appropriate HC foreground color
   const getFilledTextColor = useCallback(() => {
-    const oklch = hexToOklch(accentColor);
-    if (oklch && oklch.l >= 0.80) {
-      return '!text-black'; // Use black text for light backgrounds (≥80% lightness)
-    }
-    return '!text-white'; // Use white text for dark backgrounds (<80% lightness)
-  }, [accentColor]);
+    return 'text-primary-foreground';
+  }, []);
 
   // Load saved preferences on mount
   useEffect(() => {
@@ -118,8 +115,10 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   const isShinyUI = uiStyle === UI_STYLES.SHINY;
 
   // Get the complete pill styling classes - memoized to prevent re-computation on every render
+  // styleOverride: optional override to get classes for a specific style (used in previews)
   const getPillStyleClasses = useMemo(() => {
-    return (context?: string): string => {
+    return (context?: string, styleOverride?: PillStyle): string => {
+      const effectiveStyle = styleOverride || pillStyle;
       // Base classes that apply to all pill styles
       const displayClass = 'inline-flex';
 
@@ -149,7 +148,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
 
       // Style-specific classes
       let styleClasses = '';
-      if (pillStyle === PILL_STYLES.OUTLINE) {
+      if (effectiveStyle === PILL_STYLES.OUTLINE) {
         // Add shiny classes for outline when shiny UI mode is enabled
         const shinyClasses = isShinyUI ? 'shiny-shimmer-base pill-outline-shiny-style' : '';
         styleClasses = `
@@ -161,7 +160,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           px-2 py-0.5
           ${shinyClasses}
         `;
-      } else if (pillStyle === PILL_STYLES.TEXT_ONLY) {
+      } else if (effectiveStyle === PILL_STYLES.TEXT_ONLY) {
         styleClasses = `
           bg-transparent text-accent-100 font-bold
           border-none
@@ -171,7 +170,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           px-1
           pill-text-style
         `;
-      } else if (pillStyle === PILL_STYLES.UNDERLINED) {
+      } else if (effectiveStyle === PILL_STYLES.UNDERLINED) {
         styleClasses = `
           bg-transparent text-accent-100 font-bold
           border-none
@@ -205,7 +204,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
 
       return `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
     };
-  }, [pillStyle, accentColor, isShinyUI]); // Recompute when pillStyle, accentColor, or isShinyUI changes
+  }, [pillStyle, isShinyUI]); // Recompute when pillStyle or isShinyUI changes
 
   // Get the best text color for a pill based on its background - memoized for performance
   const getTextColorForPill = useCallback((backgroundColor: string): string => {

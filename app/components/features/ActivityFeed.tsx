@@ -437,36 +437,6 @@ export default function ActivityFeed({
     `${filterByUsername}'s Recent Activity`
   );
 
-  // Feed mode toggle (Top / Latest)
-  const feedModeToggle = showFilters && mode === 'global' && (
-    <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5">
-      <button
-        onClick={() => handleFeedSortModeChange('top')}
-        className={`
-          px-3 py-1 text-xs font-medium rounded-full transition-all
-          ${feedSortMode === 'top'
-            ? 'bg-background text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-          }
-        `}
-      >
-        Top
-      </button>
-      <button
-        onClick={() => handleFeedSortModeChange('latest')}
-        className={`
-          px-3 py-1 text-xs font-medium rounded-full transition-all
-          ${feedSortMode === 'latest'
-            ? 'bg-background text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-          }
-        `}
-      >
-        Latest
-      </button>
-    </div>
-  );
-
   // Filter modal
   const filterModal = showFilters && isAuthenticated && (
     <AdaptiveModal
@@ -478,6 +448,51 @@ export default function ActivityFeed({
       showCloseButton
     >
       <div className="space-y-6">
+        {/* Sort Order */}
+        {mode === 'global' && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Sort Order
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleFeedSortModeChange('top')}
+                className={`
+                  flex flex-col items-start p-3 rounded-lg border text-left transition-all
+                  ${feedSortMode === 'top'
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    : 'border-border hover:border-foreground/20'
+                  }
+                `}
+              >
+                <span className={`text-sm font-medium ${feedSortMode === 'top' ? 'text-primary' : 'text-foreground'}`}>
+                  Top
+                </span>
+                <span className="text-xs text-muted-foreground mt-0.5">
+                  Most supported content first
+                </span>
+              </button>
+              <button
+                onClick={() => handleFeedSortModeChange('latest')}
+                className={`
+                  flex flex-col items-start p-3 rounded-lg border text-left transition-all
+                  ${feedSortMode === 'latest'
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                    : 'border-border hover:border-foreground/20'
+                  }
+                `}
+              >
+                <span className={`text-sm font-medium ${feedSortMode === 'latest' ? 'text-primary' : 'text-foreground'}`}>
+                  Latest
+                </span>
+                <span className="text-xs text-muted-foreground mt-0.5">
+                  Newest activity first
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Content Filters */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -588,7 +603,6 @@ export default function ActivityFeed({
               title={displayTitle}
             />
             <div className="flex items-center gap-2">
-              {feedModeToggle}
               {showFilters && isAuthenticated && (
                 <Button
                   variant="outline"
@@ -622,7 +636,6 @@ export default function ActivityFeed({
               title={displayTitle}
             />
             <div className="flex items-center gap-2">
-              {feedModeToggle}
               {showFilters && isAuthenticated && (
                 <Button
                   variant="outline"
@@ -662,7 +675,6 @@ export default function ActivityFeed({
           />
 
           <div className="flex items-center gap-2">
-            {feedModeToggle}
             {showFilters && isAuthenticated && (
               <Button
                 variant="outline"
