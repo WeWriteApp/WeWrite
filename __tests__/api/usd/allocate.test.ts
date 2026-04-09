@@ -58,8 +58,8 @@ describe('/api/usd/allocate', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.balance).toEqual(mockUpdatedBalance);
-      expect(data.currentPageAllocation).toBe(250);
+      expect(data.newBalance).toEqual(mockUpdatedBalance);
+      expect(data.currentAllocation).toBe(250);
       expect(data.message).toContain('Successfully allocated');
       expect(mockUsdService.allocateUsdToPage).toHaveBeenCalledWith(mockUserId, pageId, usdCentsChange);
     });
@@ -98,7 +98,7 @@ describe('/api/usd/allocate', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.currentPageAllocation).toBe(150);
+      expect(data.currentAllocation).toBe(150);
     });
 
     test('returns 401 for unauthenticated user', async () => {

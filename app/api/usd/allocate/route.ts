@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      balance: updatedBalance,
-      currentPageAllocation: currentAllocation,
+      newBalance: updatedBalance,
+      currentAllocation,
       message: `Successfully allocated ${formatUsdCents(Math.abs(usdCentsChange))} to page`
     });
 
