@@ -2935,12 +2935,12 @@ html[data-high-contrast="true"].dark [class*="border-theme-"] {
   border-width: 1.5px;
 }
 
-/* High contrast: card HOVER override
+/* High contrast: card HOVER override — no border thickening (e-ink friendly)
    Specificity (0,6,1) naturally beats generic hover (0,4,0) — no !important needed */
 html[data-high-contrast="true"]:not(.dark) .wewrite-card.wewrite-input:hover,
 html[data-high-contrast="true"]:not(.dark) .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
   border-color: black;
-  border-width: 2.5px;
+  border-width: 1.5px;
   background-color: var(--card-bg);
   box-shadow: none;
   transform: none;
@@ -2949,7 +2949,7 @@ html[data-high-contrast="true"]:not(.dark) .wewrite-card:not(.wewrite-input):hov
 html[data-high-contrast="true"].dark .wewrite-card.wewrite-input:hover,
 html[data-high-contrast="true"].dark .wewrite-card:not(.wewrite-input):hover:not([data-expanded="true"]) {
   border-color: white;
-  border-width: 2.5px;
+  border-width: 1.5px;
   background-color: var(--card-bg);
   box-shadow: none;
   transform: none;
@@ -3464,6 +3464,104 @@ html[data-high-contrast="true"] .focus-visible\:ring-2:focus-visible {
 /* Boost muted text that uses opacity - make it at least 60% visible */
 html[data-high-contrast="true"] .text-muted-foreground {
   color: oklch(var(--foreground) / 0.7) !important;
+}
+
+/* ==========================================================================
+   High Contrast: E-Ink / E-Paper Optimizations
+   E-ink displays have slow refresh rates (~250ms), no backlight, and show
+   ghosting artifacts from animations. These rules eliminate visual noise
+   that causes unnecessary screen redraws on e-ink hardware.
+   ========================================================================== */
+
+/* --- Kill all transitions and animations -------------------------------- */
+/* E-ink panels redraw the entire affected region for every frame of an
+   animation, causing visible flicker and ghosting. Disable globally. */
+html[data-high-contrast="true"] *,
+html[data-high-contrast="true"] *::before,
+html[data-high-contrast="true"] *::after {
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+}
+
+/* --- Remove pulse/spin/bounce animations -------------------------------- */
+/* These cause constant redraws on e-ink and serve no purpose without color */
+html[data-high-contrast="true"] .animate-pulse {
+  animation: none !important;
+}
+html[data-high-contrast="true"] .animate-spin {
+  animation: none !important;
+}
+html[data-high-contrast="true"] .animate-bounce {
+  animation: none !important;
+}
+
+/* --- Disable hover background shifts on cards --------------------------- */
+/* Background color changes between states cause full-region e-ink refreshes.
+   In HC mode, cards stay static — interaction is confirmed by focus rings. */
+html[data-high-contrast="true"] .wewrite-interactive-card:hover {
+  border-color: oklch(var(--foreground));
+  background-color: transparent;
+}
+html[data-high-contrast="true"] .wewrite-active-card {
+  border: 1.5px solid oklch(var(--foreground)) !important;
+  background-color: transparent !important;
+  transition: none;
+}
+
+/* --- Disable opacity-based hover on buttons ----------------------------- */
+/* Subtle opacity shifts are invisible on e-ink's limited grayscale range.
+   Keep buttons static; users rely on focus outlines for interactivity. */
+html[data-high-contrast="true"] .bg-primary:hover,
+html[data-high-contrast="true"] .bg-error:hover,
+html[data-high-contrast="true"] .bg-success:hover,
+html[data-high-contrast="true"] .bg-warning:hover {
+  opacity: 1 !important;
+}
+html[data-high-contrast="true"] .bg-primary:active,
+html[data-high-contrast="true"] .bg-error:active,
+html[data-high-contrast="true"] .bg-success:active,
+html[data-high-contrast="true"] .bg-warning:active {
+  opacity: 0.7 !important;
+}
+
+/* --- Disable transforms (scale, translate) ------------------------------ */
+/* Any transform causes a full-page redraw on most e-ink controllers. */
+html[data-high-contrast="true"] .hover\:scale-105:hover,
+html[data-high-contrast="true"] .hover\:scale-110:hover,
+html[data-high-contrast="true"] .active\:scale-95:active,
+html[data-high-contrast="true"] .active\:scale-100:active {
+  transform: none !important;
+}
+
+/* --- Remove backdrop-filter / blur -------------------------------------- */
+/* Glassmorphism is meaningless on e-ink and expensive to composite. */
+html[data-high-contrast="true"] .backdrop-blur-sm,
+html[data-high-contrast="true"] .backdrop-blur-md,
+html[data-high-contrast="true"] .backdrop-blur-lg,
+html[data-high-contrast="true"] .backdrop-blur-xl,
+html[data-high-contrast="true"] [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* --- Skeleton loading: static gray instead of pulsing ------------------- */
+/* Replace animated skeleton shimmer with a flat gray placeholder. */
+html[data-high-contrast="true"] .animate-pulse[class*="bg-muted"],
+html[data-high-contrast="true"] [class*="skeleton"] {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* --- Smooth scroll off -------------------------------------------------- */
+/* Smooth scrolling triggers many partial redraws on e-ink. Snap instead. */
+html[data-high-contrast="true"] {
+  scroll-behavior: auto !important;
+}
+html[data-high-contrast="true"] * {
+  scroll-behavior: auto !important;
 }
 
 /* Mobile-specific card grid improvements */
