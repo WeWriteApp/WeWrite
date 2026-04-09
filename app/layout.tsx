@@ -195,6 +195,12 @@ export default function RootLayout({
                     }
                   }
 
+                  // 3b. REDUCE ANIMATIONS: Apply immediately if saved
+                  var ra = localStorage.getItem('reduce-animations');
+                  if (ra) {
+                    try { if (JSON.parse(ra)) d.setAttribute('data-reduce-animations', 'true'); } catch(e) {}
+                  }
+
                   // 4. ACCENT COLORS: Apply saved accent colors to prevent flash of default blue
                   // (skip if HC is active — HC already set the accent above)
                   if (!isHighContrast) {

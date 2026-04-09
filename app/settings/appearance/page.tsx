@@ -17,7 +17,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '..
 export default function AppearancePage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { theme, setTheme, highContrast, toggleHighContrast } = useTheme();
+  const { theme, setTheme, highContrast, toggleHighContrast, reduceAnimations, setReduceAnimations } = useTheme();
   const { accentColor, setAccentColor, getAccentColorValue } = useAccentColor();
   const { pillStyle, uiStyle } = usePillStyle();
 
@@ -152,12 +152,12 @@ export default function AppearancePage() {
         {/* Color System */}
         <ColorSystemManager />
 
-        {/* High Contrast Mode */}
+        {/* E-Ink Mode */}
         <div className="wewrite-card wewrite-card-padding-sm">
           <div className="flex items-center justify-between py-1">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-base font-semibold">High Contrast</span>
+                <span className="text-base font-semibold">E-Ink Mode</span>
                 {highContrast && (
                   <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-foreground text-background">
                     On
@@ -174,6 +174,23 @@ export default function AppearancePage() {
               size="md"
             />
           </div>
+
+          {/* Sub-toggle: Reduce Animations */}
+          {highContrast && (
+            <div className="flex items-center justify-between py-1 mt-2 pt-2 border-t border-border/40">
+              <div className="flex-1 pl-1">
+                <span className="text-sm font-medium">Turn off animations</span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Disables transitions, hover effects, and loading animations.
+                </p>
+              </div>
+              <Switch
+                checked={reduceAnimations}
+                onCheckedChange={setReduceAnimations}
+                size="sm"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

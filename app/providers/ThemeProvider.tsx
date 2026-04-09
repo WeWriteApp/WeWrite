@@ -34,21 +34,39 @@ type ThemeProviderProps = {
 const HighContrastContext = React.createContext<{
   highContrast: boolean;
   toggleHighContrast: () => void;
+  reduceAnimations: boolean;
+  setReduceAnimations: (value: boolean) => void;
 }>({
   highContrast: false,
   toggleHighContrast: () => {},
+  reduceAnimations: false,
+  setReduceAnimations: () => {},
 });
 
 function HighContrastProvider({ children }: { children: React.ReactNode }) {
   const [highContrast, setHighContrast] = React.useState(false);
+  const [reduceAnimations, setReduceAnimationsState] = React.useState(false);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
   React.useEffect(() => {
     setIsHydrated(true);
-    const saved = localStorage.getItem('high-contrast');
-    if (saved) {
+    const savedHC = localStorage.getItem('high-contrast');
+    const savedRA = localStorage.getItem('reduce-animations');
+    if (savedHC) {
       try {
-        setHighContrast(JSON.parse(saved));
+        const hcValue = JSON.parse(savedHC);
+        setHighContrast(hcValue);
+        // If reduce-animations was never explicitly set, default to HC value
+        if (savedRA === null) {
+          setReduceAnimationsState(hcValue);
+        }
+      } catch {
+        // Invalid value — ignore
+      }
+    }
+    if (savedRA !== null) {
+      try {
+        setReduceAnimationsState(JSON.parse(savedRA));
       } catch {
         // Invalid value — ignore
       }
@@ -59,11 +77,24 @@ function HighContrastProvider({ children }: { children: React.ReactNode }) {
     setHighContrast(prev => {
       const newValue = !prev;
       localStorage.setItem('high-contrast', JSON.stringify(newValue));
+      // When enabling HC, also enable reduce-animations (unless user previously set it)
+      if (newValue) {
+        const savedRA = localStorage.getItem('reduce-animations');
+        if (savedRA === null) {
+          setReduceAnimationsState(true);
+          localStorage.setItem('reduce-animations', 'true');
+        }
+      }
       return newValue;
     });
   }, []);
 
-  // Sync attribute to DOM for CSS fallback rules
+  const setReduceAnimations = React.useCallback((value: boolean) => {
+    setReduceAnimationsState(value);
+    localStorage.setItem('reduce-animations', JSON.stringify(value));
+  }, []);
+
+  // Sync attributes to DOM for CSS fallback rules
   React.useEffect(() => {
     if (isHydrated) {
       if (highContrast) {
@@ -71,12 +102,17 @@ function HighContrastProvider({ children }: { children: React.ReactNode }) {
       } else {
         document.documentElement.removeAttribute('data-high-contrast');
       }
+      if (reduceAnimations) {
+        document.documentElement.setAttribute('data-reduce-animations', 'true');
+      } else {
+        document.documentElement.removeAttribute('data-reduce-animations');
+      }
     }
-  }, [highContrast, isHydrated]);
+  }, [highContrast, reduceAnimations, isHydrated]);
 
   const value = React.useMemo(
-    () => ({ highContrast, toggleHighContrast }),
-    [highContrast, toggleHighContrast]
+    () => ({ highContrast, toggleHighContrast, reduceAnimations, setReduceAnimations }),
+    [highContrast, toggleHighContrast, reduceAnimations, setReduceAnimations]
   );
 
   return (
@@ -89,13 +125,15 @@ function HighContrastProvider({ children }: { children: React.ReactNode }) {
 // Shared hook — all callers share the same HC state via context
 export function useTheme() {
   const nextTheme = useNextTheme();
-  const { highContrast, toggleHighContrast } = React.useContext(HighContrastContext);
+  const { highContrast, toggleHighContrast, reduceAnimations, setReduceAnimations } = React.useContext(HighContrastContext);
 
   return {
     ...nextTheme,
     highContrast,
     toggleHighContrast,
-    setHighContrastMode: toggleHighContrast // Alias for compatibility
+    setHighContrastMode: toggleHighContrast, // Alias for compatibility
+    reduceAnimations,
+    setReduceAnimations,
   };
 }
 

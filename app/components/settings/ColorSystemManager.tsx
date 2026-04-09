@@ -198,7 +198,7 @@ export default function ColorSystemManager({ className }: ColorSystemManagerProp
       {/* Accent Colors - Independent Light/Dark Mode */}
       <CollapsibleColorCard
         title="Accent Color"
-        description={highContrast ? "Overridden by high contrast mode" : "Set different accent colors for light and dark themes"}
+        description={highContrast ? "Overridden by E-Ink mode" : "Set different accent colors for light and dark themes"}
         color={highContrast ? (resolvedTheme === 'dark' ? '#ffffff' : '#000000') : oklchToHex(accentOklch)}
         isExpanded={expandedCard === 'accent'}
         onToggle={toggleAccent}

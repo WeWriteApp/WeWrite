@@ -3467,18 +3467,18 @@ html[data-high-contrast="true"] .text-muted-foreground {
 }
 
 /* ==========================================================================
-   High Contrast: E-Ink / E-Paper Optimizations
-   E-ink displays have slow refresh rates (~250ms), no backlight, and show
-   ghosting artifacts from animations. These rules eliminate visual noise
-   that causes unnecessary screen redraws on e-ink hardware.
+   Reduce Animations Mode
+   Controlled independently from high-contrast. Enabled by default when
+   E-Ink mode is on, but can be toggled separately. Eliminates visual noise
+   that causes unnecessary screen redraws on e-ink hardware, or simply
+   reduces motion for users who prefer a calmer UI.
+   Keyed off html[data-reduce-animations="true"].
    ========================================================================== */
 
 /* --- Kill all transitions and animations -------------------------------- */
-/* E-ink panels redraw the entire affected region for every frame of an
-   animation, causing visible flicker and ghosting. Disable globally. */
-html[data-high-contrast="true"] *,
-html[data-high-contrast="true"] *::before,
-html[data-high-contrast="true"] *::after {
+html[data-reduce-animations="true"] *,
+html[data-reduce-animations="true"] *::before,
+html[data-reduce-animations="true"] *::after {
   transition-duration: 0s !important;
   transition-delay: 0s !important;
   animation-duration: 0s !important;
@@ -3487,80 +3487,68 @@ html[data-high-contrast="true"] *::after {
 }
 
 /* --- Remove pulse/spin/bounce animations -------------------------------- */
-/* These cause constant redraws on e-ink and serve no purpose without color */
-html[data-high-contrast="true"] .animate-pulse {
+html[data-reduce-animations="true"] .animate-pulse {
   animation: none !important;
 }
-html[data-high-contrast="true"] .animate-spin {
+html[data-reduce-animations="true"] .animate-spin {
   animation: none !important;
 }
-html[data-high-contrast="true"] .animate-bounce {
+html[data-reduce-animations="true"] .animate-bounce {
   animation: none !important;
 }
 
 /* --- Disable hover background shifts on cards --------------------------- */
-/* Background color changes between states cause full-region e-ink refreshes.
-   In HC mode, cards stay static — interaction is confirmed by focus rings. */
-html[data-high-contrast="true"] .wewrite-interactive-card:hover {
-  border-color: oklch(var(--foreground));
+html[data-reduce-animations="true"] .wewrite-interactive-card:hover {
   background-color: transparent;
 }
-html[data-high-contrast="true"] .wewrite-active-card {
-  border: 1.5px solid oklch(var(--foreground)) !important;
-  background-color: transparent !important;
+html[data-reduce-animations="true"] .wewrite-active-card {
   transition: none;
 }
 
 /* --- Disable opacity-based hover on buttons ----------------------------- */
-/* Subtle opacity shifts are invisible on e-ink's limited grayscale range.
-   Keep buttons static; users rely on focus outlines for interactivity. */
-html[data-high-contrast="true"] .bg-primary:hover,
-html[data-high-contrast="true"] .bg-error:hover,
-html[data-high-contrast="true"] .bg-success:hover,
-html[data-high-contrast="true"] .bg-warning:hover {
+html[data-reduce-animations="true"] .bg-primary:hover,
+html[data-reduce-animations="true"] .bg-error:hover,
+html[data-reduce-animations="true"] .bg-success:hover,
+html[data-reduce-animations="true"] .bg-warning:hover {
   opacity: 1 !important;
 }
-html[data-high-contrast="true"] .bg-primary:active,
-html[data-high-contrast="true"] .bg-error:active,
-html[data-high-contrast="true"] .bg-success:active,
-html[data-high-contrast="true"] .bg-warning:active {
+html[data-reduce-animations="true"] .bg-primary:active,
+html[data-reduce-animations="true"] .bg-error:active,
+html[data-reduce-animations="true"] .bg-success:active,
+html[data-reduce-animations="true"] .bg-warning:active {
   opacity: 0.7 !important;
 }
 
 /* --- Disable transforms (scale, translate) ------------------------------ */
-/* Any transform causes a full-page redraw on most e-ink controllers. */
-html[data-high-contrast="true"] .hover\:scale-105:hover,
-html[data-high-contrast="true"] .hover\:scale-110:hover,
-html[data-high-contrast="true"] .active\:scale-95:active,
-html[data-high-contrast="true"] .active\:scale-100:active {
+html[data-reduce-animations="true"] .hover\:scale-105:hover,
+html[data-reduce-animations="true"] .hover\:scale-110:hover,
+html[data-reduce-animations="true"] .active\:scale-95:active,
+html[data-reduce-animations="true"] .active\:scale-100:active {
   transform: none !important;
 }
 
 /* --- Remove backdrop-filter / blur -------------------------------------- */
-/* Glassmorphism is meaningless on e-ink and expensive to composite. */
-html[data-high-contrast="true"] .backdrop-blur-sm,
-html[data-high-contrast="true"] .backdrop-blur-md,
-html[data-high-contrast="true"] .backdrop-blur-lg,
-html[data-high-contrast="true"] .backdrop-blur-xl,
-html[data-high-contrast="true"] [class*="backdrop-blur"] {
+html[data-reduce-animations="true"] .backdrop-blur-sm,
+html[data-reduce-animations="true"] .backdrop-blur-md,
+html[data-reduce-animations="true"] .backdrop-blur-lg,
+html[data-reduce-animations="true"] .backdrop-blur-xl,
+html[data-reduce-animations="true"] [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
 /* --- Skeleton loading: static gray instead of pulsing ------------------- */
-/* Replace animated skeleton shimmer with a flat gray placeholder. */
-html[data-high-contrast="true"] .animate-pulse[class*="bg-muted"],
-html[data-high-contrast="true"] [class*="skeleton"] {
+html[data-reduce-animations="true"] .animate-pulse[class*="bg-muted"],
+html[data-reduce-animations="true"] [class*="skeleton"] {
   animation: none !important;
   opacity: 1 !important;
 }
 
 /* --- Smooth scroll off -------------------------------------------------- */
-/* Smooth scrolling triggers many partial redraws on e-ink. Snap instead. */
-html[data-high-contrast="true"] {
+html[data-reduce-animations="true"] {
   scroll-behavior: auto !important;
 }
-html[data-high-contrast="true"] * {
+html[data-reduce-animations="true"] * {
   scroll-behavior: auto !important;
 }
 
