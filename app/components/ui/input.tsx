@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import { cn } from "../../lib/utils"
-import { usePillStyle, PILL_STYLES } from "../../contexts/PillStyleContext"
+import { usePillStyle } from "../../contexts/PillStyleContext"
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -30,16 +30,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return !!(value || defaultValue);
     });
 
-    // Get pill style to determine if shiny effect should be applied
-    let pillStyle: string | undefined;
-    try {
-      const pillStyleContext = usePillStyle();
-      pillStyle = pillStyleContext?.pillStyle;
-    } catch {
-      pillStyle = undefined;
-    }
-    const isShinyMode = pillStyle === PILL_STYLES.SHINY;
-    const shinyClass = isShinyMode ? 'input-shiny-style' : '';
+    // Get UI style to determine if shiny effect should be applied
+    const { isShinyUI } = usePillStyle();
+    const shinyClass = isShinyUI ? 'input-shiny-style' : '';
 
     // Update hasValue when controlled value changes
     React.useEffect(() => {

@@ -42,16 +42,6 @@ interface UsdAllocationData {
   totalBalance?: number; // USD cents - Will be sanitized
 }
 
-/**
- * @deprecated Use UsdAllocationData instead
- */
-interface TokenAllocationData {
-  action: 'allocate' | 'deallocate' | 'view_balance' | 'convert';
-  amount?: number;
-  pageId?: string;
-  totalBalance?: number; // Will be sanitized
-}
-
 interface ModalInteractionData {
   modalType: string;
   action: 'open' | 'close' | 'submit' | 'cancel';
@@ -126,20 +116,6 @@ export function LogRocketProvider({ children }: LogRocketProviderProps) {
     });
   };
 
-  /**
-   * @deprecated Use trackUsdAllocation instead
-   */
-  const trackTokenAllocation = (data: TokenAllocationData) => {
-    // Convert to USD data and use USD tracking
-    const usdData: UsdAllocationData = {
-      action: data.action,
-      amount: data.amount ? data.amount * 10 : undefined, // Convert tokens to USD cents
-      pageId: data.pageId,
-      totalBalance: data.totalBalance ? data.totalBalance * 10 : undefined
-    };
-    trackUsdAllocation(usdData);
-  };
-
   const trackModalInteraction = (data: ModalInteractionData) => {
     trackEvent('modal_interaction', {
       modalType: data.modalType,
@@ -209,7 +185,6 @@ export function LogRocketProvider({ children }: LogRocketProviderProps) {
     // WeWrite-specific tracking functions
     trackDragDropLink,
     trackUsdAllocation,
-    trackTokenAllocation, // @deprecated - kept for backward compatibility
     trackModalInteraction,
     trackPayoutFlow,
     trackPageCreation,
@@ -237,7 +212,6 @@ export function useLogRocket(): LogRocketContextType {
       getSessionURL: () => {},
       trackDragDropLink: () => {},
       trackUsdAllocation: () => {},
-      trackTokenAllocation: () => {}, // @deprecated
       trackModalInteraction: () => {},
       trackPayoutFlow: () => {},
       trackPageCreation: () => {},
@@ -252,7 +226,6 @@ export function useLogRocket(): LogRocketContextType {
 export type {
   DragDropLinkData,
   UsdAllocationData,
-  TokenAllocationData, // @deprecated
   ModalInteractionData,
   PayoutFlowData,
   PageCreationData,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Icon } from '@/components/ui/Icon';
 import PillLink from "../utils/PillLink";
 import { usePillStyle } from "../../contexts/PillStyleContext";
@@ -113,11 +113,10 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
   const [isLoading, setIsLoading] = useState(false); // Start with false, only set to true when actually fetching
   const [fetchError, setFetchError] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
-  const [isMounted, setIsMounted] = useState(true);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
+    return () => { isMountedRef.current = false; };
   }, []);
 
   // Ensure href is properly formatted
@@ -168,13 +167,13 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
           checkIfPageDeleted(pageId)
         ]);
 
-        if (isMounted) {
+        if (isMountedRef.current) {
           setCurrentTitle(pageTitle);
           setIsDeleted(deletedStatus);
           setIsLoading(false);
         }
       } catch (error) {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setFetchError(true);
           setIsLoading(false);
         }
@@ -190,7 +189,7 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
       setFetchError(true);
       setIsLoading(false);
     }
-  }, [pageId, isMounted, originalPageTitle]);
+  }, [pageId, originalPageTitle]);
 
   // Determine what text to display using a clear priority system
   let textToDisplay: React.ReactNode;
@@ -227,7 +226,6 @@ const InternalLinkWithTitle: React.FC<InternalLinkWithTitleProps> = ({
 
   // Use PillStyleContext for consistent styling between edit and view modes
   const { getPillStyleClasses } = usePillStyle();
-  const pillStyles = getPillStyleClasses('paragraph');
 
   // TextView is now for viewing only - editing is handled by Editor component
   // Always render in view mode - normal navigation behavior - no tooltip

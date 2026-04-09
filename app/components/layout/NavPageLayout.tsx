@@ -16,8 +16,6 @@ export interface NavPageLayoutProps {
   className?: string;
   loading?: boolean;
   loadingFallback?: React.ReactNode;
-  /** @deprecated maxWidth is now controlled at SidebarLayout level. Use BREAKOUT_CLASSES for full-width carousels. */
-  maxWidth?: string;
   /** When true, reduces top padding for pages where logged-out users don't have a floating header */
   reducedPaddingForLoggedOut?: boolean;
   /**
@@ -56,7 +54,6 @@ export default function NavPageLayout({
   className = "",
   loading = false,
   loadingFallback,
-  maxWidth, // deprecated but kept for backwards compatibility
   reducedPaddingForLoggedOut = false,
   header,
   headerHeight

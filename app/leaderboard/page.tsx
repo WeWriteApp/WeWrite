@@ -545,7 +545,7 @@ function LeaderboardCarousel<T extends UserCategoryConfig | PageCategoryConfig>(
 // Loading fallback component
 function LeaderboardLoading() {
   return (
-    <NavPageLayout maxWidth="2xl">
+    <NavPageLayout>
       <div className="flex items-center justify-between mb-4 px-4">
         <div className="flex items-center gap-3">
           <Icon name="Trophy" size={24} className="text-yellow-500" />
@@ -838,7 +838,7 @@ function LeaderboardContent() {
       const category = userCategories.find(c => c.id === detailView.categoryId);
       if (category) {
         return (
-          <NavPageLayout maxWidth="2xl">
+          <NavPageLayout>
             <LeaderboardDetailView
               category={category}
               data={userLeaderboardData[category.id] || []}
@@ -857,7 +857,7 @@ function LeaderboardContent() {
       const category = pageCategories.find(c => c.id === detailView.categoryId);
       if (category) {
         return (
-          <NavPageLayout maxWidth="2xl">
+          <NavPageLayout>
             <LeaderboardDetailView
               category={category}
               data={pageLeaderboardData[category.id] || []}
@@ -876,7 +876,7 @@ function LeaderboardContent() {
   }
 
   return (
-    <NavPageLayout maxWidth="2xl">
+    <NavPageLayout>
       {/* Header with Calendar Toggle */}
       <PageHeader
         title="Leaderboards"

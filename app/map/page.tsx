@@ -604,7 +604,7 @@ function MapPageContent() {
   };
 
   return (
-    <NavPageLayout maxWidth="full" className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
+    <NavPageLayout className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
       {/* Loading Overlay */}
       <div
         className="fixed sidebar-inset bg-background flex items-center justify-center z-50 transition-opacity duration-500"
@@ -775,7 +775,7 @@ function MapPageContent() {
 
       {/* New Pin Drawer */}
       <Drawer open={showNewPinDrawer && !!newPinLocation} onOpenChange={(open) => !open && cancelNewPin()}>
-        <DrawerContent height="auto" noOverlay>
+        <DrawerContent height="auto" showOverlay={false}>
           <DrawerHeader className="border-b-0 pb-2">
             <DrawerTitle className="text-center w-full">Add page here?</DrawerTitle>
           </DrawerHeader>
@@ -813,7 +813,7 @@ function MapPageContent() {
 export default function MapPage() {
   return (
     <Suspense fallback={
-      <NavPageLayout maxWidth="full" className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
+      <NavPageLayout className="!p-0 !pb-0 !pt-0 !min-h-0 overflow-hidden">
         <div className="fixed sidebar-inset bg-background flex items-center justify-center">
           <div className="text-center space-y-2">
             <Icon name="Loader" className="mx-auto text-primary" />

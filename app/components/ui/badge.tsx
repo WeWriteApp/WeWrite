@@ -70,14 +70,7 @@ export interface BadgeProps
 
 function Badge({ className, variant, size, ...props }: BadgeProps) {
   // Get UI style to determine if shiny effect should be applied
-  let isShinyUI = false;
-  try {
-    const pillStyleContext = usePillStyle();
-    isShinyUI = pillStyleContext?.isShinyUI ?? false;
-  } catch {
-    // Context not available (e.g., during SSR or outside provider)
-    isShinyUI = false;
-  }
+  const { isShinyUI } = usePillStyle();
 
   // Determine shiny classes based on variant when shiny mode is enabled
   // Secondary/light badges get skeuomorphic style, solid badges get glow style

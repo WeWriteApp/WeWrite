@@ -64,14 +64,3 @@ export function useAllocationIncrement() {
   }
   return context;
 }
-
-// Legacy export for backward compatibility during migration
-/**
- * @deprecated Use AllocationIncrementProvider instead
- */
-export const TokenIncrementProvider = AllocationIncrementProvider;
-
-/**
- * @deprecated Use useAllocationIncrement instead
- */
-export const useTokenIncrement = useAllocationIncrement;

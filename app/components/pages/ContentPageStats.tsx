@@ -35,8 +35,6 @@ interface PageStatsProps {
   canEdit?: boolean;
   onCustomDateChange?: (date: string) => void;
   showSparklines?: boolean;
-  /** @deprecated Use includeCurrentView instead */
-  realTime?: boolean;
   /**
    * Add +1 to the displayed view count to account for the current page view.
    * Since views are recorded asynchronously and may be batched, this ensures
@@ -58,7 +56,6 @@ export default function ContentPageStats({
   canEdit = false,
   onCustomDateChange,
   showSparklines = true,
-  realTime: _realTime, // Ignored, kept for backwards compatibility
   includeCurrentView = true,
 }: PageStatsProps) {
   const router = useRouter();

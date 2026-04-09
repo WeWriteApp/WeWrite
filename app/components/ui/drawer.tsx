@@ -242,8 +242,6 @@ interface DrawerContentProps
   showOverlay?: boolean
   /** Add blur effect to overlay */
   blurOverlay?: boolean
-  /** @deprecated Use showOverlay={false} instead */
-  noOverlay?: boolean
   /**
    * Disable swipe-to-dismiss gesture.
    * Useful for content that requires drag interactions (e.g., 3D graph views).
@@ -266,21 +264,18 @@ interface DrawerContentProps
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
->(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, noOverlay = false, disableSwipeDismiss = false, accessibleTitle = "Drawer", hideDragHandle = false, ...props }, ref) => {
+>(({ side = "bottom", className, children, height = "auto", showOverlay = true, blurOverlay = false, disableSwipeDismiss = false, accessibleTitle = "Drawer", hideDragHandle = false, ...props }, ref) => {
   // Get open state from context for animations
   const { open } = React.useContext(DrawerContext)
-
-  // Handle legacy noOverlay prop
-  const shouldShowOverlay = noOverlay ? false : showOverlay
 
   // Determine overlay classes based on options
   // Using 40% opacity for better visibility of background content
   const overlayClasses = cn(
     "fixed inset-0 z-[1100] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-    shouldShowOverlay && "bg-black/40",
+    showOverlay && "bg-black/40",
     blurOverlay && "backdrop-blur-sm",
     // If blur but no dark overlay, add slight tint
-    blurOverlay && !shouldShowOverlay && "bg-white/30 dark:bg-black/30"
+    blurOverlay && !showOverlay && "bg-white/30 dark:bg-black/30"
   )
   // Drag-to-dismiss state: tracks touch interactions for native-like behavior
   const [isDragging, setIsDragging] = React.useState(false)
@@ -464,7 +459,7 @@ const DrawerContent = React.forwardRef<
 
   return (
     <DrawerPortal>
-      {(shouldShowOverlay || blurOverlay) && (
+      {(showOverlay || blurOverlay) && (
         <DialogPrimitive.Overlay
           className={overlayClasses}
           // Prevent touch events from reaching content behind overlay

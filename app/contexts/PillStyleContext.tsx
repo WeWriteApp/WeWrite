@@ -1,9 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { getBestTextColor } from "../utils/accessibility";
-import { useAccentColor } from "./AccentColorContext";
 
 // Define the available pill/link styles (link appearance only)
 export const PILL_STYLES = {
@@ -57,16 +55,6 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   // Try to load from localStorage, default to filled for links and shiny for UI
   const [pillStyle, setPillStyle] = useState<PillStyle>(PILL_STYLES.FILLED);
   const [uiStyle, setUIStyle] = useState<UIStyle>(UI_STYLES.SHINY);
-  const { theme } = useTheme();
-  const { accentColor } = useAccentColor();
-
-  // Determine text color for filled pills
-  // Uses text-primary-foreground which is automatically set by AccentColorContext
-  // based on accent lightness (>0.70 = black text, else = white text), and also
-  // correctly handles HC mode where it's set to the appropriate HC foreground color
-  const getFilledTextColor = useCallback(() => {
-    return 'text-primary-foreground';
-  }, []);
 
   // Load saved preferences on mount
   useEffect(() => {
@@ -182,10 +170,8 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           pill-underlined-style
         `;
       } else {
-        // Default filled style - dynamic text color based on accent lightness
+        // Default filled style — text color via CSS variable (set by AccentColorContext)
         // Use background-image for alpha overlay to preserve base bg-accent-100
-        const textColor = getFilledTextColor();
-        // Add shiny classes when shiny UI mode is enabled
         const shinyClasses = isShinyUI ? 'shiny-shimmer-base shiny-glow-base pill-shiny-style' : '';
         styleClasses = `
           bg-accent-100
@@ -195,7 +181,7 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
           active:[background-image:var(--alpha-15-gradient)]
           hover:shadow-md
           active:shadow-sm
-          ${textColor}
+          text-primary-foreground
           px-2 py-0.5
           pill-filled-style
           ${shinyClasses}

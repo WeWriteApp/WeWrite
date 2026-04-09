@@ -29,7 +29,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
-import AutomaticUpdateManager from './components/common/AutomaticUpdateManager'
 import { ServiceWorkerRegistration } from './components/performance/ServiceWorkerRegistration'
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
@@ -303,7 +302,6 @@ export default function RootLayout({
                                     <CommandPaletteProvider>
                                       <SessionAuthInitializer>
                                         <SessionMonitor />
-                                        <AutomaticUpdateManager />
                                         <ServiceWorkerRegistration />
                                         <ScrollRestorationDisabler />
                                         <GlobalLandingBlobs />

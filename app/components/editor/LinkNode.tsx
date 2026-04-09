@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PillLink from "../utils/PillLink";
 import { validateLink, getLinkDisplayText } from '../../utils/linkValidator';
-import { usePillStyle } from "../../contexts/PillStyleContext";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import InternalLinkWithTitle from "./InternalLinkWithTitle";
@@ -578,10 +577,6 @@ const LinkNode: React.FC<LinkNodeProps> = ({
   if (!displayText) {
     displayText = "Link";
   }
-
-  // Use PillStyleContext for consistent styling between edit and view modes
-  const { getPillStyleClasses } = usePillStyle();
-  const pillStyles = getPillStyleClasses('paragraph');
 
   // TextView is now for viewing only - editing is handled by Editor component
   // Always render in view mode - normal navigation behavior

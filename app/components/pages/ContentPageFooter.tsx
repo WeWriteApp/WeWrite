@@ -228,7 +228,6 @@ export default function ContentPageFooter({
           {!page.isNewPage && (
             <ContentPageStats
               pageId={page.id}
-              realTime={true}
               showSparklines={true}
             />
           )}

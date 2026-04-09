@@ -55,14 +55,7 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     // Get UI style to determine if shiny effect should be applied
-    let isShinyMode = false;
-    try {
-      const pillStyleContext = usePillStyle();
-      isShinyMode = pillStyleContext?.isShinyUI ?? false;
-    } catch {
-      // Context not available (e.g., during SSR or outside provider)
-      isShinyMode = false;
-    }
+    const { isShinyUI: isShinyMode } = usePillStyle();
 
     // Determine shiny classes based on variant when shiny mode is enabled
     // Uses inheritance: shiny-shimmer-base + (shiny-glow-base OR shiny-skeuomorphic-base) + variant-specific
