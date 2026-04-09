@@ -1093,26 +1093,6 @@ export async function PUT(request: NextRequest) {
             }
           })(),
 
-          // Rebuild graph cache for this page (fire-and-forget API call)
-          (async () => {
-            try {
-              // Use internal fetch to trigger cache rebuild
-              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
-                ? `https://${process.env.VERCEL_URL}`
-                : 'http://localhost:3000';
-
-              fetch(`${baseUrl}/api/graph-cache/rebuild`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pageId: id, invalidateAffected: true })
-              }).catch(() => {
-                // Graph cache rebuild request failed - non-fatal
-              });
-            } catch (err) {
-              // Graph cache trigger failed - non-fatal
-            }
-          })(),
-
           // Sync to Typesense for search indexing
           (async () => {
             try {

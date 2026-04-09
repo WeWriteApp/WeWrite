@@ -454,8 +454,8 @@ export class PayoutService {
       payoutPreferences: {
         minimumThreshold: 25,
         currency: 'usd',
-        schedule: 'manual',
-        autoPayoutEnabled: false,
+        schedule: 'monthly',
+        autoPayoutEnabled: true,
         notificationsEnabled: true
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
