@@ -1238,17 +1238,31 @@ const Editor: React.FC<EditorProps> = ({
           // Ignore path errors
         }
 
+        // Resolve paragraph index for line numbers
+        let paragraphIndex = 0;
+        try {
+          const path = ReactEditor.findPath(editor, element);
+          paragraphIndex = path[0];
+        } catch {
+          // Ignore path errors
+        }
+
         if (shouldHighlight) {
           return (
             <div
               {...attributes}
               className={cn(
-                "relative flex items-center transition-all duration-200",
+                "editor-paragraph relative flex items-baseline transition-all duration-200",
                 isPendingDeletion && "opacity-0 scale-95 -translate-x-4"
               )}
             >
+              {lineFeaturesEnabled && (
+                <span className="paragraph-number" contentEditable={false}>
+                  {paragraphIndex + 1}
+                </span>
+              )}
               <p className={cn(
-                "flex-1 rounded-md transition-colors",
+                "flex-1 rounded-md transition-colors min-w-0",
                 "bg-error-10"
               )}>
                 {children}
@@ -1278,9 +1292,18 @@ const Editor: React.FC<EditorProps> = ({
           );
         }
 
-        return <p {...attributes}>{children}</p>;
+        return (
+          <div {...attributes} className="editor-paragraph flex items-baseline">
+            {lineFeaturesEnabled && (
+              <span className="paragraph-number" contentEditable={false}>
+                {paragraphIndex + 1}
+              </span>
+            )}
+            <p className="flex-1 min-w-0">{children}</p>
+          </div>
+        );
     }
-  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, isLastParagraph, deleteEmptyParagraph, editorValue.length, pendingDeletionIndices]);
+  }, [editor, readOnly, isEmptyParagraph, isFirstParagraph, isLastParagraph, deleteEmptyParagraph, editorValue.length, pendingDeletionIndices, lineFeaturesEnabled]);
 
   // Simple leaf renderer with suggestion underline support
   const renderLeaf = useCallback((props: any) => {
@@ -1344,59 +1367,41 @@ const Editor: React.FC<EditorProps> = ({
               !readOnly && "cursor-text"
             )}
           >
-            <div className="flex">
-              {/* Line numbers (hidden when feature flag is disabled) */}
-              {lineFeaturesEnabled && (
-                <div className="flex-shrink-0 pr-4 text-right text-base text-muted-foreground/60 select-none font-mono leading-relaxed">
-                  {Array.from({ length: (editorValue?.length || 1) }, (_, i) => (
-                    <div
-                      key={i + 1}
-                      className="flex items-start justify-end leading-relaxed mb-3 last:mb-0"
-                    >
-                      {i + 1}
-                    </div>
-                  ))}
-                </div>
+            <Editable
+              className={cn(
+                "w-full resize-none border-none bg-transparent p-0 text-base leading-relaxed text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0",
+                "prose prose-slate max-w-none dark:prose-invert",
+                "prose-headings:font-semibold prose-headings:tracking-tight",
+                "prose-h1:text-3xl prose-h1:leading-tight",
+                "prose-h2:text-2xl prose-h2:leading-tight",
+                "prose-h3:text-xl prose-h3:leading-tight",
+                // Tighten default typography spacing
+                "[&_p]:m-0 [&_p]:leading-relaxed",
+                "[&_.editor-paragraph]:mb-3 [&_.editor-paragraph:last-of-type]:mb-0",
+                "[&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1",
+                "[&_h1]:mt-6 [&_h1]:mb-2 [&_h2]:mt-5 [&_h2]:mb-2 [&_h3]:mt-4 [&_h3]:mb-1",
+                "prose-blockquote:border-l-4 prose-blockquote:border-border prose-blockquote:pl-4 prose-blockquote:italic",
+                "prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm",
+                "prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto",
+                "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
+                "[&_.slate-link]:text-primary [&_.slate-link]:no-underline [&_.slate-link:hover]:underline"
               )}
-
-              {/* Editor content */}
-              <div className="flex-1 min-w-0">
-                <Editable
-                  className={cn(
-                    "w-full resize-none border-none bg-transparent p-0 text-base leading-relaxed text-foreground placeholder-muted-foreground focus:outline-none focus:ring-0",
-                    "prose prose-slate max-w-none dark:prose-invert",
-                    "prose-headings:font-semibold prose-headings:tracking-tight",
-                    "prose-h1:text-3xl prose-h1:leading-tight",
-                    "prose-h2:text-2xl prose-h2:leading-tight",
-                    "prose-h3:text-xl prose-h3:leading-tight",
-                    // Tighten default typography spacing to align with page numbers
-                    "[&_p]:m-0 [&_p]:mb-3 [&_p:last-of-type]:mb-0 [&_p]:leading-relaxed",
-                    "[&_ul]:my-2 [&_ol]:my-2 [&_li]:my-1",
-                    "[&_h1]:mt-6 [&_h1]:mb-2 [&_h2]:mt-5 [&_h2]:mb-2 [&_h3]:mt-4 [&_h3]:mb-1",
-                    "prose-blockquote:border-l-4 prose-blockquote:border-border prose-blockquote:pl-4 prose-blockquote:italic",
-                    "prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm",
-                    "prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto",
-                    "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
-                    "[&_.slate-link]:text-primary [&_.slate-link]:no-underline [&_.slate-link:hover]:underline"
-                  )}
-                  placeholder={placeholder}
-                  renderElement={renderElement}
-                  renderLeaf={renderLeaf}
-                  decorate={decorate}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  readOnly={readOnly}
-                  spellCheck={true}
-                  autoCorrect="on"
-                  autoCapitalize="sentences"
-                  style={{
-                    // Performance optimization for mobile: use GPU acceleration
-                    transform: 'translateZ(0)',
-                    willChange: 'contents'
-                  }}
-                />
-              </div>
-            </div>
+              placeholder={placeholder}
+              renderElement={renderElement}
+              renderLeaf={renderLeaf}
+              decorate={decorate}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              readOnly={readOnly}
+              spellCheck={true}
+              autoCorrect="on"
+              autoCapitalize="sentences"
+              style={{
+                // Performance optimization for mobile: use GPU acceleration
+                transform: 'translateZ(0)',
+                willChange: 'contents'
+              }}
+            />
           </div>
 
           {/* Delete all empty lines button - animated in/out to prevent layout shifts */}

@@ -113,61 +113,96 @@
 }
 
 /* ============================================================================
-   PARAGRAPH STYLING
+   PARAGRAPH & LINE NUMBER SYSTEM
+   Single source of truth for paragraph layout, line numbers, and dense mode.
+   Both edit mode (Slate) and view mode (TextView) use the same classes.
    ============================================================================ */
 
-/* Unified paragraph styling - consistent 1rem spacing to match edit mode */
+/* --- Shared paragraph number styling (used in all modes) --- */
+
+.paragraph-number {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8125rem; /* 13px — visually balanced against 16px body text */
+  line-height: inherit;
+  color: oklch(var(--muted-foreground));
+  opacity: var(--paragraph-number-opacity, 0.4);
+  flex-shrink: 0;
+  user-select: none;
+  min-width: 1.5ch; /* Right-aligns single & double digit numbers */
+  text-align: right;
+}
+
+/* --- Normal mode (view): each paragraph is a flex row --- */
+
 .unified-paragraph {
   display: flex;
   align-items: baseline;
   margin-bottom: 1rem;
-  line-height: 1.5;
+  line-height: 1.625;
+  position: relative;
 }
 
-/* No-line-numbers class no longer needs different spacing since base is now 1rem */
+.unified-paragraph .paragraph-number {
+  margin-right: 0.75rem;
+}
+
 .unified-paragraph.no-line-numbers {
-  /* Same as base - keeping for backwards compatibility */
   margin-bottom: 1rem;
 }
 
-/* Paragraph number */
-.paragraph-number {
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: oklch(var(--muted-foreground));
-  margin-right: 0.75rem;
-  flex-shrink: 0;
-  user-select: none;
+/* --- Edit mode: Slate paragraph elements --- */
+
+.editor-paragraph {
+  line-height: 1.625;
 }
 
-/* Text content area */
+.editor-paragraph .paragraph-number {
+  margin-right: 0.75rem;
+}
+
+/* --- Dense mode (view): continuous text flow with inline paragraphs --- */
+
+.dense-mode-container {
+  line-height: 1.625;
+}
+
+.dense-paragraph {
+  display: inline;
+}
+
+.dense-paragraph .paragraph-number {
+  display: inline;
+  margin-right: 0.25rem;
+  vertical-align: baseline;
+}
+
+.dense-paragraph:not(:first-child) .paragraph-number {
+  margin-left: 0.5rem;
+}
+
+.dense-paragraph-content {
+  color: oklch(var(--foreground));
+}
+
+.dense-paragraph-separator {
+  /* Intentionally empty — space character in the span handles separation */
+}
+
+/* --- Text content area --- */
+
 .unified-text-content {
   flex: 1;
   min-width: 0;
-  /* Ensure proper text color inheritance */
   color: oklch(var(--foreground));
 }
 
-/* CRITICAL FIX: Target text spans but EXCLUDE pill links which have their own styling */
-/* Pill links use [data-pill-style] attribute and need to control their own text color */
-/* Using :not() to exclude pill link elements and their children */
-.wewrite-viewable-content .unified-text-content {
-  color: oklch(var(--foreground));
-}
-
-/* Also target any other content containers */
+.wewrite-viewable-content .unified-text-content,
 .page-content .unified-text-content,
 .unified-editor .unified-text-content {
   color: oklch(var(--foreground));
 }
 
-/* Dense paragraph content styling */
-.dense-paragraph-content {
-  /* Ensure proper text color in dense mode */
-  color: oklch(var(--foreground));
-}
-
-/* Fix text color in dense mode */
+/* Dense mode text color */
 .dense-mode .unified-text-content {
   color: oklch(var(--foreground));
 }
@@ -195,6 +230,7 @@
 
   .paragraph-number {
     margin-right: 0.5rem;
+    font-size: 0.75rem;
   }
 
   .page-link,

@@ -920,28 +920,23 @@ export const RenderContent = (props: {
             {loadedNodes.map((node, index) => {
               const actualIndex = paragraphNodes.indexOf(node);
               return (
-                <React.Fragment key={actualIndex}>
+                <span
+                  key={actualIndex}
+                  className="dense-paragraph"
+                  style={{
+                    animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`
+                  }}
+                >
                   {effectiveShowLineNumbers && (
-                    <span
-                      className="paragraph-number"
-                      style={{
-                        animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`,
-                        display: 'inline'
-                      }}
-                    >
+                    <span className="paragraph-number">
                       {actualIndex + 1}
                     </span>
                   )}
-                  <span
-                    className="dense-paragraph-content"
-                    style={{
-                      animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY + 100}ms`
-                    }}
-                  >
+                  <span className="dense-paragraph-content">
                     {node.children?.map((child, childIndex) => renderDenseChild(child, childIndex))}
                   </span>
                   {index < loadedNodes.length - 1 && <span className="dense-paragraph-separator"> </span>}
-                </React.Fragment>
+                </span>
               );
             })}
           </div>
