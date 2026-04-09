@@ -3415,11 +3415,20 @@ html[data-high-contrast="true"] .bg-border\/60 {
 }
 
 /* --- Skeleton ----------------------------------------------------------- */
+/* Subtler skeletons for e-ink — pure black at 15%/25% is too aggressive */
 html[data-high-contrast="true"] .bg-muted\/20 {
-  background-color: oklch(var(--foreground) / 0.15) !important;
+  background-color: oklch(var(--foreground) / 0.06) !important;
+}
+html[data-high-contrast="true"] .bg-muted\/30 {
+  background-color: oklch(var(--foreground) / 0.08) !important;
 }
 html[data-high-contrast="true"] .bg-muted\/40 {
-  background-color: oklch(var(--foreground) / 0.25) !important;
+  background-color: oklch(var(--foreground) / 0.10) !important;
+}
+/* Skeleton animate-pulse blocks that use bg-muted directly */
+html[data-high-contrast="true"] .animate-pulse.bg-muted,
+html[data-high-contrast="true"] .animate-pulse > .bg-muted {
+  background-color: oklch(var(--foreground) / 0.06) !important;
 }
 
 /* --- SubscriptionTierBadge ---------------------------------------------- */
