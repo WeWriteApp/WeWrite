@@ -9,6 +9,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName, USD_COLLECTIONS } from '../../../utils/environmentConfig';
 import { withAdminContext } from '../../../utils/adminRequestContext';
 import { getEffectiveTier } from '../../../utils/subscriptionTiers';
+import { searchUsers as typesenseSearchUsers } from '../../../lib/typesense';
 
 interface UserData {
   uid: string;
@@ -84,6 +85,7 @@ export async function GET(request: NextRequest) {
     const searchTerm = searchParams.get('search');
     const includeFinancial = searchParams.get('includeFinancial') === 'true';
     const countOnly = searchParams.get('countOnly') === 'true';
+    const singleUid = searchParams.get('uid');
 
     // Collection names are now synchronous when using withAdminContext wrapper
     const usersCollectionName = getCollectionName('users');
@@ -110,16 +112,150 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, total: snapshot.size });
     }
 
+    // Single user fetch by UID
+    if (singleUid) {
+      const userDoc = await db.collection(usersCollectionName).doc(singleUid).get();
+      if (!userDoc.exists) {
+        return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+      }
+      // Build a snapshot-like structure so we can reuse the hydration code below
+      const snapshot = { empty: false, docs: [userDoc] };
+      const userIds = [singleUid];
+
+      const usdBalancesCollectionName = getCollectionName(USD_COLLECTIONS.USD_BALANCES);
+
+      const [subscriptionsMap, earningsMap, pageCountsMap, referrerUsernamesMap, pwaInstallsMap, notificationSparklinesMap, usdBalancesMap] = await Promise.all([
+        batchFetchSubscriptions(db, usersCollectionName, userIds),
+        batchFetchEarnings(db, writerEarningsCollectionName, userIds),
+        batchFetchPageCounts(db, pagesCollectionName, userIds),
+        batchFetchReferrerUsernames(db, usersCollectionName, snapshot.docs),
+        batchFetchPWAInstalls(db, analyticsEventsCollectionName, userIds),
+        batchFetchNotificationSparklines(db, userIds),
+        batchFetchUsdBalances(db, usdBalancesCollectionName, userIds),
+      ]);
+
+      const data = userDoc.data()!;
+      const user: UserData = {
+        uid: singleUid,
+        email: data.email || 'No email',
+        username: data.username,
+        emailVerified: data.emailVerified === true,
+        createdAt: data.createdAt,
+        lastLogin: data.lastLoginAt || data.lastLogin || null,
+        stripeConnectedAccountId: data.stripeConnectedAccountId || null,
+        isAdmin: data.isAdmin === true || isUserRecordAdmin(data.email || ''),
+        referredBy: data.referredBy || undefined,
+        referralSource: data.referralSource || undefined,
+        totalPages: pageCountsMap.get(singleUid) ?? 0,
+        pwaInstalled: pwaInstallsMap.get(singleUid)?.installed ?? false,
+        pwaVerified: pwaInstallsMap.get(singleUid)?.verified ?? false,
+        notificationSparkline: notificationSparklinesMap.get(singleUid) || Array(7).fill(0),
+      };
+
+      if (user.referredBy && referrerUsernamesMap.has(user.referredBy)) {
+        user.referredByUsername = referrerUsernamesMap.get(user.referredBy);
+      }
+
+      const subscriptionData = subscriptionsMap.get(singleUid);
+      const earningsData = earningsMap.get(singleUid) || { total: 0, available: 0, thisMonth: 0 };
+      const usdBalanceData = usdBalancesMap.get(singleUid);
+
+      user.tier = getEffectiveTier(
+        subscriptionData?.amount ?? null,
+        subscriptionData?.tier ?? null,
+        subscriptionData?.status ?? null
+      );
+
+      user.financial = {
+        hasSubscription: subscriptionData?.status === 'active',
+        subscriptionAmount: subscriptionData?.amount ?? null,
+        subscriptionStatus: subscriptionData?.status ?? null,
+        subscriptionCancelReason: subscriptionData?.cancelReason || null,
+        availableEarningsUsd: earningsData.available > 0 ? earningsData.available / 100 : undefined,
+        earningsTotalUsd: earningsData.total > 0 ? earningsData.total / 100 : undefined,
+        earningsThisMonthUsd: earningsData.thisMonth > 0 ? earningsData.thisMonth / 100 : undefined,
+        payoutsSetup: Boolean(user.stripeConnectedAccountId),
+        allocatedUsdCents: usdBalanceData?.allocatedUsdCents,
+        unallocatedUsdCents: usdBalanceData?.availableUsdCents,
+        totalBudgetUsdCents: usdBalanceData?.totalUsdCents,
+      };
+
+      const duration = Date.now() - startTime;
+      return NextResponse.json({
+        success: true,
+        user,
+        _debug: { durationMs: duration }
+      });
+    }
+
     // Query Firestore for user documents
     let snapshot;
-    try {
-      snapshot = await db.collection(usersCollectionName)
-        .orderBy('createdAt', 'desc')
-        .limit(limit)
-        .get();
-    } catch (orderingError) {
-      console.warn('Order by createdAt failed; falling back to unordered fetch:', orderingError);
-      snapshot = await db.collection(usersCollectionName).limit(limit).get();
+
+    // When searching, use Typesense to find matching user IDs first, then fetch those specific docs
+    if (searchTerm && searchTerm.trim().length >= 2) {
+      let matchedUserIds: string[] = [];
+
+      try {
+        console.log(`[Admin Users] Searching Typesense for: "${searchTerm}"`);
+        const searchResult = await typesenseSearchUsers(searchTerm, {
+          perPage: Math.min(limit, 50),
+          queryBy: ['username', 'usernameLower', 'displayName'],
+        });
+        matchedUserIds = searchResult.hits.map(hit => hit.document.id);
+        console.log(`[Admin Users] Typesense returned ${matchedUserIds.length} matches in ${searchResult.search_time_ms}ms`);
+      } catch (searchError) {
+        console.warn('[Admin Users] Typesense search failed, falling back to Firestore prefix search:', searchError);
+
+        // Fallback: prefix search on usernameLower in Firestore
+        const searchLower = searchTerm.toLowerCase();
+        const fallbackSnapshot = await db.collection(usersCollectionName)
+          .where('usernameLower', '>=', searchLower)
+          .where('usernameLower', '<=', searchLower + '\uf8ff')
+          .limit(Math.min(limit, 50))
+          .get();
+        matchedUserIds = fallbackSnapshot.docs.map(doc => doc.id);
+
+        // Also try email prefix
+        const emailSnapshot = await db.collection(usersCollectionName)
+          .where('email', '>=', searchLower)
+          .where('email', '<=', searchLower + '\uf8ff')
+          .limit(Math.min(limit, 50))
+          .get();
+        const emailIds = emailSnapshot.docs.map(doc => doc.id);
+        matchedUserIds = [...new Set([...matchedUserIds, ...emailIds])];
+        console.log(`[Admin Users] Firestore fallback found ${matchedUserIds.length} matches`);
+      }
+
+      if (matchedUserIds.length === 0) {
+        const duration = Date.now() - startTime;
+        return NextResponse.json({
+          success: true,
+          users: [],
+          total: 0,
+          searchTerm,
+          _debug: { durationMs: duration, searchEngine: 'typesense' }
+        });
+      }
+
+      // Fetch the matched users by ID (Firestore getAll for batch reads)
+      const docRefs = matchedUserIds.map(id => db.collection(usersCollectionName).doc(id));
+      const docs = await db.getAll(...docRefs);
+      // Build a fake snapshot-like object so we can reuse the same hydration code below
+      snapshot = {
+        empty: docs.filter(d => d.exists).length === 0,
+        docs: docs.filter(d => d.exists),
+      };
+    } else {
+      // No search term: fetch most recent users
+      try {
+        snapshot = await db.collection(usersCollectionName)
+          .orderBy('createdAt', 'desc')
+          .limit(limit)
+          .get();
+      } catch (orderingError) {
+        console.warn('Order by createdAt failed; falling back to unordered fetch:', orderingError);
+        snapshot = await db.collection(usersCollectionName).limit(limit).get();
+      }
     }
 
     if (snapshot.empty) {
@@ -234,16 +370,8 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      // Apply search filter if provided
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        if (user.email.toLowerCase().includes(searchLower) ||
-            user.username?.toLowerCase().includes(searchLower)) {
-          userData.push(user);
-        }
-      } else {
-        userData.push(user);
-      }
+      // When search was used, users are already pre-filtered by Typesense/Firestore
+      userData.push(user);
     }
 
     const duration = Date.now() - startTime;

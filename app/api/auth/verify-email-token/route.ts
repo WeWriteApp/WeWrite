@@ -152,9 +152,14 @@ export async function POST(request: NextRequest) {
     const validation = await getAndValidateToken(token);
     
     if (!validation.valid) {
+      const status = validation.error === 'TOKEN_ALREADY_USED' ? 200 : 400;
       return NextResponse.json(
-        { error: validation.error },
-        { status: validation.error === 'TOKEN_ALREADY_USED' ? 200 : 400 }
+        { 
+          success: validation.error === 'TOKEN_ALREADY_USED',
+          alreadyVerified: validation.error === 'TOKEN_ALREADY_USED',
+          error: validation.error 
+        },
+        { status }
       );
     }
 

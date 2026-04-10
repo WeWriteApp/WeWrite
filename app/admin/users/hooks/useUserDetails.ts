@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { adminFetch } from '../../../utils/adminFetch';
 import { useMediaQuery } from '../../../hooks/use-media-query';
 import { useGlobalDrawer } from '../../../providers/GlobalDrawerProvider';
@@ -14,6 +15,7 @@ export function useUserDetails(
   const [loadingActivities, setLoadingActivities] = useState(false);
 
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const router = useRouter();
   const { navigateInDrawer, isGlobalDrawerActive } = useGlobalDrawer();
 
   // Parse user ID from drawer subPath (e.g., "users/abc123" -> "abc123")
@@ -54,11 +56,8 @@ export function useUserDetails(
   }, [drawerUserId, users]);
 
   const handleUserSelect = (user: User) => {
-    if (isGlobalDrawerActive && !isDesktop) {
-      navigateInDrawer(`admin/users/${user.uid}`);
-    } else {
-      setSelectedUser(user);
-    }
+    // Navigate to the full user detail page
+    router.push(`/admin/users/${user.uid}`);
   };
 
   const filteredActivities = useMemo(() => {

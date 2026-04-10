@@ -46,9 +46,6 @@ function VerifyEmailContent() {
           if (data.error === 'TOKEN_EXPIRED') {
             setStatus('expired');
             setMessage('This verification link has expired. Please request a new one.');
-          } else if (data.error === 'TOKEN_ALREADY_USED') {
-            setStatus('success');
-            setMessage('Your email has already been verified!');
           } else {
             setStatus('error');
             setMessage(data.error || 'Failed to verify email');
@@ -56,18 +53,24 @@ function VerifyEmailContent() {
           return;
         }
 
-        setStatus('success');
-        setMessage('Your email has been verified successfully!');
-
-        // Refresh user context to get updated email verification status
-        if (refreshUser) {
-          await refreshUser();
+        // Handle TOKEN_ALREADY_USED (returns 200 but with error field)
+        if (data.error === 'TOKEN_ALREADY_USED') {
+          setStatus('success');
+          setMessage('Your email has already been verified!');
+        } else {
+          setStatus('success');
+          setMessage('Your email has been verified successfully!');
         }
 
-        // Redirect to home after a short delay
-        setTimeout(() => {
-          router.push('/home');
-        }, 3000);
+        // Refresh user context to get updated email verification status
+        try {
+          if (refreshUser) {
+            await refreshUser();
+          }
+        } catch (refreshError) {
+          // Non-fatal: user context refresh can fail if not logged in
+          console.warn('[Verify Email] Could not refresh user context:', refreshError);
+        }
       } catch (error) {
         console.error('[Verify Email] Error:', error);
         setStatus('error');
@@ -76,7 +79,7 @@ function VerifyEmailContent() {
     };
 
     verifyEmail();
-  }, [searchParams, router, refreshUser]);
+  }, [searchParams, refreshUser]);
 
   const handleResendVerification = async () => {
     if (!user?.email) {
@@ -117,8 +120,8 @@ function VerifyEmailContent() {
 
   return (
     <ModernAuthLayout
-      title={status === 'success' ? 'Email Verified!' : 'Verifying Email'}
-      description="Please wait while we verify your email address"
+      title={status === 'success' ? 'Email Verified!' : status === 'error' ? 'Verification Failed' : 'Verifying Email'}
+      description={status === 'success' ? undefined : 'Please wait while we verify your email address'}
     >
       <div className="text-center flex flex-col items-center gap-6">
         {status === 'loading' && (
@@ -130,9 +133,20 @@ function VerifyEmailContent() {
 
         {status === 'success' && (
           <>
-            <Icon name="CheckCircle" size={64} className="text-green-500 mx-auto mb-4" />
-            <p className="text-foreground font-medium mb-2">{message}</p>
-            <p className="text-foreground/70 text-sm">Redirecting you to the home page...</p>
+            <Icon name="CheckCircle" size={64} className="text-green-500 mx-auto" />
+            <div className="space-y-2">
+              <p className="text-foreground font-medium text-lg">{message}</p>
+              <p className="text-foreground/60 text-sm">
+                You now have full access to all WeWrite features.
+              </p>
+            </div>
+            <Link
+              href="/home"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg font-medium hover:bg-foreground/90 transition-colors"
+            >
+              Continue to WeWrite
+              <Icon name="ArrowRight" size={16} />
+            </Link>
           </>
         )}
 

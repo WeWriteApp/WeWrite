@@ -8,11 +8,9 @@ import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { UserDetailsDrawer } from "../../components/admin/UserDetailsDrawer";
 import { useUsersData, useColumns, useUserActions, useUserDetails } from './hooks';
 import {
   ColumnSelector,
-  MobileUserDetails,
   UsersTable,
   UsersMobileList,
   UserDialogs,
@@ -30,6 +28,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     setCopiedError,
     search,
     setSearch,
+    searchLoading,
     filtered,
     maxEarningsMonth,
     maxEarningsTotal,
@@ -46,7 +45,6 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     loadingActivities,
     isDesktop,
     filteredActivities,
-    isViewingUserDetails,
     handleUserSelect,
     refreshUserNotifications,
   } = useUserDetails(users, drawerSubPath);
@@ -81,26 +79,6 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
     [filtered, sortBy, columns, getSorted]
   );
 
-  // Mobile user detail view
-  if (isViewingUserDetails && selectedUser) {
-    return (
-      <MobileUserDetails
-        selectedUser={selectedUser}
-        loading={loading}
-        loadingAction={actions.loadingAction}
-        activityFilter={activityFilter}
-        setActivityFilter={setActivityFilter}
-        loadingActivities={loadingActivities}
-        filteredActivities={filteredActivities}
-        toggleAdminUser={actions.toggleAdminUser}
-        setToggleAdminUser={actions.setToggleAdminUser}
-        onSendEmailVerification={actions.handleSendEmailVerification}
-        onSendPayoutReminder={actions.handleSendPayoutReminder}
-        onToggleAdminStatus={actions.handleToggleAdminStatus}
-      />
-    );
-  }
-
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="p-4 pt-4 space-y-4">
@@ -112,7 +90,7 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
         <div className="space-y-3">
           <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
             <div className="text-sm text-muted-foreground">
-              Showing {filtered.length} of {users.length} users
+              {searchLoading ? 'Searching...' : `Showing ${filtered.length} of ${users.length} users`}
             </div>
             <Input
               placeholder="Search by email or username"
@@ -237,20 +215,6 @@ export default function AdminUsersPage({ drawerSubPath }: AdminUsersPageProps = 
           onUsernameSave={actions.handleUsernameSave}
           onToggleAdminStatus={actions.handleToggleAdminStatus}
         />
-
-        {/* User detail side drawer - only on desktop */}
-        {isDesktop && (
-          <UserDetailsDrawer
-            open={!!selectedUser}
-            onOpenChange={(open) => !open && setSelectedUser(null)}
-            userId={selectedUser?.uid}
-            username={selectedUser?.username}
-            onUserClick={(userId, username) => {
-              const user = users.find(u => u.uid === userId || u.username === username);
-              if (user) setSelectedUser(user);
-            }}
-          />
-        )}
       </div>
     </DndProvider>
   );
