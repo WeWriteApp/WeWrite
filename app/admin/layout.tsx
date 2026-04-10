@@ -45,7 +45,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
   if (!isHydrated) {
     return (
       <div className={cn(
-        "flex items-center justify-between wewrite-card wewrite-card-no-padding px-5 py-4",
+        "flex items-center justify-between wewrite-card wewrite-card-no-padding px-6 py-5",
         isCollapsed ? "justify-center" : ""
       )}>
         <div className="flex items-center gap-2.5">
@@ -81,7 +81,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
 
   return (
     <div className={cn(
-      "flex items-center justify-between wewrite-card wewrite-card-no-padding px-5 py-4",
+      "flex items-center justify-between wewrite-card wewrite-card-no-padding px-6 py-5",
       isProduction
         ? "border-green-500/30 bg-green-500/5"
         : "border-yellow-500/30 bg-yellow-500/5"

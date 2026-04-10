@@ -120,24 +120,33 @@ export function RandomPagesSkeleton({ limit = 10 }: { limit?: number }) {
       <div className="hidden md:block">
         <div className="border border-theme-medium rounded-2xl overflow-hidden">
           <div className="border-b border-theme-medium bg-muted/30 p-4">
-            <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4">
+            <div className="grid grid-cols-[1fr_200px_150px_200px_40px] gap-4">
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-20" />
+              <div />
             </div>
           </div>
           <div className="divide-y divide-theme-medium">
             {Array.from({ length: limit }).map((_, index) => (
               <div key={index} className="p-4">
-                <div className="grid grid-cols-[1fr_200px_150px_200px] gap-4 items-center">
+                <div className="grid grid-cols-[1fr_200px_150px_200px_40px] gap-4 items-center">
                   <Skeleton className="h-6 w-3/4" />
                   <div className="flex items-center gap-2">
                     <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-3 w-3 rounded-full" />
                   </div>
                   <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-8 w-full rounded-full" />
+                  <div className="h-[68px]">
+                    <Skeleton className="h-5 w-24 mx-auto mb-2" />
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 flex-shrink-0" />
+                      <Skeleton className="flex-1 h-8 rounded-full" />
+                      <Skeleton className="h-8 w-8 flex-shrink-0" />
+                    </div>
+                  </div>
+                  <div />
                 </div>
               </div>
             ))}
@@ -165,9 +174,16 @@ export function RandomPagesSkeleton({ limit = 10 }: { limit?: number }) {
               </div>
             </div>
 
-            {/* Allocation Bar */}
+            {/* Allocation Bar - matches EmbeddedAllocationBar height */}
             <div className="pt-2 border-t border-neutral-15">
-              <Skeleton className="h-8 w-full rounded-full" />
+              <div className="h-[68px]">
+                <Skeleton className="h-5 w-24 mx-auto mb-2" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 flex-shrink-0" />
+                  <Skeleton className="flex-1 h-8 rounded-full" />
+                  <Skeleton className="h-8 w-8 flex-shrink-0" />
+                </div>
+              </div>
             </div>
           </div>
         ))}

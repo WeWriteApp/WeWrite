@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { Textarea } from "../ui/textarea";
+import { cn } from "../../lib/utils";
 
 import ClickableByline from "../utils/ClickableByline";
 import { useAuth } from '../../providers/AuthProvider';
@@ -1130,17 +1131,65 @@ export default function ContentPageHeader({
                   : 'opacity-100 mt-2 translate-y-0'
               }`}>
                 <div className="flex items-center justify-center gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1 justify-center">
-                      <span className="whitespace-nowrap flex-shrink-0">by</span>
-                      <UsernameBadge
-                        userId={userId}
-                        username={username}
-                        tier={authorSubscription.tier}
-                        size="sm"
-                      />
+                  {/* Unified byline: show EITHER "in GroupName" OR "by AuthorName" */}
+                  {groupId && groupName ? (
+                    // Group-published: show group badge
+                    <div className="text-sm text-muted-foreground">
+                      {canEdit ? (
+                        <button
+                          onClick={() => setShowGroupPicker(true)}
+                          className="inline-flex items-center gap-1"
+                        >
+                          <span className="whitespace-nowrap">in</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors text-xs">
+                            <Icon name="Users" size={12} />
+                            {groupName}
+                            <Icon name="ChevronDown" size={10} />
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="whitespace-nowrap">in</span>
+                          <Link
+                            href={`/g/${groupId}`}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors text-xs"
+                          >
+                            <Icon name="Users" size={12} />
+                            {groupName}
+                          </Link>
+                        </span>
+                      )}
                     </div>
-                  </div>
+                  ) : (
+                    // Self-published: show author byline
+                    <div className="text-sm text-muted-foreground">
+                      {canEdit && groupsEnabled ? (
+                        <button
+                          onClick={() => setShowGroupPicker(true)}
+                          className="flex items-center gap-1 justify-center"
+                        >
+                          <span className="whitespace-nowrap flex-shrink-0">by</span>
+                          <UsernameBadge
+                            userId={userId}
+                            username={username}
+                            tier={authorSubscription.tier}
+                            size="sm"
+                          />
+                          <Icon name="ChevronDown" size={10} className="text-muted-foreground/60 ml-0.5" />
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1 justify-center">
+                          <span className="whitespace-nowrap flex-shrink-0">by</span>
+                          <UsernameBadge
+                            userId={userId}
+                            username={username}
+                            tier={authorSubscription.tier}
+                            size="sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Visibility Toggle - only for page owners with the feature */}
                   {canEdit && canUsePrivatePages && !isNewPage && pageId && (
@@ -1153,102 +1202,99 @@ export default function ContentPageHeader({
                     />
                   )}
 
-                  {/* Group badge / picker */}
+                  {/* Group / self-publish picker modal */}
                   {groupsEnabled && (
-                    <>
-                      {groupId && groupName ? (
-                        canEdit ? (
-                          <button
-                            onClick={() => setShowGroupPicker(true)}
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                          >
-                            <span className="whitespace-nowrap">in</span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors">
-                              <Icon name="Users" size={12} />
-                              {groupName}
-                              <Icon name="ChevronDown" size={10} />
-                            </span>
-                          </button>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <span className="whitespace-nowrap">in</span>
-                            <Link
-                              href={`/g/${groupId}`}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
-                            >
-                              <Icon name="Users" size={12} />
-                              {groupName}
-                            </Link>
-                          </span>
-                        )
-                      ) : canEdit ? (
+                    <AdaptiveModal
+                      isOpen={showGroupPicker && canEdit}
+                      onClose={() => setShowGroupPicker(false)}
+                      title="Publish as"
+                      subtitle="Choose how this page is published"
+                    >
+                      <div className="flex flex-col gap-1">
+                        {/* Self-publish option */}
                         <button
-                          onClick={() => setShowGroupPicker(true)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                          onClick={() => {
+                            if (groupId) {
+                              handleRemoveFromGroup();
+                            } else {
+                              setShowGroupPicker(false);
+                            }
+                          }}
+                          disabled={assigningGroup}
+                          className={cn(
+                            "w-full text-left px-4 py-3 rounded-lg text-sm transition-colors flex items-center gap-3 disabled:opacity-50",
+                            !groupId
+                              ? "bg-primary/10 text-primary"
+                              : "hover:bg-muted"
+                          )}
                         >
-                          <Icon name="Users" size={12} />
-                          No group
-                          <Icon name="ChevronDown" size={10} />
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 shrink-0">
+                            <Icon name="User" size={16} className="text-primary" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">by {username}</span>
+                            <span className="text-xs text-muted-foreground">Self-published</span>
+                          </div>
+                          {!groupId && (
+                            <Icon name="Check" size={16} className="text-primary shrink-0 ml-auto" />
+                          )}
                         </button>
-                      ) : null}
 
-                      {/* Group picker modal/drawer */}
-                      <AdaptiveModal
-                        isOpen={showGroupPicker && canEdit}
-                        onClose={() => setShowGroupPicker(false)}
-                        title={groupId ? 'Change group' : 'Add to group'}
-                        subtitle="Select a group to assign this page to"
-                      >
-                        <div className="flex flex-col gap-1">
-                          {loadingGroups ? (
-                            <div className="flex items-center justify-center py-8">
-                              <Icon name="Loader" size={20} />
-                            </div>
-                          ) : userGroups.length === 0 ? (
-                            <div className="py-8 text-sm text-muted-foreground text-center">
-                              You're not a member of any groups yet.
-                            </div>
-                          ) : (
-                            userGroups.filter(g => g.id !== groupId).map((group) => (
-                              <button
-                                key={group.id}
-                                onClick={() => handleAssignGroup(group)}
-                                disabled={assigningGroup}
-                                className="w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-muted transition-colors flex items-center gap-3 disabled:opacity-50"
-                              >
-                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 shrink-0">
-                                  <Icon name="Users" size={16} className="text-indigo-600 dark:text-indigo-400" />
-                                </div>
-                                <span className="truncate font-medium">{group.name}</span>
-                                {group.visibility === 'private' && (
-                                  <Icon name="Lock" size={12} className="text-muted-foreground shrink-0 ml-auto" />
-                                )}
-                              </button>
-                            ))
-                          )}
-                          {groupId && (
+                        {/* Divider */}
+                        <div className="border-t border-border my-1" />
+
+                        {/* Group options */}
+                        {loadingGroups ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Icon name="Loader" size={20} />
+                          </div>
+                        ) : userGroups.length === 0 ? (
+                          <div className="py-4 text-sm text-muted-foreground text-center">
+                            You&apos;re not a member of any groups yet.
+                          </div>
+                        ) : (
+                          userGroups.map((group) => (
                             <button
-                              onClick={handleRemoveFromGroup}
+                              key={group.id}
+                              onClick={() => {
+                                if (group.id === groupId) {
+                                  setShowGroupPicker(false);
+                                } else {
+                                  handleAssignGroup(group);
+                                }
+                              }}
                               disabled={assigningGroup}
-                              className="w-full text-left px-4 py-3 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-3 disabled:opacity-50 mt-2 border-t border-border pt-4"
+                              className={cn(
+                                "w-full text-left px-4 py-3 rounded-lg text-sm transition-colors flex items-center gap-3 disabled:opacity-50",
+                                group.id === groupId
+                                  ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                                  : "hover:bg-muted"
+                              )}
                             >
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-destructive/10 shrink-0">
-                                <Icon name="X" size={16} className="text-destructive" />
+                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 shrink-0">
+                                <Icon name="Users" size={16} className="text-indigo-600 dark:text-indigo-400" />
                               </div>
-                              <span className="font-medium">Remove from group</span>
+                              <span className="truncate font-medium">{group.name}</span>
+                              {group.visibility === 'private' && (
+                                <Icon name="Lock" size={12} className="text-muted-foreground shrink-0" />
+                              )}
+                              {group.id === groupId && (
+                                <Icon name="Check" size={16} className="text-indigo-600 dark:text-indigo-400 shrink-0 ml-auto" />
+                              )}
                             </button>
-                          )}
-                        </div>
-                      </AdaptiveModal>
-                    </>
+                          ))
+                        )}
+                      </div>
+                    </AdaptiveModal>
                   )}
+
                   {/* Group badge fallback when groups feature is disabled */}
                   {!groupsEnabled && groupId && groupName && (
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                       <span className="whitespace-nowrap">in</span>
                       <Link
                         href={`/g/${groupId}`}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors text-xs"
                       >
                         <Icon name="Users" size={12} />
                         {groupName}

@@ -313,7 +313,9 @@ export function UsernameBadge({
             : "text-primary"
         )
       )}>
-        {isLoadingUsername ? 'Loading...' : displayUsername}
+        {isLoadingUsername ? (
+          <span className="inline-block h-4 w-16 bg-muted rounded animate-pulse align-middle" />
+        ) : displayUsername}
       </span>
       {showBadge && (
         <SubscriptionTierBadge

@@ -13,6 +13,7 @@ import { Button } from '../../components/ui/button';
 import { toast } from '../../components/ui/use-toast';
 import { getAnalyticsService } from '../../utils/analytics-service';
 import { SETTINGS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
+import DevSubscriptionPanel from '../../components/dev/DevSubscriptionPanel';
 
 export default function FundAccountPage() {
   const { user } = useAuth();
@@ -266,6 +267,9 @@ export default function FundAccountPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
+      {/* Dev-only subscription testing panel */}
+      <DevSubscriptionPanel />
+
       {/* Success/Cancellation Messages */}
       {cancelled && (
         <Alert>

@@ -17,6 +17,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from '../providers/AuthProvider';
 import { UsdDataService, type SubscriptionData } from '../services/usdDataService';
 import { subscriptionCache } from '../utils/financialDataCache';
+import { getDevSubscriptionOverride, type DevSubscriptionOverride } from '../components/dev/DevSubscriptionPanel';
 
 interface SubscriptionContextType {
   // Subscription data
@@ -42,7 +43,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [adminPaywallOverride, setAdminPaywallOverride] = useState(false);
+  const [devOverride, setDevOverride] = useState<DevSubscriptionOverride | null>(null);
   const fetchingRef = useRef<Promise<void> | null>(null);
 
   /**
@@ -142,25 +143,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return subscription.status || 'unknown';
   }, [subscription]);
 
-  // Check for admin paywall override on mount
+  // Check for dev subscription override on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const checkAdminOverride = () => {
-        const override = localStorage.getItem('wewrite_admin_no_subscription_mode') === 'true';
-        setAdminPaywallOverride(override);
+      const checkOverride = () => {
+        setDevOverride(getDevSubscriptionOverride());
       };
 
       // Check on mount
-      checkAdminOverride();
+      checkOverride();
 
-      // Listen for changes from admin panel
-      const handleOverrideChange = () => {
-        checkAdminOverride();
-      };
-
-      window.addEventListener('adminPaywallOverrideChange', handleOverrideChange);
+      // Listen for changes from dev panel
+      window.addEventListener('devSubscriptionOverrideChange', checkOverride);
+      // Legacy event compat
+      window.addEventListener('adminPaywallOverrideChange', checkOverride);
       return () => {
-        window.removeEventListener('adminPaywallOverrideChange', handleOverrideChange);
+        window.removeEventListener('devSubscriptionOverrideChange', checkOverride);
+        window.removeEventListener('adminPaywallOverrideChange', checkOverride);
       };
     }
   }, []);
@@ -170,15 +169,32 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     fetchSubscription();
   }, [fetchSubscription]);
 
+  // Build mock subscription when dev override is active
+  const mockSubscription: SubscriptionData | null = devOverride ? {
+    status: devOverride.status,
+    amount: devOverride.amount,
+    cancelAtPeriodEnd: devOverride.cancelAtPeriodEnd,
+    tier: devOverride.amount >= 30 ? 'tier3' : devOverride.amount >= 20 ? 'tier2' : devOverride.amount >= 10 ? 'tier1' : null,
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  } : null;
+
+  const effectiveSubscription = devOverride ? mockSubscription : subscription;
+  const effectiveHasActive = devOverride
+    ? (devOverride.status === 'active' && devOverride.amount > 0)
+    : hasActiveSubscription;
+  const effectiveAmount = devOverride
+    ? (devOverride.status === 'active' ? devOverride.amount : 0)
+    : (subscription?.status === 'active' ? (subscription.amount || 0) : 0);
+
   const contextValue: SubscriptionContextType = {
-    subscription,
-    hasActiveSubscription: adminPaywallOverride ? false : hasActiveSubscription,
-    // When admin override is on, show $0 to simulate no subscription
-    subscriptionAmount: adminPaywallOverride ? 0 : (subscription?.status === 'active' ? (subscription.amount || 0) : 0),
+    subscription: effectiveSubscription,
+    hasActiveSubscription: effectiveHasActive,
+    subscriptionAmount: effectiveAmount,
     isLoading,
     lastUpdated,
     refreshSubscription,
-    isSubscriptionActive: () => adminPaywallOverride ? false : isSubscriptionActive(),
+    isSubscriptionActive: () => effectiveHasActive,
     getSubscriptionStatus
   };
 

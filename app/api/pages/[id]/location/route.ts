@@ -139,7 +139,10 @@ export async function PATCH(
           added: 0,
           removed: 0,
           hasChanges: true // Always true for location changes
-        }
+        },
+        diffPreview: location?.name
+          ? `Location set to ${location.name}`
+          : location ? 'Added location' : 'Removed location'
       };
 
       // Create the version document

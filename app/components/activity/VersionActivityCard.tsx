@@ -30,6 +30,23 @@ export default function VersionActivityCard({ activity, className = "" }) {
   const isTitleChange = activity.type === 'title_change' ||
                         activity.changeType === 'title_change' ||
                         activity.changeType === 'content_and_title_change';
+  const isMetadataChange = activity.changeType === 'location' || activity.changeType === 'customDate';
+
+  // Build a human-readable label for metadata-only changes
+  const getMetadataLabel = () => {
+    if (activity.changeType === 'location') {
+      const to = activity.locationChange?.to;
+      if (to?.name) return `Location set to ${to.name}`;
+      if (to) return 'Added location';
+      return 'Removed location';
+    }
+    if (activity.changeType === 'customDate') {
+      const to = activity.customDateChange?.to;
+      if (to) return `Date set to ${to}`;
+      return 'Removed custom date';
+    }
+    return null;
+  };
 
   const handleCardClick = () => {
     if (activity.pageId && activity.versionId) {
@@ -76,24 +93,32 @@ export default function VersionActivityCard({ activity, className = "" }) {
 
       {/* Main content area: diff preview fills the space */}
       <div className="flex-1 mb-1">
-        <DiffPreview
-          currentContent={activity.currentContent}
-          previousContent={isNewPage ? null : activity.previousContent}
-          textDiff={{
-            preview: activity.lastDiff?.preview || activity.diffPreview,
-            added: activity.lastDiff?.added || activity.diff?.added || 0,
-            removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
-            hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
-          }}
-          isNewPage={isNewPage}
-          className="h-full"
-          expandedContext={true}
-        />
+        {isMetadataChange ? (
+          <div className="text-xs h-full flex items-center">
+            <span className="text-primary dark:text-muted-foreground bg-muted/50 dark:bg-muted/40 px-1.5 py-0.5 rounded text-xs font-medium">
+              {getMetadataLabel()}
+            </span>
+          </div>
+        ) : (
+          <DiffPreview
+            currentContent={activity.currentContent}
+            previousContent={isNewPage ? null : activity.previousContent}
+            textDiff={{
+              preview: activity.lastDiff?.preview || activity.diffPreview,
+              added: activity.lastDiff?.added || activity.diff?.added || 0,
+              removed: activity.lastDiff?.removed || activity.diff?.removed || 0,
+              hasChanges: activity.lastDiff?.hasChanges || activity.diff?.hasChanges || false
+            }}
+            isNewPage={isNewPage}
+            className="h-full"
+            expandedContext={true}
+          />
+        )}
       </div>
 
       {/* Bottom row: diff stats at bottom right */}
       <div className="flex justify-end">
-        {!isTitleChange && (
+        {!isTitleChange && !isMetadataChange && (
           <DiffStats
             added={added}
             removed={removed}

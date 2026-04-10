@@ -336,18 +336,37 @@ const TextView: React.FC<TextViewProps> = ({
   // Use lineMode from context as the primary mode, but force normal mode when editing
   const effectiveMode = isEditing ? LINE_MODES.NORMAL : (lineMode || LINE_MODES.NORMAL);
 
-  // Create a unique key that changes when lineMode changes to force complete re-render
-  // This ensures the component properly updates when switching between dense and normal modes
-  const renderKey = useMemo(() => `content-view-${effectiveMode}`, [effectiveMode]);
+  // Animate dense ↔ normal mode transitions: fade out old, swap DOM, fade in new
+  const [displayMode, setDisplayMode] = useState(effectiveMode);
+  const [isModeTransitioning, setIsModeTransitioning] = useState(false);
+  const prevModeRef = useRef(effectiveMode);
 
-  // Force re-render when lineMode changes
   useEffect(() => {
-    // Force a re-render by updating the loaded paragraphs
-    if (parsedContents && Array.isArray(parsedContents)) {
-      const paragraphCount = parsedContents.filter(node => node.type === CONTENT_TYPES.PARAGRAPH).length;
-      setLoadedParagraphs(Array.from({ length: paragraphCount }, (_, i) => i));
+    if (prevModeRef.current !== effectiveMode) {
+      prevModeRef.current = effectiveMode;
+      // Fade out
+      setIsModeTransitioning(true);
+      const timer = setTimeout(() => {
+        // Swap content while invisible
+        setDisplayMode(effectiveMode);
+        // Re-populate loaded paragraphs for the new mode
+        if (parsedContents && Array.isArray(parsedContents)) {
+          const paragraphCount = parsedContents.filter(node => node.type === CONTENT_TYPES.PARAGRAPH).length;
+          setLoadedParagraphs(Array.from({ length: paragraphCount }, (_, i) => i));
+        }
+        // Fade in on next frame (let React commit the new DOM first)
+        requestAnimationFrame(() => setIsModeTransitioning(false));
+      }, 200);
+      return () => clearTimeout(timer);
     }
-  }, [lineMode, parsedContents]);
+  }, [effectiveMode, parsedContents]);
+
+  // Keep displayMode in sync on initial mount / when parsedContents first loads
+  useEffect(() => {
+    if (!isModeTransitioning) {
+      setDisplayMode(effectiveMode);
+    }
+  }, [effectiveMode, isModeTransitioning]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -600,9 +619,9 @@ const TextView: React.FC<TextViewProps> = ({
   // Use compact styling without prose classes that add excessive padding
   const getViewModeStyles = useMemo(() => {
     // FIXED: Remove prose classes that add excessive padding, use compact layout
-    const modeClass = effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode';
+    const modeClass = displayMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode';
     return `editor-content page-editor-stable box-border mode-transition ${modeClass}`;
-  }, [effectiveMode]);
+  }, [displayMode]);
 
   // Handle click to edit - WYSIWYG smooth transition
   const handleActiveLine = (index) => {
@@ -720,7 +739,7 @@ const TextView: React.FC<TextViewProps> = ({
           } ${
             canEdit && isHovering ? 'bg-muted/20' : ''
           } transition-colors duration-150 outline-none page-editor-stable box-border`}
-          data-mode={effectiveMode}
+          data-mode={displayMode}
           data-debug-classes={getViewModeStyles}
           onClick={handleContentClick}
           onMouseEnter={(e) => {
@@ -764,26 +783,31 @@ const TextView: React.FC<TextViewProps> = ({
           )}
 
           {parsedContents && (
-            <RenderContent
-              key={`${renderKey}-${effectiveMode}`}
-              contents={parsedContents}
-              language={language}
-              loadedParagraphs={loadedParagraphs}
-              effectiveMode={effectiveMode}
-              canEdit={canEdit}
-              activeLineIndex={activeLineIndex}
-              onActiveLine={handleActiveLine}
-              showDiff={showDiff}
-              clickPosition={clickPosition}
-              isEditing={isEditing}
-              handleEditLink={handleEditLink}
-              lineFeaturesEnabled={lineFeaturesEnabled}
-              showLineNumbers={showLineNumbers}
-              // External link paywall context
-              authorHasSubscription={effectiveAuthorHasSubscription}
-              pageCreatedAt={effectivePageCreatedAt}
-              isPageOwner={isPageOwner}
-            />
+            <div
+              className="transition-opacity duration-200 ease-in-out"
+              style={{ opacity: isModeTransitioning ? 0 : 1 }}
+            >
+              <RenderContent
+                key={`content-${displayMode}`}
+                contents={parsedContents}
+                language={language}
+                loadedParagraphs={loadedParagraphs}
+                effectiveMode={displayMode}
+                canEdit={canEdit}
+                activeLineIndex={activeLineIndex}
+                onActiveLine={handleActiveLine}
+                showDiff={showDiff}
+                clickPosition={clickPosition}
+                isEditing={isEditing}
+                handleEditLink={handleEditLink}
+                lineFeaturesEnabled={lineFeaturesEnabled}
+                showLineNumbers={showLineNumbers}
+                // External link paywall context
+                authorHasSubscription={effectiveAuthorHasSubscription}
+                pageCreatedAt={effectivePageCreatedAt}
+                isPageOwner={isPageOwner}
+              />
+            </div>
           )}
         </div>
       </div>

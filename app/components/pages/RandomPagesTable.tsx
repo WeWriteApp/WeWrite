@@ -84,7 +84,8 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
   // Note: Batch page data preloading was removed with user management cleanup
 
   // Calculate minimum height based on expected content to prevent layout shifts
-  const minHeight = pages.length > 0 ? `${Math.max(400, pages.length * 60 + 100)}px` : '400px';
+  // Each row: p-4 (32px padding) + allocation bar (~68px) + text lines ≈ 120px
+  const minHeight = pages.length > 0 ? `${Math.max(400, pages.length * 120 + 100)}px` : '400px';
 
   if (!pages || pages.length === 0) {
     return (

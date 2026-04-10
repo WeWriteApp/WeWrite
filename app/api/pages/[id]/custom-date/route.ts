@@ -105,7 +105,8 @@ export async function PATCH(
           added: 0,
           removed: 0,
           hasChanges: true
-        }
+        },
+        diffPreview: customDate ? `Set date to ${customDate}` : 'Removed custom date'
       };
 
       const versionRef = await pageRef.collection('versions').add(versionData);

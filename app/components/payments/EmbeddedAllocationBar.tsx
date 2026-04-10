@@ -298,17 +298,23 @@ export function EmbeddedAllocationBar({
   // Don't render for page owners or when loading critical data
   // For demo balance users, don't wait for USD balance loading
   const isLoadingCriticalData = shouldUseDemoBalance ? intervalLoading : (usdLoading && intervalLoading);
+
+  // Reserve consistent height to prevent layout shifts.
+  // The fully-loaded bar is: amount display (~28px + 8px mb) + controls row (32px) ≈ 68px.
   if (isPageOwner || isLoadingCriticalData) {
-    return null;
+    return <div className={cn("h-[68px]", className)} />;
   }
 
-  // Show loading state while data loads
+  // Show loading state while data loads — skeleton must match final render height
   if (allocationState.isLoading || usdLoading || intervalLoading) {
     return (
-      <div className={cn("flex items-center gap-3", className)}>
-        <div className="h-8 w-8 bg-muted rounded animate-pulse" />
-        <div className="flex-1 h-8 bg-muted rounded animate-pulse" />
-        <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+      <div className={cn("h-[68px] w-full", className)}>
+        <div className="h-5 w-24 mx-auto bg-muted rounded animate-pulse mb-2" />
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 bg-muted rounded animate-pulse flex-shrink-0" />
+          <div className="flex-1 h-8 bg-muted rounded-full animate-pulse" />
+          <div className="h-8 w-8 bg-muted rounded animate-pulse flex-shrink-0" />
+        </div>
       </div>
     );
   }
