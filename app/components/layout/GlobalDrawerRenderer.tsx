@@ -266,23 +266,6 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
       }}
     >
       <div className="grid grid-cols-5 gap-2 px-3 py-2">
-        {/* Close button (shows X when menu is open) */}
-        <button
-          onClick={onClose}
-          className={cn(
-            "flex items-center justify-center h-14 w-full rounded-xl relative",
-            "transition-all duration-150 ease-out",
-            "touch-manipulation select-none",
-            "active:scale-95 active:duration-75",
-            "bg-accent/15 text-accent"
-          )}
-          aria-label="Close Menu"
-        >
-          <div className="relative flex items-center justify-center">
-            <Icon name="X" size={26} className="w-[26px] h-[26px]" />
-          </div>
-        </button>
-
         {/* Toolbar items */}
         {toolbarItems.map((itemId) => {
           const config = navigationButtons[itemId];
@@ -300,6 +283,23 @@ function DrawerToolbar({ onClose, visible }: { onClose: () => void; visible: boo
             </DrawerToolbarButton>
           );
         })}
+
+        {/* Close button (shows X when menu is open) - on the right to match menu button position */}
+        <button
+          onClick={onClose}
+          className={cn(
+            "flex items-center justify-center h-14 w-full rounded-xl relative",
+            "transition-all duration-150 ease-out",
+            "touch-manipulation select-none",
+            "active:scale-95 active:duration-75",
+            "bg-accent/15 text-accent"
+          )}
+          aria-label="Close Menu"
+        >
+          <div className="relative flex items-center justify-center">
+            <Icon name="X" size={26} className="w-[26px] h-[26px]" />
+          </div>
+        </button>
       </div>
     </div>
   );
