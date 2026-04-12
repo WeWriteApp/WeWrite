@@ -791,24 +791,22 @@ export default function LinkEditorModal({
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="external-url">URL</Label>
-                    <div className="relative">
-                      <Icon name="Globe" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                      <Input
-                        ref={externalUrlInputRef}
-                        id="external-url"
-                        value={externalUrl}
-                        onChange={handleExternalUrlChange}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && externalUrl.trim() && !customText) {
-                            e.preventDefault();
-                            handleCreateExternalLink();
-                          }
-                        }}
-                        placeholder="https://example.com"
-                        className="w-full pl-9"
-                        autoComplete="off"
-                      />
-                    </div>
+                    <Input
+                      ref={externalUrlInputRef}
+                      id="external-url"
+                      value={externalUrl}
+                      onChange={handleExternalUrlChange}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && externalUrl.trim() && !customText) {
+                          e.preventDefault();
+                          handleCreateExternalLink();
+                        }
+                      }}
+                      placeholder="https://example.com"
+                      leftIcon={<Icon name="Globe" size={16} />}
+                      className="w-full"
+                      autoComplete="off"
+                    />
                   </div>
 
                   {/* Custom Text Switch */}
