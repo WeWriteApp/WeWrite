@@ -270,7 +270,6 @@ export default function DatabaseReadsMonitoring() {
         </Card>
       )}
       </div>
-      </div>
     </div>
   );
 }

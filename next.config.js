@@ -27,6 +27,10 @@ const nextConfig = {
   // Disable source maps in production for security (use error tracking services instead)
   productionBrowserSourceMaps: false,
 
+  // Allow Turbopack builds to proceed even though we have a webpack config.
+  // The webpack config is still used when --webpack is passed (dev mode).
+  turbopack: {},
+
   // Minimal webpack logging for development
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
 
