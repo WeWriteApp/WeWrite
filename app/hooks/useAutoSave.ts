@@ -44,6 +44,16 @@ export function useAutoSave({
   // All auto-saves with the same session ID will be batched into a single version
   const autoSaveSessionIdRef = useRef<string | null>(null);
 
+  // Track whether there's a pending auto-save that hasn't fired yet
+  // Used to flush saves on unmount so changes aren't lost during navigation
+  const hasPendingSaveRef = useRef(false);
+  // Stable ref to onSave to avoid stale closures in unmount effect
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+  // Stable ref to canEdit
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
+
   // Refs to hold current values for access inside setTimeout callbacks
   // These avoid stale closure issues in async callbacks
   const currentTitleRef = useRef(title);
@@ -167,6 +177,7 @@ export function useAutoSave({
     // Show "pending" state IMMEDIATELY when changes are detected
     // This gives instant feedback that there are unsaved changes
     setAutoSaveStatus('pending');
+    hasPendingSaveRef.current = true;
 
     // Set a new timeout for auto-save after 1 second of inactivity
     // This is faster than before (was 2.5s) for a more responsive feel
@@ -199,11 +210,13 @@ export function useAutoSave({
       // If no actual changes, go back to idle state
       if (!latestTitleChanged && !latestLocationChanged && !latestContentChanged) {
         setAutoSaveStatus('idle');
+        hasPendingSaveRef.current = false;
         return;
       }
 
       setAutoSaveStatus('saving');
       setAutoSaveError(null);
+      hasPendingSaveRef.current = false;
 
       try {
         // Pass current content and session ID to the save function
@@ -258,6 +271,38 @@ export function useAutoSave({
       }
     };
   }, [editorState, title, location, canEdit, isSaving, onSave, isNewPage, autoSaveStatus, hasPageTitle, lastSavedContentRef, lastSavedTitleRef, lastSavedLocationRef]);
+
+  // Flush pending auto-save on unmount to prevent data loss during navigation
+  // This ensures backlinks and content are saved even if the user navigates away
+  // before the 1-second debounce completes (e.g., clicking a newly created link)
+  useEffect(() => {
+    return () => {
+      if (!hasPendingSaveRef.current || !canEditRef.current) return;
+
+      // Check if there are actual unsaved changes
+      const latestContent = currentEditorStateRef.current;
+      const latestSavedContent = lastSavedContentRef.current;
+      let hasUnsavedContent = false;
+      if (latestSavedContent && latestContent) {
+        try {
+          hasUnsavedContent = JSON.stringify(latestSavedContent) !== JSON.stringify(latestContent);
+        } catch {
+          // Ignore serialization errors
+        }
+      }
+
+      if (hasUnsavedContent) {
+        // Fire-and-forget save — component is unmounting so we can't update state
+        onSaveRef.current(latestContent, {
+          isAutoSave: true,
+          sessionId: autoSaveSessionIdRef.current
+        }).catch(() => {
+          // Unmount save failed — non-fatal, content will be saved on next visit
+        });
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     autoSaveStatus,
