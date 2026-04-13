@@ -356,15 +356,40 @@ export function LoginForm() {
 
 /**
  * Dev-only quick login card — render outside ModernAuthLayout so it's a separate card
+ * Shows all available dev accounts (predefined + registered) with admin badges
  */
 export function DevQuickLogin() {
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingAccount, setLoadingAccount] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [accounts, setAccounts] = useState<{
+    uid: string;
+    email: string;
+    username: string;
+    displayName: string;
+    isAdmin: boolean;
+    source: 'predefined' | 'registered';
+  }[]>([]);
+  const [isFetching, setIsFetching] = useState(true);
+
+  useEffect(() => {
+    if (getEnvironmentType() !== 'development') return;
+    fetch('/api/auth/dev-accounts')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.accounts) {
+          setAccounts(data.accounts);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsFetching(false));
+  }, []);
 
   if (getEnvironmentType() !== 'development') return null;
 
   const handleDevQuickLogin = async (email: string) => {
     setIsLoading(true);
+    setLoadingAccount(email);
     setError('');
     try {
       const res = await fetch('/api/auth/login', {
@@ -384,6 +409,7 @@ export function DevQuickLogin() {
       setError(err.message || 'Quick login failed');
     } finally {
       setIsLoading(false);
+      setLoadingAccount(null);
     }
   };
 
@@ -391,19 +417,55 @@ export function DevQuickLogin() {
     <div className="w-full max-w-md mx-auto mt-6 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4 space-y-3">
       <div className="text-center">
         <p className="text-sm font-medium text-muted-foreground">Dev Quick Login</p>
-        <p className="text-xs text-muted-foreground/70">No password required</p>
+        <p className="text-xs text-muted-foreground/70">Select an account — no password required</p>
       </div>
       {error && <p className="text-xs text-destructive text-center">{error}</p>}
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" size="sm" className="flex-1 text-xs" disabled={isLoading}
-          onClick={() => handleDevQuickLogin('jamie@wewrite.app')}>
-          jamie (admin)
-        </Button>
-        <Button type="button" variant="outline" size="sm" className="flex-1 text-xs" disabled={isLoading}
-          onClick={() => handleDevQuickLogin('test@wewrite.app')}>
-          test (admin)
-        </Button>
-      </div>
+      {isFetching ? (
+        <div className="flex items-center justify-center py-4">
+          <Icon name="Loader" size={16} />
+        </div>
+      ) : accounts.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-2">No dev accounts found</p>
+      ) : (
+        <div className="space-y-1.5">
+          {accounts.map((account) => (
+            <button
+              key={account.uid}
+              type="button"
+              disabled={isLoading}
+              onClick={() => handleDevQuickLogin(account.email)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors hover:bg-muted/80 disabled:opacity-50 border border-transparent hover:border-border"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-semibold text-primary">
+                  {(account.username || account.email)[0].toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium truncate">{account.username || account.email}</span>
+                  {account.isAdmin && (
+                    <span className="shrink-0 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 leading-none">
+                      Admin
+                    </span>
+                  )}
+                  {account.source === 'registered' && (
+                    <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 leading-none">
+                      Registered
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{account.email}</p>
+              </div>
+              {loadingAccount === account.email ? (
+                <Icon name="Loader" size={14} className="shrink-0" />
+              ) : (
+                <Icon name="ChevronRight" size={14} className="shrink-0 text-muted-foreground" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -170,12 +170,26 @@ async function getIncomingAllocationsForUser(userId: string) {
 
       // Get page title if it's a page allocation
       let pageTitle = 'Unknown Resource';
+      let groupId: string | null = null;
+      let groupName: string | null = null;
       if (allocation.resourceType === 'page') {
         try {
           const pageDoc = await db.collection(getCollectionName('pages')).doc(allocation.resourceId).get();
           if (pageDoc.exists) {
             const pageData = pageDoc.data();
             pageTitle = pageData?.title || 'Untitled Page';
+            // Check if this page belongs to a group
+            if (pageData?.groupId) {
+              groupId = pageData.groupId;
+              try {
+                const groupDoc = await db.collection(getCollectionName('groups')).doc(pageData.groupId).get();
+                if (groupDoc.exists) {
+                  groupName = groupDoc.data()?.name || null;
+                }
+              } catch {
+                // Group name lookup failed, proceed without it
+              }
+            }
           }
         } catch (error) {
           console.warn(`[EARNINGS] Error fetching page title for ${allocation.resourceId}:`, error);
@@ -212,7 +226,9 @@ async function getIncomingAllocationsForUser(userId: string) {
         fromUsername,
         username: fromUsername, // Alias for compatibility
         month: allocation.month,
-        createdAt: allocation.createdAt
+        createdAt: allocation.createdAt,
+        groupId,
+        groupName,
       };
     });
 

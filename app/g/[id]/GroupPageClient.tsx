@@ -19,7 +19,9 @@ import { InviteMemberModal } from '../../components/groups/InviteMemberModal';
 import { FundDistributionEditor } from '../../components/groups/FundDistributionEditor';
 import { GroupEarningsSummary } from '../../components/groups/GroupEarningsSummary';
 import GroupSettingsTab from '../../components/groups/GroupSettingsTab';
+import GroupStatsTab from '../../components/groups/GroupStatsTab';
 import ActivityFeed from '../../components/features/ActivityFeed';
+import AllocationBar from '../../components/payments/AllocationBar';
 import type { Group, GroupMember } from '../../types/groups';
 
 // Dynamic imports for heavy tab components
@@ -67,7 +69,7 @@ const GroupExternalLinksTab = dynamic(() => import('../../components/groups/Grou
   )
 });
 
-const VALID_GROUP_TABS = ['about', 'pages', 'members', 'activity', 'timeline', 'map', 'graph', 'external-links', 'earnings', 'settings'];
+const VALID_GROUP_TABS = ['about', 'pages', 'members', 'activity', 'timeline', 'map', 'graph', 'external-links', 'earnings', 'stats', 'settings'];
 
 interface GroupPageClientProps {
   initialGroup: Group;
@@ -224,6 +226,12 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
                 </TabsTrigger>
               )}
               {isOwner && (
+                <TabsTrigger value="stats" data-value="stats" className={tabTriggerClass}>
+                  <Icon name="BarChart3" size={16} />
+                  <span>Stats</span>
+                </TabsTrigger>
+              )}
+              {isOwner && (
                 <TabsTrigger value="settings" data-value="settings" className={tabTriggerClass}>
                   <Icon name="Settings" size={16} />
                   <span>Settings</span>
@@ -315,6 +323,12 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
           )}
 
           {isOwner && (
+            <TabsContent value="stats" className="mt-0">
+              <GroupStatsTab groupId={group.id} groupName={group.name} />
+            </TabsContent>
+          )}
+
+          {isOwner && (
             <TabsContent value="settings" className="mt-0">
               <GroupSettingsTab
                 group={group}
@@ -324,6 +338,19 @@ function GroupPageClientInner({ initialGroup }: GroupPageClientProps) {
           )}
         </div>
       </Tabs>
+
+      {/* Floating allocation bar - only show for non-owners */}
+      {!isOwner && (
+        <AllocationBar
+          pageId={group.id}
+          pageTitle={group.name || 'Group'}
+          authorId={group.ownerId}
+          visible={true}
+          variant="user"
+          isUserAllocation={true}
+          username={group.name || 'Group'}
+        />
+      )}
 
       <InviteMemberModal
         isOpen={showInviteModal}

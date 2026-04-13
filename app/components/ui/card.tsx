@@ -14,8 +14,6 @@ const Card = React.forwardRef<
       "rounded-2xl overflow-hidden",
       // Card provides all internal padding — children should NOT add their own
       "p-4",
-      // Ensure proper spacing between cards when used in grids
-      "mb-4 md:mb-0",
       className
     )}
     {...props}

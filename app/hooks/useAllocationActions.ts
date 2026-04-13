@@ -21,7 +21,6 @@ import {
   getUserFriendlyErrorMessage,
   getErrorRecoveryActions
 } from '../utils/allocationErrorHandling';
-import { showUsdAllocationNotification } from '../utils/usdNotifications';
 import { allocateLoggedOutUsd, allocateUserUsd } from '../utils/simulatedUsd';
 
 /**
@@ -111,7 +110,6 @@ export function useAllocationActions({
           // Refresh the demo balance from localStorage to update the context
           refreshDemoBalance();
           onAllocationChange?.(newAllocationCents);
-          showUsdAllocationNotification(changeCents, pageTitle, newAllocationCents);
         } else {
           throw new Error(result.error || 'Demo allocation failed');
         }
@@ -131,13 +129,6 @@ export function useAllocationActions({
       if (result.success) {
         // Update the actual allocation
         onAllocationChange?.(result.currentAllocation);
-
-        // Show success notification
-        showUsdAllocationNotification(
-          changeCents,
-          pageTitle,
-          result.currentAllocation
-        );
       } else {
         throw new AllocationError(
           result.error || 'Allocation failed',
@@ -288,7 +279,6 @@ export function useAllocationActions({
     allocationBatcher.batchRequest(request, 'high').then(result => {
       if (result.success) {
         onAllocationChange?.(result.currentAllocation);
-        showUsdAllocationNotification(changeCents, pageTitle, result.currentAllocation);
       } else {
         throw new Error(result.error || 'Allocation failed');
       }

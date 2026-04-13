@@ -36,29 +36,45 @@ interface DevTestUser {
  * SECURITY: Passwords are NOT stored here - they come from DEV_TEST_USER_PASSWORD env var
  */
 export const DEV_TEST_USERS: Record<string, DevTestUser> = {
-  'jamie@wewrite.app': {
+  'alice@wewrite.dev': {
     uid: 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L',
-    email: 'jamie@wewrite.app',
-    username: 'jamie',
-    displayName: 'Jamie Gray',
+    email: 'alice@wewrite.dev',
+    username: 'alice',
+    displayName: 'Alice Admin',
     isAdmin: true,
-    description: 'Admin test user for development'
+    description: 'Admin test user'
   },
-  'test@wewrite.app': {
+  'bob@wewrite.dev': {
     uid: 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N',
-    email: 'test@wewrite.app',
-    username: 'testuser',
-    displayName: 'Test User',
+    email: 'bob@wewrite.dev',
+    username: 'bob',
+    displayName: 'Bob Admin',
     isAdmin: true,
-    description: 'Test user for development (admin in dev mode)'
+    description: 'Admin test user'
   },
-  'getwewrite@gmail.com': {
+  'charlie@wewrite.dev': {
     uid: 'gW5eR8iT3eA9pP2mN6oQ4sT7uV1X',
-    email: 'getwewrite@gmail.com',
-    username: 'getwewrite',
-    displayName: 'WeWrite',
+    email: 'charlie@wewrite.dev',
+    username: 'charlie',
+    displayName: 'Charlie Admin',
     isAdmin: true,
-    description: 'WeWrite official test account (admin in dev mode)'
+    description: 'Admin test user'
+  },
+  'dana@wewrite.dev': {
+    uid: 'aL1cEwR1t3rT5sT9uS3rK7mJ2pQ4x',
+    email: 'dana@wewrite.dev',
+    username: 'dana',
+    displayName: 'Dana Test',
+    isAdmin: false,
+    description: 'Non-admin test user'
+  },
+  'eve@wewrite.dev': {
+    uid: 'bO8rEaD3rT6sT0uS4rL8nK3qR5yZ',
+    email: 'eve@wewrite.dev',
+    username: 'eve',
+    displayName: 'Eve Test',
+    isAdmin: false,
+    description: 'Non-admin test user'
   }
 };
 
@@ -66,21 +82,22 @@ export const DEV_TEST_USERS: Record<string, DevTestUser> = {
  * Development test user UIDs from DEV_TEST_USERS
  */
 export const DEV_TEST_USER_UIDS: string[] = [
-  'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L', // jamie@wewrite.app
-  'mP9yRa3nO6gS8wD4xE2hF5jK7m9N', // test@wewrite.app
-  'gW5eR8iT3eA9pP2mN6oQ4sT7uV1X', // getwewrite@gmail.com
-  'qT1uVb4oQ7hU9xF5yG3iH6kL8n0P', // testAdmin
-  'sW2vXc5pR8iV0yH6zI4jJ7lM9o1Q', // testWriter
-  'uY3wZd6qS9jW1zJ7aK5kL8mN0p2R'  // testReader
+  'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L', // alice@wewrite.dev
+  'mP9yRa3nO6gS8wD4xE2hF5jK7m9N', // bob@wewrite.dev
+  'gW5eR8iT3eA9pP2mN6oQ4sT7uV1X', // charlie@wewrite.dev
+  'aL1cEwR1t3rT5sT9uS3rK7mJ2pQ4x', // dana@wewrite.dev
+  'bO8rEaD3rT6sT0uS4rL8nK3qR5yZ', // eve@wewrite.dev
 ];
 
 /**
  * Development test user emails from DEV_TEST_USERS
  */
 export const DEV_TEST_USER_EMAILS: string[] = [
-  'jamie@wewrite.app',
-  'test@wewrite.app',
-  'getwewrite@gmail.com'
+  'alice@wewrite.dev',
+  'bob@wewrite.dev',
+  'charlie@wewrite.dev',
+  'dana@wewrite.dev',
+  'eve@wewrite.dev'
 ];
 
 /**

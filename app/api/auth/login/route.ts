@@ -235,8 +235,9 @@ export async function POST(request: NextRequest) {
         const fields = userDoc.fields || {};
         const storedPasswordHash = fields.passwordHash?.stringValue;
 
+        // Quick login skips password for registered dev users too
         // Use verifyDevPassword which supports both SHA-256 (new) and base64 (legacy) formats
-        const passwordValid = storedPasswordHash && await verifyDevPassword(password, storedPasswordHash);
+        const passwordValid = isQuickLogin ? true : (storedPasswordHash && await verifyDevPassword(password, storedPasswordHash));
 
         if (passwordValid) {
           // Extract uid from document path

@@ -44,7 +44,15 @@ interface ReferralEarning {
   payoutCount: number;
 }
 
-type BreakdownMode = 'pages' | 'sponsors' | 'referrals';
+interface GroupEarning {
+  groupId: string;
+  groupName: string;
+  totalEarnings: number;
+  pageCount: number;
+  pages: PageContribution[];
+}
+
+type BreakdownMode = 'pages' | 'sponsors' | 'referrals' | 'groups';
 
 /**
  * EarningsSourceBreakdown - Shows where earnings are coming from
@@ -115,7 +123,7 @@ export default function EarningsSourceBreakdown() {
   }, [earnings?.availableBalance, loadingHistorical]);
 
   // Process both pending allocations AND historical earnings data
-  const { pageBreakdown, sponsorBreakdown, referralBreakdown } = useMemo(() => {
+  const { pageBreakdown, sponsorBreakdown, referralBreakdown, groupBreakdown } = useMemo(() => {
 
     // Combine current pending allocations with historical earnings data
     const allEarningsData: any[] = [];
@@ -139,7 +147,7 @@ export default function EarningsSourceBreakdown() {
 
 
     if (allEarningsData.length === 0) {
-      return { pageBreakdown: [], sponsorBreakdown: [], referralBreakdown: [] };
+      return { pageBreakdown: [], sponsorBreakdown: [], referralBreakdown: [], groupBreakdown: [] };
     }
 
     // Separate referral allocations from page allocations
@@ -236,7 +244,42 @@ export default function EarningsSourceBreakdown() {
     const referralBreakdown = Array.from(referralMap.values())
       .sort((a, b) => b.totalEarnings - a.totalEarnings);
 
-    return { pageBreakdown, sponsorBreakdown, referralBreakdown };
+    // Group by groups (pages that belong to a group)
+    const groupMap = new Map<string, GroupEarning>();
+    pageAllocations.forEach((allocation: any) => {
+      const gId = allocation.groupId;
+      const gName = allocation.groupName;
+      if (!gId || !gName) return;
+
+      const pageId = allocation.resourceId;
+      const pageTitle = allocation.pageTitle || allocation.resourceTitle || 'Untitled Page';
+      const amount = allocation.usdCents / 100;
+
+      if (!groupMap.has(gId)) {
+        groupMap.set(gId, {
+          groupId: gId,
+          groupName: gName,
+          totalEarnings: 0,
+          pageCount: 0,
+          pages: [],
+        });
+      }
+      const groupData = groupMap.get(gId)!;
+      groupData.totalEarnings += amount;
+
+      const existingPage = groupData.pages.find(p => p.pageId === pageId);
+      if (existingPage) {
+        existingPage.amount += amount;
+      } else {
+        groupData.pages.push({ pageId, pageTitle, amount });
+        groupData.pageCount++;
+      }
+    });
+
+    const groupBreakdown = Array.from(groupMap.values())
+      .sort((a, b) => b.totalEarnings - a.totalEarnings);
+
+    return { pageBreakdown, sponsorBreakdown, referralBreakdown, groupBreakdown };
   }, [earnings?.pendingAllocations, historicalEarnings]);
 
   if (loading) {
@@ -266,8 +309,9 @@ export default function EarningsSourceBreakdown() {
     );
   }
 
-  const hasEarnings = pageBreakdown.length > 0 || sponsorBreakdown.length > 0 || referralBreakdown.length > 0;
+  const hasEarnings = pageBreakdown.length > 0 || sponsorBreakdown.length > 0 || referralBreakdown.length > 0 || groupBreakdown.length > 0;
   const hasReferrals = referralBreakdown.length > 0;
+  const hasGroups = groupBreakdown.length > 0;
 
   return (
     <div className="space-y-4">
@@ -307,6 +351,17 @@ export default function EarningsSourceBreakdown() {
               >
                 <Icon name="UserPlus" size={12} />
                 Referrals
+              </Button>
+            )}
+            {hasGroups && (
+              <Button
+                variant={mode === 'groups' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMode('groups')}
+                className="flex items-center gap-1"
+              >
+                <Icon name="Users" size={12} />
+                Groups
               </Button>
             )}
           </div>
@@ -520,6 +575,86 @@ export default function EarningsSourceBreakdown() {
                   </div>
                 </Card>
               ))
+            ) : mode === 'groups' ? (
+              // Groups breakdown - Each group gets its own card
+              groupBreakdown.map((group, index) => {
+                const cardId = `group-${group.groupId}`;
+                const isExpanded = isCardExpanded(cardId);
+
+                return (
+                  <Card key={group.groupId} className="overflow-hidden">
+                    <div
+                      className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => toggleCardExpansion(cardId)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
+                            <PillLink
+                              href={`/g/${group.groupId}`}
+                              isPublic={true}
+                              customOnClick={(e) => e.stopPropagation()}
+                            >
+                              {group.groupName}
+                            </PillLink>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {group.pageCount} page{group.pageCount !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="font-semibold text-green-600">
+                              {formatUsdCents(group.totalEarnings * 100)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">/month</div>
+                          </div>
+                          <Icon name="ChevronRight" size={16} className={`text-muted-foreground transition-transform duration-200 ${
+                            isExpanded ? 'rotate-90' : 'rotate-0'
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded content - Pages in this group */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <div className="border-t border-neutral-15 bg-muted/20">
+                        <div className="p-4">
+                          <h4 className="text-sm font-medium mb-3 text-muted-foreground">
+                            Earning pages in this group
+                          </h4>
+                          <div className="space-y-2">
+                            {group.pages
+                              .sort((a, b) => b.amount - a.amount)
+                              .map((page) => (
+                                <div key={page.pageId} className="flex items-center justify-between py-2 px-3">
+                                  <div className="flex items-center gap-2">
+                                    <PillLink
+                                      href={`/${page.pageId}`}
+                                      pageId={page.pageId}
+                                      isPublic={true}
+                                    >
+                                      {page.pageTitle}
+                                    </PillLink>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-semibold text-green-600">
+                                      {formatUsdCents((page.amount || 0) * 100)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">/month</div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
             ) : null}
 
             {/* Summary */}
@@ -530,12 +665,16 @@ export default function EarningsSourceBreakdown() {
                     ? `${pageBreakdown.length} earning page${pageBreakdown.length !== 1 ? 's' : ''}`
                     : mode === 'sponsors'
                     ? `${sponsorBreakdown.length} sponsor${sponsorBreakdown.length !== 1 ? 's' : ''}`
+                    : mode === 'groups'
+                    ? `${groupBreakdown.length} group${groupBreakdown.length !== 1 ? 's' : ''}`
                     : `${referralBreakdown.length} referral${referralBreakdown.length !== 1 ? 's' : ''}`
                   }
                 </span>
                 <span className="font-medium">
                   {mode === 'referrals'
                     ? `Total: ${formatUsdCents(referralBreakdown.reduce((sum, r) => sum + r.totalEarnings, 0) * 100)}`
+                    : mode === 'groups'
+                    ? `Total: ${formatUsdCents(groupBreakdown.reduce((sum, g) => sum + g.totalEarnings, 0) * 100)}/month`
                     : `Total: ${formatUsdCents((earnings?.pendingBalance || 0) * 100)}/month`
                   }
                 </span>

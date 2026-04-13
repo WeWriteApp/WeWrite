@@ -179,8 +179,9 @@ export default function DatabaseReadsMonitoring() {
         </Card>
       </div>
 
+      <div className="space-y-6">
       {/* Quota Status */}
-      <Card className="mb-6">
+      <Card>
         <CardHeader>
           <CardTitle>Quota Status</CardTitle>
         </CardHeader>
@@ -227,7 +228,7 @@ export default function DatabaseReadsMonitoring() {
       </Card>
 
       {/* Top Endpoints */}
-      <Card className="mb-6">
+      <Card>
         <CardHeader>
           <CardTitle>Top Endpoints by Read Count</CardTitle>
         </CardHeader>
@@ -268,9 +269,7 @@ export default function DatabaseReadsMonitoring() {
           </CardContent>
         </Card>
       )}
-
-      <div className="mt-6 text-xs text-gray-500">
-        Last updated: {new Date(data.stats.lastUpdated).toLocaleString()}
+      </div>
       </div>
     </div>
   );

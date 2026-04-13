@@ -104,7 +104,7 @@ export async function getUserEmailFromId(userId: string): Promise<string | null>
 
     // Handle legacy development user IDs
     if (userId === 'dev_admin_user') {
-      return 'jamie@wewrite.app';
+      return 'alice@wewrite.dev';
     }
     if (userId === 'dev_test_user_1') {
       return 'test@local.dev';

@@ -20,7 +20,6 @@ import { USD_UI_TEXT } from '../../utils/usdConstants';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
-import { toast } from '../ui/use-toast';
 
 interface UsdAllocationModalProps {
   isOpen: boolean;
@@ -130,13 +129,6 @@ export function UsdAllocationModal({
 
     try {
       await onAllocationChange(newAllocationCents);
-
-      toast({
-        title: "Allocation Updated",
-        description: `${formatUsdCents(newAllocationCents)} allocated to ${isUserAllocation ? username : pageTitle}`,
-        duration: 3000,
-      });
-
       onClose();
     } catch (error) {
       console.error('Error updating allocation:', error);

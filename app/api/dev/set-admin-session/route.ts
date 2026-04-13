@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Dev admin session created',
       userId: 'dev_admin_user',
-      userEmail: 'jamie@wewrite.app',
+      userEmail: 'alice@wewrite.dev',
       note: 'You can now access admin endpoints'
     });
     

@@ -132,7 +132,8 @@ export default function GroupSettingsPage() {
     <NavPageLayout>
       <PageHeader title="Group Settings" backHref={true} />
 
-      <Card className="mb-4">
+      <div className="space-y-4">
+      <Card>
         <CardHeader>
           <CardTitle>General</CardTitle>
         </CardHeader>
@@ -196,7 +197,6 @@ export default function GroupSettingsPage() {
         </CardFooter>
       </Card>
 
-      {/* Danger Zone */}
       <Card className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -213,6 +213,7 @@ export default function GroupSettingsPage() {
           </button>
         </CardContent>
       </Card>
+      </div>
     </NavPageLayout>
   );
 }
