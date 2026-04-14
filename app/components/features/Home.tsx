@@ -12,6 +12,7 @@ import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
 import { EmailVerificationModal } from "../auth/EmailVerificationModal";
 import { OnboardingCard } from "../onboarding/OnboardingCard";
+import { SubscriptionCTACard } from "../subscription/SubscriptionCTACard";
 
 
 
@@ -132,6 +133,9 @@ const Home: React.FC = () => {
           <div className="container max-w-4xl mx-auto py-4 space-y-6">
             {/* Onboarding Card - inline at top of feed */}
             <OnboardingCard />
+
+            {/* Subscription CTA - encourage non-subscribers to start */}
+            <SubscriptionCTACard />
 
             {/* Daily Notes Section */}
             <DailyNotesSection />
