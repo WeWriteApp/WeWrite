@@ -13,6 +13,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useInfiniteScrollWithLoadMore, useInfiniteScroll } from '../../hooks/useInfiniteScroll';
 import { SectionTitle } from '../ui/section-title';
 import { FollowUsersCard } from '../activity/FollowUsersCard';
+import { SubscriptionCTACard } from '../subscription/SubscriptionCTACard';
 import { getUserFollowing } from '../../firebase/follows';
 
 interface ActivityItem {
@@ -756,7 +757,7 @@ export default function ActivityFeed({
         )
       ) : (
         <div className="space-y-4">
-          {activities.map((activity) => {
+          {activities.map((activity, index) => {
             const isNewPageCreation = activity.lastDiff?.isNewPage === true;
 
             const activityCardData = {
@@ -786,10 +787,13 @@ export default function ActivityFeed({
             };
 
             return (
-              <ActivityCard
-                key={activity.id}
-                activity={activityCardData}
-              />
+              <React.Fragment key={activity.id}>
+                <ActivityCard
+                  activity={activityCardData}
+                />
+                {/* Subscription CTA injected after 3rd feed item */}
+                {index === 2 && mode === 'global' && <SubscriptionCTACard />}
+              </React.Fragment>
             );
           })}
 

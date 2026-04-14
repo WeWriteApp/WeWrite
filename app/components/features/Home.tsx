@@ -12,7 +12,6 @@ import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
 import { EmailVerificationModal } from "../auth/EmailVerificationModal";
 import { OnboardingCard } from "../onboarding/OnboardingCard";
-import { SubscriptionCTACard } from "../subscription/SubscriptionCTACard";
 
 
 
@@ -134,9 +133,6 @@ const Home: React.FC = () => {
             {/* Onboarding Card - inline at top of feed */}
             <OnboardingCard />
 
-            {/* Subscription CTA - encourage non-subscribers to start */}
-            <SubscriptionCTACard />
-
             {/* Daily Notes Section */}
             <DailyNotesSection />
 
@@ -144,12 +140,6 @@ const Home: React.FC = () => {
             <div className="px-4">
               <ActivityFeed mode="global" />
             </div>
-
-
-
-
-
-
           </div>
         </main>
     </div>
