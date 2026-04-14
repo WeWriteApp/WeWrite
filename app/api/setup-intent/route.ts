@@ -3,8 +3,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getUserIdFromRequest } from '../auth-helper';
-import { sanitizeUsername } from '../../utils/usernameSecurity';
 import { getStripe } from '../../lib/stripe';
+import { getOrCreateStripeCustomer } from '../../lib/stripeCustomer';
 
 // Initialize Firebase Admin lazily
 let auth: any;
@@ -53,53 +53,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get the user's customer ID from Firestore
-    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-    const userData = userDoc.data();
-
-    let customerId = userData?.stripeCustomerId;
-
-    // If the user doesn't have a customer ID, create one
-    if (!customerId) {
-      // Get user email from Firebase Auth
-      const userRecord = await auth.getUser(userId);
-
-      // Get username from Firestore (never expose email local part)
-      let username = 'Unknown User';
-      try {
-        const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-        const userData = userDoc.exists() ? userDoc.data() : null;
-        const emailLocalPart = userRecord.email ? userRecord.email.split('@')[0] : null;
-        // Only use username field - displayName is fully deprecated
-        username = sanitizeUsername(
-          userData?.username || null,
-          'User',
-          'User'
-        );
-        if (!username || username === 'User') {
-          username = `user_${userId.substring(0, 8)}`;
-        }
-        // Keep email local part only for backend metadata clarity, never surface as username
-        const email_local_part = emailLocalPart || undefined;
-        if (email_local_part) {
-        }
-      } catch (error) {
-        console.warn('Could not fetch username for Stripe customer:', error);
-      }
-
-      const customer = await stripe.customers.create({
-        email: userRecord.email,
-        description: `WeWrite user ${username} (${userId})`,
-        metadata: {
-          firebaseUID: userId,
-          username: username}});
-
-      customerId = customer.id;
-
-      // Save the customer ID to Firestore
-      await db.collection(getCollectionName('users')).doc(userId).set({
-        stripeCustomerId: customerId}, { merge: true });
-    }
+    // Get or create a Stripe customer (with deduplication)
+    const userRecord = await auth.getUser(userId);
+    const { customerId } = await getOrCreateStripeCustomer({
+      userId,
+      email: userRecord.email,
+      db,
+    });
 
     // Check if the user already has 3 payment methods
     const paymentMethods = await stripe.paymentMethods.list({

@@ -5,8 +5,8 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 import { SubscriptionValidationService } from '../../../services/subscriptionValidationService';
 import { invalidateCache } from '../../../utils/internalApi';
-import Stripe from 'stripe';
 import { getStripe } from '../../../lib/stripe';
+import { getOrCreateStripeCustomer } from '../../../lib/stripeCustomer';
 
 const stripe = getStripe();
 
@@ -30,28 +30,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User email not found' }, { status: 400 });
     }
 
-    // Create or get customer
-    let customer: Stripe.Customer;
-    try {
-      const customers = await stripe.customers.list({
-        email: userEmail,
-        limit: 1,
-      });
+    // Get or create Stripe customer (with deduplication)
+    // Initialize Firebase Admin early since getOrCreateStripeCustomer needs the db
+    const admin = getFirebaseAdmin();
+    const adminDb = admin.firestore();
 
-      if (customers.data.length > 0) {
-        customer = customers.data[0];
-      } else {
-        customer = await stripe.customers.create({
-          email: userEmail,
-          metadata: {
-            userId: userId,
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Error creating/finding customer:', error);
-      return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 });
-    }
+    const { customerId } = await getOrCreateStripeCustomer({
+      userId,
+      email: userEmail,
+      db: adminDb,
+    });
 
     // Create price for the amount
     const price = await stripe.prices.create({
@@ -67,14 +55,14 @@ export async function POST(request: NextRequest) {
 
     // Check if customer has a default payment method
     const paymentMethods = await stripe.paymentMethods.list({
-      customer: customer.id,
+      customer: customerId,
       type: 'card',
     });
 
     if (paymentMethods.data.length === 0) {
       // No payment method - create setup intent for payment method collection
       const setupIntent = await stripe.setupIntents.create({
-        customer: customer.id,
+        customer: customerId,
         // STRIPE LINK: Add Link support along with card payments
         payment_method_types: ['card', 'link'],
         usage: 'off_session',
@@ -88,19 +76,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         requiresPaymentMethod: true,
         clientSecret: setupIntent.client_secret,
-        customerId: customer.id,
+        customerId,
         setupIntentId: setupIntent.id
       });
     }
 
     // Check if customer already has active subscriptions
-    const existingCheck = await SubscriptionValidationService.checkForExistingSubscriptions(customer.id);
+    const existingCheck = await SubscriptionValidationService.checkForExistingSubscriptions(customerId);
     const validationError = SubscriptionValidationService.validateSubscriptionCreation(existingCheck);
 
     if (validationError) {
       SubscriptionValidationService.logValidationEvent('DUPLICATE_SUBSCRIPTION_PREVENTED', {
         userId,
-        customerId: customer.id,
+        customerId,
         existingSubscriptionId: validationError.existingSubscriptionId
       });
 
@@ -112,7 +100,7 @@ export async function POST(request: NextRequest) {
     const transferGroup = `subscription_${userId}_${currentMonth}`;
 
     const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
+      customer: customerId,
       items: [{ price: price.id }],
       default_payment_method: paymentMethods.data[0].id,
       payment_behavior: 'error_if_incomplete',
@@ -136,14 +124,11 @@ export async function POST(request: NextRequest) {
     SubscriptionValidationService.validateSubscriptionStatus(subscription, 'active');
 
     // Save subscription to Firestore
-    const admin = getFirebaseAdmin();
-    const adminDb = admin.firestore();
-
     const subscriptionData = {
       id: 'current',
       userId: userId,
       stripeSubscriptionId: subscription.id,
-      stripeCustomerId: customer.id,
+      stripeCustomerId: customerId,
       stripePriceId: price.id,
       status: subscription.status,
       amount: amount,
