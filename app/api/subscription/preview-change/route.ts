@@ -31,8 +31,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION PREVIEW] User ${userId} previewing change for subscription ${subscriptionId}`);
 
-    // Check if this is a test subscription
-    const isTestSubscription = subscriptionId.startsWith('sub_test_');
+    // Check if this is a test subscription or development environment
+    const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
+                               process.env.NODE_ENV === 'development';
     
     if (isTestSubscription) {
       // For test subscriptions, provide a mock preview

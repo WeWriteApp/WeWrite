@@ -35,8 +35,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION REACTIVATE] User ${userId} reactivating subscription ${subscriptionId}`);
 
-    // Check if this is a test subscription
-    const isTestSubscription = subscriptionId.startsWith('sub_test_');
+    // Check if this is a test subscription or development environment
+    const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
+                               process.env.NODE_ENV === 'development';
     
     let reactivatedSubscription;
     
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         }
       };
     } else {
-      // Handle real subscription - call Stripe API
+      // Handle real subscription - call Stripe API (production only)
       try {
         // First, check if subscription is cancelled at period end
         const currentSubscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -114,10 +115,10 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(`[SUBSCRIPTION REACTIVATE] Successfully reactivated Stripe subscription ${subscriptionId}`);
-      } catch (stripeError) {
-        console.error('[SUBSCRIPTION REACTIVATE] Stripe API error:', stripeError);
+      } catch (stripeError: any) {
+        console.error('[SUBSCRIPTION REACTIVATE] Stripe API error:', stripeError?.message || stripeError);
         return NextResponse.json({ 
-          error: 'Failed to reactivate subscription in Stripe' 
+          error: `Failed to reactivate subscription in Stripe: ${stripeError?.message || 'Unknown error'}` 
         }, { status: 500 });
       }
     }

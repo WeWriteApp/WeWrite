@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION CANCEL] User ${userId} cancelling subscription ${subscriptionId}, immediate: ${cancelImmediately}`);
 
-    // Check if this is a test subscription
-    const isTestSubscription = subscriptionId.startsWith('sub_test_');
+    // Check if this is a test subscription or development environment
+    const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
+                               process.env.NODE_ENV === 'development';
     
     let cancelledSubscription;
     
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
         canceled_at: cancelImmediately ? Math.floor(Date.now() / 1000) : null
       };
     } else {
-      // Handle real subscription - call Stripe API
+      // Handle real subscription - call Stripe API (production only)
       try {
         if (cancelImmediately) {
           // Cancel immediately
@@ -71,10 +72,10 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(`[SUBSCRIPTION CANCEL] Successfully cancelled Stripe subscription ${subscriptionId}`);
-      } catch (stripeError) {
-        console.error('[SUBSCRIPTION CANCEL] Stripe API error:', stripeError);
+      } catch (stripeError: any) {
+        console.error('[SUBSCRIPTION CANCEL] Stripe API error:', stripeError?.message || stripeError);
         return NextResponse.json({ 
-          error: 'Failed to cancel subscription in Stripe' 
+          error: `Failed to cancel subscription in Stripe: ${stripeError?.message || 'Unknown error'}` 
         }, { status: 500 });
       }
     }
