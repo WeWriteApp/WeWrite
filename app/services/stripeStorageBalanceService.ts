@@ -131,7 +131,7 @@ export class StripeStorageBalanceService {
         };
       }
 
-      // Create transfer from Payments Balance to Connected Account
+      // Create transfer from Payments Balance to Connected Account with idempotency key
       const transfer = await this.stripe.transfers.create({
         amount: netAmountCents,
         currency: 'usd',
@@ -146,7 +146,7 @@ export class StripeStorageBalanceService {
           platformFeeCents: feeCents.toString(),
           platformFeePercentage: (PLATFORM_FEE_CONFIG.PERCENTAGE * 100).toString()
         }
-      });
+      }, payoutId ? { idempotencyKey: payoutId } : undefined);
 
       // Record the payout operation
       await this.recordOperation({

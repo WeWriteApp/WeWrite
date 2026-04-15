@@ -76,12 +76,17 @@ const CommandDialog = ({ children, shouldFilter, hashId, open, onOpenChange, ...
   const containerRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!open) return;
+    // Save scroll position before focusing input
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
     // Use a short setTimeout to ensure the portal is fully mounted.
     // On mobile, the proxy input from CommandPaletteProvider holds keyboard
     // activation; transferring focus here keeps the keyboard visible.
     const timer = setTimeout(() => {
       const input = containerRef.current?.querySelector('input');
       input?.focus();
+      // Restore scroll position after focusing
+      window.scrollTo(scrollX, scrollY);
     }, 50);
     return () => clearTimeout(timer);
   }, [open]);

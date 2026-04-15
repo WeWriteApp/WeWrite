@@ -290,23 +290,59 @@ export class PayoutService {
         completedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      // Phase 2: Mark earnings records as paid_out instead of updating balance collection
-      // Get all 'available' earnings for this user and mark them as paid_out
+
+      // Partial payout logic: only mark enough earnings as paid_out to match payout.amountCents
+      let remainingCents = payout.amountCents;
       const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
         .where('userId', '==', payout.userId)
-        .where('status', '==', 'available');
+        .where('status', '==', 'available')
+        .orderBy('month', 'asc'); // oldest first
 
       const earningsSnapshot = await earningsQuery.get();
       const batch = db.batch();
 
-      earningsSnapshot.docs.forEach(doc => {
-        batch.update(doc.ref, {
-          status: 'paid_out',
-          paidOutAt: admin.firestore.FieldValue.serverTimestamp(),
-          payoutId: payout.id,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      });
+      for (const doc of earningsSnapshot.docs) {
+        if (remainingCents <= 0) break;
+        const earnings = doc.data();
+        const earningCents = earnings.totalUsdCentsReceived || 0;
+        if (earningCents <= 0) continue;
+
+        if (earningCents <= remainingCents) {
+          // Mark full earning as paid out
+          batch.update(doc.ref, {
+            status: 'paid_out',
+            paidOutAt: admin.firestore.FieldValue.serverTimestamp(),
+            payoutId: payout.id,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          remainingCents -= earningCents;
+        } else {
+          // Partial earning: split the record
+          // 1. Update current doc to partial paid_out
+          batch.update(doc.ref, {
+            status: 'paid_out',
+            paidOutAt: admin.firestore.FieldValue.serverTimestamp(),
+            payoutId: payout.id,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            totalUsdCentsReceived: remainingCents
+          });
+          // 2. Create a new doc for the leftover available amount
+          const leftoverCents = earningCents - remainingCents;
+          if (leftoverCents > 0) {
+            const newDocRef = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS)).doc();
+            batch.set(newDocRef, {
+              ...earnings,
+              totalUsdCentsReceived: leftoverCents,
+              status: 'available',
+              paidOutAt: null,
+              payoutId: null,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+          }
+          remainingCents = 0;
+        }
+      }
 
       await batch.commit();
 
@@ -346,7 +382,7 @@ export class PayoutService {
         if (referredBy) {
           const platformFeeCents = Math.round(payout.amountCents * PLATFORM_FEE_CONFIG.PERCENTAGE);
 
-          await UsdEarningsService.processReferralEarning(
+          const referralResult = await UsdEarningsService.processReferralEarning(
             referredBy,                           // referrerUserId
             payout.userId,                        // referredUserId
             userData?.username || 'Anonymous',    // referredUsername
@@ -354,11 +390,70 @@ export class PayoutService {
             payout.amountCents,                   // payoutAmountCents
             platformFeeCents                      // platformFeeCents
           );
+          if (!referralResult.success) {
+            // Log failed referral earning for later retry
+            await db.collection(getCollectionName('referralEarningsFailures')).add({
+              referrerUserId: referredBy,
+              referredUserId: payout.userId,
+              referredUsername: userData?.username || 'Anonymous',
+              payoutId: payout.id,
+              payoutAmountCents: payout.amountCents,
+              platformFeeCents,
+              error: referralResult.error || 'Unknown error',
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              retryCount: 0
+            });
+            console.error('[Payout] Referral earnings failed and logged for retry:', referralResult.error);
+          }
         }
       } catch (referralErr) {
-        // Don't fail the payout if referral earnings fail - log and continue
-        console.error('[Payout] Error processing referral earnings (non-fatal):', referralErr);
+        // Log unexpected errors for retry
+        await db.collection(getCollectionName('referralEarningsFailures')).add({
+          referrerUserId: userData?.referredBy,
+          referredUserId: payout.userId,
+          referredUsername: userData?.username || 'Anonymous',
+          payoutId: payout.id,
+          payoutAmountCents: payout.amountCents,
+          platformFeeCents: Math.round(payout.amountCents * PLATFORM_FEE_CONFIG.PERCENTAGE),
+          error: referralErr instanceof Error ? referralErr.message : 'Unknown error',
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          retryCount: 0
+        });
+        console.error('[Payout] Error processing referral earnings (non-fatal, logged for retry):', referralErr);
       }
+  // Retry all failed referral earnings
+  static async retryFailedReferralEarnings(): Promise<{ retried: number; succeeded: number; failed: number }> {
+    const admin = getFirebaseAdmin();
+    if (!admin) throw new Error('Database not available');
+    const db = admin.firestore();
+    const failuresSnapshot = await db.collection(getCollectionName('referralEarningsFailures')).get();
+    let retried = 0, succeeded = 0, failed = 0;
+    for (const doc of failuresSnapshot.docs) {
+      const data = doc.data();
+      try {
+        const result = await UsdEarningsService.processReferralEarning(
+          data.referrerUserId,
+          data.referredUserId,
+          data.referredUsername,
+          data.payoutId,
+          data.payoutAmountCents,
+          data.platformFeeCents
+        );
+        retried++;
+        if (result.success) {
+          succeeded++;
+          await doc.ref.delete();
+        } else {
+          failed++;
+          await doc.ref.update({ retryCount: (data.retryCount || 0) + 1, lastError: result.error || 'Unknown error', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+      } catch (err) {
+        failed++;
+        await doc.ref.update({ retryCount: (data.retryCount || 0) + 1, lastError: err instanceof Error ? err.message : 'Unknown error', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      }
+    }
+    return { retried, succeeded, failed };
+  }
 
       return { success: true, transferId: payoutResult.transferId };
 

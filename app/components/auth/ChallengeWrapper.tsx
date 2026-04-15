@@ -81,21 +81,8 @@ export function ChallengeWrapper({
   const widgetIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
 
-  // Determine widget size based on risk level
-  const getWidgetSize = useCallback((): TurnstileSize => {
-    switch (riskLevel) {
-      case 'allow':
-        return 'invisible';
-      case 'soft_challenge':
-        return 'invisible';
-      case 'hard_challenge':
-        return 'normal';
-      case 'block':
-        return 'normal';
-      default:
-        return 'invisible';
-    }
-  }, [riskLevel]);
+  // Always use 'normal' mode for maximum compatibility
+  const getWidgetSize = useCallback((): TurnstileSize => 'normal', []);
 
   // Handle successful verification
   const handleSuccess = useCallback(

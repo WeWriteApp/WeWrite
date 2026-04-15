@@ -33,40 +33,36 @@ export class UsdEarningsService {
     try {
       const { db } = getFirebaseAdminAndDb();
 
-      // Calculate balance from earnings records (Phase 2 - single source of truth)
-      const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
-        .where('userId', '==', userId);
 
-      const earningsSnapshot = await earningsQuery.get();
-
-      // If no earnings, return null (user has no balance)
-      if (earningsSnapshot.empty) {
-        return null;
-      }
-
-      // Calculate totals from earnings
+      // Only fetch available and pending earnings, limit to 1000 for performance
+      const statuses = ['pending', 'available', 'paid_out'];
       let totalUsdCentsEarned = 0;
       let pendingUsdCents = 0;
       let availableUsdCents = 0;
       let paidOutUsdCents = 0;
       let lastProcessedMonth = '';
 
-      earningsSnapshot.docs.forEach(doc => {
-        const earnings = doc.data();
-        totalUsdCentsEarned += earnings.totalUsdCentsReceived || 0;
-
-        if (earnings.status === 'pending') {
-          pendingUsdCents += earnings.totalUsdCentsReceived || 0;
-        } else if (earnings.status === 'available') {
-          availableUsdCents += earnings.totalUsdCentsReceived || 0;
-        } else if (earnings.status === 'paid_out') {
-          paidOutUsdCents += earnings.totalUsdCentsReceived || 0;
-        }
-
-        if (earnings.month > lastProcessedMonth) {
-          lastProcessedMonth = earnings.month;
-        }
-      });
+      for (const status of statuses) {
+        const earningsQuery = db.collection(getCollectionName(USD_COLLECTIONS.WRITER_USD_EARNINGS))
+          .where('userId', '==', userId)
+          .where('status', '==', status)
+          .limit(1000);
+        const earningsSnapshot = await earningsQuery.get();
+        earningsSnapshot.docs.forEach(doc => {
+          const earnings = doc.data();
+          totalUsdCentsEarned += earnings.totalUsdCentsReceived || 0;
+          if (status === 'pending') {
+            pendingUsdCents += earnings.totalUsdCentsReceived || 0;
+          } else if (status === 'available') {
+            availableUsdCents += earnings.totalUsdCentsReceived || 0;
+          } else if (status === 'paid_out') {
+            paidOutUsdCents += earnings.totalUsdCentsReceived || 0;
+          }
+          if (earnings.month > lastProcessedMonth) {
+            lastProcessedMonth = earnings.month;
+          }
+        });
+      }
 
       return {
         userId,
