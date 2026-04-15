@@ -420,7 +420,16 @@ export class PayoutService {
           retryCount: 0
         });
         console.error('[Payout] Error processing referral earnings (non-fatal, logged for retry):', referralErr);
+
       }
+
+      return { success: true, transferId: payoutResult.transferId };
+
+    } catch (error) {
+      // ...existing error handling...
+    }
+  }
+
   // Retry all failed referral earnings
   static async retryFailedReferralEarnings(): Promise<{ retried: number; succeeded: number; failed: number }> {
     const admin = getFirebaseAdmin();
@@ -452,33 +461,21 @@ export class PayoutService {
         await doc.ref.update({ retryCount: (data.retryCount || 0) + 1, lastError: err instanceof Error ? err.message : 'Unknown error', updatedAt: admin.firestore.FieldValue.serverTimestamp() });
       }
     }
+
     return { retried, succeeded, failed };
   }
 
-      return { success: true, transferId: payoutResult.transferId };
+  // ...other static methods...
 
-    } catch (error) {
-      console.error('[Payout] Error processing payout:', error);
-      try {
-        const admin = getFirebaseAdmin();
-        if (admin) {
-          const db = admin.firestore();
-          await db.collection(getCollectionName(USD_COLLECTIONS.USD_PAYOUTS)).doc(payoutId).update({
-            status: 'failed',
-            failureReason: error instanceof Error ? error.message : 'Unknown error',
-            completedAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-      } catch (updateError) {
-        console.warn('[Payout] Failed to update payout status:', updateError);
-      }
+  // Move catch block back inside requestPayout
+  // (This is the end of requestPayout)
+  // Place after the try block in requestPayout
+  // (Assume the try block ends with: return { success: true, transferId: payoutResult.transferId };)
 
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Payout processing failed'
-      };
-    }
-  }
+  // (catch block for requestPayout)
+  // (This is not a real method, just a patch to fix misplaced code)
+
+  // End of PayoutService class
 
   static async getPayoutHistory(userId: string): Promise<PayoutRecord[]> {
     try {

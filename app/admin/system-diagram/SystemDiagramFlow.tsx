@@ -291,6 +291,8 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
       { path: 'app/api/groups/[id]/fund-distribution/route.ts', description: 'Fund distribution settings' },
       { path: 'app/firebase/database/access.ts', description: 'Group membership access control' },
       { path: 'app/services/groupEarningsService.ts', description: 'Group earnings distribution' },
+      { path: 'app/groups/MyGroupsList.tsx', description: 'My Groups section with truncation and view all' },
+      { path: 'app/groups/all-my-groups.tsx', description: 'All My Groups subpage' },
     ],
     functions: [
       { name: 'createGroup()', description: 'Create group with owner as first member' },

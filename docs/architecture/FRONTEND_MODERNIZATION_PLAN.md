@@ -161,6 +161,25 @@ function MobileNav() {
 
 ---
 
+## April 2026: Groups Page Section Redesign
+
+### Summary
+- My Groups now appears as a section at the top, truncated to 4 groups with a "View all" button if more exist.
+- Discover is now a continuous, infinite-scroll section below My Groups, with no segmented control.
+- The "View all" button navigates to a dedicated subpage (`/groups/all-my-groups`) listing all user groups.
+
+### Implementation Details
+- Main Page (`app/groups/page.tsx`): Removed segmented control, added `MyGroupsList`, Discover always visible below.
+- `MyGroupsList` (`app/groups/MyGroupsList.tsx`): Truncates to 4, shows "View all" if more, button links to `/groups/all-my-groups`.
+- All My Groups Subpage (`app/groups/all-my-groups.tsx`): Lists all groups, linked from main page.
+- System Diagram: Updated `app/admin/system-diagram/SystemDiagramFlow.tsx` to include new files.
+
+_No breaking API changes. No data migrations required._
+
+_Last updated: April 14, 2026_
+
+---
+
 ## Pre-Migration Checklist
 
 Before starting the migration, complete these preparatory tasks:

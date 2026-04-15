@@ -190,6 +190,12 @@ Tab navigation uses `useTabNavigation` hook with URL query params (`?tab=graph`)
 - **Graph**: `GET /api/user-graph?groupId=...` — extended existing endpoint (separate cache)
 - **External Links**: Client-side via `getGroupExternalLinksAggregated()` in `links.ts`
 
+## April 2026: UI Section Redesign
+- My Groups is now a section at the top of the Groups page, truncated to 4 with a "View all" button if more exist.
+- "View all" navigates to `/groups/all-my-groups` subpage listing all groups.
+- Discover is a continuous, infinite-scroll section below My Groups, always visible.
+- See `app/groups/page.tsx`, `app/groups/MyGroupsList.tsx`, and `app/groups/all-my-groups.tsx` for details.
+
 ## Navigation Integration
 
 - Desktop sidebar: "Groups" item (icon: Users) appears when feature flag enabled

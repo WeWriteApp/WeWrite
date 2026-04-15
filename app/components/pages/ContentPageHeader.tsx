@@ -53,7 +53,8 @@ import AddToPageButton from '../utils/AddToPageButton';
 import VisibilityDropdown from '../utils/VisibilityDropdown';
 import { useSubscriberFeature } from '../../hooks/useSubscriberFeature';
 import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
-import { AdaptiveModal } from '../ui/adaptive-modal';
+import { ModalNavigationStack } from '../ui/ModalNavigationStack';
+import { CreateGroupModal } from '../groups/CreateGroupModal';
 import type { Group } from '../../types/groups';
 
 /**
@@ -858,6 +859,19 @@ export default function ContentPageHeader({
     }
   };
 
+  // --- State for create group modal ---
+  const [showCreateGroupModal, setShowCreateGroupModal] = React.useState(false);
+
+  // --- Handler for group creation from modal ---
+  const handleGroupCreatedFromModal = (newGroup: Group) => {
+    setUserGroups((prev) => [...prev, newGroup]);
+    handleAssignGroup(newGroup);
+    setShowCreateGroupModal(false);
+  };
+
+  // --- Modal navigation state ---
+  const [publishAsNav, setPublishAsNav] = React.useState<'root' | 'group'>('root');
+
   return (
     <>
       <header
@@ -1204,14 +1218,18 @@ export default function ContentPageHeader({
 
                   {/* Group / self-publish picker modal */}
                   {groupsEnabled && (
-                    <AdaptiveModal
+                    <ModalNavigationStack
                       isOpen={showGroupPicker && canEdit}
-                      onClose={() => setShowGroupPicker(false)}
-                      title="Publish as"
-                      subtitle="Choose how this page is published"
+                      onClose={() => {
+                        setShowGroupPicker(false);
+                        setPublishAsNav('root');
+                      }}
+                      title={publishAsNav === 'root' ? 'Publish as' : 'Publish as Group'}
+                      subtitle={publishAsNav === 'root' ? 'Choose how this page is published' : 'Select a group or create a new one'}
+                      activeView={publishAsNav === 'root' ? null : 'group'}
                     >
-                      <div className="flex flex-col gap-1">
-                        {/* Self-publish option */}
+                      <ModalNavigationStack.Root>
+                        {/* Step 1: Choose self or group */}
                         <button
                           onClick={() => {
                             if (groupId) {
@@ -1239,11 +1257,32 @@ export default function ContentPageHeader({
                             <Icon name="Check" size={16} className="text-primary shrink-0 ml-auto" />
                           )}
                         </button>
-
-                        {/* Divider */}
+                        <button
+                          onClick={() => setPublishAsNav('group')}
+                          className="w-full text-left px-4 py-3 rounded-lg text-sm transition-colors flex items-center gap-3 hover:bg-muted"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/10 shrink-0">
+                            <Icon name="Users" size={16} className="text-indigo-600 dark:text-indigo-400" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">Publish as Group</span>
+                            <span className="text-xs text-muted-foreground">Choose or create a group</span>
+                          </div>
+                        </button>
+                      </ModalNavigationStack.Root>
+                      <ModalNavigationStack.Detail>
+                        {/* Step 2: Group selection/creation */}
+                        <div className="flex items-center mb-2">
+                          <button
+                            onClick={() => setPublishAsNav('root')}
+                            className="mr-2 p-1 rounded hover:bg-muted"
+                            aria-label="Back"
+                          >
+                            <Icon name="ArrowLeft" size={18} />
+                          </button>
+                          <span className="font-semibold text-base">Select a group</span>
+                        </div>
                         <div className="border-t border-border my-1" />
-
-                        {/* Group options */}
                         {loadingGroups ? (
                           <div className="flex items-center justify-center py-8">
                             <Icon name="Loader" size={20} />
@@ -1284,8 +1323,21 @@ export default function ContentPageHeader({
                             </button>
                           ))
                         )}
-                      </div>
-                    </AdaptiveModal>
+                        {/* Create new group option below group list */}
+                        <button
+                          onClick={() => setShowCreateGroupModal(true)}
+                          className="w-full text-left px-4 py-3 rounded-lg text-sm transition-colors flex items-center gap-3 hover:bg-muted mt-2"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 shrink-0">
+                            <Icon name="Plus" size={16} className="text-primary" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium truncate">Create new group…</span>
+                            <span className="text-xs text-muted-foreground">Start a new group for publishing</span>
+                          </div>
+                        </button>
+                      </ModalNavigationStack.Detail>
+                    </ModalNavigationStack>
                   )}
 
                   {/* Group badge fallback when groups feature is disabled */}
@@ -1356,6 +1408,13 @@ export default function ContentPageHeader({
           canEdit={canEdit}
         />
       )}
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onCreated={handleGroupCreatedFromModal}
+      />
     </>
   );
 }

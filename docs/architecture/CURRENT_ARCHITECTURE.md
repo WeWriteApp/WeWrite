@@ -292,3 +292,12 @@ WeWrite implements a comprehensive SEO strategy with programmatic pages:
 
 **Last Updated**: January 7, 2026
 **Status**: Current Production Architecture
+
+---
+
+### April 2026: Groups Page Section Redesign
+- My Groups is now a section at the top, truncated to 4 groups with a "View all" button if more exist.
+- Discover is a continuous, infinite-scroll section below My Groups, with no segmented control.
+- "View all" navigates to `/groups/all-my-groups` subpage.
+- See `app/groups/page.tsx`, `app/groups/MyGroupsList.tsx`, and `app/groups/all-my-groups.tsx` for implementation.
+- System diagram updated to include new files.
