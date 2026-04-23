@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, location, groupId, customDate, id: requestedId } = body;
+    const { title, content, location, groupId, customDate, id: requestedId, sourcePageId } = body;
 
 
 
@@ -308,6 +308,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const now = new Date().toISOString();
     const trimmedTitleForData = title.trim();
     const pageData: PageData = {
       title: trimmedTitleForData,
@@ -317,8 +318,8 @@ export async function POST(request: NextRequest) {
       username,
       groupId: groupId || null,
       location: location || null,
-      lastModified: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+      lastModified: now,
+      createdAt: now,
       deleted: false,
       customDate: customDate || null
     };
@@ -341,6 +342,36 @@ export async function POST(request: NextRequest) {
       // Auto-generate ID
       pageRef = await db.collection(collectionName).add(pageData);
       pageId = pageRef.id;
+    }
+
+    // If this page was created from another page's link editor, create the backlink immediately
+    // so Page B can show Page A in graph/what-links-here before Page A is re-saved.
+    if (sourcePageId && typeof sourcePageId === 'string' && sourcePageId.trim() && sourcePageId !== pageId) {
+      try {
+        const sourceId = sourcePageId.trim();
+        const sourcePageDoc = await db.collection(getCollectionName('pages')).doc(sourceId).get();
+
+        if (sourcePageDoc.exists) {
+          const sourceData = sourcePageDoc.data() || {};
+          const backlinkId = `${sourceId}_to_${pageId}`;
+
+          await db.collection(getCollectionName('backlinks')).doc(backlinkId).set({
+            id: backlinkId,
+            sourcePageId: sourceId,
+            sourcePageTitle: sourceData.title || 'Untitled',
+            sourceUsername: sourceData.username || username || 'Anonymous',
+            targetPageId: pageId,
+            linkText: trimmedTitleForData,
+            linkUrl: `/${pageId}`,
+            createdAt: now,
+            lastModified: now,
+            isPublic: sourceData.isPublic !== false
+          }, { merge: true });
+        }
+      } catch (backlinkError) {
+        // Non-fatal: page creation should still succeed even if backlink indexing fails.
+        console.warn('[POST /api/pages] Failed to create immediate backlink:', backlinkError);
+      }
     }
 
     // Create activity record with pre-computed diff data for new page
@@ -1050,7 +1081,7 @@ export async function PUT(request: NextRequest) {
                 pageTitle,
                 pageUsername,
                 contentNodes,
-                pageData?.isPublic || false,
+                pageData?.isPublic !== false,
                 new Date().toISOString()
               );
             } catch (err) {
@@ -1068,7 +1099,7 @@ export async function PUT(request: NextRequest) {
                 currentUserId,
                 pageUsername,
                 contentNodes,
-                pageData?.isPublic || false,
+                pageData?.isPublic !== false,
                 new Date().toISOString()
               );
             } catch (err) {

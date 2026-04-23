@@ -13,18 +13,18 @@ interface DataReconciliationProps {
 export function DataReconciliation({ reconciliation, isSyncing, onSync }: DataReconciliationProps) {
   return (
     <div className="wewrite-card">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-4 flex-col sm:flex-row gap-2">
+        <div className="flex items-center gap-2 flex-col sm:flex-row">
           {reconciliation.isInSync ? (
             <Icon name="CheckCircle" size={20} />
           ) : (
             <Icon name="AlertTriangle" size={20} />
           )}
-          <h2 className="text-xl font-bold">Data Reconciliation</h2>
+          <h2 className="text-lg sm:text-xl font-bold">Data Reconciliation</h2>
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${reconciliation.isInSync
             ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
             : 'bg-muted'}`}>
-            {reconciliation.isInSync ? 'In Sync' : `${reconciliation.discrepancies?.length || 0} Discrepancies`}
+            {reconciliation.isInSync ? 'In Sync' : `${reconciliation.discrepancies?.length || 0} Issues`}
           </span>
         </div>
         {!reconciliation.isInSync && reconciliation.discrepancies?.length > 0 && (
@@ -42,30 +42,30 @@ export function DataReconciliation({ reconciliation, isSyncing, onSync }: DataRe
             ) : (
               <>
                 <Icon name="RefreshCw" size={16} className="mr-2" />
-                Sync with Stripe
+                Sync
               </>
             )}
           </Button>
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Stripe Subscriptions</p>
-          <p className="text-xl font-bold">{formatUsdCents(reconciliation.stripeSubscriptionsCents)}</p>
-          <p className="text-xs text-muted-foreground">{reconciliation.stripeSubscriberCount} subscribers</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground">Stripe Subscriptions</p>
+          <p className="text-base sm:text-xl font-bold mt-1">{formatUsdCents(reconciliation.stripeSubscriptionsCents)}</p>
+          <p className="text-xs text-muted-foreground mt-1">{reconciliation.stripeSubscriberCount} subscribers</p>
         </div>
-        <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Firebase Recorded</p>
-          <p className="text-xl font-bold">{formatUsdCents(reconciliation.firebaseRecordedCents)}</p>
-          <p className="text-xs text-muted-foreground">{reconciliation.firebaseUserCount} users</p>
+        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground">Firebase Recorded</p>
+          <p className="text-base sm:text-xl font-bold mt-1">{formatUsdCents(reconciliation.firebaseRecordedCents)}</p>
+          <p className="text-xs text-muted-foreground mt-1">{reconciliation.firebaseUserCount} users</p>
         </div>
-        <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Discrepancy</p>
-          <p className="text-xl font-bold">
+        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground">Discrepancy</p>
+          <p className="text-base sm:text-xl font-bold mt-1">
             {reconciliation.discrepancyCents >= 0 ? '+' : ''}{formatUsdCents(reconciliation.discrepancyCents)}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-1">
             {reconciliation.userCountDiscrepancy >= 0 ? '+' : ''}{reconciliation.userCountDiscrepancy} users
           </p>
         </div>
@@ -74,7 +74,7 @@ export function DataReconciliation({ reconciliation, isSyncing, onSync }: DataRe
       {/* Sync Results */}
       {reconciliation.syncResults && (
         <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-          <p className="text-sm font-medium text-green-800 dark:text-green-200">Sync Completed</p>
+          <p className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-200">Sync Completed</p>
           <ul className="text-xs text-green-700 dark:text-green-300 mt-1 space-y-0.5">
             {reconciliation.syncResults.staleRecordsFixed > 0 && (
               <li>Fixed {reconciliation.syncResults.staleRecordsFixed} stale records (cancelled subscriptions)</li>

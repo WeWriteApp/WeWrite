@@ -7,11 +7,10 @@ import { withAdminContext } from '../../../utils/adminRequestContext';
 type FeatureFlagMap = Record<string, boolean>;
 
 const DEFAULT_FLAGS: FeatureFlagMap = {
-  line_numbers: false,
-  onboarding_tutorial: false,
-  ui_labels: false,
-  private_pages: false,
-  groups: false,
+  line_numbers: true,
+  onboarding_tutorial: true,
+  ui_labels: true,
+  groups: true,
 };
 
 const COLLECTION_DEFAULTS = 'featureFlags';

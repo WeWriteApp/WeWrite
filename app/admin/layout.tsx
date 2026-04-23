@@ -45,7 +45,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
   if (!isHydrated) {
     return (
       <div className={cn(
-        "flex items-center justify-between wewrite-card wewrite-card-no-padding px-6 py-5",
+        "flex items-center justify-between wewrite-card px-4 py-3 sm:px-5 sm:py-4",
         isCollapsed ? "justify-center" : ""
       )}>
         <div className="flex items-center gap-2.5">
@@ -81,7 +81,7 @@ function AdminDataSourceToggle({ isCollapsed }: { isCollapsed?: boolean }) {
 
   return (
     <div className={cn(
-      "flex items-center justify-between wewrite-card wewrite-card-no-padding px-6 py-5",
+      "flex items-center justify-between wewrite-card px-4 py-3 sm:px-5 sm:py-4",
       isProduction
         ? "border-green-500/30 bg-green-500/5"
         : "border-yellow-500/30 bg-yellow-500/5"
@@ -320,6 +320,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         sections={mobileNavSections}
         title="Admin"
         headerExtra={<AdminDataSourceToggle />}
+        contentContainerClassName="px-3 py-3 sm:px-4 sm:py-4"
       >
         {children}
       </MobilePageNav>

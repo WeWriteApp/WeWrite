@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import { Icon, IconName } from '@/components/ui/Icon';
 import SimpleSparkline from '../utils/SimpleSparkline';
 import AnimatedNumber from './AnimatedNumber';
@@ -102,7 +103,9 @@ export function StatsCard({
   const shouldAnimate = animateValue && typeof value === 'number';
 
   return (
-    <div
+    <motion.div
+      layout
+      transition={{ layout: { duration: 0.25, ease: 'easeOut' } }}
       className={cn(
         "wewrite-card min-h-[52px] flex flex-col justify-center",
         onClick && "cursor-pointer hover:bg-[var(--card-bg-hover)] transition-colors",
@@ -177,7 +180,7 @@ export function StatsCard({
           {children}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

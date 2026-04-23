@@ -21,11 +21,10 @@ type FeatureFlagContextValue = {
 };
 
 const DEFAULT_FLAGS: FeatureFlagMap = {
-  line_numbers: false,
-  onboarding_tutorial: false,
-  ui_labels: false,
-  groups: false,
-  private_pages: false,
+  line_numbers: true,
+  onboarding_tutorial: true,
+  ui_labels: true,
+  groups: true,
 };
 
 const STORAGE_KEY = 'wewrite_feature_flags';

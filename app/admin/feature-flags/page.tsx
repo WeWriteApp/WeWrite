@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { Icon } from '@/components/ui/Icon';
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../providers/AuthProvider";
+import { useAdminData } from "../../providers/AdminDataProvider";
 import { Switch } from "../../components/ui/switch";
 import { Badge } from "../../components/ui/badge";
 import { Separator } from "../../components/ui/separator";
 
 export default function FeatureFlagsPage() {
   const { user, isLoading } = useAuth();
+  const { adminFetch, isHydrated } = useAdminData();
   const router = useRouter();
   const [lineNumbersEnabled, setLineNumbersEnabled] = useState(false);
   const [lineNumbersGlobal, setLineNumbersGlobal] = useState(false);
@@ -17,13 +19,10 @@ export default function FeatureFlagsPage() {
   const [onboardingGlobal, setOnboardingGlobal] = useState(false);
   const [groupsEnabled, setGroupsEnabled] = useState(false);
   const [groupsGlobal, setGroupsGlobal] = useState(false);
-  const [privatePagesEnabled, setPrivatePagesEnabled] = useState(false);
-  const [privatePagesGlobal, setPrivatePagesGlobal] = useState(false);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [enabledUsers, setEnabledUsers] = useState<number | null>(null);
   const [onboardingEnabledUsers, setOnboardingEnabledUsers] = useState<number | null>(null);
   const [groupsEnabledUsers, setGroupsEnabledUsers] = useState<number | null>(null);
-  const [privatePagesEnabledUsers, setPrivatePagesEnabledUsers] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const enabledFraction =
@@ -38,13 +37,9 @@ export default function FeatureFlagsPage() {
     totalUsers && totalUsers > 0
       ? `${groupsEnabledUsers ?? 0}/${totalUsers}`
       : "—";
-  const privatePagesEnabledFraction =
-    totalUsers && totalUsers > 0
-      ? `${privatePagesEnabledUsers ?? 0}/${totalUsers}`
-      : "—";
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && isHydrated) {
       if (!user) {
         router.push("/auth/login?redirect=/admin/feature-flags");
         return;
@@ -56,11 +51,11 @@ export default function FeatureFlagsPage() {
       void loadCsrfToken();
       void loadFlags();
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, isHydrated, user, router]);
 
   const loadCsrfToken = async () => {
     try {
-      const res = await fetch("/api/auth/csrf-token", { credentials: "include" });
+      const res = await adminFetch("/api/auth/csrf-token", { credentials: "include" });
       const data = await res.json();
       if (res.ok && data?.token) {
         setCsrfToken(data.token);
@@ -72,15 +67,14 @@ export default function FeatureFlagsPage() {
 
   const loadFlags = async () => {
     try {
-      const res = await fetch("/api/feature-flags", { credentials: "include" });
+      const res = await adminFetch("/api/feature-flags", { credentials: "include" });
       const data = await res.json();
       if (res.ok && data?.flags) {
         setLineNumbersEnabled(Boolean(data.flags.line_numbers));
         setOnboardingEnabled(Boolean(data.flags.onboarding_tutorial));
         setGroupsEnabled(Boolean(data.flags.groups));
-        setPrivatePagesEnabled(Boolean(data.flags.private_pages));
       }
-      const summaryRes = await fetch("/api/feature-flags?summary=1", { credentials: "include" });
+      const summaryRes = await adminFetch("/api/feature-flags?summary=1", { credentials: "include" });
       const summaryData = await summaryRes.json();
       if (summaryRes.ok && summaryData?.summary) {
         setTotalUsers(summaryData.summary.totalUsers ?? null);
@@ -88,25 +82,18 @@ export default function FeatureFlagsPage() {
         setLineNumbersGlobal(Boolean(summaryData.summary.defaultEnabled));
       }
       // Load onboarding tutorial summary
-      const onboardingSummaryRes = await fetch("/api/feature-flags?summary=1&flag=onboarding_tutorial", { credentials: "include" });
+      const onboardingSummaryRes = await adminFetch("/api/feature-flags?summary=1&flag=onboarding_tutorial", { credentials: "include" });
       const onboardingSummaryData = await onboardingSummaryRes.json();
       if (onboardingSummaryRes.ok && onboardingSummaryData?.summary) {
         setOnboardingEnabledUsers(onboardingSummaryData.summary.enabledCount ?? null);
         setOnboardingGlobal(Boolean(onboardingSummaryData.summary.defaultEnabled));
       }
       // Load groups summary
-      const groupsSummaryRes = await fetch("/api/feature-flags?summary=1&flag=groups", { credentials: "include" });
+      const groupsSummaryRes = await adminFetch("/api/feature-flags?summary=1&flag=groups", { credentials: "include" });
       const groupsSummaryData = await groupsSummaryRes.json();
       if (groupsSummaryRes.ok && groupsSummaryData?.summary) {
         setGroupsEnabledUsers(groupsSummaryData.summary.enabledCount ?? null);
         setGroupsGlobal(Boolean(groupsSummaryData.summary.defaultEnabled));
-      }
-      // Load private pages summary
-      const privatePagesSummaryRes = await fetch("/api/feature-flags?summary=1&flag=private_pages", { credentials: "include" });
-      const privatePagesSummaryData = await privatePagesSummaryRes.json();
-      if (privatePagesSummaryRes.ok && privatePagesSummaryData?.summary) {
-        setPrivatePagesEnabledUsers(privatePagesSummaryData.summary.enabledCount ?? null);
-        setPrivatePagesGlobal(Boolean(privatePagesSummaryData.summary.defaultEnabled));
       }
     } catch (err) {
       console.warn("[FeatureFlagsPage] Failed to load flag data", err);
@@ -120,7 +107,7 @@ export default function FeatureFlagsPage() {
       if (csrfToken) {
         headers["X-CSRF-Token"] = csrfToken;
       }
-      const res = await fetch("/api/feature-flags", {
+      const res = await adminFetch("/api/feature-flags", {
         method: "POST",
         headers,
         credentials: "include",
@@ -149,12 +136,6 @@ export default function FeatureFlagsPage() {
         } else {
           setGroupsGlobal(enabled);
         }
-      } else if (flagName === "private_pages") {
-        if (scope === "user") {
-          setPrivatePagesEnabled(enabled);
-        } else {
-          setPrivatePagesGlobal(enabled);
-        }
       }
       // Refresh summary after change
       await loadFlags();
@@ -171,8 +152,6 @@ export default function FeatureFlagsPage() {
   const handleOnboardingGlobalToggle = (checked: boolean) => updateFlag("onboarding_tutorial", "global", checked);
   const handleGroupsPersonalToggle = (checked: boolean) => updateFlag("groups", "user", checked);
   const handleGroupsGlobalToggle = (checked: boolean) => updateFlag("groups", "global", checked);
-  const handlePrivatePagesPersonalToggle = (checked: boolean) => updateFlag("private_pages", "user", checked);
-  const handlePrivatePagesGlobalToggle = (checked: boolean) => updateFlag("private_pages", "global", checked);
 
   if (isLoading || !user) {
     return (
@@ -294,38 +273,6 @@ export default function FeatureFlagsPage() {
         </div>
       </div>
 
-      {/* Private Pages Feature Flag */}
-      <div className="wewrite-card space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="font-semibold">Private Pages</h2>
-            <p className="text-sm text-muted-foreground">
-              Enabled for: {privatePagesEnabledFraction} users
-            </p>
-          </div>
-          <Badge variant="outline" className="shrink-0 text-xs">Admin only</Badge>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Enable for me</p>
-              <p className="text-xs text-muted-foreground">Personal override</p>
-            </div>
-            <Switch checked={privatePagesEnabled} onCheckedChange={handlePrivatePagesPersonalToggle} disabled={saving} className="shrink-0" />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Enable for all users</p>
-              <p className="text-xs text-muted-foreground">Allows pages to be marked private within groups</p>
-            </div>
-            <Switch checked={privatePagesGlobal} onCheckedChange={handlePrivatePagesGlobalToggle} disabled={saving} className="shrink-0" />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

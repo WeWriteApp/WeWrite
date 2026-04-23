@@ -168,7 +168,7 @@ export default function ContentPageStats({
   // Loading state - show cards with titles and loader
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Recent Edits Card Loading - first for confidence in save status */}
         <StatsCard
           icon="Clock"
@@ -180,6 +180,13 @@ export default function ContentPageStats({
         <StatsCard
           icon="Eye"
           title="Views"
+          loading={true}
+        />
+
+        {/* Supporters Card Loading */}
+        <StatsCard
+          icon="Heart"
+          title="Supporters"
           loading={true}
         />
       </div>
@@ -201,15 +208,6 @@ export default function ContentPageStats({
     return null;
   }
 
-  // Determine grid layout based on available data
-  const hasSupporters = stats.supporterCount > 0 || (stats.supporterData && stats.supporterData.some(v => v > 0));
-
-  // Calculate grid columns based on available cards
-  let gridCols = "md:grid-cols-2"; // Default: views + changes
-  if (hasSupporters) {
-    gridCols = "md:grid-cols-3"; // Three cards
-  }
-
   // Helper to extract text from JSON content (for diff preview)
   const extractTextFromJson = (text: string) => {
     if (text && (text.startsWith('[{') || text.startsWith('{"'))) {
@@ -228,7 +226,7 @@ export default function ContentPageStats({
   };
 
   return (
-    <div className={`grid grid-cols-1 ${gridCols} gap-3`}>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       {/* Recent Changes Card - first for confidence in save status */}
       <StatsCard
         icon="Clock"
@@ -291,17 +289,15 @@ export default function ContentPageStats({
         showSparkline={showSparklines}
       />
 
-      {/* Supporters Card - only show if data is provided */}
-      {hasSupporters && (
-        <StatsCard
-          icon="Heart"
-          title="Supporters"
-          value={stats.supporterCount}
-          sparklineData={showSparklines ? (stats.supporterData.length > 0 ? stats.supporterData : Array(24).fill(0)) : undefined}
-          showSparkline={showSparklines}
-          animateValue={false}
-        />
-      )}
+      {/* Supporters Card */}
+      <StatsCard
+        icon="Heart"
+        title="Supporters"
+        value={stats.supporterCount}
+        sparklineData={showSparklines ? (stats.supporterData.length > 0 ? stats.supporterData : Array(24).fill(0)) : undefined}
+        showSparkline={showSparklines}
+        animateValue={false}
+      />
     </div>
   );
 }

@@ -2,10 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User, AuthContextValue, AuthState, AuthError, AuthErrorCode } from '../types/auth';
-import { getEnvironmentType } from '../utils/environmentConfig';
 import { identifyUser } from '../utils/logrocket';
 import { useRouter } from 'next/navigation';
-import { isAdmin } from '../utils/isAdmin';
 import { checkEmailVerificationOnStartup } from '../services/emailVerificationNotifications';
 
 // Create context
@@ -23,7 +21,11 @@ const getCachedAuthState = (): User | null => {
       const parsed = JSON.parse(cached);
       // Only use cache if it's less than 24 hours old
       if (parsed.cachedAt && Date.now() - parsed.cachedAt < 24 * 60 * 60 * 1000) {
-        return parsed.user;
+        // Never trust cached admin status; session validation will set it accurately.
+        return {
+          ...parsed.user,
+          isAdmin: false,
+        };
       }
       // Clear stale cache
       localStorage.removeItem(AUTH_CACHE_KEY);
@@ -116,11 +118,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Set user state
   const setUser = useCallback((user: User | null) => {
-    // Always derive admin flag from email allowlist to avoid missing server flags
+    // SECURITY: Trust the authenticated session as the single source of truth
+    // for admin permissions. Do not auto-elevate in development on the client.
     const enrichedUser = user
       ? {
           ...user,
-          isAdmin: user.isAdmin === true || isAdmin(user.email),
+          isAdmin: user.isAdmin === true,
         }
       : null;
 

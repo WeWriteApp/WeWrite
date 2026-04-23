@@ -50,8 +50,6 @@ const TitleSettingsModal = dynamic(() => import('./TitleSettingsModal'), {
 });
 
 import AddToPageButton from '../utils/AddToPageButton';
-import VisibilityDropdown from '../utils/VisibilityDropdown';
-import { useSubscriberFeature } from '../../hooks/useSubscriberFeature';
 import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
 import { ModalNavigationStack } from '../ui/ModalNavigationStack';
 import { CreateGroupModal } from '../groups/CreateGroupModal';
@@ -193,10 +191,6 @@ export default function ContentPageHeader({
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
-
-  // Private pages feature (subscribers only)
-  const { isAvailable: canUsePrivatePages } = useSubscriberFeature('private_pages');
-  const [isUpdatingVisibility, setIsUpdatingVisibility] = React.useState(false);
 
   // Fetch subscription data for the page author
   React.useEffect(() => {
@@ -809,42 +803,6 @@ export default function ContentPageHeader({
     }
   };
 
-  // Handle visibility change
-  const handleVisibilityChange = async (newIsPublic: boolean) => {
-    if (!pageId || !onVisibilityChange || isUpdatingVisibility) return;
-
-    setIsUpdatingVisibility(true);
-    try {
-      const response = await fetch(`/api/pages/${pageId}/visibility`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPublic: newIsPublic }),
-      });
-
-      if (response.ok) {
-        onVisibilityChange(newIsPublic);
-      } else {
-        const data = await response.json().catch(() => ({}));
-        const msg = data.error || `Visibility update failed (${response.status})`;
-        toast.error("Failed to update visibility", {
-          description: msg,
-          enableCopy: true,
-          copyText: `Visibility error: ${msg}\nPage: ${pageId}\nTime: ${new Date().toISOString()}`
-        });
-      }
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.error('Error updating visibility:', error);
-      toast.error("Failed to update visibility", {
-        description: msg,
-        enableCopy: true,
-        copyText: `Visibility error: ${msg}\nPage: ${pageId}\nTime: ${new Date().toISOString()}`
-      });
-    } finally {
-      setIsUpdatingVisibility(false);
-    }
-  };
-
   // Logo/home click handler - for new pages, use onBack for slide-down dismiss
   const handleLogoClick = () => {
     if (isScrolled && !isEditing) {
@@ -1203,17 +1161,6 @@ export default function ContentPageHeader({
                         </div>
                       )}
                     </div>
-                  )}
-
-                  {/* Visibility Toggle - only for page owners with the feature */}
-                  {canEdit && canUsePrivatePages && !isNewPage && pageId && (
-                    <VisibilityDropdown
-                      isPublic={isPublic}
-                      onVisibilityChange={handleVisibilityChange}
-                      disabled={isUpdatingVisibility}
-                      mode="page"
-                      compact={false}
-                    />
                   )}
 
                   {/* Group / self-publish picker modal */}

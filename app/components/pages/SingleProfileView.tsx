@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 
 import { ProfilePagesProvider } from "../../providers/ProfilePageProvider";
@@ -11,7 +11,6 @@ import UserProfileTabs from '../utils/UserProfileTabs';
 import AllocationBar from '../payments/AllocationBar';
 import UserProfileHeader from './UserProfileHeader';
 import UserProfileStats from '../utils/UserProfileStats';
-import { UserDetailsDrawer } from '../admin/UserDetailsDrawer';
 import { Icon } from '../ui/Icon';
 
 interface Profile {
@@ -30,7 +29,6 @@ interface SingleProfileViewProps {
 const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
   const { user } = useAuth();
   const router = useRouter();
-  const [adminDrawerOpen, setAdminDrawerOpen] = useState(false);
 
   // Early return if profile is not available
   if (!profile) {
@@ -78,7 +76,7 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
             {/* Admin info button - only visible to admins */}
             {isAdmin && (
               <button
-                onClick={() => setAdminDrawerOpen(true)}
+                onClick={() => router.push(`/admin/users/${profile.uid}`)}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
                 title="View admin details for this user"
               >
@@ -106,16 +104,6 @@ const SingleProfileView: React.FC<SingleProfileViewProps> = ({ profile }) => {
           variant="user"
           isUserAllocation={true}
           username={profile.username || 'User'}
-        />
-      )}
-
-      {/* Admin user details drawer */}
-      {isAdmin && (
-        <UserDetailsDrawer
-          open={adminDrawerOpen}
-          onOpenChange={setAdminDrawerOpen}
-          userId={profile.uid}
-          username={profile.username}
         />
       )}
     </ProfilePagesProvider>

@@ -134,7 +134,7 @@ const nextConfig = {
     // Pages are the core product — always serve fresh content.
     staleTimes: {
       dynamic: 0,
-      static: 0,
+      static: 30,
     },
   },
 

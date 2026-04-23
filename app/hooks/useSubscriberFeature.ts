@@ -10,7 +10,7 @@
  * 1. The feature flag to be enabled
  * 2. An active subscription
  *
- * Examples: private_pages, groups
+ * Examples: groups, premium analytics, advanced moderation tools
  */
 
 import { useFeatureFlags } from '../contexts/FeatureFlagContext';
@@ -30,11 +30,11 @@ export interface SubscriberFeatureResult {
 /**
  * Check if a subscriber-only feature is available to the current user
  *
- * @param featureFlag - The feature flag name (e.g., 'private_pages', 'groups')
+ * @param featureFlag - The feature flag name (e.g., 'groups')
  * @returns Object with availability status
  *
  * @example
- * const { isAvailable, requiresSubscription } = useSubscriberFeature('private_pages');
+ * const { isAvailable, requiresSubscription } = useSubscriberFeature('groups');
  *
  * if (isAvailable) {
  *   // Show the feature
@@ -63,8 +63,8 @@ export function useSubscriberFeature(featureFlag: string): SubscriberFeatureResu
  * Hook for checking multiple subscriber features at once
  *
  * @example
- * const features = useSubscriberFeatures(['private_pages', 'groups']);
- * // features.private_pages.isAvailable, features.groups.isAvailable, etc.
+ * const features = useSubscriberFeatures(['groups', 'premium_analytics']);
+ * // features.groups.isAvailable, features.premium_analytics.isAvailable, etc.
  */
 export function useSubscriberFeatures(
   featureFlags: string[]

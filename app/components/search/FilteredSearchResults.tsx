@@ -776,6 +776,7 @@ const FilteredSearchResults = forwardRef(({
                     username: user.username || 'Anonymous',
                     lastModified: new Date().toISOString(),
                     isReply: false,
+                    sourcePageId: currentPageId || null,
                     groupId: null,
                     customDate: null
                   };

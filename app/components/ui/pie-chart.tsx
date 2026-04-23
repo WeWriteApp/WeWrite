@@ -207,6 +207,16 @@ function describeArc(
  * - Smooth animations
  * - Customizable colors and sizing
  */
+/**
+ * Get theme-aware track color for pie chart background
+ * Returns a color that adapts to light/dark mode
+ */
+function getThemeAwareTrackColor(): string {
+  // Use muted semantic color which adapts to light/dark mode
+  // With opacity for a subtle background effect
+  return 'var(--muted) / 0.5';
+}
+
 export function PieChart({
   segments,
   size = 120,
@@ -220,9 +230,11 @@ export function PieChart({
   gap = 6, // Gap in degrees between segments
   cornerRadius = 3, // Corner radius in pixels
   showTrack = false,
-  trackColor = 'rgba(0,0,0,0.08)',
+  trackColor,
   maxValue,
 }: PieChartProps) {
+  // Use theme-aware default track color if not provided
+  const finalTrackColor = trackColor ?? `oklch(${getThemeAwareTrackColor()})`;
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -323,7 +335,7 @@ export function PieChart({
               cy={center}
               r={outerRadius - strokeWidth / 2}
               fill="none"
-              stroke={trackColor}
+              stroke={finalTrackColor}
               strokeWidth={strokeWidth}
             />
           )}

@@ -15,6 +15,12 @@ function isGeneratedFallback(name: string | null | undefined): boolean {
   return !!name && /^user_[a-zA-Z0-9]{6,}$/.test(name);
 }
 
+// Some synthetic/dev IDs can appear in UI data streams and legitimately 404.
+function isExpectedMissingUser(userId: string, status: number): boolean {
+  if (status !== 404) return false;
+  return userId.startsWith('dev_') || userId.startsWith('test_');
+}
+
 // Cache structure for full profile data (username + tier)
 interface CachedProfile {
   username: string;
@@ -175,7 +181,9 @@ export function UsernameBadge({
             }
           }
         } else {
-          console.error('Failed to fetch profile, status:', response.status);
+          if (!isExpectedMissingUser(userId, response.status)) {
+            console.error('Failed to fetch profile, status:', response.status);
+          }
           failedFetchCache.set(userId, Date.now());
           // FALLBACK: Only use generated username if prop is also invalid
           if (needsUsernameRefresh(username)) {
@@ -210,8 +218,19 @@ export function UsernameBadge({
 
         // Fetch fresh profile (with subscription data)
         fetch(`/api/users/full-profile?id=${encodeURIComponent(userId)}`)
-          .then(response => response.json())
+          .then(async response => {
+            if (!response.ok) {
+              failedFetchCache.set(userId, Date.now());
+              if (!isExpectedMissingUser(userId, response.status)) {
+                console.error('Failed to refresh profile, status:', response.status);
+              }
+              return null;
+            }
+
+            return response.json();
+          })
           .then(result => {
+            if (!result) return;
             if (result.success && result.data?.username) {
               setFreshUsername(result.data.username);
               // Also update tier data

@@ -83,7 +83,7 @@ export function RemainingFundsDisplay({
             fill="none"
             stroke="currentColor"
             strokeWidth={strokeWidth}
-            className="text-neutral-15"
+            className="text-muted opacity-30"
           />
 
           {/* Progress circle */}

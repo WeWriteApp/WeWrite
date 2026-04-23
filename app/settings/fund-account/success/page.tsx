@@ -145,8 +145,8 @@ export default function FundAccountSuccessPage() {
               size="lg"
               className="w-full max-w-xs mx-auto"
             >
-              <Icon name="Home" size={20} className="mr-2" />
-              Go Home
+              <Icon name="Sparkles" size={20} className="mr-2" />
+              Start Funding Writers
             </Button>
 
             <Button

@@ -59,7 +59,7 @@ export function SubscriptionCTACard() {
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         className="overflow-hidden"
       >
-        <div className="wewrite-card rounded-2xl p-4">
+        <div className="wewrite-card w-full overflow-hidden flex flex-col p-3 md:p-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">

@@ -13,91 +13,91 @@ interface WriterEarningsTableProps {
 export function WriterEarningsTable({ writerEarnings, onUserClick }: WriterEarningsTableProps) {
   return (
     <div className="wewrite-card">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-col sm:flex-row">
         <Icon name="DollarSign" size={20} />
-        <h2 className="text-xl font-bold">Writer Earnings</h2>
-        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
-          {writerEarnings?.length || 0} writers with earnings
+        <h2 className="text-lg sm:text-xl font-bold">Writer Earnings</h2>
+        <span className="px-2 py-0.5 rounded-full text-xs sm:text-xs font-medium bg-muted">
+          {writerEarnings?.length || 0} writers
         </span>
       </div>
 
       {(!writerEarnings || writerEarnings.length === 0) ? (
         <div className="text-center py-8 text-muted-foreground">
-          <p>No writers with pending earnings yet.</p>
-          <p className="text-sm mt-1">Writers will appear here once they have allocations from subscribers.</p>
+          <p className="text-sm">No writers with pending earnings yet.</p>
+          <p className="text-xs mt-1">Writers will appear here once they have allocations from subscribers.</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Gross Earnings</p>
-              <p className="text-2xl font-bold">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.grossEarningsCents, 0))}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+            <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs sm:text-sm text-muted-foreground">Total Gross</p>
+              <p className="text-base sm:text-2xl font-bold mt-1">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.grossEarningsCents, 0))}</p>
             </div>
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Net Payouts</p>
-              <p className="text-2xl font-bold">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}</p>
+            <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs sm:text-sm text-muted-foreground">Total Net</p>
+              <p className="text-base sm:text-2xl font-bold mt-1">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}</p>
             </div>
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Total Balances
+            <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                <span>Total Balance</span>
                 <InfoTooltip text="Sum of all writer account balances (pending + available earnings)" />
               </p>
-              <p className="text-2xl font-bold">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + (w.pendingEarningsCents || 0) + (w.availableEarningsCents || 0), 0))}</p>
+              <p className="text-base sm:text-2xl font-bold mt-1">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + (w.pendingEarningsCents || 0) + (w.availableEarningsCents || 0), 0))}</p>
             </div>
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Payout Eligible
-                <InfoTooltip text={`Writers with $${PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS}+ balance who can request payouts. Requires verified bank account.`} />
+            <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                <span>Payout Ready</span>
+                <InfoTooltip text={`Writers with $${PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS}+ balance who can request payouts.`} />
               </p>
-              <p className="text-2xl font-bold">
+              <p className="text-base sm:text-2xl font-bold mt-1">
                 {writerEarnings.filter(w =>
                   ((w.pendingEarningsCents || 0) + (w.availableEarningsCents || 0)) >= PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_CENTS
                 ).length} / {writerEarnings.length}
               </p>
             </div>
-            <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Platform Fee (10%)
-                <InfoTooltip text="10% fee deducted from writer earnings. This is the fee taken from payouts, not from subscriber subscriptions." />
+            <div className="p-3 sm:p-4 bg-green-100 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
+                <span>Platform Fee</span>
+                <InfoTooltip text="10% fee deducted from writer earnings." />
               </p>
-              <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.platformFeeCents, 0))}</p>
+              <p className="text-base sm:text-2xl font-bold text-green-700 dark:text-green-400 mt-1">{formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.platformFeeCents, 0))}</p>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left py-2 px-2">Writer</th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Gross Earnings
+                    <div className="inline-flex items-center gap-1">
+                      <span>Gross</span>
                       <InfoTooltip text="Total amount allocated to this writer before fees" />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Net Payout
+                    <div className="inline-flex items-center gap-1">
+                      <span>Net</span>
                       <InfoTooltip text="Amount writer will receive after fee deduction" />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-center py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Bank Account
+                    <div className="inline-flex items-center gap-1">
+                      <span>Bank</span>
                       <InfoTooltip text="Whether writer has set up their Stripe account to receive payouts" />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Total Balance
+                    <div className="inline-flex items-center gap-1">
+                      <span>Balance</span>
                       <InfoTooltip text={`Current account balance (pending + available). Writers need $${PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS} minimum to request a payout.`} />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Platform Fee (10%)
+                    <div className="inline-flex items-center gap-1">
+                      <span>Fee</span>
                       <InfoTooltip text="10% fee deducted from writer earnings" />
-                    </span>
+                    </div>
                   </th>
                 </tr>
               </thead>

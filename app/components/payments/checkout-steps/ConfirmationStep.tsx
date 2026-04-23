@@ -7,6 +7,7 @@ import { Button } from '../../ui/button';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
+import { useUsdBalance } from '../../../contexts/UsdBalanceContext';
 import { EmbeddedCheckoutService } from '../../../services/embeddedCheckoutService';
 
 interface ConfirmationStepProps {
@@ -29,6 +30,7 @@ export function ConfirmationStep({
 }: ConfirmationStepProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { refreshUsdBalance } = useUsdBalance();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isProcessingSuccess, setIsProcessingSuccess] = useState(true);
   const [successProcessingError, setSuccessProcessingError] = useState<string>('');
@@ -54,6 +56,9 @@ export function ConfirmationStep({
 
       if (!result.success) {
         setSuccessProcessingError(result.error || 'Failed to complete subscription setup');
+      } else {
+        // Refresh USD balance after successful subscription to show funds in header
+        await refreshUsdBalance();
       }
     } catch (error) {
       console.error('Error processing subscription success:', error);
@@ -121,8 +126,8 @@ export function ConfirmationStep({
             </p>
             <div className="space-y-3">
               <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full">
-                <Icon name="Home" size={16} className="mr-2" />
-                Go Home
+                <Icon name="Sparkles" size={16} className="mr-2" />
+                Start Funding Writers
               </Button>
               <Button
                 onClick={handleViewSubscription}
@@ -156,8 +161,8 @@ export function ConfirmationStep({
           </p>
           <div className="space-y-3">
             <Button onClick={handleGoHome} disabled={isRedirecting} className="w-full" size="lg">
-              <Icon name="Home" size={16} className="mr-2" />
-              Go Home
+              <Icon name="Sparkles" size={16} className="mr-2" />
+              Start Funding Writers
             </Button>
             <Button
               onClick={handleViewSubscription}

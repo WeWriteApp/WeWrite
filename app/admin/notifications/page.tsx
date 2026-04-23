@@ -10,7 +10,6 @@ import { Button } from '../../components/ui/button';
 import { isAdmin } from '../../utils/isAdmin';
 import { useToast } from '../../components/ui/use-toast';
 import { useAdminData } from '../../providers/AdminDataProvider';
-import { UserDetailsDrawer } from '../../components/admin/UserDetailsDrawer';
 import { useTheme } from '../../providers/ThemeProvider';
 
 // Import types from extracted module
@@ -80,11 +79,6 @@ function AdminEmailsPageContent() {
   const [emailPreviewIsPersonalized, setEmailPreviewIsPersonalized] = useState(false);
   const [emailPreviewError, setEmailPreviewError] = useState<string | null>(null);
   const [emailPreviewTriggerReason, setEmailPreviewTriggerReason] = useState<string | null>(null);
-
-  // User details drawer state
-  const [userDetailsOpen, setUserDetailsOpen] = useState(false);
-  const [userDetailsUserId, setUserDetailsUserId] = useState<string | null>(null);
-  const [userDetailsUsername, setUserDetailsUsername] = useState<string | null>(null);
 
   // Cron scheduling control state
   const [cronActionLoading, setCronActionLoading] = useState(false);
@@ -386,12 +380,12 @@ function AdminEmailsPageContent() {
     }
   };
 
-  // Open user details drawer
+  // Open user details page
   const openUserDetails = (userId?: string, username?: string) => {
     if (!userId && !username) return;
-    setUserDetailsUserId(userId || null);
-    setUserDetailsUsername(username || null);
-    setUserDetailsOpen(true);
+    if (userId) {
+      router.push(`/admin/users/${userId}`);
+    }
   };
 
   // Trigger cron job for a specific user
@@ -731,20 +725,6 @@ function AdminEmailsPageContent() {
         notificationModes={notificationModes}
         stageConfig={stageConfig}
         formatRelativeTime={formatRelativeTime}
-      />
-
-      {/* User Details Drawer */}
-      <UserDetailsDrawer
-        open={userDetailsOpen}
-        onOpenChange={(open) => {
-          setUserDetailsOpen(open);
-          if (!open) {
-            setUserDetailsUserId(null);
-            setUserDetailsUsername(null);
-          }
-        }}
-        userId={userDetailsUserId || undefined}
-        username={userDetailsUsername || undefined}
       />
     </div>
   );

@@ -11,29 +11,19 @@ export async function isGroupsEnabled(userId: string | null): Promise<boolean> {
     if (!admin) return false;
     const db = admin.firestore();
 
-    // Parallelize all Firestore reads for performance
     const defaultsPromise = db.collection(getCollectionName('featureFlags')).doc('defaults').get();
     const overridesPromise = userId
       ? db.collection(getCollectionName('featureFlagOverrides')).doc(userId).get()
       : Promise.resolve(null);
-    const userPromise = userId
-      ? db.collection(getCollectionName('users')).doc(userId).get()
-      : Promise.resolve(null);
 
-    const [defaultsDoc, overridesDoc, userDoc] = await Promise.all([defaultsPromise, overridesPromise, userPromise]);
+    const [defaultsDoc, overridesDoc] = await Promise.all([defaultsPromise, overridesPromise]);
 
     const defaults = defaultsDoc.exists ? defaultsDoc.data()?.flags || {} : {};
     const overrides: Record<string, boolean> = overridesDoc?.exists ? overridesDoc.data()?.flags || {} : {};
     const merged = { ...defaults, ...overrides };
 
-    if (merged.groups) return true;
-
-    // Auto-enable groups for admin users
-    if (userId && userDoc?.exists && userDoc.data()?.isAdmin === true) {
-      return true;
-    }
-
-    return false;
+    // Keep historical behavior: groups defaults to enabled unless explicitly set false.
+    return merged.groups !== false;
   } catch {
     return false;
   }

@@ -3,16 +3,18 @@ import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { getUserIdFromRequest } from '../auth-helper';
 import { checkAdminPermissions } from '../admin-auth-helper';
+import { withAdminContext } from '../../utils/adminRequestContext';
 
 type FeatureFlagMap = Record<string, boolean>;
 
 const DEFAULT_FLAGS: FeatureFlagMap = {
-  line_numbers: false,
-  onboarding_tutorial: false,
-  ui_labels: false,
-  groups: false,
-  private_pages: false,
+  line_numbers: true,
+  onboarding_tutorial: true,
+  ui_labels: true,
+  groups: true,
 };
+
+const DEPRECATED_FLAGS = new Set(['private_pages']);
 
 const COLLECTION_DEFAULTS = 'featureFlags';
 const COLLECTION_OVERRIDES = 'featureFlagOverrides';
@@ -60,6 +62,7 @@ async function getUserOverrides(
 }
 
 export async function GET(request: NextRequest) {
+  return withAdminContext(request, async () => {
   const summaryRequested = request.nextUrl.searchParams.get('summary') === '1';
   const flagParam = request.nextUrl.searchParams.get('flag') || 'line_numbers';
   try {
@@ -81,6 +84,17 @@ export async function GET(request: NextRequest) {
         return { data: () => ({ count: snap.size }) };
       });
       const totalUsers = totalSnap.data().count || 0;
+
+      if (DEPRECATED_FLAGS.has(flagParam)) {
+        return NextResponse.json({
+          success: true,
+          summary: {
+            totalUsers,
+            enabledCount: 0,
+            defaultEnabled: false,
+          },
+        });
+      }
 
       // Count overrides that explicitly enable the requested flag
       const overridesSnap = await db
@@ -113,14 +127,10 @@ export async function GET(request: NextRequest) {
       ...overrides,
     };
 
-    // Auto-enable groups and private_pages for admin users
-    if (userId) {
-      const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
-      if (userDoc.exists && userDoc.data()?.isAdmin === true) {
-        mergedFlags.groups = true;
-        mergedFlags.private_pages = true;
-      }
-    }
+    // Remove deprecated flags from client payloads.
+    DEPRECATED_FLAGS.forEach((flag) => {
+      delete mergedFlags[flag];
+    });
 
     return NextResponse.json({
       success: true,
@@ -141,9 +151,11 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+  });
 }
 
 export async function POST(request: NextRequest) {
+  return withAdminContext(request, async () => {
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
@@ -160,6 +172,13 @@ export async function POST(request: NextRequest) {
 
     if (!flag || typeof enabled !== 'boolean' || !scope) {
       return NextResponse.json({ success: false, error: 'Invalid payload' }, { status: 400 });
+    }
+
+    if (DEPRECATED_FLAGS.has(flag)) {
+      return NextResponse.json(
+        { success: false, error: 'private_pages has been removed' },
+        { status: 410 }
+      );
     }
 
     if (scope === 'global') {
@@ -201,4 +220,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+  });
 }

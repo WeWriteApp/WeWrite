@@ -14,19 +14,19 @@ export function HistoricalData({ historicalData, totals, formatMonth }: Historic
     <>
       {/* Historical Data Table */}
       <div className="wewrite-card">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 flex-col sm:flex-row">
           <Icon name="TrendingUp" size={20} />
-          <h2 className="text-xl font-bold">Historical Monthly Data</h2>
+          <h2 className="text-lg sm:text-xl font-bold">Historical Monthly Data</h2>
         </div>
 
         {historicalData.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>No historical data yet.</p>
-            <p className="text-sm mt-1">Data will appear after the first month-end processing.</p>
+            <p className="text-sm">No historical data yet.</p>
+            <p className="text-xs mt-1">Data will appear after the first month-end processing.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-2">Month</th>

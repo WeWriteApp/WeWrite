@@ -5227,6 +5227,56 @@ button.bg-transparent[type] {
   color: oklch(var(--accent-base));
 }
 
+/* Mobile/touch accessibility: disable hover-only visual states unless a real hover pointer exists.
+   This prevents sticky hover artifacts on touch input while preserving desktop pointer behavior. */
+@media (max-width: 1023px) and (hover: none),
+       (max-width: 1023px) and (pointer: coarse) {
+  /* Tailwind hover utilities (class names are present as literal strings in markup). */
+  [class*="hover:bg-"]:hover,
+  [class*="hover:text-"]:hover,
+  [class*="hover:border-"]:hover,
+  [class*="hover:underline"]:hover,
+  [class*="hover:no-underline"]:hover,
+  [class*="hover:opacity-"]:hover,
+  [class*="hover:shadow"]:hover,
+  [class*="hover:scale-"]:hover,
+  [class*="hover:-translate-"]:hover,
+  [class*="hover:translate-"]:hover,
+  [class*="hover:decoration-"]:hover {
+    background-color: inherit !important;
+    color: inherit !important;
+    border-color: inherit !important;
+    box-shadow: inherit !important;
+    opacity: inherit !important;
+    text-decoration: inherit !important;
+    transform: none !important;
+  }
+
+  /* Neutralize group-hover driven styles on touch devices. */
+  .group:hover [class*="group-hover:bg-"],
+  .group:hover [class*="group-hover:text-"],
+  .group:hover [class*="group-hover:border-"],
+  .group:hover [class*="group-hover:opacity-"],
+  .group:hover [class*="group-hover:underline"],
+  .group:hover [class*="group-hover:shadow"],
+  .group:hover [class*="group-hover:scale-"],
+  .group:hover [class*="group-hover:translate-"] {
+    background-color: inherit !important;
+    color: inherit !important;
+    border-color: inherit !important;
+    box-shadow: inherit !important;
+    opacity: inherit !important;
+    text-decoration: inherit !important;
+    transform: none !important;
+  }
+
+  /* Keep standardized nav utility classes from showing touch-hover backgrounds. */
+  .nav-hover-state:hover,
+  .nav-active-state:active {
+    background-color: transparent !important;
+  }
+}
+
 /* High contrast: disable hover/active background changes to maintain contrast
    Specificity (0,3,1) beats utility class (0,2,0) — no !important needed */
 html[data-high-contrast="true"] .nav-hover-state:hover {
@@ -5239,6 +5289,19 @@ html[data-high-contrast="true"] .nav-selected-state {
   background-color: transparent;
   color: oklch(var(--foreground));
   font-weight: 700;
+}
+
+/* Pill style selector: text color should NOT change when button is selected.
+   Selection is indicated by the container background, not by recoloring the
+   inner link-style preview text. */
+button.nav-selected-state > span.pill-filled-style {
+  color: oklch(var(--primary-foreground)) !important;
+}
+
+button.nav-selected-state > span.pill-outline-style,
+button.nav-selected-state > span.pill-text-style,
+button.nav-selected-state > span.pill-underlined-style {
+  color: oklch(var(--accent-base)) !important;
 }
 
 /* Mobile Bottom Navigation Icon and Text Alignment */

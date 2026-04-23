@@ -47,6 +47,8 @@ interface MobilePageNavProps {
   children: React.ReactNode;
   /** Optional header content between header and menu (e.g., data source toggle) */
   headerExtra?: React.ReactNode;
+  /** Optional className for sub-page content wrapper (useful for mobile gutters) */
+  contentContainerClassName?: string;
 }
 
 /**
@@ -58,7 +60,14 @@ function getSubPageTitle(pathname: string, basePath: string, sections: MobileNav
   return match?.title || '';
 }
 
-export function MobilePageNav({ basePath, sections, title, children, headerExtra }: MobilePageNavProps) {
+export function MobilePageNav({
+  basePath,
+  sections,
+  title,
+  children,
+  headerExtra,
+  contentContainerClassName,
+}: MobilePageNavProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -179,7 +188,7 @@ export function MobilePageNav({ basePath, sections, title, children, headerExtra
             style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
           >
             {headerExtra && (
-              <div className="px-4 pt-4 pb-1">
+              <div className="px-4 pt-4 pb-3">
                 {headerExtra}
               </div>
             )}
@@ -231,7 +240,9 @@ export function MobilePageNav({ basePath, sections, title, children, headerExtra
             )}
             style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
           >
-            {children}
+            <div className={contentContainerClassName}>
+              {children}
+            </div>
           </div>
         )}
       </div>

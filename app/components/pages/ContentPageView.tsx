@@ -23,23 +23,74 @@ import ContentPageHeader from "./ContentPageHeader";
 import ContentPageFooter from "./ContentPageFooter";
 import AllocationBar from "../payments/AllocationBar";
 
+function BelowContentLoadingCard({
+  title,
+  icon = "Loader",
+  minHeightClass = "min-h-[160px]",
+}: {
+  title: string;
+  icon?: any;
+  minHeightClass?: string;
+}) {
+  return (
+    <div className={`wewrite-card ${minHeightClass} flex flex-col gap-3`}>
+      <div className="flex items-center gap-2">
+        <Icon name={icon} size={20} className="text-muted-foreground" />
+        <span className="text-sm font-medium">{title}</span>
+      </div>
+      <div className="space-y-2">
+        <div className="h-3 w-1/3 rounded bg-muted/70" />
+        <div className="h-3 w-full rounded bg-muted/60" />
+        <div className="h-3 w-5/6 rounded bg-muted/50" />
+      </div>
+    </div>
+  );
+}
+
 // PERFORMANCE: Lazy-load below-the-fold components to reduce initial bundle size
 // These components are heavy and not needed for initial page render
-// No loading fallbacks - instant render when ready (no skeleton flicker)
 const RelatedPagesSection = dynamic(() => import("../features/RelatedPagesSection"), {
-  ssr: false
+  ssr: false,
+  loading: () => (
+    <BelowContentLoadingCard
+      title="Related Pages"
+      icon="Compass"
+      minHeightClass="min-h-[180px]"
+    />
+  )
 });
 
 const RepliesSection = dynamic(() => import("../features/RepliesSection"), {
-  ssr: false
+  ssr: false,
+  loading: () => (
+    <BelowContentLoadingCard
+      title="Replies"
+      icon="MessageCircle"
+      minHeightClass="min-h-[220px]"
+    />
+  )
 });
 
 const PageGraphView = dynamic(() => import("./PageGraphView"), {
-  ssr: false
+  ssr: false,
+  loading: () => (
+    <BelowContentLoadingCard
+      title="Graph View"
+      icon="GitBranch"
+      minHeightClass="min-h-[240px]"
+    />
+  )
 });
 
 const WhatLinksHere = dynamic(() => import("./WhatLinksHere"), {
-  ssr: false
+  ssr: false,
+  loading: () => (
+    <BelowContentLoadingCard
+      title="What Links Here"
+      icon="Link2"
+      minHeightClass="min-h-[180px]"
+    />
+  )
 });
 
 // Writing ideas banner - shown for new pages to suggest topics
@@ -1339,6 +1390,10 @@ export default function ContentPageView({
         }));
       }
 
+      // Force an immediate graph refresh for the current page.
+      // The global pageSaved listener remains as a fallback for backlink propagation.
+      graphRefreshRef.current?.();
+
       // NOTE: hasChanges is now computed via memo - no need to set hasUnsavedChanges
 
       // Set justSaved STATE (ref was already set above before setPage)
@@ -1391,8 +1446,8 @@ export default function ContentPageView({
       setError(null);
 
 
-      // Page connections will refresh automatically via the pageSaved event
-      // No manual refresh needed since we now have real-time updates
+      // Page connections are refreshed both directly (for immediate UI update)
+      // and via pageSaved listeners (for cross-page backlink propagation).
 
       // REMOVED: Page reload was causing issues with subsequent saves
       // The content should update automatically without needing a reload
@@ -1820,114 +1875,117 @@ export default function ContentPageView({
               </TextSelectionProvider>
             </div>
 
-            {/* Page Footer with actions - tight spacing (hidden in print) */}
-            <div className="no-print">
+            {/* Named post-content area for everything below the main body. */}
+            <motion.section
+              layout
+              className="no-print"
+              data-section-name="content-page-below-body"
+            >
               <ContentPageFooter
-              page={memoizedPage}
-              content={editorState}
-              linkedPageIds={memoizedLinkedPageIds}
-              isEditing={isEditing}
-              canEdit={canEdit}
-              isOwner={canEdit} // Add isOwner prop - same logic as canEdit for ownership
-              title={title}
+                page={memoizedPage as any}
+                content={editorState}
+                linkedPageIds={memoizedLinkedPageIds}
+                isEditing={isEditing}
+                canEdit={canEdit}
+                isOwner={canEdit} // Add isOwner prop - same logic as canEdit for ownership
+                title={title}
+                location={location}
+                onTitleChange={handleTitleChange}
+                onLocationChange={handleLocationChange}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onDelete={handleDelete}
+                onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
+                // setIsEditing removed - no manual edit mode toggling allowed
+                isSaving={isSaving}
+                saveSuccess={saveSuccess}
+                error={error}
+                titleError={titleError}
+                hasUnsavedChanges={hasChanges}
+                showLinkSuggestions={showLinkSuggestions}
+                linkSuggestionCount={linkSuggestionCount}
+                onToggleLinkSuggestions={setShowLinkSuggestions}
+              />
 
-              location={location}
-              onTitleChange={handleTitleChange}
-              onLocationChange={handleLocationChange}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              onDelete={handleDelete}
-              onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
-              // setIsEditing removed - no manual edit mode toggling allowed
-              isSaving={isSaving}
-              saveSuccess={saveSuccess}
-              error={error}
-              titleError={titleError}
-              hasUnsavedChanges={hasChanges}
-              showLinkSuggestions={showLinkSuggestions}
-              linkSuggestionCount={linkSuggestionCount}
-              onToggleLinkSuggestions={setShowLinkSuggestions}
-            />
-            </div>
+              {/* Page Actions for non-owners are now rendered inside ContentPageFooter */}
 
-            {/* Page Actions for non-owners are now rendered inside ContentPageFooter */}
+              {/* Page Connections and Related Pages - hide for new pages to focus on creation */}
+              {page && !page.isNewPage && (
+                <motion.div layout className="px-4 space-y-4">
+                  {/* Page Graph View */}
+                  <PageGraphView
+                    pageId={page.id}
+                    pageTitle={page.title}
+                    replyToId={page.replyTo || null}
+                    replyType={replyTypeForGraph}
+                    onRefreshReady={handleGraphRefreshReady}
+                    pageOwnerId={page.userId}
+                  />
 
-            {/* Page Connections and Related Pages - hide for new pages to focus on creation (hidden in print) */}
-            {page && !page.isNewPage && (
-              <div className="px-4 space-y-4 no-print">
-                {/* Page Graph View */}
-                <PageGraphView
-                  pageId={page.id}
-                  pageTitle={page.title}
-                  replyToId={page.replyTo || null}
-                  replyType={replyTypeForGraph}
-                  onRefreshReady={handleGraphRefreshReady}
-                  pageOwnerId={page.userId}
-                />
+                  {/* What Links Here */}
+                  <WhatLinksHere
+                    pageId={page.id}
+                    pageTitle={page.title}
+                    isOwner={user?.uid === page.userId}
+                    page={page as any}
+                  />
 
-                {/* What Links Here */}
-                <WhatLinksHere
-                  pageId={page.id}
-                  pageTitle={page.title}
-                  isOwner={user?.uid === page.userId}
-                  page={page}
-                />
-
-                {page.replyTo && (
-                  <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Reply to</p>
-                        <Link
-                          href={`/${page.replyTo}`}
-                          className="font-semibold underline-offset-4 hover:underline"
-                        >
-                          {page.replyToTitle || "View page"}
-                        </Link>
-                      </div>
-                      {canEdit && (
-                        <div className="min-w-[160px]">
-                          <p className="text-sm text-muted-foreground mb-1">Reply type</p>
-                          <Select
-                            value={replyTypeForGraph}
-                            onValueChange={(val) => {
-                              setPage((prev) => {
-                                if (!prev) return prev;
-                                return { ...prev, replyType: val as 'agree' | 'disagree' | 'neutral' };
-                              });
-                              // NOTE: hasChanges is computed via memo - no need to set hasUnsavedChanges
-                            }}
+                  {page.replyTo && (
+                    <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Reply to</p>
+                          <Link
+                            href={`/${page.replyTo}`}
+                            className="font-semibold underline-offset-4 hover:underline"
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="neutral">Neutral reply</SelectItem>
-                              <SelectItem value="agree">Agree</SelectItem>
-                              <SelectItem value="disagree">Disagree</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            {page.replyToTitle || "View page"}
+                          </Link>
                         </div>
-                      )}
+                        {canEdit && (
+                          <div className="min-w-[160px]">
+                            <p className="text-sm text-muted-foreground mb-1">Reply type</p>
+                            <Select
+                              value={replyTypeForGraph}
+                              onValueChange={(val) => {
+                                setPage((prev) => {
+                                  if (!prev) return prev;
+                                  return { ...prev, replyType: val as 'agree' | 'disagree' | 'neutral' };
+                                });
+                                // NOTE: hasChanges is computed via memo - no need to set hasUnsavedChanges
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="neutral">Neutral reply</SelectItem>
+                                <SelectItem value="agree">Agree</SelectItem>
+                                <SelectItem value="disagree">Disagree</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Replies Section - shows all replies to this page with type filtering */}
-                <RepliesSection
-                  pageId={page.id}
-                  pageTitle={page.title}
-                  pageUserId={page.userId}
-                  pageUsername={page.username}
-                  isOwnPage={canEdit}
-                />
+                  {/* Replies Section - shows all replies to this page with type filtering */}
+                  <RepliesSection
+                    pageId={page.id}
+                    pageTitle={page.title}
+                    pageUserId={page.userId}
+                    pageUsername={page.username}
+                    isOwnPage={canEdit}
+                  />
 
-                <RelatedPagesSection
-                  page={page}
-                  linkedPageIds={memoizedLinkedPageIds}
-                />
-              </div>
-            )}
+                  <RelatedPagesSection
+                    page={page}
+                    linkedPageIds={memoizedLinkedPageIds}
+                  />
+                </motion.div>
+              )}
+            </motion.section>
 
             {/* Delete/Cancel button - positioned at the very bottom for page owners (hidden in print) */}
             {/* Shows "Cancel" for new pages, "Delete" for existing pages */}

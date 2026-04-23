@@ -249,6 +249,51 @@ interface ActivityCardProps {
 />
 ```
 
+## Activity Feed Card Variants
+
+The homepage/global activity feed can render multiple card types, not just `ActivityCard`.
+
+### 1. ActivityCard (default feed row)
+
+- File: `app/components/activity/ActivityCard.tsx`
+- Render rule: One card per activity item returned by the activity feed API.
+
+### 2. FollowUsersCard (suggestions)
+
+- File: `app/components/activity/FollowUsersCard.tsx`
+- Render rule: Shows above the feed list only when:
+  - feed mode is `global`
+  - user is authenticated
+  - following count is zero
+  - card has not been dismissed in current view
+
+### 3. SubscriptionCTACard (support CTA)
+
+- File: `app/components/subscription/SubscriptionCTACard.tsx`
+- Render rule: Injected after the 3rd feed item only when:
+  - feed mode is `global`
+  - user is authenticated
+  - user has no active subscription
+  - subscription state is not loading
+  - card is not dismissed (7-day local cooldown)
+
+### Injection Logic (source of truth)
+
+File: `app/components/features/ActivityFeed.tsx`
+
+```tsx
+{showFollowSuggestions && mode === 'global' && isAuthenticated && (
+  <FollowUsersCard onDismiss={dismissFollowSuggestions} />
+)}
+
+{activities.map((activity, index) => (
+  <React.Fragment key={activity.id}>
+    <ActivityCard activity={activityCardData} />
+    {index === 2 && mode === 'global' && <SubscriptionCTACard />}
+  </React.Fragment>
+))}
+```
+
 ## Design Principles
 
 1. **Visual Chunking**: Related information is grouped together in sub-cards

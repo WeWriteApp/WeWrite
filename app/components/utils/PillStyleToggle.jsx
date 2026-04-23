@@ -34,6 +34,7 @@ export default function PillStyleToggle() {
             )}
           >
             {/* Use the actual pill style classes from context for accurate preview */}
+            {/* Pill style colors are preserved on selection via CSS specificity rules */}
             <span className={getPillStyleClasses(undefined, style)}>
               {label}
             </span>

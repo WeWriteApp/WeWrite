@@ -43,6 +43,8 @@ const HighContrastContext = React.createContext<{
   setReduceAnimations: () => {},
 });
 
+const EINK_PREV_REDUCE_ANIMATIONS_KEY = 'eink-prev-reduce-animations';
+
 function HighContrastProvider({ children }: { children: React.ReactNode }) {
   const [highContrast, setHighContrast] = React.useState(false);
   const [reduceAnimations, setReduceAnimationsState] = React.useState(false);
@@ -77,22 +79,41 @@ function HighContrastProvider({ children }: { children: React.ReactNode }) {
     setHighContrast(prev => {
       const newValue = !prev;
       localStorage.setItem('high-contrast', JSON.stringify(newValue));
-      // When enabling HC, also enable reduce-animations (unless user previously set it)
+
+      // E-ink ON: snapshot current animation preference, then enable reduced animations.
       if (newValue) {
-        const savedRA = localStorage.getItem('reduce-animations');
-        if (savedRA === null) {
-          setReduceAnimationsState(true);
-          localStorage.setItem('reduce-animations', 'true');
+        localStorage.setItem(EINK_PREV_REDUCE_ANIMATIONS_KEY, JSON.stringify(reduceAnimations));
+        setReduceAnimationsState(true);
+        localStorage.setItem('reduce-animations', 'true');
+      } else {
+        // E-ink OFF: restore prior animation preference if we captured one.
+        const previous = localStorage.getItem(EINK_PREV_REDUCE_ANIMATIONS_KEY);
+        if (previous !== null) {
+          try {
+            const previousValue = JSON.parse(previous);
+            setReduceAnimationsState(Boolean(previousValue));
+            localStorage.setItem('reduce-animations', JSON.stringify(Boolean(previousValue)));
+          } catch {
+            setReduceAnimationsState(false);
+            localStorage.setItem('reduce-animations', 'false');
+          }
+          localStorage.removeItem(EINK_PREV_REDUCE_ANIMATIONS_KEY);
         }
       }
       return newValue;
     });
-  }, []);
+  }, [reduceAnimations]);
 
   const setReduceAnimations = React.useCallback((value: boolean) => {
     setReduceAnimationsState(value);
     localStorage.setItem('reduce-animations', JSON.stringify(value));
-  }, []);
+
+    // If user explicitly changes this while e-ink is on, honor manual control
+    // and cancel automatic restore behavior on e-ink exit.
+    if (highContrast) {
+      localStorage.removeItem(EINK_PREV_REDUCE_ANIMATIONS_KEY);
+    }
+  }, [highContrast]);
 
   // Sync attributes to DOM for CSS fallback rules
   React.useEffect(() => {

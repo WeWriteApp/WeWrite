@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Icon, IconName } from '@/components/ui/Icon';
 import { PillLink } from '../utils/PillLink';
 import { Button } from './button';
@@ -105,7 +106,11 @@ export function PageLinksCard({
   }
 
   return (
-    <div className={cn("wewrite-card", className)}>
+    <motion.div
+      layout
+      transition={{ layout: { duration: 0.25, ease: 'easeOut' } }}
+      className={cn("wewrite-card min-h-[120px]", className)}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -136,9 +141,19 @@ export function PageLinksCard({
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Icon name="Loader" size={16} />
-          <span>Loading...</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Icon name="Loader" size={16} />
+            <span>Loading...</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div
+                key={`loading-pill-${idx}`}
+                className="h-7 w-20 rounded-full bg-muted/70"
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -179,7 +194,7 @@ export function PageLinksCard({
           {footer}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

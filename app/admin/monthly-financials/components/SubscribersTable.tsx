@@ -12,26 +12,26 @@ interface SubscribersTableProps {
 export function SubscribersTable({ stripeSubscriptions, onUserClick }: SubscribersTableProps) {
   return (
     <div className="wewrite-card">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-col sm:flex-row">
         <Icon name="Users" size={20} />
-        <h2 className="text-xl font-bold">Active Subscriptions (from Stripe)</h2>
-        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted">
-          Source of Truth
+        <h2 className="text-lg sm:text-xl font-bold">Active Subscriptions</h2>
+        <span className="px-2 py-0.5 rounded-full text-xs sm:text-xs font-medium bg-muted">
+          Stripe
         </span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-        <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Active Subscribers</p>
-          <p className="text-2xl font-bold">{stripeSubscriptions.totalActiveSubscriptions}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground">Active Subscribers</p>
+          <p className="text-lg sm:text-2xl font-bold mt-1">{stripeSubscriptions.totalActiveSubscriptions}</p>
         </div>
-        <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Monthly Recurring Revenue</p>
-          <p className="text-2xl font-bold">{formatUsdCents(stripeSubscriptions.totalMRRCents)}</p>
+        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground">Monthly Recurring Revenue</p>
+          <p className="text-lg sm:text-2xl font-bold mt-1">{formatUsdCents(stripeSubscriptions.totalMRRCents)}</p>
         </div>
-        <div className="p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">Avg per Subscriber</p>
-          <p className="text-2xl font-bold">
+        <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border border-border">
+          <p className="text-xs sm:text-sm text-muted-foreground">Avg per Subscriber</p>
+          <p className="text-lg sm:text-2xl font-bold mt-1">
             {stripeSubscriptions.totalActiveSubscriptions > 0
               ? formatUsdCents(Math.round(stripeSubscriptions.totalMRRCents / stripeSubscriptions.totalActiveSubscriptions))
               : '$0'}
@@ -41,38 +41,38 @@ export function SubscribersTable({ stripeSubscriptions, onUserClick }: Subscribe
 
       {stripeSubscriptions.subscribers && stripeSubscriptions.subscribers.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-            Detailed Subscriber Breakdown
+          <h3 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
+            <span>Subscriber Breakdown</span>
             <InfoTooltip text="Shows each subscriber's plan, allocation status, and financial breakdown. Only FUNDED allocations (backed by subscription) count toward creator earnings." />
           </h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="text-left py-2 px-2">Subscriber</th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Plan
+                    <div className="inline-flex items-center gap-1">
+                      <span>Plan</span>
                       <InfoTooltip text="Monthly subscription amount from Stripe" />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Allocated
+                    <div className="inline-flex items-center gap-1">
+                      <span>Allocated</span>
                       <InfoTooltip text="Total amount this subscriber has allocated to creators (may exceed their plan)" />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Overspent
+                    <div className="inline-flex items-center gap-1">
+                      <span>Overspent</span>
                       <InfoTooltip text="Unfunded allocations - amount allocated beyond their subscription. These allocations are NOT paid to creators." />
-                    </span>
+                    </div>
                   </th>
                   <th className="text-right py-2 px-2">
-                    <span className="inline-flex items-center">
-                      Unallocated
+                    <div className="inline-flex items-center gap-1">
+                      <span>Unallocated</span>
                       <InfoTooltip text="Plan - Allocated. Funds not yet directed to creators (becomes platform revenue at month-end)" />
-                    </span>
+                    </div>
                   </th>
                 </tr>
               </thead>

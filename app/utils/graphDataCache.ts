@@ -31,9 +31,9 @@ interface UserPagesData {
  */
 class GraphDataCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 2 * 60 * 60 * 1000; // 2 hours (increased from 5m for cost optimization)
-  private readonly RELATED_PAGES_TTL = 4 * 60 * 60 * 1000; // 4 hours (increased from 10m)
-  private readonly USER_PAGES_TTL = 1 * 60 * 60 * 1000; // 1 hour (increased from 2m)
+  private readonly DEFAULT_TTL = 60 * 1000; // 1 minute for graph accuracy after edits
+  private readonly RELATED_PAGES_TTL = 10 * 60 * 1000; // 10 minutes
+  private readonly USER_PAGES_TTL = 5 * 60 * 1000; // 5 minutes
 
   /**
    * Get cached data if valid, otherwise return null
@@ -107,7 +107,10 @@ class GraphDataCache {
     }
     
     try {
-      const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=${includeSecondHop}&limit=50`);
+      const response = await fetch(
+        `/api/page-connections?pageId=${pageId}&includeSecondHop=${includeSecondHop}&limit=50&skipCache=true`,
+        { cache: 'no-store' }
+      );
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -117,7 +120,7 @@ class GraphDataCache {
       const connectionsData: PageConnectionsData = {
         incoming: data.incoming || [],
         outgoing: data.outgoing || [],
-        secondHop: data.secondHop || []
+        secondHop: data.secondHopConnections || data.secondHop || []
       };
 
       this.set(cacheKey, connectionsData);

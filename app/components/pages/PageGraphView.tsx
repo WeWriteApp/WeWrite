@@ -139,10 +139,11 @@ export default function PageGraphView({
   const {
     incoming,
     outgoing,
-    bidirectional,
     allConnections,
     secondHopConnections,
     thirdHopConnections,
+    secondHopEdges,
+    thirdHopEdges,
     graphLoading: hookLoading,
     refresh
   } = usePageConnectionsGraph(hasInitialData ? '' : pageId, hasInitialData ? '' : pageTitle);
@@ -159,6 +160,39 @@ export default function PageGraphView({
   // If we have initial data, skip loading states
   const loading = hasInitialData ? false : hookLoading;
   const relatedLoading = hasInitialData ? false : relatedHookLoading;
+
+  const level1Signature = useMemo(
+    () => allConnections.map(conn => conn.id).sort().join('|'),
+    [allConnections]
+  );
+  const incomingSignature = useMemo(
+    () => incoming.map(conn => conn.id).sort().join('|'),
+    [incoming]
+  );
+  const outgoingSignature = useMemo(
+    () => outgoing.map(conn => conn.id).sort().join('|'),
+    [outgoing]
+  );
+  const secondHopSignature = useMemo(
+    () => secondHopConnections.map(conn => conn.id).sort().join('|'),
+    [secondHopConnections]
+  );
+  const thirdHopSignature = useMemo(
+    () => thirdHopConnections.map(conn => conn.id).sort().join('|'),
+    [thirdHopConnections]
+  );
+  const secondHopEdgesSignature = useMemo(
+    () => secondHopEdges.map(edge => `${edge.sourceId}->${edge.targetId}`).sort().join('|'),
+    [secondHopEdges]
+  );
+  const thirdHopEdgesSignature = useMemo(
+    () => thirdHopEdges.map(edge => `${edge.sourceId}->${edge.targetId}`).sort().join('|'),
+    [thirdHopEdges]
+  );
+  const relatedPagesSignature = useMemo(
+    () => relatedPages.map(page => page.id).sort().join('|'),
+    [relatedPages]
+  );
 
   // Expose refresh function to parent component
   useEffect(() => {
@@ -275,51 +309,46 @@ export default function PageGraphView({
       }
     });
 
-    // Level 2 connections (second-hop to first-hop)
-    // These are more realistic connections since they come from the backlinks index
-    secondHopConnections.forEach(secondHopConnection => {
-      // Find first-level connections this second-hop page might link to
-      // Since second-hop comes from backlinks, we know there's a connection
-      const possibleTargets = allConnections.filter(conn =>
-        // Prefer connections that would make sense based on the data structure
-        incoming.some(inc => inc.id === conn.id) || outgoing.some(out => out.id === conn.id)
-      );
-
-      if (possibleTargets.length > 0) {
-        // Connect to the first available target (could be randomized or based on other criteria)
-        const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
-        allLinks.push({
-          source: secondHopConnection.id,
-          target: target.id,
-          type: 'incoming'
-        });
-      }
+    // Level 2 connections (second-hop to first-hop) based on actual backlink edges.
+    secondHopEdges.forEach(edge => {
+      allLinks.push({
+        source: edge.sourceId,
+        target: edge.targetId,
+        type: 'incoming'
+      });
     });
 
-    // Level 3 connections (third-hop to second-hop)
-    thirdHopConnections.forEach(thirdHopConnection => {
-      // Find second-level connections this third-hop page might link to
-      const possibleTargets = secondHopConnections.filter(conn =>
-        // Ensure we have valid second-hop targets
-        conn.id !== thirdHopConnection.id
-      );
-
-      if (possibleTargets.length > 0) {
-        // Connect to a random second-hop target
-        const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
-        allLinks.push({
-          source: thirdHopConnection.id,
-          target: target.id,
-          type: 'incoming'
-        });
-      }
+    // Level 3 connections (third-hop to second-hop) based on actual backlink edges.
+    thirdHopEdges.forEach(edge => {
+      allLinks.push({
+        source: edge.sourceId,
+        target: edge.targetId,
+        type: 'incoming'
+      });
     });
 
     // Related pages are added as disconnected nodes (no links) - they float in the graph
 
     setNodes(allNodes);
     setLinks(allLinks);
-  }, [pageId, pageTitle, loading, relatedLoading, hasInitialData, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length, thirdHopConnections.length, relatedPages.length]);
+  }, [
+    pageId,
+    pageTitle,
+    loading,
+    relatedLoading,
+    hasInitialData,
+    level1Signature,
+    incomingSignature,
+    outgoingSignature,
+    secondHopSignature,
+    thirdHopSignature,
+    secondHopEdgesSignature,
+    thirdHopEdgesSignature,
+    relatedPagesSignature,
+    replyToId,
+    replyType,
+    user?.username
+  ]);
 
   // Share the graph view URL - must be defined before any early returns
   const handleShare = useCallback(async () => {
@@ -435,6 +464,7 @@ export default function PageGraphView({
         showOverlay={true}
         className="!rounded-t-3xl"
         disableSwipeDismiss={true}
+        aria-describedby={undefined}
       >
         {/* Header with controls */}
         <div className="px-4 pb-3 border-b border-border flex-shrink-0">

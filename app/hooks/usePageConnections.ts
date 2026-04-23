@@ -98,6 +98,7 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
   }, [fetchConnections, refreshTrigger]);
 
   const refresh = useCallback(() => {
+    graphDataCache.invalidatePage(pageId);
     setRefreshTrigger(prev => prev + 1);
   }, [pageId]);
 
@@ -131,6 +132,8 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
   const baseConnections = usePageConnections(pageId, pageTitle);
   const [secondHopConnections, setSecondHopConnections] = useState<PageConnection[]>([]);
   const [thirdHopConnections, setThirdHopConnections] = useState<PageConnection[]>([]);
+  const [secondHopEdges, setSecondHopEdges] = useState<Array<{ sourceId: string; targetId: string }>>([]);
+  const [thirdHopEdges, setThirdHopEdges] = useState<Array<{ sourceId: string; targetId: string }>>([]);
   const [graphLoading, setGraphLoading] = useState(false);
 
   const fetchSecondHopConnections = useCallback(async () => {
@@ -139,7 +142,10 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
     try {
       setGraphLoading(true);
 
-      const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=true&limit=50`);
+      const response = await fetch(
+        `/api/page-connections?pageId=${pageId}&includeSecondHop=true&limit=50&skipCache=true`,
+        { cache: 'no-store' }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -148,6 +154,8 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
       const data = await response.json();
       setSecondHopConnections(data.secondHopConnections || []);
       setThirdHopConnections(data.thirdHopConnections || []);
+      setSecondHopEdges(data.secondHopEdges || []);
+      setThirdHopEdges(data.thirdHopEdges || []);
 
     } catch (error) {
       // Silently fail for second hop - base connections still work
@@ -164,6 +172,8 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
     ...baseConnections,
     secondHopConnections,
     thirdHopConnections,
+    secondHopEdges,
+    thirdHopEdges,
     graphLoading: baseConnections.loading || graphLoading
   };
 }

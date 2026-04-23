@@ -21,6 +21,20 @@ interface EmailLogEntry {
   sentAt: string;
 }
 
+interface PayoutRecord {
+  id: string;
+  userId: string;
+  amountCents: number;
+  amountDollars: number;
+  status: string;
+  stripePayoutId?: string | null;
+  failureReason?: string | null;
+  requestedAt: any;
+  completedAt?: any;
+  approvalRequired?: boolean;
+  approvalFlags?: string[];
+}
+
 const formatDateTime = (dateValue: any): string => {
   if (!dateValue) return "—";
   try {
@@ -54,6 +68,8 @@ export default function AdminUserDetailPage() {
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
+  const [payoutsLoading, setPayoutsLoading] = useState(false);
 
   // Fetch user data
   const loadUser = useCallback(async () => {
@@ -127,9 +143,29 @@ export default function AdminUserDetailPage() {
     [id]
   );
 
+  // Fetch payout history
+  const loadPayouts = useCallback(async () => {
+    if (!id) return;
+    setPayoutsLoading(true);
+    try {
+      const res = await adminFetch(
+        `/api/admin/payouts?userId=${id}&pageSize=50&sortOrder=desc`
+      );
+      const data = await res.json();
+      if (data.success && data.data?.payouts) {
+        setPayouts(data.data.payouts);
+      }
+    } catch (err) {
+      console.error("Failed to load payouts:", err);
+    } finally {
+      setPayoutsLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     loadUser();
     loadEmailLogs();
+    loadPayouts();
   }, [loadUser, loadEmailLogs]);
 
   useEffect(() => {
@@ -535,6 +571,112 @@ export default function AdminUserDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Payout History */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Icon name="ArrowDownToLine" size={16} className="text-emerald-400" />
+          <span className="font-medium">Payout History</span>
+          {payouts.length > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {payouts.length}
+            </Badge>
+          )}
+        </div>
+        {payoutsLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Icon name="Loader" className="text-muted-foreground" />
+          </div>
+        ) : payouts.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No payouts yet</p>
+        ) : (
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {payouts.map((payout) => (
+              <div
+                key={payout.id}
+                className="flex items-start justify-between gap-2 p-2 rounded bg-muted/30 text-xs"
+              >
+                <div className="flex items-start gap-2 min-w-0 flex-1">
+                  {payout.status === "completed" || payout.status === "paid" ? (
+                    <Icon
+                      name="CheckCircle2"
+                      size={14}
+                      className="text-green-500 flex-shrink-0 mt-0.5"
+                    />
+                  ) : payout.status === "pending" || payout.status === "pending_approval" ? (
+                    <Icon
+                      name="Clock"
+                      size={14}
+                      className="text-blue-500 flex-shrink-0 mt-0.5"
+                    />
+                  ) : payout.status === "failed" || payout.status === "canceled" ? (
+                    <Icon
+                      name="XCircle"
+                      size={14}
+                      className="text-red-500 flex-shrink-0 mt-0.5"
+                    />
+                  ) : (
+                    <Icon
+                      name="CircleDot"
+                      size={14}
+                      className="text-muted-foreground flex-shrink-0 mt-0.5"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">
+                        ${payout.amountDollars.toFixed(2)}
+                      </span>
+                      <Badge
+                        variant={
+                          payout.status === "completed" || payout.status === "paid"
+                            ? "success-secondary"
+                            : payout.status === "failed" || payout.status === "canceled"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                        className="text-[10px]"
+                      >
+                        {payout.status}
+                      </Badge>
+                      {payout.approvalRequired && (
+                        <Badge variant="outline-static" className="text-[10px]">
+                          Approval required
+                        </Badge>
+                      )}
+                    </div>
+                    {payout.stripePayoutId && (
+                      <p className="text-muted-foreground mt-0.5 font-mono text-[10px] truncate">
+                        {payout.stripePayoutId}
+                      </p>
+                    )}
+                    {payout.failureReason && (
+                      <p className="text-red-500 mt-0.5">{payout.failureReason}</p>
+                    )}
+                    {payout.approvalFlags && payout.approvalFlags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {payout.approvalFlags.map((flag, i) => (
+                          <span key={i} className="text-[10px] text-orange-500 bg-orange-500/10 rounded px-1">
+                            {flag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right text-muted-foreground whitespace-nowrap flex-shrink-0">
+                  <div>{formatDateTime(payout.requestedAt)}</div>
+                  {payout.completedAt && (
+                    <div className="text-green-600">
+                      Completed {formatDateTime(payout.completedAt)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Notification History */}

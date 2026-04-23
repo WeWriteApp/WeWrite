@@ -131,6 +131,45 @@ export function ActivityCardSection({ id }: { id: string }) {
 />`}
         </DocsCodeBlock>
       </CollapsibleDocs>
+
+      <StateDemo label="Feed Card Variants & Logic">
+        <div className="space-y-3 text-sm">
+          <div className="wewrite-card p-3">
+            <p className="font-medium">Primary feed item</p>
+            <p className="text-muted-foreground">Component: <code className="bg-muted px-1 rounded">ActivityCard</code></p>
+            <p className="text-muted-foreground">Logic: renders for every activity item returned by the feed API.</p>
+          </div>
+
+          <div className="wewrite-card p-3">
+            <p className="font-medium">Follow suggestions card</p>
+            <p className="text-muted-foreground">Component: <code className="bg-muted px-1 rounded">FollowUsersCard</code></p>
+            <p className="text-muted-foreground">Logic: shows only in global feed when authenticated and following count is zero; dismissible.</p>
+          </div>
+
+          <div className="wewrite-card p-3">
+            <p className="font-medium">Subscription CTA card</p>
+            <p className="text-muted-foreground">Component: <code className="bg-muted px-1 rounded">SubscriptionCTACard</code></p>
+            <p className="text-muted-foreground">Logic: injected after the 3rd global feed item for authenticated users without an active subscription, hidden while loading subscription state, and dismissible with cooldown.</p>
+          </div>
+        </div>
+      </StateDemo>
+
+      <CollapsibleDocs type="notes" title="Feed Injection Rules">
+        <DocsCodeBlock label="Activity Feed Conditions">
+{`// Follow suggestions above feed list
+{showFollowSuggestions && mode === 'global' && isAuthenticated && (
+  <FollowUsersCard onDismiss={dismissFollowSuggestions} />
+)}
+
+// Main list
+{activities.map((activity, index) => (
+  <React.Fragment key={activity.id}>
+    <ActivityCard activity={activityCardData} />
+    {index === 2 && mode === 'global' && <SubscriptionCTACard />}
+  </React.Fragment>
+))}`}
+        </DocsCodeBlock>
+      </CollapsibleDocs>
     </ComponentShowcase>
   );
 }

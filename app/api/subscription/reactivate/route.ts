@@ -10,7 +10,6 @@ import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/enviro
 import { determineTierFromAmount } from '../../../utils/subscriptionTiers';
 import { UsdService } from '../../../services/usdService';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { serverTimestamp } from 'firebase-admin/firestore';
 
 import { getStripe } from '../../../lib/stripe';
 
@@ -127,6 +126,8 @@ export async function POST(request: NextRequest) {
     const amount = newAmount || (reactivatedSubscription.items.data[0].price.unit_amount / 100);
     const tier = newTier || determineTierFromAmount(amount);
 
+    const admin = getFirebaseAdmin();
+
     const subscriptionData = {
       status: reactivatedSubscription.status,
       amount,
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
       cancelAtPeriodEnd: reactivatedSubscription.cancel_at_period_end,
       currentPeriodEnd: new Date(reactivatedSubscription.current_period_end * 1000),
       canceledAt: null, // Clear cancelled date
-      updatedAt: serverTimestamp()
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
     const { parentPath, subCollectionName } = getSubCollectionPath(
@@ -143,7 +144,6 @@ export async function POST(request: NextRequest) {
       PAYMENT_COLLECTIONS.SUBSCRIPTIONS
     );
     
-    const admin = getFirebaseAdmin();
     const adminDb = admin.firestore();
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
     await subscriptionRef.update(subscriptionData);

@@ -57,14 +57,11 @@ export default function FundAccountPage() {
         throw new Error(errorData.error || `Failed to reactivate (${response.status})`);
       }
 
-      toast({
-        title: 'Subscription reactivated',
-        description: 'Your subscription is now active again.',
-      });
+      // Refresh the USD balance to reflect the subscription change
+      await refreshUsdBalance();
 
-      // Refresh the page to reflect the new subscription state
-      refreshUsdBalance();
-      window.location.href = '/settings/fund-account?success=true';
+      // Redirect to success page to show nice confirmation screen
+      window.location.href = `/settings/fund-account/success?subscription=${subscriptionId}`;
     } catch (error) {
       console.error('Reactivation error:', error);
       toast({

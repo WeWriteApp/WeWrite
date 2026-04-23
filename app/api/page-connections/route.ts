@@ -21,6 +21,11 @@ interface PageConnection {
   linkText?: string;
 }
 
+interface GraphEdge {
+  sourceId: string;
+  targetId: string;
+}
+
 // Extract page IDs from content
 function extractPageIdsFromContent(content: string): string[] {
   if (!content) return [];
@@ -65,7 +70,7 @@ export async function GET(request: NextRequest) {
     const pageId = searchParams.get('pageId');
     const includeSecondHop = searchParams.get('includeSecondHop') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
-    const skipCache = searchParams.get('skipCache') === 'true';
+    const skipCache = searchParams.get('skipCache') !== 'false';
 
     if (!pageId) {
       return NextResponse.json({
@@ -91,6 +96,8 @@ export async function GET(request: NextRequest) {
               bidirectional: cacheData.bidirectional || [],
               secondHopConnections: includeSecondHop ? (cacheData.secondHopConnections || []) : [],
               thirdHopConnections: includeSecondHop ? (cacheData.thirdHopConnections || []) : [],
+              secondHopEdges: includeSecondHop ? (cacheData.secondHopEdges || []) : [],
+              thirdHopEdges: includeSecondHop ? (cacheData.thirdHopEdges || []) : [],
               stats: cacheData.stats,
               cached: true,
               cachedAt: cacheData.cachedAt?.toDate?.()?.toISOString() || null,
@@ -222,6 +229,8 @@ export async function GET(request: NextRequest) {
     // Get second-hop and third-hop connections if requested
     let secondHopConnections: PageConnection[] = [];
     let thirdHopConnections: PageConnection[] = [];
+    let secondHopEdges: GraphEdge[] = [];
+    let thirdHopEdges: GraphEdge[] = [];
 
     if (includeSecondHop) {
       // Get second-hop from incoming connections (backlinks to backlinks)
@@ -244,9 +253,14 @@ export async function GET(request: NextRequest) {
 
       // Collect all candidate second-hop pages
       const secondHopCandidates: Array<{id: string; title: string; username: string; lastModified: any; linkText?: string}> = [];
+      const secondHopEdgeMap = new Map<string, GraphEdge>();
       const existingIds = new Set([pageId, ...incoming.map(p => p.id), ...outgoing.map(p => p.id)]);
 
-      for (const snapshot of secondHopSnapshots) {
+      for (let i = 0; i < secondHopSnapshots.length; i++) {
+        const snapshot = secondHopSnapshots[i];
+        const targetPageId = firstLevelSample[i]?.id;
+        if (!targetPageId) continue;
+
         for (const doc of snapshot.docs) {
           const data = doc.data();
           if (!existingIds.has(data.sourcePageId) && !secondHopCandidates.some(p => p.id === data.sourcePageId)) {
@@ -257,6 +271,13 @@ export async function GET(request: NextRequest) {
               lastModified: data.lastModified,
               linkText: data.linkText
             });
+          }
+
+          if (!existingIds.has(data.sourcePageId)) {
+            secondHopEdgeMap.set(
+              `${data.sourcePageId}->${targetPageId}`,
+              { sourceId: data.sourcePageId, targetId: targetPageId }
+            );
           }
         }
       }
@@ -278,6 +299,9 @@ export async function GET(request: NextRequest) {
 
         // Filter to only valid pages
         secondHopConnections = secondHopCandidates.filter(c => validSecondHopIds.has(c.id));
+        secondHopEdges = Array.from(secondHopEdgeMap.values()).filter(edge =>
+          validSecondHopIds.has(edge.sourceId) && existingIds.has(edge.targetId)
+        );
       }
 
       // Get third-hop connections from second-hop pages
@@ -296,9 +320,14 @@ export async function GET(request: NextRequest) {
 
         // Collect all candidate third-hop pages
         const thirdHopCandidates: Array<{id: string; title: string; username: string; lastModified: any; linkText?: string}> = [];
+        const thirdHopEdgeMap = new Map<string, GraphEdge>();
         const secondHopIds = new Set(secondHopConnections.map(p => p.id));
 
-        for (const snapshot of thirdHopSnapshots) {
+        for (let i = 0; i < thirdHopSnapshots.length; i++) {
+          const snapshot = thirdHopSnapshots[i];
+          const targetPageId = secondLevelSample[i]?.id;
+          if (!targetPageId) continue;
+
           for (const doc of snapshot.docs) {
             const data = doc.data();
             if (!existingIds.has(data.sourcePageId) &&
@@ -311,6 +340,13 @@ export async function GET(request: NextRequest) {
                 lastModified: data.lastModified,
                 linkText: data.linkText
               });
+            }
+
+            if (!existingIds.has(data.sourcePageId) && !secondHopIds.has(data.sourcePageId)) {
+              thirdHopEdgeMap.set(
+                `${data.sourcePageId}->${targetPageId}`,
+                { sourceId: data.sourcePageId, targetId: targetPageId }
+              );
             }
           }
         }
@@ -332,6 +368,9 @@ export async function GET(request: NextRequest) {
 
           // Filter to only valid pages
           thirdHopConnections = thirdHopCandidates.filter(c => validThirdHopIds.has(c.id));
+          thirdHopEdges = Array.from(thirdHopEdgeMap.values()).filter(edge =>
+            validThirdHopIds.has(edge.sourceId) && secondHopIds.has(edge.targetId)
+          );
         }
       }
     }
@@ -342,12 +381,16 @@ export async function GET(request: NextRequest) {
       bidirectional,
       secondHopConnections,
       thirdHopConnections,
+      secondHopEdges,
+      thirdHopEdges,
       stats: {
         incomingCount: incoming.length,
         outgoingCount: outgoing.length,
         bidirectionalCount: bidirectional.length,
         secondHopCount: secondHopConnections.length,
-        thirdHopCount: thirdHopConnections.length
+        thirdHopCount: thirdHopConnections.length,
+        secondHopEdgeCount: secondHopEdges.length,
+        thirdHopEdgeCount: thirdHopEdges.length
       },
       timestamp: new Date().toISOString()
     };

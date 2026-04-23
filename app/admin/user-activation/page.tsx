@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import { UserDetailsDrawer } from "../../components/admin/UserDetailsDrawer";
+import { useRouter } from "next/navigation";
 import { ActivationTrends } from "../../components/admin/ActivationTrends";
 
 // Activation milestones in order - short labels for column headers
@@ -132,20 +132,18 @@ export default function UserActivationPage() {
   const [filterCompleted, setFilterCompleted] = useState<'all' | 'complete' | 'incomplete'>('all');
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [hoveredCol, setHoveredCol] = useState<string | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // For drawer navigation
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const { navigateInDrawer, isGlobalDrawerActive } = useGlobalDrawer();
+  const router = useRouter();
 
-  // Handler for selecting a user - uses drawer navigation on mobile, SideDrawer on desktop
+  // Handler for selecting a user - navigates to the full user detail page
   const handleUserSelect = (user: UserActivationData) => {
     if (isGlobalDrawerActive && !isDesktop) {
-      // On mobile in drawer: navigate to user details subpage
       navigateInDrawer(`admin/users/${user.uid}`);
     } else {
-      // On desktop: open SideDrawer
-      setSelectedUserId(user.uid);
+      router.push(`/admin/users/${user.uid}`);
     }
   };
 
@@ -425,19 +423,6 @@ export default function UserActivationPage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* User detail side drawer - only on desktop */}
-      {isDesktop && (
-        <UserDetailsDrawer
-          open={!!selectedUserId}
-          onOpenChange={(open) => !open && setSelectedUserId(null)}
-          userId={selectedUserId ?? undefined}
-          username={users.find(u => u.uid === selectedUserId)?.username}
-          onUserClick={(userId) => {
-            setSelectedUserId(userId);
-          }}
-        />
       )}
     </div>
   );
