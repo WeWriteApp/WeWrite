@@ -183,14 +183,14 @@ export function DateRangeFilter({
   if (compact) {
     return (
       <div className={`${className}`}>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* Date Range Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-3 text-sm font-medium gap-2"
+                className="h-8 w-full justify-between gap-2 px-3 text-sm font-medium sm:w-auto sm:justify-start"
               >
                 <Icon name="Calendar" size={14} />
                 <span>{getDisplayLabel()}</span>
@@ -264,25 +264,27 @@ export function DateRangeFilter({
           </DropdownMenu>
 
           {/* Separator */}
-          <div className="h-6 w-px bg-border flex-shrink-0"></div>
+          <div className="hidden h-6 w-px flex-shrink-0 bg-border sm:block"></div>
 
           {/* Global Analytics Filters - Combined Mode */}
           {combined && globalFilters && onGlobalFiltersChange && (
-            <SegmentedControl
-              value={globalFilters.timeDisplayMode}
-              onValueChange={(value) => handleTimeDisplayModeChange(value as 'cumulative' | 'overTime')}
-            >
-              <SegmentedControlList className="h-8">
-                <SegmentedControlTrigger value="cumulative" className="text-xs px-3 gap-1.5">
-                  <Icon name="TrendingUp" size={12} />
-                  Cumulative
-                </SegmentedControlTrigger>
-                <SegmentedControlTrigger value="overTime" className="text-xs px-3 gap-1.5">
-                  <Icon name="Activity" size={12} />
-                  Over Time
-                </SegmentedControlTrigger>
-              </SegmentedControlList>
-            </SegmentedControl>
+            <div className="w-full sm:w-auto">
+              <SegmentedControl
+                value={globalFilters.timeDisplayMode}
+                onValueChange={(value) => handleTimeDisplayModeChange(value as 'cumulative' | 'overTime')}
+              >
+                <SegmentedControlList className="h-8 w-full">
+                  <SegmentedControlTrigger value="cumulative" className="flex-1 gap-1.5 px-3 text-xs">
+                    <Icon name="TrendingUp" size={12} />
+                    Cumulative
+                  </SegmentedControlTrigger>
+                  <SegmentedControlTrigger value="overTime" className="flex-1 gap-1.5 px-3 text-xs">
+                    <Icon name="Activity" size={12} />
+                    Over Time
+                  </SegmentedControlTrigger>
+                </SegmentedControlList>
+              </SegmentedControl>
+            </div>
           )}
 
           {/* Granularity Controls */}

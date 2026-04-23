@@ -318,7 +318,7 @@ export default function RootLayout({
                                         {/* Global drawer overlay for settings/admin on mobile */}
                                         <GlobalDrawerRenderer />
                                         {/* UI label tooltips for admin debugging */}
-                                        <UILabelTooltipOverlay />
+                                        {process.env.NODE_ENV === 'development' && <UILabelTooltipOverlay />}
                                         {/* Toast notifications - theme="system" for auto dark/light mode */}
                                         <Toaster
                                           richColors

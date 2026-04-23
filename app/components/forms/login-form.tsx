@@ -414,7 +414,7 @@ export function DevQuickLogin() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto mt-6 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4 space-y-3">
+    <div className="w-full max-w-md mx-auto mt-6 rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3">
       <div className="text-center">
         <p className="text-sm font-medium text-muted-foreground">Dev Quick Login</p>
         <p className="text-xs text-muted-foreground/70">Select an account — no password required</p>

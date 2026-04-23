@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 
+const TOOLTIP_STORAGE_KEYS = ['wewrite_admin_ui_label_tooltips', 'wewrite_ui_label_tooltips'] as const;
+
 /**
  * UILabelTooltipOverlay
  *
@@ -11,15 +13,24 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
  * It detects elements with data-ui-label attributes and shows their labels in a tooltip.
  */
 export default function UILabelTooltipOverlay() {
+  const isDevelopment = process.env.NODE_ENV === 'development';
   const [isEnabled, setIsEnabled] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   // Check localStorage on mount and listen for changes
   useEffect(() => {
+    if (!isDevelopment) {
+      if (typeof window !== 'undefined') {
+        TOOLTIP_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+      }
+      setIsEnabled(false);
+      return;
+    }
+
     const checkEnabled = () => {
       if (typeof window !== 'undefined') {
-        setIsEnabled(localStorage.getItem('wewrite_admin_ui_label_tooltips') === 'true');
+        setIsEnabled(localStorage.getItem(TOOLTIP_STORAGE_KEYS[0]) === 'true');
       }
     };
 
@@ -34,7 +45,7 @@ export default function UILabelTooltipOverlay() {
       window.removeEventListener('adminUiLabelTooltipsChange', handleChange);
       window.removeEventListener('storage', handleChange);
     };
-  }, []);
+  }, [isDevelopment]);
 
   // Find the closest element with a ui label
   const findLabeledElement = useCallback((element: HTMLElement | null): { element: HTMLElement; label: string } | null => {
@@ -78,6 +89,11 @@ export default function UILabelTooltipOverlay() {
 
   // Handle mouse movement
   useEffect(() => {
+    if (!isDevelopment) {
+      setTooltip(null);
+      return;
+    }
+
     if (!isEnabled) {
       setTooltip(null);
       return;
@@ -125,7 +141,7 @@ export default function UILabelTooltipOverlay() {
         (el as HTMLElement).style.outlineOffset = '';
       });
     };
-  }, [isEnabled, findLabeledElement]);
+  }, [isEnabled, isDevelopment, findLabeledElement]);
 
   // Adjust tooltip position if it would overflow viewport
   useEffect(() => {
@@ -150,7 +166,7 @@ export default function UILabelTooltipOverlay() {
     }
   }, [tooltip]);
 
-  if (!isEnabled || !tooltip) {
+  if (!isDevelopment || !isEnabled || !tooltip) {
     return null;
   }
 
