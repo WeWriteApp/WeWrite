@@ -7,6 +7,7 @@ import { useSubscriptionsOverTime } from '../../hooks/usePaymentAnalytics';
 import { type DateRange } from '../../services/adminAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface SubscriptionsOverTimeWidgetProps {
   dateRange: DateRange;
@@ -123,15 +124,15 @@ export function SubscriptionsOverTimeWidget({
               data={chartData}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis 
                 dataKey="label"
-                tick={chartConfig.tickConfig}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={formatTickLabel}
               />
               <YAxis 
-                tick={chartConfig.tickConfig}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 tickFormatter={(value) => Math.abs(value).toString()}
               />
               <Tooltip 
@@ -149,36 +150,36 @@ export function SubscriptionsOverTimeWidget({
                 }}
                 labelFormatter={(label) => `Period: ${label}`}
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
+                  backgroundColor: 'oklch(var(--background))',
+                  border: '1px solid oklch(var(--border))',
                   borderRadius: '6px'
                 }}
               />
               
               {/* Reference line at zero */}
-              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 2" />
+              <ReferenceLine y={0} stroke="oklch(var(--muted-foreground))" strokeDasharray="2 2" />
               
               {/* Bars for created (positive) and cancelled (negative) */}
               <Bar 
                 dataKey="subscriptionsCreated" 
-                fill="hsl(var(--primary))" 
+                fill={ADMIN_CHART_THEME.series1}
                 name="Created"
                 radius={[2, 2, 0, 0]}
               />
               <Bar 
                 dataKey="subscriptionsCancelledNegative" 
-                fill="hsl(var(--destructive))" 
+                fill={ADMIN_CHART_THEME.destructive}
                 name="Cancelled"
                 radius={[0, 0, 2, 2]}
               />
               
               {/* Line for cumulative active subscriptions */}
               <Line 
-                type="monotone" 
+                type="linear" 
                 dataKey="cumulativeActive" 
-                stroke="hsl(var(--chart-2))" 
+                stroke={ADMIN_CHART_THEME.series2}
                 strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-2))', strokeWidth: 2, r: 3 }}
+                dot={{ fill: ADMIN_CHART_THEME.series2, strokeWidth: 2, r: 3 }}
                 name="Total Active"
               />
             </ComposedChart>

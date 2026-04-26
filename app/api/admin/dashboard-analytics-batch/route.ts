@@ -35,6 +35,15 @@ interface ChartDataPoint {
   count: number;
 }
 
+interface NotificationDataPoint {
+  date: string;
+  label: string;
+  emails: number;
+  pushNotifications: number;
+  total: number;
+  count: number;
+}
+
 interface BatchResponse {
   accounts: ChartDataPoint[];
   pages: ChartDataPoint[];
@@ -44,7 +53,7 @@ interface BatchResponse {
   visitors: ChartDataPoint[];
   replies: { date: string; label: string; agree: number; disagree: number; neutral: number; total: number }[];
   links: ChartDataPoint[];
-  notifications: ChartDataPoint[];
+  notifications: NotificationDataPoint[];
   followedUsers: ChartDataPoint[];
   platformRevenue: any[];
   payouts: any[];
@@ -52,8 +61,8 @@ interface BatchResponse {
   finalEarnings: any[];
 }
 
-function getCacheKey(startDate: string, endDate: string): string {
-  return `${startDate}_${endDate}`;
+function getCacheKey(startDate: string, endDate: string, granularity: number): string {
+  return `${startDate}_${endDate}_${granularity}`;
 }
 
 function getFromCache(cacheKey: string): BatchResponse | null {
@@ -91,6 +100,10 @@ export async function GET(request: NextRequest) {
 
       const startDateStr = searchParams.get('startDate');
       const endDateStr = searchParams.get('endDate');
+      const granularityParam = parseInt(searchParams.get('granularity') || '50', 10);
+      const requestedGranularity = Number.isFinite(granularityParam) && granularityParam > 0
+        ? Math.floor(granularityParam)
+        : 50;
 
       if (!startDateStr || !endDateStr) {
         return NextResponse.json({ error: 'startDate and endDate are required' }, { status: 400 });
@@ -106,7 +119,7 @@ export async function GET(request: NextRequest) {
       const dateRange: DateRange = { startDate, endDate };
 
       // Check cache
-      const cacheKey = getCacheKey(startDateStr, endDateStr);
+      const cacheKey = getCacheKey(startDateStr, endDateStr, requestedGranularity);
       const cachedData = getFromCache(cacheKey);
       if (cachedData) {
         console.log('[BATCH API] Cache hit for', cacheKey);
@@ -115,12 +128,14 @@ export async function GET(request: NextRequest) {
           data: cachedData,
           metadata: {
             cacheHit: true,
+            granularity: requestedGranularity,
             generatedAt: new Date().toISOString()
           }
         }, {
           headers: {
             'Cache-Control': 'private, max-age=300',
             'X-Cache-Hit': 'true',
+            'X-Granularity': requestedGranularity.toString(),
             'X-Cache-Generated': new Date().toISOString()
           }
         });
@@ -203,6 +218,7 @@ export async function GET(request: NextRequest) {
         data: batchData,
         metadata: {
           cacheHit: false,
+          granularity: requestedGranularity,
           generatedAt: new Date().toISOString(),
           fetchDuration: `${fetchDuration}ms`,
           period: `${startDateStr} to ${endDateStr}`
@@ -211,6 +227,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'Cache-Control': 'private, max-age=300',
           'X-Cache-Hit': 'false',
+          'X-Granularity': requestedGranularity.toString(),
           'X-Cache-Generated': new Date().toISOString()
         }
       });
@@ -322,8 +339,11 @@ async function fetchEmailLogsOnce(db: FirebaseFirestore.Firestore, dateRange: Da
     const emailLogsCollectionName = await getCollectionNameAsync('emailLogs');
     const emailLogsRef = db.collection(emailLogsCollectionName);
 
-    const startDateStr = dateRange.startDate.toISOString();
-    const endDateStr = dateRange.endDate.toISOString();
+    // Match admin notifications service date semantics to avoid dropping valid records.
+    const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+    const endDateNext = new Date(dateRange.endDate);
+    endDateNext.setDate(endDateNext.getDate() + 1);
+    const endDateStr = endDateNext.toISOString().split('T')[0];
 
     const snapshot = await emailLogsRef
       .where('sentAt', '>=', startDateStr)
@@ -616,28 +636,50 @@ function combineNotifications(
   emailLogs: any[],
   pushNotificationsMap: Map<string, number>,
   dateRange: DateRange
-): ChartDataPoint[] {
-  const dailyMap = initializeDailyMap(dateRange);
+): NotificationDataPoint[] {
+  const dailyMap = new Map<string, { emails: number; pushNotifications: number }>();
+
+  const currentDate = new Date(dateRange.startDate);
+  while (currentDate <= dateRange.endDate) {
+    const dayKey = currentDate.toISOString().split('T')[0];
+    dailyMap.set(dayKey, { emails: 0, pushNotifications: 0 });
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
 
   // Add email logs
   for (const log of emailLogs) {
     const sentAt = log.sentAt;
-    if (sentAt && typeof sentAt === 'string') {
-      const dateStr = sentAt.split('T')[0];
-      if (dailyMap.has(dateStr)) {
-        dailyMap.set(dateStr, dailyMap.get(dateStr)! + 1);
-      }
+    if (!sentAt) continue;
+
+    let dateStr: string | null = null;
+    if (typeof sentAt === 'string') {
+      dateStr = sentAt.split('T')[0];
+    } else if (typeof sentAt.toDate === 'function') {
+      dateStr = sentAt.toDate().toISOString().split('T')[0];
+    }
+
+    if (dateStr && dailyMap.has(dateStr)) {
+      const current = dailyMap.get(dateStr)!;
+      current.emails += 1;
     }
   }
 
   // Add push notifications
   for (const [dateStr, count] of pushNotificationsMap.entries()) {
     if (dailyMap.has(dateStr)) {
-      dailyMap.set(dateStr, dailyMap.get(dateStr)! + count);
+      const current = dailyMap.get(dateStr)!;
+      current.pushNotifications += count;
     }
   }
 
-  return mapToChartData(dailyMap);
+  return Array.from(dailyMap.entries()).map(([date, data]) => ({
+    date,
+    label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    emails: data.emails,
+    pushNotifications: data.pushNotifications,
+    total: data.emails + data.pushNotifications,
+    count: data.emails + data.pushNotifications
+  }));
 }
 
 function processFollows(follows: any[], dateRange: DateRange): ChartDataPoint[] {

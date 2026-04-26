@@ -19,12 +19,47 @@ interface PayoutDataPoint {
 }
 
 // Helper function to get time intervals
-function getTimeIntervals(startDate: Date, endDate: Date) {
+function getTimeIntervals(startDate: Date, endDate: Date, targetBuckets?: number) {
   const diffInDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  const safeTargetBuckets = typeof targetBuckets === 'number' && Number.isFinite(targetBuckets) && targetBuckets > 0
+    ? Math.floor(targetBuckets)
+    : undefined;
   
   let buckets: string[];
   let formatLabel: (date: Date) => string;
   let granularityType: string;
+
+  if (safeTargetBuckets) {
+    const totalDailyBuckets = diffInDays + 1;
+    const totalWeeklyBuckets = Math.ceil(totalDailyBuckets / 7);
+
+    if (totalDailyBuckets <= safeTargetBuckets) {
+      granularityType = 'daily';
+      buckets = [];
+      formatLabel = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        buckets.push(d.toISOString().split('T')[0]);
+      }
+
+      return { buckets, formatLabel, granularityType };
+    }
+
+    if (totalWeeklyBuckets <= safeTargetBuckets) {
+      granularityType = 'weekly';
+      buckets = [];
+      formatLabel = (date: Date) => `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+      const startOfWeek = new Date(startDate);
+      startOfWeek.setDate(startDate.getDate() - startDate.getDay());
+
+      for (let d = new Date(startOfWeek); d <= endDate; d.setDate(d.getDate() + 7)) {
+        buckets.push(d.toISOString().split('T')[0]);
+      }
+
+      return { buckets, formatLabel, granularityType };
+    }
+  }
 
   if (diffInDays <= 31) {
     // Daily granularity for periods <= 1 month
@@ -93,6 +128,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const cumulative = searchParams.get('cumulative') === 'true';
+    const granularityParam = parseInt(searchParams.get('granularity') || '', 10);
+    const requestedBuckets = Number.isFinite(granularityParam) && granularityParam > 0 ? granularityParam : undefined;
 
     if (!startDate || !endDate) {
       return NextResponse.json({
@@ -103,10 +140,10 @@ export async function GET(request: NextRequest) {
     const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
     
-    console.log(`[ADMIN] Payout analytics request: ${startDate} to ${endDate}, cumulative: ${cumulative}`);
+    console.log(`[ADMIN] Payout analytics request: ${startDate} to ${endDate}, cumulative: ${cumulative}, requestedBuckets: ${requestedBuckets ?? 'auto'}`);
 
     // Get time intervals for the chart
-    const timeConfig = getTimeIntervals(startDateObj, endDateObj);
+    const timeConfig = getTimeIntervals(startDateObj, endDateObj, requestedBuckets);
     
     // Initialize data map
     const dateMap = new Map<string, { payouts: number; payoutCount: number }>();
@@ -217,6 +254,7 @@ export async function GET(request: NextRequest) {
       metadata: {
         dateRange: { startDate: startDateObj.toISOString(), endDate: endDateObj.toISOString() },
         granularity: timeConfig.granularityType,
+        requestedBuckets: requestedBuckets ?? null,
         cumulative,
         totalPayouts: cumulativePayouts,
         totalPayoutCount: cumulativePayoutCount,

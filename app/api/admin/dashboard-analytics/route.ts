@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Invalid date format');
     }
 
+    console.log(`[AdminAnalytics] Fetching ${type} from ${startDateStr} to ${endDateStr}`);
+
     let data;
 
     // Route to appropriate analytics method based on type
@@ -63,7 +65,9 @@ export async function GET(request: NextRequest) {
         break;
       case 'links':
         // Get internal and external link analytics
+        console.log('[AdminAnalytics] Starting links analytics fetch');
         data = await AdminAnalyticsService.getLinkAnalytics(dateRange);
+        console.log(`[AdminAnalytics] Links analytics returned ${data?.length || 0} days of data`);
         break;
       case 'pwaInstalls':
         data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'pwa_install');
@@ -72,14 +76,18 @@ export async function GET(request: NextRequest) {
         data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'pwa_notification_sent');
         break;
       case 'notificationsSent':
+        console.log('[AdminAnalytics] Starting notifications sent analytics fetch');
         data = await AdminAnalyticsService.getNotificationsSentAnalytics(dateRange);
+        console.log(`[AdminAnalytics] Notifications analytics returned ${data?.length || 0} days of data`);
         break;
       case 'replies':
         data = await AdminAnalyticsService.getRepliesAnalytics(dateRange);
         break;
       case 'visitors':
         // Use pageViews data for visitors metric
+        console.log('[AdminAnalytics] Starting page views analytics fetch');
         const pageViewsData = await AdminAnalyticsService.getPageViewsAnalytics(dateRange);
+        console.log(`[AdminAnalytics] Page views analytics returned ${pageViewsData?.length || 0} days of data`);
         // Transform to visitor format expected by dashboard
         data = pageViewsData.map(item => ({
           ...item,
@@ -89,7 +97,9 @@ export async function GET(request: NextRequest) {
         }));
         break;
       case 'pageViews':
+        console.log('[AdminAnalytics] Starting page views analytics fetch');
         data = await AdminAnalyticsService.getPageViewsAnalytics(dateRange);
+        console.log(`[AdminAnalytics] Page views analytics returned ${data?.length || 0} days of data`);
         break;
       case 'subscriptions':
         data = await AdminAnalyticsService.getSubscriptionsCreated(dateRange);
@@ -104,6 +114,8 @@ export async function GET(request: NextRequest) {
       default:
         return createErrorResponse('BAD_REQUEST', 'Invalid analytics type. Must be one of: accounts, pages, shares, edits, contentChanges, links, pwaInstalls, pwaNotifications, notificationsSent, replies, visitors, pageViews, subscriptions, revenue, all');
     }
+
+    console.log(`[AdminAnalytics] Successfully fetched ${type}: ${data?.length || 0} items`);
 
     return createApiResponse({
       type,

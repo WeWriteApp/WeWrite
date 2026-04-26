@@ -32,7 +32,6 @@ import PWAAnalyticsInitializer from './components/utils/PWAAnalyticsInitializer'
 import { ServiceWorkerRegistration } from './components/performance/ServiceWorkerRegistration'
 import { GlobalLandingBlobs } from "./components/landing/GlobalLandingBlobs"
 import ScrollRestorationDisabler from "./components/utils/ScrollRestorationDisabler"
-import UILabelTooltipOverlay from "./components/utils/UILabelTooltipOverlay"
 import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
@@ -317,8 +316,6 @@ export default function RootLayout({
                                         <CommandPalette />
                                         {/* Global drawer overlay for settings/admin on mobile */}
                                         <GlobalDrawerRenderer />
-                                        {/* UI label tooltips for admin debugging */}
-                                        {process.env.NODE_ENV === 'development' && <UILabelTooltipOverlay />}
                                         {/* Toast notifications - theme="system" for auto dark/light mode */}
                                         <Toaster
                                           richColors

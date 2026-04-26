@@ -14,6 +14,7 @@ import {
   PaymentAnalyticsData
 } from '../types/database';
 import { DateRange } from './adminAnalytics';
+import { adminFetch } from '../utils/adminFetch';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 
 // Cache configuration
@@ -167,15 +168,7 @@ export class PaymentAnalyticsService {
       }
 
 
-      // Build query parameters
-      const params = new URLSearchParams({
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString(),
-        type: 'conversion-funnel'
-      });
-
-      // Fetch from server-side API
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const response = await adminFetch('/api/admin/verify-subscription-funnel');
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -183,12 +176,50 @@ export class PaymentAnalyticsService {
       }
 
       const result = await response.json();
+      const counts = result?.data?.funnelEvents?.counts || {};
 
+      const stageConfig = [
+        {
+          stage: 'subscription_flow_started',
+          stageName: 'Started Checkout',
+          description: 'Users who began the subscription flow'
+        },
+        {
+          stage: 'subscription_completed',
+          stageName: 'Completed Subscription',
+          description: 'Users who finished checkout successfully'
+        },
+        {
+          stage: 'first_token_allocation',
+          stageName: 'First Allocation',
+          description: 'Subscribers who made their first allocation'
+        },
+        {
+          stage: 'ongoing_token_allocation',
+          stageName: 'Ongoing Allocation',
+          description: 'Subscribers continuing allocations over time'
+        }
+      ];
 
-      // Cache the result
-      setCachedData(cacheKey, result);
+      const startedCount = Number(counts.subscription_flow_started || 0);
+      const normalized = stageConfig.map((stage, index) => {
+        const count = Number(counts[stage.stage] || 0);
+        const previousCount = index === 0 ? startedCount : Number(counts[stageConfig[index - 1].stage] || 0);
+        const conversionRate = startedCount > 0 ? (count / startedCount) * 100 : 0;
+        const dropOffRate = index === 0 || previousCount <= 0 ? 0 : ((previousCount - count) / previousCount) * 100;
 
-      return result;
+        return {
+          stage: stage.stage,
+          stageName: stage.stageName,
+          count,
+          conversionRate,
+          dropOffRate,
+          description: stage.description
+        } as SubscriptionConversionFunnelData;
+      });
+
+      setCachedData(cacheKey, normalized);
+      return normalized;
 
     } catch (error) {
       console.error('Error fetching subscription conversion funnel:', error);
@@ -209,19 +240,14 @@ export class PaymentAnalyticsService {
       }
 
 
-      // Build query parameters
       const params = new URLSearchParams({
         startDate: dateRange.startDate.toISOString(),
         endDate: dateRange.endDate.toISOString(),
-        type: 'subscriptions'
+        type: 'subscriptions',
+        granularity: granularity?.toString() || '50'
       });
 
-      if (granularity) {
-        params.append('granularity', granularity.toString());
-      }
-
-      // Fetch from server-side API
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const response = await adminFetch(`/api/admin/dashboard-analytics?${params.toString()}`);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -229,12 +255,26 @@ export class PaymentAnalyticsService {
       }
 
       const result = await response.json();
+      const source = result.data?.data || result.data || [];
+      const safeSource = Array.isArray(source) ? source : [];
 
+      let cumulativeActive = 0;
+      const normalized = safeSource.map((item: any) => {
+        const subscriptionsCreated = Number(item.count || 0);
+        cumulativeActive += subscriptionsCreated;
 
-      // Cache the result
-      setCachedData(cacheKey, result);
+        return {
+          date: item.date,
+          subscriptionsCreated,
+          subscriptionsCancelled: 0,
+          netSubscriptions: subscriptionsCreated,
+          cumulativeActive,
+          label: item.label || item.date
+        } as SubscriptionMetrics;
+      });
 
-      return result;
+      setCachedData(cacheKey, normalized);
+      return normalized;
 
     } catch (error) {
       console.error('Error fetching subscriptions over time:', error);
@@ -255,19 +295,14 @@ export class PaymentAnalyticsService {
       }
 
 
-      // Build query parameters
       const params = new URLSearchParams({
         startDate: dateRange.startDate.toISOString(),
         endDate: dateRange.endDate.toISOString(),
-        type: 'revenue'
+        type: 'revenue',
+        granularity: granularity?.toString() || '50'
       });
 
-      if (granularity) {
-        params.append('granularity', granularity.toString());
-      }
-
-      // Fetch from server-side API
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const response = await adminFetch(`/api/admin/dashboard-analytics?${params.toString()}`);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -275,12 +310,28 @@ export class PaymentAnalyticsService {
       }
 
       const result = await response.json();
+      const source = result.data?.data || result.data || [];
+      const safeSource = Array.isArray(source) ? source : [];
 
+      let cumulativeRevenue = 0;
+      const normalized = safeSource.map((item: any) => {
+        const activeRevenue = Number(item.count || 0);
+        cumulativeRevenue += activeRevenue;
 
-      // Cache the result
-      setCachedData(cacheKey, result);
+        return {
+          date: item.date,
+          activeRevenue,
+          cancelledRevenue: 0,
+          netRevenue: activeRevenue,
+          cumulativeRevenue,
+          averageRevenuePerUser: 0,
+          churnRate: 0,
+          label: item.label || item.date
+        } as RevenueMetrics;
+      });
 
-      return result;
+      setCachedData(cacheKey, normalized);
+      return normalized;
 
     } catch (error) {
       console.error('Error fetching subscription revenue:', error);
@@ -301,19 +352,7 @@ export class PaymentAnalyticsService {
       }
 
 
-      // Build query parameters
-      const params = new URLSearchParams({
-        startDate: dateRange.startDate.toISOString(),
-        endDate: dateRange.endDate.toISOString(),
-        type: 'token-allocation'
-      });
-
-      if (granularity) {
-        params.append('granularity', granularity.toString());
-      }
-
-      // Fetch from server-side API
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const response = await adminFetch('/api/admin/monthly-financials');
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -321,12 +360,28 @@ export class PaymentAnalyticsService {
       }
 
       const result = await response.json();
+      const totals = result?.totals || {};
+      const currentMonth = result?.currentMonth?.data || {};
+      const subscribers = Number(result?.stripeSubscriptions?.totalActiveSubscriptions || 0);
+      const allocatedCents = Number(totals.totalAllocatedCents || currentMonth.totalAllocatedCents || 0);
+      const subscriptionCents = Number(totals.totalSubscriptionCents || currentMonth.totalSubscriptionCents || 0);
+      const label = currentMonth.month || 'Current';
 
+      const normalized: TokenAllocationMetrics[] = [
+        {
+          date: label,
+          totalSubscribers: subscribers,
+          subscribersWithAllocations: subscribers,
+          allocationPercentage: subscriptionCents > 0 ? (allocatedCents / subscriptionCents) * 100 : 0,
+          averageAllocationPercentage: subscriptionCents > 0 ? (allocatedCents / subscriptionCents) * 100 : 0,
+          totalTokensAllocated: allocatedCents,
+          totalTokensAvailable: subscriptionCents,
+          label
+        }
+      ];
 
-      // Cache the result
-      setCachedData(cacheKey, result);
-
-      return result;
+      setCachedData(cacheKey, normalized);
+      return normalized;
 
     } catch (error) {
       console.error('Error fetching token allocation metrics:', error);

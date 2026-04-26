@@ -2247,6 +2247,13 @@ a.username-badge-link:has(.text-muted-foreground) {
     --ring: var(--accent-base);
     --radius: 0.5rem;
 
+    /* Chart series colors - full oklch values for SVG/canvas compatibility */
+    --chart-1: oklch(0.55 0.22 230);
+    --chart-2: oklch(0.60 0.17 142);
+    --chart-3: oklch(0.72 0.17 65);
+    --chart-4: oklch(0.55 0.20 280);
+    --chart-5: oklch(0.60 0.15 185);
+
     /* Active line highlight in editor */
     --active-line-highlight: oklch(var(--accent-base) / 0.1);
 
@@ -2341,6 +2348,13 @@ a.username-badge-link:has(.text-muted-foreground) {
     --input: 0.22 0 0;
     --ring: var(--accent-base);
     --radius: 0.5rem;
+
+    /* Chart series colors - brighter for dark backgrounds */
+    --chart-1: oklch(0.65 0.18 230);
+    --chart-2: oklch(0.68 0.15 142);
+    --chart-3: oklch(0.75 0.15 65);
+    --chart-4: oklch(0.65 0.17 280);
+    --chart-5: oklch(0.68 0.13 185);
 
     /* Focus indicator variables - higher contrast in dark mode */
     --focus-ring-color: var(--accent-base);

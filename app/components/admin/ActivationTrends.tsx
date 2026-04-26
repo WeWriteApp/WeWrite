@@ -33,18 +33,18 @@ interface MilestoneStat {
 
 // Colors for each milestone (matching a nice gradient palette)
 const MILESTONE_COLORS: Record<string, string> = {
-  usernameSet: '#8b5cf6',    // violet
-  emailVerified: '#a855f7',  // purple
-  pageCreated: '#d946ef',    // fuchsia
-  linkedOwnPage: '#ec4899',  // pink
-  linkedOtherPage: '#f43f5e', // rose
-  repliedToPage: '#ef4444',  // red
-  pwaInstalled: '#f97316',   // orange
-  hasSubscription: '#eab308', // yellow
-  allocatedToWriters: '#84cc16', // lime
-  receivedEarnings: '#14b8a6', // teal
-  reachedPayoutThreshold: '#10b981', // emerald
-  payoutsSetup: '#22c55e',   // green
+  usernameSet: 'var(--chart-1)',
+  emailVerified: 'var(--chart-2)',
+  pageCreated: 'var(--chart-3)',
+  linkedOwnPage: 'var(--chart-4)',
+  linkedOtherPage: 'var(--chart-5)',
+  repliedToPage: 'oklch(var(--destructive))',
+  pwaInstalled: 'var(--chart-1)',
+  hasSubscription: 'var(--chart-2)',
+  allocatedToWriters: 'var(--chart-3)',
+  receivedEarnings: 'var(--chart-4)',
+  reachedPayoutThreshold: 'var(--chart-5)',
+  payoutsSetup: 'var(--chart-2)',
 };
 
 // Icons for each milestone (Lucide icon names)
@@ -96,7 +96,7 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
         label: milestoneLabels[milestone] || milestone,
         count,
         percent,
-        color: MILESTONE_COLORS[milestone] || '#6366f1',
+        color: MILESTONE_COLORS[milestone] || 'var(--chart-1)',
         icon: MILESTONE_ICONS[milestone] || 'Circle',
       };
     });
@@ -232,7 +232,7 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
               }`}
               style={{ ['--hover-bg' as string]: 'var(--neutral-alpha-10)' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--neutral-alpha-10)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = row.isChild ? 'hsl(var(--muted) / 0.1)' : ''}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = row.isChild ? 'oklch(var(--muted) / 0.1)' : ''}
             >
               {/* Milestone name with icon */}
               <td className="p-3">
@@ -291,7 +291,7 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
                         endAngle={-270}
                       >
                         <Cell fill={row.color} />
-                        <Cell fill="hsl(var(--muted))" />
+                        <Cell fill="oklch(var(--muted))" />
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
@@ -313,7 +313,7 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
                         </linearGradient>
                       </defs>
                       <Area
-                        type="monotone"
+                        type="linear"
                         dataKey={row.milestone}
                         stroke={row.color}
                         strokeWidth={1.5}
@@ -321,12 +321,12 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
+                          backgroundColor: 'oklch(var(--card))',
+                          border: '1px solid oklch(var(--border))',
                           borderRadius: '6px',
                           fontSize: '12px',
                         }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        labelStyle={{ color: 'oklch(var(--foreground))' }}
                         formatter={(value: number) => [`${value}%`, row.label]}
                         labelFormatter={(label) => {
                           const item = trendData.find(d => d.date === label);

@@ -10,6 +10,7 @@ import { type DateRange } from '../../services/adminAnalytics';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface UsdAllocationsWidgetProps {
   dateRange: DateRange;
@@ -86,9 +87,9 @@ export function UsdAllocationsWidget({
 
   // Prepare pie chart data for allocation distribution
   const allocationDistribution = [
-    { name: 'Page Allocations', value: stats?.totalPageAllocations || 0, color: '#3b82f6' },
-    { name: 'User Allocations', value: stats?.totalUserAllocations || 0, color: '#10b981' },
-    { name: 'Unallocated', value: stats?.totalUnallocated || 0, color: '#6b7280' }
+    { name: 'Page Allocations', value: stats?.totalPageAllocations || 0, color: ADMIN_CHART_THEME.series1 },
+    { name: 'User Allocations', value: stats?.totalUserAllocations || 0, color: ADMIN_CHART_THEME.series2 },
+    { name: 'Unallocated', value: stats?.totalUnallocated || 0, color: ADMIN_CHART_THEME.tickColor }
   ].filter(item => item.value > 0);
 
   return (
@@ -162,15 +163,19 @@ export function UsdAllocationsWidget({
                     data={data}
                     margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
                     <XAxis 
                       dataKey="label"
-                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={chartAxisTick(10)}
                       interval="preserveStartEnd"
                       tickFormatter={formatTickLabel}
                     />
                     <YAxis 
-                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={chartAxisTick(10)}
                       tickFormatter={(value) => formatCurrency(value)}
                     />
                     <Tooltip 
@@ -187,14 +192,14 @@ export function UsdAllocationsWidget({
                     <Bar 
                       dataKey="pageAllocations" 
                       stackId="allocations"
-                      fill="#3b82f6" 
+                      fill={ADMIN_CHART_THEME.series1}
                       name="Page Allocations"
                       radius={[0, 0, 0, 0]}
                     />
                     <Bar 
                       dataKey="userAllocations" 
                       stackId="allocations"
-                      fill="#10b981" 
+                      fill={ADMIN_CHART_THEME.series2}
                       name="User Allocations"
                       radius={[2, 2, 0, 0]}
                     />

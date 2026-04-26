@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useAsyncState } from '../../hooks/useAsyncState';
+import { adminFetch } from '../../utils/adminFetch';
 import type { DateRange } from '../admin/DateRangeFilter';
 import type { GlobalAnalyticsFilters } from '../admin/GlobalAnalyticsFilters';
 
@@ -51,7 +52,7 @@ function useWriterEarnings(dateRange: DateRange, cumulative: boolean) {
   useEffect(() => {
     execute(async () => {
       const params = buildDateParams(dateRange, cumulative);
-      const response = await fetch(`/api/admin/writer-earnings?${params}`, {
+      const response = await adminFetch(`/api/admin/writer-earnings?${params}`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +81,7 @@ function useWriterPayouts(dateRange: DateRange, cumulative: boolean) {
   useEffect(() => {
     execute(async () => {
       const params = buildDateParams(dateRange, cumulative);
-      const response = await fetch(`/api/admin/writer-payouts?${params}`, {
+      const response = await adminFetch(`/api/admin/writer-payouts?${params}`, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

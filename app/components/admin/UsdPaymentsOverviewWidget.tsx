@@ -10,6 +10,7 @@ import { type DateRange } from '../../services/adminAnalytics';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface UsdPaymentsOverviewWidgetProps {
   dateRange: DateRange;
@@ -179,15 +180,15 @@ export function UsdPaymentsOverviewWidget({
                   data={chartData}
                   margin={chartConfig.margins}
                 >
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
                   <XAxis 
                     dataKey="label"
-                    tick={chartConfig.tickConfig}
+                    tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                     interval={chartConfig.interval}
                     tickFormatter={formatTickLabel}
                   />
                   <YAxis 
-                    tick={chartConfig.tickConfig}
+                    tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                     tickFormatter={(value) => formatCurrency(Math.abs(value))}
                   />
                   <Tooltip 
@@ -202,8 +203,8 @@ export function UsdPaymentsOverviewWidget({
                     }}
                     labelFormatter={(label) => `Period: ${label}`}
                     contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
-                      border: '1px solid hsl(var(--border))',
+                      backgroundColor: 'oklch(var(--background))',
+                      border: '1px solid oklch(var(--border))',
                       borderRadius: '6px'
                     }}
                   />
@@ -211,30 +212,30 @@ export function UsdPaymentsOverviewWidget({
                   {/* Bars for different revenue streams */}
                   <Bar 
                     dataKey="subscriptionRevenue" 
-                    fill="#3b82f6" 
+                    fill={ADMIN_CHART_THEME.series1}
                     name="Subscription Revenue"
                     radius={[2, 2, 0, 0]}
                   />
                   <Bar 
                     dataKey="platformFees" 
-                    fill="#10b981" 
+                    fill={ADMIN_CHART_THEME.series2}
                     name="Platform Fees"
                     radius={[2, 2, 0, 0]}
                   />
                   <Bar 
                     dataKey="writerPayouts" 
-                    fill="#8b5cf6" 
+                    fill={ADMIN_CHART_THEME.series3}
                     name="Writer Payouts"
                     radius={[2, 2, 0, 0]}
                   />
                   
                   {/* Line for net revenue */}
                   <Line 
-                    type="monotone" 
+                    type="linear" 
                     dataKey="netRevenue" 
-                    stroke="#f59e0b" 
+                    stroke={ADMIN_CHART_THEME.series4}
                     strokeWidth={3}
-                    dot={{ r: 4, fill: '#f59e0b' }}
+                    dot={{ r: 4, fill: ADMIN_CHART_THEME.series4 }}
                     name="Net Revenue"
                   />
                 </ComposedChart>

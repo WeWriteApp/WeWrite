@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useEditsMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../services/adminAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface EditsAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -147,13 +148,13 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
               data={data}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
@@ -161,14 +162,14 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 allowDecimals={false}
                 width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="count"
-                fill="#3b82f6"
+                fill={ADMIN_CHART_THEME.series1}
                 name="Edits"
                 radius={[2, 2, 0, 0]}
                 maxBarSize={60}

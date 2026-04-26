@@ -190,6 +190,15 @@ import {
 } from '../../hooks/useDashboardAnalytics';
 import { usePayoutAnalytics, useWriterPendingEarnings, useWriterFinalEarnings } from '../../hooks/usePaymentAnalytics';
 
+const CHART_GRID_STROKE = 'oklch(var(--border))';
+const CHART_GRID_OPACITY = 0.14;
+const CHART_TICK_COLOR = 'oklch(var(--muted-foreground))';
+const CHART_PRIMARY = 'var(--chart-1)';
+const CHART_SERIES_2 = 'var(--chart-2)';
+const CHART_SERIES_3 = 'var(--chart-3)';
+const CHART_SERIES_4 = 'var(--chart-4)';
+const CHART_DESTRUCTIVE = 'oklch(var(--destructive))';
+
 type ChartType = 'line' | 'bar';
 
 interface DesktopOptimizedDashboardProps {
@@ -264,14 +273,14 @@ const GenericChart = ({
     dataKey: labelKey,
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: '#999999' },
+    tick: { fontSize: 9, fill: CHART_TICK_COLOR },
     interval: 'preserveStartEnd' as const
   };
 
   const yAxisProps = {
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: '#999999' },
+    tick: { fontSize: 9, fill: CHART_TICK_COLOR },
     interval: 'preserveStartEnd' as const,
     width: yAxisWidth,
     tickFormatter: yAxisTickFormatter
@@ -285,13 +294,13 @@ const GenericChart = ({
       <div ref={containerRef} style={{ width: '100%', height }}>
         {canRender && (
           <BarChart width={width} height={height} data={safeData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} vertical={false} horizontal={true} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
             <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
             <Bar
               dataKey={dataKey}
-              fill="#3b82f6"
+              fill={CHART_PRIMARY}
               radius={[2, 2, 0, 0]}
             />
           </BarChart>
@@ -304,17 +313,17 @@ const GenericChart = ({
     <div ref={containerRef} style={{ width: '100%', height }}>
       {canRender && (
         <LineChart width={width} height={height} data={safeData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} vertical={false} horizontal={true} />
           <XAxis {...xAxisProps} />
           <YAxis {...yAxisProps} />
           <Tooltip content={<ChartTooltip valueFormatter={tooltipFormatter} />} />
           <Line
-            type="monotone"
+            type="linear"
             dataKey={dataKey}
-            stroke="#3b82f6"
+            stroke={CHART_PRIMARY}
             strokeWidth={1.5}
             dot={false}
-            activeDot={{ r: 4, fill: '#3b82f6' }}
+            activeDot={{ r: 4, fill: CHART_PRIMARY }}
           />
         </LineChart>
       )}
@@ -346,14 +355,14 @@ const NotificationsChart = ({
     dataKey: labelKey,
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: '#999999' },
+    tick: { fontSize: 9, fill: CHART_TICK_COLOR },
     interval: 'preserveStartEnd' as const
   };
 
   const yAxisProps = {
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: '#999999' },
+    tick: { fontSize: 9, fill: CHART_TICK_COLOR },
     interval: 'preserveStartEnd' as const,
     width: 30
   };
@@ -390,12 +399,12 @@ const NotificationsChart = ({
       <div ref={containerRef} style={{ width: '100%', height }}>
         {canRender && (
           <LineChart width={width} height={height} data={safeData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} vertical={false} horizontal={true} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
             <Tooltip content={<NotificationsMultiSeriesTooltip />} />
-            <Line type="monotone" dataKey="emails" stroke="#3b82f6" strokeWidth={1.5} dot={false} name="Emails" />
-            <Line type="monotone" dataKey="pushNotifications" stroke="#8b5cf6" strokeWidth={1.5} dot={false} name="Push Notifications" />
+            <Line type="linear" dataKey="emails" stroke={CHART_PRIMARY} strokeWidth={1.5} dot={false} name="Emails" />
+            <Line type="linear" dataKey="pushNotifications" stroke={CHART_SERIES_2} strokeWidth={1.5} dot={false} name="Push Notifications" />
           </LineChart>
         )}
       </div>
@@ -407,21 +416,21 @@ const NotificationsChart = ({
     <div ref={containerRef} style={{ width: '100%', height }}>
       {canRender && (
         <BarChart width={width} height={height} data={safeData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} vertical={false} horizontal={true} />
           <XAxis {...xAxisProps} />
           <YAxis {...yAxisProps} />
           <Tooltip content={<NotificationsMultiSeriesTooltip />} />
           <Bar
             dataKey="emails"
             stackId="notifications"
-            fill="#3b82f6"
+            fill={CHART_PRIMARY}
             name="Emails"
             radius={[0, 0, 0, 0]}
           />
           <Bar
             dataKey="pushNotifications"
             stackId="notifications"
-            fill="#8b5cf6"
+            fill={CHART_SERIES_2}
             name="Push Notifications"
             radius={[2, 2, 0, 0]}
           />
@@ -455,14 +464,14 @@ const RepliesChart = ({
     dataKey: labelKey,
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: '#999999' },
+    tick: { fontSize: 9, fill: CHART_TICK_COLOR },
     interval: 'preserveStartEnd' as const
   };
 
   const yAxisProps = {
     axisLine: false,
     tickLine: false,
-    tick: { fontSize: 9, fill: '#999999' },
+    tick: { fontSize: 9, fill: CHART_TICK_COLOR },
     interval: 'preserveStartEnd' as const,
     width: 30
   };
@@ -499,34 +508,34 @@ const RepliesChart = ({
       <div ref={containerRef} style={{ width: '100%', height }}>
         {canRender && (
           <LineChart width={width} height={height} data={safeData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} vertical={false} horizontal={true} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
             <Tooltip content={<RepliesMultiSeriesTooltip />} />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="agree"
-              stroke="#22c55e"
+              stroke={CHART_SERIES_2}
               strokeWidth={1.5}
               dot={false}
-              activeDot={{ r: 4, fill: '#22c55e' }}
+              activeDot={{ r: 4, fill: CHART_SERIES_2 }}
               name="Agree"
             />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="neutral"
-              stroke="#999999"
+              stroke={CHART_SERIES_3}
               strokeWidth={1.5}
               dot={false}
               name="Neutral"
             />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="disagree"
-              stroke="#ef4444"
+              stroke={CHART_DESTRUCTIVE}
               strokeWidth={1.5}
               dot={false}
-              activeDot={{ r: 4, fill: '#ef4444' }}
+              activeDot={{ r: 4, fill: CHART_DESTRUCTIVE }}
               name="Disagree"
             />
           </LineChart>
@@ -540,28 +549,28 @@ const RepliesChart = ({
     <div ref={containerRef} style={{ width: '100%', height }}>
       {canRender && (
         <BarChart width={width} height={height} data={safeData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} horizontal={true} />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} vertical={false} horizontal={true} />
           <XAxis {...xAxisProps} />
           <YAxis {...yAxisProps} />
           <Tooltip content={<RepliesMultiSeriesTooltip />} />
           <Bar
             dataKey="agree"
             stackId="replies"
-            fill="#22c55e"
+            fill={CHART_SERIES_2}
             name="Agree"
             radius={[0, 0, 0, 0]}
           />
           <Bar
             dataKey="neutral"
             stackId="replies"
-            fill="#999999"
+            fill={CHART_SERIES_3}
             name="Neutral"
             radius={[0, 0, 0, 0]}
           />
           <Bar
             dataKey="disagree"
             stackId="replies"
-            fill="#ef4444"
+            fill={CHART_DESTRUCTIVE}
             name="Disagree"
             radius={[2, 2, 0, 0]}
           />
@@ -603,7 +612,7 @@ export function DesktopOptimizedDashboard({
   const getRowHeight = () => globalHeight;
 
   // Batch data fetching - single API call for all metrics (93% reduction in API calls)
-  const batchResult = useDashboardAnalyticsBatch(dateRange);
+  const batchResult = useDashboardAnalyticsBatch(dateRange, granularity);
   const batchData = useBatchMode ? batchResult.data : null;
   const batchLoading = useBatchMode ? batchResult.loading : false;
   const batchError = useBatchMode ? batchResult.error : null;
@@ -842,45 +851,45 @@ export function DesktopOptimizedDashboard({
             {canRender && (
               chartType === 'bar' ? (
                 <BarChart width={width} height={height} data={safeData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: CHART_TICK_COLOR }}
                     tickLine={false}
                     axisLine={false}
                     interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: CHART_TICK_COLOR }}
                     tickLine={false}
                     axisLine={false}
                     width={35}
                     tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
                   />
                   <Tooltip content={<ChartTooltip />} />
-                  <Bar dataKey="internalLinks" stackId="a" fill="#3b82f6" name="Internal Links" />
-                  <Bar dataKey="externalLinks" stackId="a" fill="#10b981" name="External Links" />
+                  <Bar dataKey="internalLinks" stackId="a" fill={CHART_PRIMARY} name="Internal Links" />
+                  <Bar dataKey="externalLinks" stackId="a" fill={CHART_SERIES_2} name="External Links" />
                 </BarChart>
               ) : (
                 <LineChart width={width} height={height} data={safeData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} strokeOpacity={CHART_GRID_OPACITY} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: CHART_TICK_COLOR }}
                     tickLine={false}
                     axisLine={false}
                     interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: CHART_TICK_COLOR }}
                     tickLine={false}
                     axisLine={false}
                     width={35}
                     tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
                   />
                   <Tooltip content={<ChartTooltip />} />
-                  <Line type="monotone" dataKey="internalLinks" stroke="#3b82f6" strokeWidth={2} dot={false} name="Internal Links" />
-                  <Line type="monotone" dataKey="externalLinks" stroke="#10b981" strokeWidth={2} dot={false} name="External Links" />
+                  <Line type="linear" dataKey="internalLinks" stroke={CHART_PRIMARY} strokeWidth={2} dot={false} name="Internal Links" />
+                  <Line type="linear" dataKey="externalLinks" stroke={CHART_SERIES_2} strokeWidth={2} dot={false} name="External Links" />
                 </LineChart>
               )
             )}
@@ -987,7 +996,7 @@ export function DesktopOptimizedDashboard({
       id: 'payout-analytics',
       title: isCumulative ? 'Total Writer Payouts (Cumulative)' : 'Writer Payouts',
       hook: (dateRange: DateRange, granularity: number, globalFilters?: any) => {
-        return usePayoutAnalytics(dateRange, globalFilters?.timeDisplayMode === 'cumulative');
+        return usePayoutAnalytics(dateRange, granularity, globalFilters?.timeDisplayMode === 'cumulative');
       },
       valueKey: 'payouts',
       supportsNativeCumulative: true,
@@ -1041,7 +1050,7 @@ export function DesktopOptimizedDashboard({
       id: 'writer-pending-earnings',
       title: isCumulative ? 'Total Pending Earnings (Cumulative)' : 'Writer Pending Earnings',
       hook: (dateRange: DateRange, granularity: number, globalFilters?: any) =>
-        useWriterPendingEarnings(dateRange, globalFilters?.timeDisplayMode === 'cumulative'),
+        useWriterPendingEarnings(dateRange, granularity, globalFilters?.timeDisplayMode === 'cumulative'),
       valueKey: 'earnings',
       supportsNativeCumulative: true,
       valueFormatter: (data, stats, metadata) => {
@@ -1071,7 +1080,7 @@ export function DesktopOptimizedDashboard({
       id: 'writer-final-earnings',
       title: isCumulative ? 'Total Final Earnings (Cumulative)' : 'Writer Final Earnings',
       hook: (dateRange: DateRange, granularity: number, globalFilters?: any) =>
-        useWriterFinalEarnings(dateRange, globalFilters?.timeDisplayMode === 'cumulative'),
+        useWriterFinalEarnings(dateRange, granularity, globalFilters?.timeDisplayMode === 'cumulative'),
       valueKey: 'earnings',
       supportsNativeCumulative: true,
       valueFormatter: (data, stats, metadata) => {
@@ -1130,10 +1139,10 @@ export function DesktopOptimizedDashboard({
             onValueChange={(value) => handleChartTypeChange(value as ChartType)}
           >
             <SegmentedControlList className="h-8">
-              <SegmentedControlTrigger value="line" className="px-2.5" title="Line chart">
+              <SegmentedControlTrigger value="line" className="px-2.5">
                 <Icon name="TrendingUp" size={14} />
               </SegmentedControlTrigger>
-              <SegmentedControlTrigger value="bar" className="px-2.5" title="Bar chart">
+              <SegmentedControlTrigger value="bar" className="px-2.5">
                 <Icon name="BarChart3" size={14} />
               </SegmentedControlTrigger>
             </SegmentedControlList>
@@ -1171,11 +1180,7 @@ export function DesktopOptimizedDashboard({
 // Map row IDs to batch data keys
 const BATCH_DATA_MAP: Record<string, keyof DashboardBatchData> = {
   'new-accounts': 'accounts',
-  'new-pages': 'pages',
   'replies': 'replies',
-  'content-changes': 'contentChanges',
-  'shares': 'shares',
-  'links-added': 'links',
   'pwa-installs': 'pwaInstalls',
   'page-views': 'visitors',
   'platform-revenue': 'platformRevenue',

@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { usePageViewsMetrics } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart } from '../../utils/chartUtils';
 import { type DateRange } from './DateRangeFilter';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface PageViewsAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -149,45 +150,45 @@ export function PageViewsAnalyticsWidget({ dateRange, granularity, className = "
             <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
               <defs>
                 <linearGradient id="pageViewsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.05}/>
+                  <stop offset="5%" stopColor={ADMIN_CHART_THEME.series1} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={ADMIN_CHART_THEME.series1} stopOpacity={0.05}/>
                 </linearGradient>
                 <linearGradient id="uniqueViewsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.05}/>
+                  <stop offset="5%" stopColor={ADMIN_CHART_THEME.series2} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={ADMIN_CHART_THEME.series2} stopOpacity={0.05}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis 
                 dataKey="date" 
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.tickConfig.interval}
               />
               <YAxis 
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 allowDecimals={false}
                 width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
-                type="monotone"
+                type="linear"
                 dataKey="totalViews"
-                stroke="hsl(221, 83%, 53%)"
+                stroke={ADMIN_CHART_THEME.series1}
                 strokeWidth={2}
                 fill="url(#pageViewsGradient)"
                 name="Total Views"
               />
               {data.some(d => d.uniqueViews !== undefined) && (
                 <Area
-                  type="monotone"
+                  type="linear"
                   dataKey="uniqueViews"
-                  stroke="hsl(142, 76%, 36%)"
+                  stroke={ADMIN_CHART_THEME.series2}
                   strokeWidth={2}
                   fill="url(#uniqueViewsGradient)"
                   name="Unique Views"

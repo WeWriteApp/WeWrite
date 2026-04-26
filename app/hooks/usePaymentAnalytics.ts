@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useDebounce } from './useDebounce';
 import { PaymentAnalyticsService } from '../services/paymentAnalytics';
+import { adminFetch } from '../utils/adminFetch';
 import {
   SubscriptionConversionFunnelData,
   SubscriptionMetrics,
@@ -19,6 +20,20 @@ import {
 export interface DateRange {
   startDate: Date;
   endDate: Date;
+}
+
+function normalizeGranularityAndCumulative(
+  granularityOrCumulative?: number | boolean,
+  cumulativeArg?: boolean
+): { granularity?: number; cumulative: boolean } {
+  if (typeof granularityOrCumulative === 'boolean') {
+    return { granularity: undefined, cumulative: granularityOrCumulative };
+  }
+
+  return {
+    granularity: typeof granularityOrCumulative === 'number' ? granularityOrCumulative : undefined,
+    cumulative: cumulativeArg ?? false
+  };
 }
 
 /**
@@ -387,18 +402,31 @@ export function useWriterPayouts(dateRange: DateRange, cumulative: boolean = fal
       const params = new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
-        type: 'writer-payouts',
         cumulative: cumulative.toString()
       });
 
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const [summaryResponse, chartResponse] = await Promise.all([
+        adminFetch(`/api/admin/writer-payouts?${params.toString()}`),
+        adminFetch(`/api/admin/payout-analytics?${params.toString()}`)
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch writer payouts: ${response.status}`);
+      if (!summaryResponse.ok) {
+        throw new Error(`Failed to fetch writer payouts: ${summaryResponse.status}`);
       }
 
-      const result = await response.json();
-      setData(result);
+      if (!chartResponse.ok) {
+        throw new Error(`Failed to fetch payout chart data: ${chartResponse.status}`);
+      }
+
+      const [summaryResult, chartResult] = await Promise.all([
+        summaryResponse.json(),
+        chartResponse.json()
+      ]);
+
+      setData({
+        ...(summaryResult.data || {}),
+        chartData: chartResult.data || []
+      });
     } catch (err) {
       console.error('Error fetching writer payouts:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch writer payouts data');
@@ -446,33 +474,74 @@ export function useUsdAllocations(dateRange: DateRange, granularity?: number, cu
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams({
-        startDate: debouncedDateRange.startDate.toISOString(),
-        endDate: debouncedDateRange.endDate.toISOString(),
-        type: 'usd-allocations',
-        cumulative: cumulative.toString()
-      });
-
-      if (granularity) {
-        params.append('granularity', granularity.toString());
-      }
-
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const response = await adminFetch('/api/admin/monthly-financials');
 
       if (!response.ok) {
         throw new Error(`Failed to fetch USD allocations: ${response.status}`);
       }
 
       const result = await response.json();
-      setData(result.data || []);
-      setStats(result.stats || {
-        totalAllocated: 0,
-        totalPageAllocations: 0,
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch USD allocations data');
+      }
+
+      const historical = Array.isArray(result.historicalData) ? result.historicalData : [];
+      const currentMonthRecord = result.currentMonth?.data;
+
+      const monthlyData = [...historical];
+      if (currentMonthRecord && !monthlyData.some((item: any) => item.month === currentMonthRecord.month)) {
+        monthlyData.push(currentMonthRecord);
+      }
+
+      monthlyData.sort((a: any, b: any) => String(a.month || '').localeCompare(String(b.month || '')));
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const formattedData = monthlyData.map((item: any) => {
+        const monthKey = String(item.month || '');
+        const [year, month] = monthKey.split('-');
+        const monthIndex = Number(month) - 1;
+        const label = Number.isFinite(monthIndex) && monthIndex >= 0 && monthIndex < 12
+          ? `${monthNames[monthIndex]} '${String(year || '').slice(-2)}`
+          : monthKey;
+
+        return {
+          label,
+          totalAllocated: (item.totalAllocatedCents || 0) / 100,
+          pageAllocations: (item.totalAllocatedCents || 0) / 100,
+          userAllocations: 0,
+          totalUnallocated: (item.totalUnallocatedCents || 0) / 100,
+        };
+      });
+
+      const chartData = cumulative
+        ? formattedData.reduce((acc: any[], item: any) => {
+            const previous = acc[acc.length - 1];
+            acc.push({
+              ...item,
+              totalAllocated: item.totalAllocated + (previous?.totalAllocated || 0),
+              pageAllocations: item.pageAllocations + (previous?.pageAllocations || 0),
+              userAllocations: item.userAllocations + (previous?.userAllocations || 0),
+              totalUnallocated: item.totalUnallocated + (previous?.totalUnallocated || 0),
+            });
+            return acc;
+          }, [])
+        : formattedData;
+
+      setData(chartData);
+
+      const totals = result.totals || {};
+      const totalAllocated = (totals.totalAllocatedCents || 0) / 100;
+      const totalUnallocated = (totals.totalUnallocatedCents || 0) / 100;
+      const activeAllocators = result.stripeSubscriptions?.totalActiveSubscriptions || 0;
+
+      setStats({
+        totalAllocated,
+        totalPageAllocations: totalAllocated,
         totalUserAllocations: 0,
-        totalUnallocated: 0,
-        activeAllocators: 0,
-        allocationRate: 0,
-        averageAllocation: 0
+        totalUnallocated,
+        activeAllocators,
+        allocationRate: totals.averageAllocationRate || 0,
+        averageAllocation: activeAllocators > 0 ? totalAllocated / activeAllocators : 0
       });
     } catch (err) {
       console.error('Error fetching USD allocations:', err);
@@ -515,18 +584,17 @@ export function useWriterEarnings(dateRange: DateRange, cumulative: boolean = fa
       const params = new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
         endDate: debouncedDateRange.endDate.toISOString(),
-        type: 'writer-earnings',
         cumulative: cumulative.toString()
       });
 
-      const response = await fetch(`/api/admin/payment-analytics?${params.toString()}`);
+      const response = await adminFetch(`/api/admin/writer-earnings?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch writer earnings: ${response.status}`);
       }
 
       const result = await response.json();
-      setData(result);
+      setData(result.data || result);
     } catch (err) {
       console.error('Error fetching writer earnings:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch writer earnings data');
@@ -545,7 +613,12 @@ export function useWriterEarnings(dateRange: DateRange, cumulative: boolean = fa
 /**
  * Hook for payout analytics with time-series data
  */
-export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = false) {
+export function usePayoutAnalytics(
+  dateRange: DateRange,
+  granularityOrCumulative?: number | boolean,
+  cumulativeArg?: boolean
+) {
+  const { granularity, cumulative } = normalizeGranularityAndCumulative(granularityOrCumulative, cumulativeArg);
   const [data, setData] = useState<any[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -574,7 +647,11 @@ export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = f
         cumulative: cumulative.toString()
       });
 
-      const response = await fetch(`/api/admin/payout-analytics?${params.toString()}`);
+      if (typeof granularity === 'number' && Number.isFinite(granularity) && granularity > 0) {
+        params.set('granularity', Math.floor(granularity).toString());
+      }
+
+      const response = await adminFetch(`/api/admin/payout-analytics?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch payout analytics: ${response.status}`);
@@ -589,7 +666,7 @@ export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = f
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange, cumulative]);
+  }, [debouncedDateRange, cumulative, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -602,7 +679,12 @@ export function usePayoutAnalytics(dateRange: DateRange, cumulative: boolean = f
  * Hook for writer pending earnings (status = 'pending')
  * Shows current month allocations that haven't been finalized yet
  */
-export function useWriterPendingEarnings(dateRange: DateRange, cumulative: boolean = false) {
+export function useWriterPendingEarnings(
+  dateRange: DateRange,
+  granularityOrCumulative?: number | boolean,
+  cumulativeArg?: boolean
+) {
+  const { granularity, cumulative } = normalizeGranularityAndCumulative(granularityOrCumulative, cumulativeArg);
   const [data, setData] = useState<any[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -630,7 +712,11 @@ export function useWriterPendingEarnings(dateRange: DateRange, cumulative: boole
         status: 'pending'
       });
 
-      const response = await fetch(`/api/admin/earnings-analytics?${params.toString()}`);
+      if (typeof granularity === 'number' && Number.isFinite(granularity) && granularity > 0) {
+        params.set('granularity', Math.floor(granularity).toString());
+      }
+
+      const response = await adminFetch(`/api/admin/earnings-analytics?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch pending earnings: ${response.status}`);
@@ -645,7 +731,7 @@ export function useWriterPendingEarnings(dateRange: DateRange, cumulative: boole
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange, cumulative]);
+  }, [debouncedDateRange, cumulative, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -658,7 +744,12 @@ export function useWriterPendingEarnings(dateRange: DateRange, cumulative: boole
  * Hook for writer final earnings (status = 'available' or 'paid_out')
  * Shows earnings that have been finalized after allocation freeze
  */
-export function useWriterFinalEarnings(dateRange: DateRange, cumulative: boolean = false) {
+export function useWriterFinalEarnings(
+  dateRange: DateRange,
+  granularityOrCumulative?: number | boolean,
+  cumulativeArg?: boolean
+) {
+  const { granularity, cumulative } = normalizeGranularityAndCumulative(granularityOrCumulative, cumulativeArg);
   const [data, setData] = useState<any[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -686,7 +777,11 @@ export function useWriterFinalEarnings(dateRange: DateRange, cumulative: boolean
         status: 'final'
       });
 
-      const response = await fetch(`/api/admin/earnings-analytics?${params.toString()}`);
+      if (typeof granularity === 'number' && Number.isFinite(granularity) && granularity > 0) {
+        params.set('granularity', Math.floor(granularity).toString());
+      }
+
+      const response = await adminFetch(`/api/admin/earnings-analytics?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch final earnings: ${response.status}`);
@@ -701,7 +796,7 @@ export function useWriterFinalEarnings(dateRange: DateRange, cumulative: boolean
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange, cumulative]);
+  }, [debouncedDateRange, cumulative, granularity]);
 
   useEffect(() => {
     fetchData();

@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { usePWANotificationsMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface PWANotificationsAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -19,6 +20,12 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
 
   // Check if we have any data
   const hasData = data && data.length > 0;
+  const chartData = hasData
+    ? data.map((item) => ({
+        ...item,
+        label: item.label || item.date || '',
+      }))
+    : [];
 
   // Calculate summary statistics only if we have data
   const totalNotifications = hasData ? data.reduce((sum, item) => sum + item.count, 0) : 0;
@@ -49,9 +56,9 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
       try {
         const value = payload[0]?.value || 0;
         return (
-          <div className="bg-background p-3 border-theme-strong rounded-lg shadow-lg">
-            <p className="text-sm text-gray-600 mb-1">{label}</p>
-            <p className="text-sm font-semibold text-gray-900">
+          <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+            <p className="text-xs text-muted-foreground mb-1">{label}</p>
+            <p className="text-sm font-semibold text-foreground">
               <span className="inline-flex items-center">
                 <Icon name="Bell" size={12} className="mr-1" />
                 {value} notification{value !== 1 ? 's' : ''} sent
@@ -68,17 +75,17 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
 
   if (loading) {
     return (
-      <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
+      <div className={`wewrite-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             <Icon name="Bell" size={20} className="text-primary mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
+            <h3 className="text-lg font-semibold">PWA Notifications Sent</h3>
           </div>
         </div>
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
-          <div className="h-48 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+          <div className="h-8 bg-muted rounded w-1/2 mb-4"></div>
+          <div className="h-48 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -86,87 +93,92 @@ export function PWANotificationsAnalyticsWidget({ dateRange, granularity, classN
 
   if (error) {
     return (
-      <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
+      <div className={`wewrite-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Icon name="Bell" size={20} className="text-red-600 mr-2" />
-            <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
+            <Icon name="Bell" size={20} className="text-destructive mr-2" />
+            <h3 className="text-lg font-semibold">PWA Notifications Sent</h3>
           </div>
         </div>
         <div className="text-center py-8">
-          <p className="text-red-600 mb-2">Error loading notifications data</p>
-          <p className="text-sm text-gray-500">{error}</p>
+          <p className="text-destructive mb-2">Error loading notifications data</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-background rounded-lg border-theme-strong p-6 ${className}`}>
+    <div className={`wewrite-card ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
           <Icon name="Bell" size={20} className="text-primary mr-2" />
-          <h3 className="text-lg font-semibold text-gray-900">PWA Notifications Sent</h3>
+          <h3 className="text-lg font-semibold">PWA Notifications Sent</h3>
         </div>
         {hasData && (
           <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900">{totalNotifications.toLocaleString()}</div>
-            <div className="text-sm text-gray-500">Total notifications</div>
+            <div className="text-2xl font-bold text-foreground">{totalNotifications.toLocaleString()}</div>
+            <div className="text-sm text-muted-foreground">Total notifications</div>
           </div>
         )}
       </div>
 
       {!hasData ? (
         <div className="text-center py-8">
-          <Icon name="Bell" size={48} className="text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 mb-2">No notification data available</p>
-          <p className="text-sm text-gray-400">Notifications will appear here once sent</p>
+          <Icon name="Bell" size={48} className="text-muted-foreground/40 mx-auto mb-4" />
+          <p className="text-muted-foreground mb-2">No notification data available</p>
+          <p className="text-sm text-muted-foreground/80">Notifications will appear here once sent</p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900">{averagePerDay}</div>
-              <div className="text-sm text-gray-500">Avg/day</div>
+              <div className="text-lg font-semibold text-foreground">{averagePerDay}</div>
+              <div className="text-sm text-muted-foreground">Avg/day</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900">{peakDay.toLocaleString()}</div>
-              <div className="text-sm text-gray-500">Peak day</div>
+              <div className="text-lg font-semibold text-foreground">{peakDay.toLocaleString()}</div>
+              <div className="text-sm text-muted-foreground">Peak day</div>
             </div>
             <div className="text-center">
               <div className={`text-lg font-semibold ${isPositiveTrend ? 'text-green-600' : 'text-red-600'}`}>
                 {isPositiveTrend ? '+' : ''}{trendPercentage.toFixed(1)}%
               </div>
-              <div className="text-sm text-gray-500">Trend</div>
+              <div className="text-sm text-muted-foreground">Trend</div>
             </div>
           </div>
 
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <BarChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
                 <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: chartConfig.fontSize }}
-                  tickFormatter={formatTickLabel}
-                  stroke="#666"
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
+                  interval={chartConfig.interval}
+                  tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
                 />
                 <YAxis 
-                  tick={{ fontSize: chartConfig.fontSize }}
-                  stroke="#666"
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  width={chartConfig.tickConfig.width}
+                  tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar 
                   dataKey="count" 
-                  fill="#3b82f6"
+                  fill={ADMIN_CHART_THEME.series1}
                   radius={[2, 2, 0, 0]}
-                  maxBarSize={chartConfig.maxBarSize}
+                  maxBarSize={56}
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-4 text-xs text-gray-500 text-center">
+          <div className="mt-4 text-xs text-muted-foreground text-center">
             Track PWA push notifications sent to users over time
           </div>
         </>

@@ -12,7 +12,6 @@ import { UsdAllocationModal } from './UsdAllocationModal';
 import { CompositionBar } from './CompositionBar';
 
 import { AllocationAmountDisplay } from './AllocationAmountDisplay';
-import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 import { useUsdBalance } from '../../contexts/UsdBalanceContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useDemoBalance, useShouldUseDemoBalance } from '../../contexts/DemoBalanceContext';
@@ -52,7 +51,6 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const { triggerDelayedBanner } = useDelayedLoginBanner();
   const { usdBalance } = useUsdBalance();
   const { hasActiveSubscription } = useSubscription();
   const shouldUseDemoBalance = useShouldUseDemoBalance(hasActiveSubscription);
@@ -251,6 +249,13 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
   // User state checks - use the correct subscription state from UsdBalance context
   const showSubscriptionNotice = user && !hasActiveSubscription && !isPageOwner && isDemoBalance;
   const showLoginNotice = !user && !isPageOwner;
+  const loggedOutBalance = shouldUseDemoBalance ? demoBalance : usdBalance;
+
+  const handleLoginClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    router.push('/auth/login');
+  };
 
   return createPortal(
     <div
@@ -259,10 +264,11 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
       <div
         ref={ref}
         data-allocation-bar
-        onClick={handleAllocationBarClick}
+        onClick={showLoginNotice ? undefined : handleAllocationBarClick}
         className={cn(
           "wewrite-card wewrite-card-no-padding wewrite-floating relative w-full max-w-md overflow-hidden rounded-xl border border-neutral-20",
           "transition-all duration-300 ease-in-out", // Ensure smooth transitions
+          !showLoginNotice && "cursor-pointer",
           flashType === 'accent' && "animate-flash-bar-accent",
           flashType === 'red' && "animate-flash-bar-red",
           className
@@ -306,122 +312,163 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
           {/* USD Controls */}
           {!isPageOwner && (
             <>
-              {/* Allocation amount display above the controls */}
-              <AllocationAmountDisplay
-                allocationCents={allocationState.currentAllocationCents}
-                availableBalanceCents={usdBalance?.availableUsdCents || 0}
-                variant={isUserAllocation ? 'user' : 'page'}
-                flashType={flashType}
-                allocationIntervalCents={allocationIntervalCents}
-                isDemoBalance={showLoginNotice}
-                isOverBudget={compositionData.currentPageOverfundedPercentage > 0}
-              />
-
-              {/* Out of funds message */}
-              {compositionData.isOutOfFunds && (
-                <div className="text-center text-sm text-error font-medium">
-                  Out of funds
-                </div>
-              )}
-
-              {/* Simple variant with quick amount buttons */}
-              {variant === 'simple' ? (
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center space-x-2">
-                    {/* Quick amount buttons - use multiples of current interval */}
-                    {[
-                      allocationIntervalCents,           // 1x interval (e.g., $0.50)
-                      allocationIntervalCents * 2,       // 2x interval (e.g., $1.00)
-                      allocationIntervalCents * 4,       // 4x interval (e.g., $2.00)
-                      allocationIntervalCents * 10       // 10x interval (e.g., $5.00)
-                    ].map((cents) => (
-                      <Button
-                        key={cents}
-                        variant="secondary"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAllocationChange(cents, e);
-                        }}
-                        disabled={isProcessing || cents > (usdBalance?.availableUsdCents || 0)}
-                        className="h-8 px-2 text-xs"
-                      >
-                        +{formatUsdCents(cents)}
-                      </Button>
-                    ))}
-
-                    {/* Minus button */}
-                    {allocationState.currentAllocationCents > 0 && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const decreaseAmount = Math.min(allocationState.currentAllocationCents, 25);
-                          handleAllocationChange(-decreaseAmount, e);
-                        }}
-                        disabled={isProcessing}
-                        className="h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20"
-                      >
-                        <Icon name="Minus" size={16} />
-                      </Button>
-                    )}
+              {showLoginNotice ? (
+                <div className="space-y-3">
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Your WeWrite subscription becomes recurring support for writers.
+                    </p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      You split your monthly subscription across favorite pages, and those writers receive recurring funds every month you keep supporting them.
+                    </p>
                   </div>
-                </div>
-              ) : (
-              <div className="flex items-center gap-3">
-              {(allocationState.isLoading || intervalLoading) ? (
-                <div className="flex items-center gap-3 w-full">
-                  <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
-                  <div className="flex-1 h-12 bg-muted animate-pulse rounded-lg"></div>
-                  <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
-                </div>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={(e) => handleAllocationChange(-allocationIntervalCents, e)}
-                    className={cn(
-                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
-                      allocationState.currentAllocationCents <= 0 && "opacity-50",
-                      isProcessing && "opacity-75"
-                    )}
-                    disabled={allocationState.currentAllocationCents <= 0 || isProcessing}
-                  >
-                    <Icon name="Minus" size={16} />
-                  </Button>
 
-                  {/* Composition Bar */}
                   <CompositionBar
                     data={compositionData}
-                    showPulse={showPulse}
-                    showParticles={showParticles}
-                    onPulseComplete={() => setShowPulse(false)}
-                    onParticlesComplete={() => setShowParticles(false)}
                     size="lg"
                   />
 
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Always try to allocate - if out of funds, the modal will show
-                      handleAllocationChange(allocationIntervalCents, e);
-                    }}
-                    className={cn(
-                      "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
-                      compositionData.isOutOfFunds && "opacity-50",
-                      isProcessing && "opacity-75"
-                    )}
-                    disabled={isProcessing}
-                  >
-                    <Icon name="Plus" size={16} />
-                  </Button>
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-neutral-20 bg-muted/40 px-3 py-2">
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        Demo monthly budget
+                      </p>
+                      <p className="text-sm font-medium text-foreground">
+                        {formatUsdCents(loggedOutBalance?.totalUsdCents || 0)} split across pages
+                      </p>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      onClick={handleLoginClick}
+                      className="shrink-0"
+                    >
+                      Log in
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Allocation amount display above the controls */}
+                  <AllocationAmountDisplay
+                    allocationCents={allocationState.currentAllocationCents}
+                    availableBalanceCents={usdBalance?.availableUsdCents || 0}
+                    variant={isUserAllocation ? 'user' : 'page'}
+                    flashType={flashType}
+                    allocationIntervalCents={allocationIntervalCents}
+                    isDemoBalance={showLoginNotice}
+                    isOverBudget={compositionData.currentPageOverfundedPercentage > 0}
+                  />
+
+                  {/* Out of funds message */}
+                  {compositionData.isOutOfFunds && (
+                    <div className="text-center text-sm text-error font-medium">
+                      Out of funds
+                    </div>
+                  )}
+
+                  {/* Simple variant with quick amount buttons */}
+                  {variant === 'simple' ? (
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center space-x-2">
+                        {/* Quick amount buttons - use multiples of current interval */}
+                        {[
+                          allocationIntervalCents,
+                          allocationIntervalCents * 2,
+                          allocationIntervalCents * 4,
+                          allocationIntervalCents * 10
+                        ].map((cents) => (
+                          <Button
+                            key={cents}
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAllocationChange(cents, e);
+                            }}
+                            disabled={isProcessing || cents > (usdBalance?.availableUsdCents || 0)}
+                            className="h-8 px-2 text-xs"
+                          >
+                            +{formatUsdCents(cents)}
+                          </Button>
+                        ))}
+
+                        {/* Minus button */}
+                        {allocationState.currentAllocationCents > 0 && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const decreaseAmount = Math.min(allocationState.currentAllocationCents, 25);
+                              handleAllocationChange(-decreaseAmount, e);
+                            }}
+                            disabled={isProcessing}
+                            className="h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20"
+                          >
+                            <Icon name="Minus" size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      {(allocationState.isLoading || intervalLoading) ? (
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
+                          <div className="flex-1 h-12 bg-muted animate-pulse rounded-lg"></div>
+                          <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
+                        </div>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAllocationChange(-allocationIntervalCents, e);
+                            }}
+                            className={cn(
+                              "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
+                              allocationState.currentAllocationCents <= 0 && "opacity-50",
+                              isProcessing && "opacity-75"
+                            )}
+                            disabled={allocationState.currentAllocationCents <= 0 || isProcessing}
+                          >
+                            <Icon name="Minus" size={16} />
+                          </Button>
+
+                          {/* Composition Bar */}
+                          <CompositionBar
+                            data={compositionData}
+                            showPulse={showPulse}
+                            showParticles={showParticles}
+                            onPulseComplete={() => setShowPulse(false)}
+                            onParticlesComplete={() => setShowParticles(false)}
+                            size="lg"
+                          />
+
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAllocationChange(allocationIntervalCents, e);
+                            }}
+                            className={cn(
+                              "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
+                              compositionData.isOutOfFunds && "opacity-50",
+                              isProcessing && "opacity-75"
+                            )}
+                            disabled={isProcessing}
+                          >
+                            <Icon name="Plus" size={16} />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </>
-              )}
-            </div>
               )}
             </>
           )}

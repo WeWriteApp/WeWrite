@@ -7,12 +7,12 @@ import { useAccountsMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 import {
   applyGlobalAnalyticsFilters,
   calculateFilteredSummaryStats,
   getFilteredDisplayLabels,
-  formatFilteredNumber,
-  generateMockUserCountData
+  formatFilteredNumber
 } from '../../utils/analyticsDataProcessing';
 
 interface NewAccountsWidgetProps {
@@ -39,11 +39,8 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
   let displayLabels = { totalLabel: 'Total', averageLabel: 'Avg/Day', yAxisLabel: 'Accounts', tooltipSuffix: '' };
 
   if (globalFilters) {
-    // Generate mock user count data for normalization
-    const userCountData = generateMockUserCountData(dateRange.startDate, dateRange.endDate, granularity);
-
-    // Apply global analytics filters
-    processedData = applyGlobalAnalyticsFilters(rawData, userCountData, globalFilters);
+    // Apply global analytics filters (no per-user normalization — real user count data not yet available)
+    processedData = applyGlobalAnalyticsFilters(rawData, [], globalFilters);
 
     // Debug: Log the transformation to verify cumulative mode works
     if (globalFilters.timeDisplayMode === 'cumulative') {
@@ -172,13 +169,13 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
               data={processedData}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
@@ -186,7 +183,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 allowDecimals={globalFilters?.perUserNormalization || false}
                 width={chartConfig.tickConfig.width}
                 label={{
@@ -199,7 +196,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
               <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="count"
-                fill="hsl(var(--primary))"
+                fill="oklch(var(--primary))"
                 radius={[2, 2, 0, 0]}
                 className="hover:opacity-80 transition-opacity"
                 maxBarSize={60}

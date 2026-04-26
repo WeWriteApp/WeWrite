@@ -20,7 +20,7 @@ interface SparklineProps {
 
 export function Sparkline({
   data,
-  color = '#3b82f6',
+  color = 'var(--chart-1)',
   height = 40,
   width = 120,
   strokeWidth = 2,
@@ -71,9 +71,9 @@ export function Sparkline({
   // Determine color based on trend
   let lineColor = color;
   if (calculatedTrend === 'up') {
-    lineColor = '#10b981'; // green
+    lineColor = 'var(--chart-2)';
   } else if (calculatedTrend === 'down') {
-    lineColor = '#ef4444'; // red
+    lineColor = 'oklch(var(--destructive))';
   }
 
   return (
@@ -92,7 +92,12 @@ export function Sparkline({
       {/* Trend indicator */}
       {calculatedTrend && (
         <div className="absolute top-0 right-0 w-2 h-2 rounded-full" style={{
-          backgroundColor: calculatedTrend === 'up' ? '#10b981' : calculatedTrend === 'down' ? '#ef4444' : '#6b7280'
+          backgroundColor:
+            calculatedTrend === 'up'
+              ? 'var(--chart-2)'
+              : calculatedTrend === 'down'
+                ? 'oklch(var(--destructive))'
+                : 'oklch(var(--muted-foreground))'
         }} />
       )}
     </div>

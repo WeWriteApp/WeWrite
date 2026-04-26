@@ -6,6 +6,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Respons
 import { useContentChangesMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface ContentChangesAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -148,13 +149,13 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
               data={data}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
@@ -162,7 +163,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
@@ -170,17 +171,17 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
                 wrapperStyle={{ fontSize: window.innerWidth < 768 ? '10px' : '12px' }}
                 iconType="rect"
               />
-              <ReferenceLine y={0} stroke="#666" strokeDasharray="2 2" />
+              <ReferenceLine y={0} stroke={ADMIN_CHART_THEME.tickColor} strokeDasharray="2 2" />
               <Bar
                 dataKey="charactersAdded"
-                fill="#22c55e"
+                fill={ADMIN_CHART_THEME.series2}
                 name="Added"
                 radius={[2, 2, 0, 0]}
                 maxBarSize={60}
               />
               <Bar
                 dataKey="charactersDeleted"
-                fill="#ef4444"
+                fill={ADMIN_CHART_THEME.destructive}
                 name="Deleted"
                 radius={[0, 0, 2, 2]}
                 maxBarSize={60}
@@ -189,7 +190,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
               />
               <Bar
                 dataKey="netChange"
-                fill="#3b82f6"
+                fill={ADMIN_CHART_THEME.series1}
                 name="Net Change"
                 radius={[2, 2, 0, 0]}
               />

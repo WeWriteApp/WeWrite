@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useSharesMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface SharesAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -179,13 +180,13 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
               data={data}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
@@ -193,7 +194,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 allowDecimals={false}
                 width={chartConfig.tickConfig.width}
               />
@@ -205,7 +206,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
               <Bar
                 dataKey="successful"
                 stackId="shares"
-                fill="#22c55e"
+                fill={ADMIN_CHART_THEME.series2}
                 name="Successful"
                 radius={[0, 0, 0, 0]}
                 maxBarSize={60}
@@ -213,7 +214,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
               <Bar
                 dataKey="aborted"
                 stackId="shares"
-                fill="#ef4444"
+                fill={ADMIN_CHART_THEME.destructive}
                 name="Aborted"
                 radius={[2, 2, 0, 0]}
                 maxBarSize={60}

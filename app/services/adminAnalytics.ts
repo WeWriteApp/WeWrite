@@ -582,17 +582,33 @@ export class AdminAnalyticsService {
       const pagesCollectionName = await getCollectionNameAsync('pages');
       const pagesRef = db.collection(pagesCollectionName);
 
-      // Format dates for query
-      const startDateStr = dateRange.startDate.toISOString();
-      const endDateStr = dateRange.endDate.toISOString();
+      // Use consistent date format (YYYY-MM-DD) and extend endDate to include full day
+      const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+      const endDateNext = new Date(dateRange.endDate);
+      endDateNext.setDate(endDateNext.getDate() + 1); // Include all of end day
+      const endDateStr = endDateNext.toISOString().split('T')[0];
 
-      // Get all non-deleted pages in date range
-      const pagesSnapshot = await pagesRef
-        .where('deleted', '==', false)
-        .where('createdAt', '>=', startDateStr)
-        .where('createdAt', '<=', endDateStr)
-        .orderBy('createdAt', 'asc')
-        .get();
+      console.log(`[LinkAnalytics] Querying links: ${startDateStr} to ${endDateStr}`);
+
+      // Query only on lastModified to avoid requiring a composite index.
+      // Deleted pages are filtered out in memory below.
+      let pagesSnapshot;
+      try {
+        pagesSnapshot = await pagesRef
+          .where('lastModified', '>=', startDateStr)
+          .where('lastModified', '<=', endDateStr)
+          .orderBy('lastModified', 'asc')
+          .get();
+        console.log(`[LinkAnalytics] Query returned ${pagesSnapshot.size} pages`);
+      } catch (error: any) {
+        console.error(`[LinkAnalytics] Query failed:`, error?.message, '- trying fallback without orderBy');
+        // Fallback without orderBy in case index is still being built
+        pagesSnapshot = await pagesRef
+          .where('lastModified', '>=', startDateStr)
+          .where('lastModified', '<=', endDateStr)
+          .get();
+        console.log(`[LinkAnalytics] Fallback query returned ${pagesSnapshot.size} pages`);
+      }
 
       // Group link counts by day
       const dailyData = new Map<string, { internalLinks: number; externalLinks: number }>();
@@ -608,15 +624,17 @@ export class AdminAnalyticsService {
       // Count links in each page's content
       pagesSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        const createdAt = data.createdAt;
+        // Skip deleted pages (filtered in memory to avoid composite index requirement)
+        if (data.deleted === true) return;
+        const modifiedAt = data.lastModified || data.createdAt;
         const content = data.content;
 
-        if (!createdAt || !content) return;
+        if (!modifiedAt || !content) return;
 
         // Parse date
-        const dateStr = typeof createdAt === 'string'
-          ? createdAt.split('T')[0]
-          : createdAt.toDate?.().toISOString().split('T')[0];
+        const dateStr = typeof modifiedAt === 'string'
+          ? modifiedAt.split('T')[0]
+          : modifiedAt.toDate?.().toISOString().split('T')[0];
 
         if (!dateStr || !dailyData.has(dateStr)) return;
 
@@ -718,17 +736,33 @@ export class AdminAnalyticsService {
 
       // Format dates as strings for comparison (YYYY-MM-DD format used in date field)
       const startDateStr = dateRange.startDate.toISOString().split('T')[0];
-      const endDateStr = dateRange.endDate.toISOString().split('T')[0];
+      const endDateNext = new Date(dateRange.endDate);
+      endDateNext.setDate(endDateNext.getDate() + 1); // Include all of end day
+      const endDateStr = endDateNext.toISOString().split('T')[0];
+
+      console.log(`[PageViewsAnalytics] Querying page views: ${startDateStr} to ${endDateStr}`);
 
       // OPTIMIZED: Query by date field range instead of fetching 5000 docs
       // Uses index: (date, totalViews)
-      const snapshot = await pageViewsRef
-        .where('date', '>=', startDateStr)
-        .where('date', '<=', endDateStr)
-        .orderBy('date', 'asc')
-        .get();
+      let snapshot;
+      try {
+        snapshot = await pageViewsRef
+          .where('date', '>=', startDateStr)
+          .where('date', '<=', endDateStr)
+          .orderBy('date', 'asc')
+          .get();
+        console.log(`[PageViewsAnalytics] Query returned ${snapshot.size} documents`);
+      } catch (error: any) {
+        console.warn(`[PageViewsAnalytics] Query with orderBy failed:`, error?.message, '- trying without orderBy');
+        snapshot = await pageViewsRef
+          .where('date', '>=', startDateStr)
+          .where('date', '<', endDateStr) // Use strict less-than for exclusive end
+          .get();
+        console.log(`[PageViewsAnalytics] Fallback query returned ${snapshot.size} documents`);
+      }
 
       if (snapshot.empty) {
+        console.log(`[PageViewsAnalytics] No page view data found for date range`);
         return [];
       }
 
@@ -774,6 +808,7 @@ export class AdminAnalyticsService {
       // Sort by date
       result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+      console.log(`[PageViewsAnalytics] Processed ${result.length} daily views`);
       return result;
 
     } catch (error) {
@@ -913,21 +948,36 @@ export class AdminAnalyticsService {
       const emailLogsCollectionName = await getCollectionNameAsync('emailLogs');
       const emailLogsRef = db.collection(emailLogsCollectionName);
 
-      // Query emails by sentAt field (ISO string format)
-      const startDateStr = dateRange.startDate.toISOString();
-      const endDateStr = dateRange.endDate.toISOString();
+      // Use date strings for query (YYYY-MM-DD format)
+      const startDateStr = dateRange.startDate.toISOString().split('T')[0];
+      const endDateNext = new Date(dateRange.endDate);
+      endDateNext.setDate(endDateNext.getDate() + 1);
+      const endDateStr = endDateNext.toISOString().split('T')[0];
+
+      console.log(`[NotificationsAnalytics] Querying notifications: ${startDateStr} to ${endDateStr}`);
 
       try {
+        // Query emails by sentAt field (ISO string format)
         const emailSnapshot = await emailLogsRef
           .where('sentAt', '>=', startDateStr)
           .where('sentAt', '<=', endDateStr)
           .get();
 
+        console.log(`[NotificationsAnalytics] Email query returned ${emailSnapshot.size} docs`);
+
         emailSnapshot.docs.forEach(doc => {
           const data = doc.data();
           const sentAt = data.sentAt;
           if (sentAt) {
-            const dateStr = sentAt.split('T')[0];
+            // Handle both string and Timestamp formats
+            let dateStr: string;
+            if (typeof sentAt === 'string') {
+              dateStr = sentAt.split('T')[0];
+            } else if (sentAt?.toDate) {
+              dateStr = sentAt.toDate().toISOString().split('T')[0];
+            } else {
+              return;
+            }
             if (dailyNotifications.has(dateStr)) {
               const dayData = dailyNotifications.get(dateStr)!;
               dayData.emails++;
@@ -945,7 +995,7 @@ export class AdminAnalyticsService {
 
       // Use Firestore Timestamp objects for proper comparison
       const startTimestamp = admin.firestore.Timestamp.fromDate(dateRange.startDate);
-      const endTimestamp = admin.firestore.Timestamp.fromDate(dateRange.endDate);
+      const endTimestamp = admin.firestore.Timestamp.fromDate(endDateNext);
 
       try {
         const pushSnapshot = await eventsRef
@@ -953,6 +1003,8 @@ export class AdminAnalyticsService {
           .where('timestamp', '>=', startTimestamp)
           .where('timestamp', '<=', endTimestamp)
           .get();
+
+        console.log(`[NotificationsAnalytics] Push notification query returned ${pushSnapshot.size} docs`);
 
         pushSnapshot.docs.forEach(doc => {
           const data = doc.data();

@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
     // Test dashboard analytics endpoints
     const analyticsEndpoints = [
       { name: 'dashboardAnalytics', endpoint: '/api/admin/dashboard-analytics?type=all&startDate=2024-01-01&endDate=2024-12-31&granularity=50' },
-      { name: 'paymentAnalytics', endpoint: '/api/admin/payment-analytics?type=all&startDate=2024-01-01&endDate=2024-12-31&granularity=50' }
+      { name: 'payoutAnalytics', endpoint: '/api/admin/payout-analytics?startDate=2024-01-01&endDate=2024-12-31&cumulative=false' },
+      { name: 'writerEarnings', endpoint: '/api/admin/earnings-analytics?startDate=2024-01-01&endDate=2024-12-31&cumulative=false&status=final' }
     ];
 
     const analyticsResults: Record<string, any> = {};
@@ -158,8 +159,12 @@ export async function GET(request: NextRequest) {
       recommendations.push('Dashboard analytics API is failing - check data queries and permissions');
     }
 
-    if (analyticsResults.paymentAnalytics?.status === 'error') {
-      recommendations.push('Payment analytics API is failing - check payment data collection and aggregation');
+    if (analyticsResults.payoutAnalytics?.status === 'error') {
+      recommendations.push('Payout analytics API is failing - check payout records and admin data-source routing');
+    }
+
+    if (analyticsResults.writerEarnings?.status === 'error') {
+      recommendations.push('Writer earnings analytics API is failing - check earnings aggregation and admin data-source routing');
     }
 
     const result = {

@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { usePWAInstallsMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface PWAInstallsAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -154,13 +155,13 @@ export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className =
               data={data}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
@@ -168,14 +169,14 @@ export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className =
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 allowDecimals={false}
                 width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar
                 dataKey="count"
-                fill="#a855f7"
+                fill={ADMIN_CHART_THEME.series5}
                 name="Installs"
                 radius={[2, 2, 0, 0]}
                 maxBarSize={60}

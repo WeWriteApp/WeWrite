@@ -9,6 +9,7 @@ import { usePlatformRevenueMetrics } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart } from '../../utils/chartUtils';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface PlatformRevenueWidgetProps {
   dateRange: DateRange;
@@ -159,20 +160,20 @@ export function PlatformRevenueWidget({
               <div style={{ height: chartConfig.height }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
                     <XAxis
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
                       className="text-xs"
-                      tick={{ fontSize: 10 }}
-                      interval={chartConfig.tickInterval}
+                      tick={chartAxisTick(10)}
+                      interval={chartConfig.interval}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       className="text-xs"
-                      tick={{ fontSize: 10 }}
+                      tick={chartAxisTick(10)}
                       width={50}
                       tickFormatter={(value) => `$${value}`}
                     />
@@ -184,8 +185,8 @@ export function PlatformRevenueWidget({
                       ]}
                       labelFormatter={(label) => `Date: ${label}`}
                       contentStyle={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid #e2e8f0',
+                        backgroundColor: 'oklch(var(--background))',
+                        border: '1px solid oklch(var(--border))',
                         borderRadius: '6px',
                         fontSize: '12px'
                       }}
@@ -197,14 +198,14 @@ export function PlatformRevenueWidget({
                     <Bar
                       dataKey="platformFees"
                       stackId="revenue"
-                      fill="#10b981"
+                      fill={ADMIN_CHART_THEME.series2}
                       name="Platform Fees"
                       radius={[0, 0, 0, 0]}
                     />
                     <Bar
                       dataKey="unallocatedFunds"
                       stackId="revenue"
-                      fill="#8b5cf6"
+                      fill={ADMIN_CHART_THEME.series3}
                       name="Unallocated Funds"
                       radius={[2, 2, 0, 0]}
                     />

@@ -7,6 +7,7 @@ import { useCompositePagesMetrics, useTotalPagesEverCreated } from '../../hooks/
 import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface NewPagesWidgetProps {
   dateRange: DateRange;
@@ -168,13 +169,13 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
               data={chartData}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis
                 dataKey="label"
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
@@ -182,12 +183,12 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 allowDecimals={false}
                 width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
-              <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="2 2" />
+              <ReferenceLine y={0} stroke="oklch(var(--border))" strokeDasharray="2 2" />
 
               {/* Pages Created (positive bars) */}
               {hasBreakdown ? (
@@ -195,7 +196,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
                   <Bar
                     dataKey="publicPagesCreated"
                     stackId="created"
-                    fill="#22c55e"
+                    fill={ADMIN_CHART_THEME.series2}
                     radius={[0, 0, 0, 0]}
                     className="hover:opacity-80 transition-opacity"
                     maxBarSize={60}
@@ -203,7 +204,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
                   <Bar
                     dataKey="privatePagesCreated"
                     stackId="created"
-                    fill="#16a34a"
+                    fill={ADMIN_CHART_THEME.series3}
                     radius={[2, 2, 0, 0]}
                     className="hover:opacity-80 transition-opacity"
                     maxBarSize={60}
@@ -212,7 +213,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
               ) : (
                 <Bar
                   dataKey="pagesCreated"
-                  fill="#22c55e"
+                  fill={ADMIN_CHART_THEME.series2}
                   radius={[2, 2, 0, 0]}
                   className="hover:opacity-80 transition-opacity"
                   maxBarSize={60}
@@ -222,7 +223,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
               {/* Pages Deleted (negative bars) */}
               <Bar
                 dataKey="pagesDeletedNegative"
-                fill="#ef4444"
+                fill={ADMIN_CHART_THEME.destructive}
                 radius={[0, 0, 2, 2]}
                 className="hover:opacity-80 transition-opacity"
                 maxBarSize={60}
@@ -241,21 +242,21 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
           </div>
           <div className="mt-2 flex gap-4 text-xs">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-sm bg-green-500"></div>
+              <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: ADMIN_CHART_THEME.series2 }}></div>
               <span>Pages Created</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-sm bg-red-500"></div>
+              <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: ADMIN_CHART_THEME.destructive }}></div>
               <span>Pages Deleted</span>
             </div>
             {hasBreakdown && (
               <>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-sm bg-green-600"></div>
+                  <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: ADMIN_CHART_THEME.series3 }}></div>
                   <span>Public Created</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-sm bg-green-700"></div>
+                  <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: ADMIN_CHART_THEME.series4 }}></div>
                   <span>Private Created</span>
                 </div>
               </>

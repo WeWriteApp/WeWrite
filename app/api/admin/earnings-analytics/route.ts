@@ -39,8 +39,10 @@ export async function GET(request: NextRequest) {
       const endDate = searchParams.get('endDate');
       const cumulative = searchParams.get('cumulative') === 'true';
       const status = searchParams.get('status') || 'all'; // 'pending', 'final', or 'all'
+      const granularityParam = parseInt(searchParams.get('granularity') || '', 10);
+      const requestedBuckets = Number.isFinite(granularityParam) && granularityParam > 0 ? granularityParam : null;
 
-      console.log(`[ADMIN] Earnings analytics request: ${startDate} to ${endDate}, cumulative: ${cumulative}, status: ${status}`);
+      console.log(`[ADMIN] Earnings analytics request: ${startDate} to ${endDate}, cumulative: ${cumulative}, status: ${status}, requestedBuckets: ${requestedBuckets ?? 'monthly-source'}`);
 
       if (!startDate || !endDate) {
         return NextResponse.json({
@@ -155,7 +157,9 @@ export async function GET(request: NextRequest) {
           totalWriters: uniqueWriters.size,
           period: `${startDate} to ${endDate}`,
           status,
-          cumulative
+          cumulative,
+          requestedBuckets,
+          sourceGranularity: 'monthly'
         }
       };
 

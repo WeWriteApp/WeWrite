@@ -103,7 +103,11 @@ export function AllocationAmountDisplay({
         {isDemoBalance && (
           <span className="text-muted-foreground font-normal">
             {" (Demo funds, "}
-            <Link href="/login" className="text-primary underline hover:text-primary/80">
+            <Link
+              href="/auth/login"
+              onClick={(event) => event.stopPropagation()}
+              className="text-primary underline hover:text-primary/80"
+            >
               log in
             </Link>
             {" to make it real!)"}

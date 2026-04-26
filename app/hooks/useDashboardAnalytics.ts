@@ -1286,7 +1286,7 @@ export interface DashboardBatchData {
   visitors: ChartDataPoint[];
   replies: { date: string; label: string; agree: number; disagree: number; neutral: number; total: number }[];
   links: ChartDataPoint[];
-  notifications: ChartDataPoint[];
+  notifications: { date: string; label: string; emails: number; pushNotifications: number; total: number; count: number }[];
   followedUsers: ChartDataPoint[];
   platformRevenue: any[];
   payouts: any[];
@@ -1309,7 +1309,7 @@ export interface DashboardBatchData {
  * @param dateRange - The date range to fetch analytics for
  * @returns All dashboard metrics in a single response
  */
-export function useDashboardAnalyticsBatch(dateRange: DateRange) {
+export function useDashboardAnalyticsBatch(dateRange: DateRange, granularity: number = 50) {
   const [data, setData] = useState<DashboardBatchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1333,7 +1333,8 @@ export function useDashboardAnalyticsBatch(dateRange: DateRange) {
 
       const params = new URLSearchParams({
         startDate: debouncedDateRange.startDate.toISOString(),
-        endDate: debouncedDateRange.endDate.toISOString()
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: Number.isFinite(granularity) && granularity > 0 ? Math.floor(granularity).toString() : '50'
       });
 
       const response = await adminFetch(`/api/admin/dashboard-analytics-batch?${params}`, {
@@ -1362,7 +1363,7 @@ export function useDashboardAnalyticsBatch(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();

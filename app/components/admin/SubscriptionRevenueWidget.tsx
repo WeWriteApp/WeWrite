@@ -7,6 +7,7 @@ import { useSubscriptionRevenue } from '../../hooks/usePaymentAnalytics';
 import { type DateRange } from '../../services/adminAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';
+import { ADMIN_CHART_THEME, chartAxisTick } from './chartTheme';
 
 interface SubscriptionRevenueWidgetProps {
   dateRange: DateRange;
@@ -135,15 +136,15 @@ export function SubscriptionRevenueWidget({
               data={chartData}
               margin={chartConfig.margins}
             >
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <CartesianGrid strokeDasharray="3 3" stroke={ADMIN_CHART_THEME.gridStroke} strokeOpacity={ADMIN_CHART_THEME.gridOpacity} />
               <XAxis 
                 dataKey="label"
-                tick={chartConfig.tickConfig}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 interval={chartConfig.interval}
                 tickFormatter={formatTickLabel}
               />
               <YAxis 
-                tick={chartConfig.tickConfig}
+                tick={chartAxisTick(chartConfig.tickConfig.fontSize)}
                 tickFormatter={(value) => formatCurrency(Math.abs(value))}
               />
               <Tooltip 
@@ -164,8 +165,8 @@ export function SubscriptionRevenueWidget({
                 }}
                 labelFormatter={(label) => `Period: ${label}`}
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
+                  backgroundColor: 'oklch(var(--background))',
+                  border: '1px solid oklch(var(--border))',
                   borderRadius: '6px'
                 }}
               />
@@ -173,24 +174,24 @@ export function SubscriptionRevenueWidget({
               {/* Bars for active revenue (positive) and cancelled revenue (negative) */}
               <Bar 
                 dataKey="activeRevenue" 
-                fill="hsl(var(--primary))" 
+                fill={ADMIN_CHART_THEME.series1}
                 name="Active Revenue"
                 radius={[2, 2, 0, 0]}
               />
               <Bar 
                 dataKey="cancelledRevenueNegative" 
-                fill="hsl(var(--destructive))" 
+                fill={ADMIN_CHART_THEME.destructive}
                 name="Lost Revenue"
                 radius={[0, 0, 2, 2]}
               />
               
               {/* Line for cumulative revenue */}
               <Line 
-                type="monotone" 
+                type="linear" 
                 dataKey="cumulativeRevenue" 
-                stroke="hsl(var(--chart-2))" 
+                stroke={ADMIN_CHART_THEME.series2}
                 strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-2))', strokeWidth: 2, r: 3 }}
+                dot={{ fill: ADMIN_CHART_THEME.series2, strokeWidth: 2, r: 3 }}
                 name="Cumulative Revenue"
               />
             </ComposedChart>
