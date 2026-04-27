@@ -53,7 +53,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const { formatDate } = useDateFormat();
   const { toast } = useToast();
   const { isEnabled } = useFeatureFlags();
-  const showUILabels = isEnabled('ui_labels');
   const showGroups = isEnabled('groups');
   const [isRestoring, setIsRestoring] = useState(false);
   const [showPageScoreBreakdown, setShowPageScoreBreakdown] = useState(false);
@@ -424,11 +423,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </div>
             </div>
           </TooltipTrigger>
-          {showUILabels && (
-            <TooltipContent side="top" className="text-xs">
-              Header Section: Page title, author/group, and timestamp
-            </TooltipContent>
-          )}
         </Tooltip>
 
         {/* Diff preview sub-card - chunked section */}
@@ -473,11 +467,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </div>
             </div>
           </TooltipTrigger>
-          {showUILabels && (
-            <TooltipContent side="top" className="text-xs">
-              Diff Section: Character additions/removals and content preview
-            </TooltipContent>
-          )}
         </Tooltip>
 
         {/* Restore button for activity context - only show if needed */}
@@ -508,11 +497,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 </div>
               </div>
             </TooltipTrigger>
-            {showUILabels && (
-              <TooltipContent side="top" className="text-xs">
-                Restore Section: Revert page to this version
-              </TooltipContent>
-            )}
           </Tooltip>
         )}
 
@@ -531,11 +515,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 />
               </div>
             </TooltipTrigger>
-            {showUILabels && (
-              <TooltipContent side="top" className="text-xs">
-                Allocation Section: Support this author with tokens
-              </TooltipContent>
-            )}
           </Tooltip>
         )}
       </TooltipProvider>
