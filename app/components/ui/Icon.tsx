@@ -203,6 +203,7 @@ import {
   LayoutTemplate,
   LogIn,
   Server,
+  Compass,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -280,7 +281,8 @@ export type IconName =
   | "SlidersHorizontal" | "Video" | "Camera" | "Mic" | "Volume2" | "PlayCircle" | "StopCircle"
   | "RectangleHorizontal" | "RectangleVertical" | "Package"
   | "BarChart2" | "CalendarDays" | "Columns3" | "FileCode" | "FileQuestion"
-  | "Gauge" | "GitBranch" | "LayoutTemplate" | "LogIn" | "Server";
+  | "Gauge" | "GitBranch" | "LayoutTemplate" | "LogIn" | "Server"
+  | "Compass";
 
 // Icon props interface
 export interface IconProps {
@@ -554,6 +556,7 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   LayoutTemplate: LayoutTemplate,
   LogIn: LogIn,
   Server: Server,
+  Compass: Compass,
 };
 
 /**

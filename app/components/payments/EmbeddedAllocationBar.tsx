@@ -337,7 +337,7 @@ export function EmbeddedAllocationBar({
           size="sm"
           variant="secondary"
           className={cn(
-            "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20",
+            "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:bg-secondary/70 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20",
             minusButtonPressed && "scale-95",
             minusButtonHovered && "bg-secondary/80"
           )}
@@ -402,7 +402,7 @@ export function EmbeddedAllocationBar({
           size="sm"
           variant="secondary"
           className={cn(
-            "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20",
+            "h-8 w-8 p-0 bg-secondary/50 hover:bg-secondary/80 active:bg-secondary/70 active:scale-95 transition-all duration-150 flex-shrink-0 border border-neutral-20",
             highlightPlusButton && "ring-4 ring-primary/40 animate-pulse border-primary",
             plusButtonPressed && "scale-95",
             plusButtonHovered && "bg-secondary/80"

@@ -15,7 +15,8 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle} from "../ui/dialog";
+  DialogTitle,
+  DialogBody} from "../ui/dialog";
 import LinkEditorModal from '../editor/LinkEditorModal';
 import { createPortal } from 'react-dom';
 import FilteredSearchResults from '../search/FilteredSearchResults';
@@ -356,7 +357,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="relative sm:max-w-md w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col"
+        className="relative sm:max-w-md w-[95vw] p-0"
         aria-describedby="add-to-page-modal-description"
         ref={modalRef}
         data-text-selection-modal
@@ -373,12 +374,11 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
           <Icon name="X" size={16} />
         </Button>
 
-        <div className="flex flex-col h-full min-h-0">
-          <DialogHeader className="px-4 pt-4 pb-2 flex-shrink-0">
-            <DialogTitle>Add selected text to page</DialogTitle>
-          </DialogHeader>
+        <DialogHeader className="px-4 pt-4 pb-2">
+          <DialogTitle>Add selected text to page</DialogTitle>
+        </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-4">
+        <DialogBody className="space-y-4">
             <div className="p-3 bg-muted rounded-lg">
               <p id="add-to-page-modal-description" className="text-sm text-muted-foreground mb-2">Selected text:</p>
               <p className="text-sm font-medium break-words whitespace-normal">"{selectedText}"</p>
@@ -458,8 +458,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, selectedH
                 </Button>
               </div>
             )}
-          </div>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

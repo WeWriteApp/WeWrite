@@ -429,7 +429,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                               handleAllocationChange(-allocationIntervalCents, e);
                             }}
                             className={cn(
-                              "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
+                              "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 active:bg-secondary/70 border border-neutral-20",
                               allocationState.currentAllocationCents <= 0 && "opacity-50",
                               isProcessing && "opacity-75"
                             )}
@@ -456,7 +456,7 @@ const AllocationBar = React.forwardRef<HTMLDivElement, AllocationBarProps>(({
                               handleAllocationChange(allocationIntervalCents, e);
                             }}
                             className={cn(
-                              "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 border border-neutral-20",
+                              "h-8 w-8 p-0 bg-secondary hover:bg-secondary/80 active:bg-secondary/70 border border-neutral-20",
                               compositionData.isOutOfFunds && "opacity-50",
                               isProcessing && "opacity-75"
                             )}

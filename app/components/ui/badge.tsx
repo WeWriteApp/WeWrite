@@ -27,7 +27,7 @@ const badgeVariants = cva(
         secondary:
           "border-transparent bg-neutral-10 text-foreground hover:alpha-10 active:alpha-15 hover:scale-[1.02] active:scale-[0.98] cursor-pointer",
         outline:
-          "border-neutral-20 text-foreground hover:bg-alpha-5 active:bg-alpha-10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer",
+          "border-neutral-20 text-foreground hover:alpha-5 active:alpha-10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer",
         destructive:
           "border-transparent bg-error text-white hover:alpha-10 active:alpha-15 hover:scale-[1.02] active:scale-[0.98] cursor-pointer",
         "destructive-secondary":

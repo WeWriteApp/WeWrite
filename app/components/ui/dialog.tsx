@@ -194,7 +194,7 @@ const DialogContent = React.forwardRef<
       aria-describedby={ariaDescribedBy}
       className={cn(
         // Position centered using inset + margin auto (avoids transform conflicts)
-        "fixed inset-0 z-[1101] flex flex-col w-[85%] max-w-lg m-auto h-fit rounded-2xl",
+        "fixed inset-0 z-[1101] flex flex-col w-[85%] max-w-lg m-auto h-fit max-h-[calc(100vh-3rem)] rounded-2xl",
         // Subtle slide up + fade animation
         "transition-all duration-200 ease-out",
         "data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out",

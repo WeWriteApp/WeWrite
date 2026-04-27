@@ -19,20 +19,20 @@ const buttonVariants = cva(
         "destructive-secondary":
           "bg-error-10 text-error hover:error-alpha-10 active:error-alpha-15 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-error", // Interactive light destructive with red tint hover
         "destructive-ghost":
-          "text-error hover:bg-error-10 hover:text-error active:bg-error-15 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-error", // Interactive ghost destructive
+          "text-error hover:bg-error-10 hover:text-error active:bg-error-20 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-error", // Interactive ghost destructive
         // Success variants using our success color system
         success:
           "bg-success text-white hover:alpha-10 active:alpha-15 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-success disabled:cursor-not-allowed", // Interactive success button
         "success-secondary":
           "bg-success-10 text-success hover:success-alpha-10 active:success-alpha-15 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-success", // Interactive light success with green tint hover
         "success-ghost":
-          "text-success hover:bg-success-10 hover:text-success active:bg-success-15 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-success", // Interactive ghost success
+          "text-success hover:bg-success-10 hover:text-success active:bg-success-20 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-success", // Interactive ghost success
 
         secondary:
           "bg-neutral-5 text-foreground hover:alpha-10 active:alpha-15 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-neutral-40 disabled:cursor-not-allowed", // Interactive secondary with subtle neutral fill
         outline:
-          "border border-neutral-20 text-foreground hover:bg-alpha-5 active:bg-alpha-10 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-neutral-40 disabled:cursor-not-allowed", // Interactive outline with border
-        ghost: "hover:bg-alpha-5 active:bg-alpha-10 hover:text-foreground hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-muted disabled:cursor-not-allowed", // Interactive ghost
+          "border border-neutral-20 text-foreground hover:alpha-5 active:alpha-10 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-neutral-40 disabled:cursor-not-allowed", // Interactive outline with border
+        ghost: "hover:alpha-5 active:alpha-10 hover:text-foreground hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-muted disabled:cursor-not-allowed", // Interactive ghost
         link: "text-primary underline-offset-4 hover:underline active:text-primary/60 hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-primary disabled:cursor-not-allowed"},
       size: {
         default: "h-10 px-4 py-2 [&_svg]:size-4",

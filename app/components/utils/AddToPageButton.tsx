@@ -299,7 +299,6 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       >
         {/* Tappable area to dismiss keyboard - clicking here blurs any focused input */}
         <div
-          className="flex-1 min-h-0 overflow-hidden flex flex-col"
           onMouseDown={(e) => {
             // If user taps on the container (not on an interactive element), blur active element to dismiss keyboard
             const target = e.target as HTMLElement;
@@ -317,24 +316,22 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
             </div>
           ) : (
             <>
-              <div className="flex-1 min-h-0 overflow-auto">
-                <FilteredSearchResults
-                  onSelect={handlePageSelect}
-                  userId={user?.uid}
-                  placeholder="Search your pages..."
-                  editableOnly={true}
-                  preventRedirect={true}
-                  autoFocus={false}
-                  hideCreateButton={true}
-                  currentPageId={page?.id}
-                  maxResults={50}
-                  onInputChange={(value: string) => setSearchQuery(value)}
-                />
-              </div>
+              <FilteredSearchResults
+                onSelect={handlePageSelect}
+                userId={user?.uid}
+                placeholder="Search your pages..."
+                editableOnly={true}
+                preventRedirect={true}
+                autoFocus={false}
+                hideCreateButton={true}
+                currentPageId={page?.id}
+                maxResults={50}
+                onInputChange={(value: string) => setSearchQuery(value)}
+              />
 
               {/* Create new page button - shown when user types a search query */}
               {searchQuery.trim().length >= 2 && (
-                <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
+                <div className="pt-4 border-t border-border mt-4">
                   <Button
                     variant="secondary"
                     className="w-full justify-center gap-2"
