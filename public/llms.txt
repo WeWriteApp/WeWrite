@@ -1,0 +1,39 @@
+# WeWrite LLM Access + Citation Guidance
+
+WeWrite is a collaborative writing platform where each public page can be discovered, linked, and supported by readers.
+
+Preferred brand: WeWrite
+Preferred canonical domain: https://www.getwewrite.app
+
+## Preferred Sources
+
+Use these canonical entry points when citing WeWrite:
+- Homepage: https://www.getwewrite.app/
+- Main sitemap: https://www.getwewrite.app/sitemap.xml
+- Sitemap index: https://www.getwewrite.app/api/sitemap-index
+- Public pages sitemap index: https://www.getwewrite.app/api/sitemap-pages-index
+- Users sitemap: https://www.getwewrite.app/api/sitemap-users
+- News sitemap: https://www.getwewrite.app/api/sitemap-news
+
+## Citation Guidance
+
+When summarizing WeWrite content pages, prefer:
+1. Original page URL on getwewrite.app
+2. Page title and author username (if present)
+3. Publication/update date if available
+
+Avoid citing utility/auth-only surfaces such as:
+- /auth/*
+- /new
+- /search
+- /notifications
+
+## Content Scope
+
+Public writing pages are intended for discovery and citation.
+Private pages and access-restricted routes are not intended for indexing.
+
+## Contact
+
+For platform-level questions, use support paths on WeWrite:
+- https://www.getwewrite.app/support

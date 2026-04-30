@@ -214,7 +214,7 @@ export async function generateSitemapIndex(): Promise<string> {
 
   const sitemaps = [
     { url: `${baseUrl}/sitemap.xml`, lastmod: new Date().toISOString() },
-    { url: `${baseUrl}/api/sitemap-pages`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/api/sitemap-pages-index`, lastmod: new Date().toISOString() },
     { url: `${baseUrl}/api/sitemap-users`, lastmod: new Date().toISOString() },
     { url: `${baseUrl}/api/sitemap-news`, lastmod: new Date().toISOString() }
   ]
@@ -229,6 +229,77 @@ export async function generateSitemapIndex(): Promise<string> {
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${xmlEntries}
 </sitemapindex>`
+}
+
+export async function generatePagesSitemapIndex(options: {
+  batchSize?: number
+  maxSitemaps?: number
+} = {}): Promise<string> {
+  const { batchSize = 1000, maxSitemaps = 20 } = options
+  const safeBatchSize = Math.min(Math.max(batchSize, 100), 2000)
+  const safeMaxSitemaps = Math.min(Math.max(maxSitemaps, 1), 100)
+  const baseUrl = 'https://www.getwewrite.app'
+  const pagesRef = collection(firestore, getCollectionName('pages'))
+
+  const sitemapUrls: string[] = [
+    `${baseUrl}/api/sitemap-pages?limit=${safeBatchSize}`
+  ]
+
+  try {
+    let boundaryDocId: string | null = null
+
+    for (let i = 1; i < safeMaxSitemaps; i++) {
+      const queryConstraints: any[] = [
+        where('isPublic', '==', true),
+        orderBy('lastModified', 'desc'),
+      ]
+
+      if (boundaryDocId) {
+        const boundaryDoc = await getDoc(doc(pagesRef, boundaryDocId))
+        if (!boundaryDoc.exists()) {
+          break
+        }
+        queryConstraints.push(startAfter(boundaryDoc))
+      }
+
+      queryConstraints.push(limit(safeBatchSize))
+
+      const batchQuery = query(pagesRef, ...queryConstraints)
+      const snapshot = await getDocs(batchQuery)
+
+      if (snapshot.empty) {
+        break
+      }
+
+      const lastVisible = snapshot.docs[snapshot.docs.length - 1]
+      boundaryDocId = lastVisible.id
+
+      // If this is not the first batch, expose a cursor-based sitemap URL.
+      sitemapUrls.push(
+        `${baseUrl}/api/sitemap-pages?limit=${safeBatchSize}&cursor=${encodeURIComponent(boundaryDocId)}`
+      )
+
+      // Stop early when final batch is smaller than requested size.
+      if (snapshot.size < safeBatchSize) {
+        break
+      }
+    }
+
+    const lastmod = new Date().toISOString()
+    const xmlEntries = sitemapUrls.map((url) => `
+  <sitemap>
+    <loc>${url}</loc>
+    <lastmod>${lastmod}</lastmod>
+  </sitemap>`).join('')
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${xmlEntries}
+</sitemapindex>`
+  } catch (error) {
+    console.error('Error generating pages sitemap index:', error)
+    throw error
+  }
 }
 
 export async function generateNewsSitemap(options: SitemapOptions = {}): Promise<string> {

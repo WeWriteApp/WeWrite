@@ -2,6 +2,14 @@
 
 This document describes WeWrite's SEO strategy for user-generated content (UGC) - ensuring pages created by users are properly indexed by search engines.
 
+## Latest Audit Reference
+
+For the latest end-to-end findings and prioritized remediation plan, see:
+
+- `docs/seo/SEO_GEO_AUDIT_2026-04-29.md`
+
+That audit includes technical SEO fixes applied on April 29, 2026 (private-page indexing hardening, utility-route noindex directives, and sitemap-index route correction), plus a GEO readiness plan.
+
 ## Current Implementation Status
 
 ### What's Working Well
@@ -24,12 +32,13 @@ This document describes WeWrite's SEO strategy for user-generated content (UGC) 
 
 #### 3. Sitemaps (`app/utils/sitemapGenerator.ts`)
 - **Main sitemap** (`/sitemap.xml`): Static pages and navigation (app/sitemap.ts)
-- **Pages sitemap** (`/api/sitemap-pages`): All public user pages (up to 5,000)
+- **Pages sitemap index** (`/api/sitemap-pages-index`): Cursor-paginated index for public page sitemap batches
+- **Pages sitemap** (`/api/sitemap-pages`): Public user page chunks referenced by the pages sitemap index
 - **Users sitemap** (`/api/sitemap-users`): Active user profiles
 - **News sitemap** (`/api/sitemap-news`): Recent content (configurable via `?days=N`, default: last 2 days)
 - **Sitemap index** (`/api/sitemap-index`): Aggregates all sitemaps
 
-**Important**: The `/sitemap.xml` file only contains static pages. Dynamic content pages are served via `/api/sitemap-pages`. Pages disallowed in robots.txt (e.g., `/search`, `/activity`) are excluded from the sitemap.
+**Important**: The `/sitemap.xml` file only contains static pages. Dynamic content pages are served via `/api/sitemap-pages-index` and `/api/sitemap-pages`. Pages disallowed in robots.txt (e.g., `/search`, `/activity`) are excluded from the sitemap.
 
 Priority is dynamic based on view count:
 - >1000 views: 0.8
@@ -42,6 +51,11 @@ Priority is dynamic based on view count:
 - Blocks private areas: `/admin/`, `/settings/`, `/notifications/`, `?edit=true`, `?private=true`
 - Includes all sitemap references
 - Sets `crawlDelay: 1` to be respectful to crawlers
+
+#### 7. LLM Crawler Guidance (`public/llms.txt`, `public/llms-full.txt`)
+- Provides canonical domain and citation guidance for AI systems
+- Points crawlers to primary sitemap and sitemap index endpoints
+- Clarifies utility/auth surfaces to avoid citing for content discovery
 
 #### 5. OpenGraph Images (`app/[id]/opengraph-image.tsx`)
 - Dynamic OG image generation for each page
@@ -188,9 +202,13 @@ curl https://www.getwewrite.app/{pageId} | grep -i "page content text"
 | `app/sitemap.ts` | Static pages sitemap |
 | `app/robots.ts` | Crawler directives |
 | `app/utils/sitemapGenerator.ts` | Dynamic sitemap generation |
+| `app/api/sitemap-pages-index/route.ts` | Cursor-paginated pages sitemap index |
 | `app/api/sitemap-pages/route.ts` | Pages sitemap API |
 | `app/api/sitemap-users/route.ts` | Users sitemap API |
 | `app/api/sitemap-news/route.ts` | News sitemap API |
+| `public/llms.txt` | LLM crawler citation guidance |
+| `public/llms-full.txt` | Extended GEO guidance |
+| `scripts/seo-audit.js` | Repeatable SEO/GEO health checks |
 
 ## Monitoring
 

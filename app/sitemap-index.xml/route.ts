@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.getwewrite.app'
   const currentDate = new Date().toISOString()
 
   const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
@@ -13,7 +13,7 @@ export async function GET() {
     <lastmod>${currentDate}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${baseUrl}/api/sitemap-pages</loc>
+    <loc>${baseUrl}/api/sitemap-pages-index</loc>
     <lastmod>${currentDate}</lastmod>
   </sitemap>
   <sitemap>
@@ -21,7 +21,7 @@ export async function GET() {
     <lastmod>${currentDate}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${baseUrl}/api/sitemap-groups</loc>
+    <loc>${baseUrl}/api/sitemap-news</loc>
     <lastmod>${currentDate}</lastmod>
   </sitemap>
 </sitemapindex>`

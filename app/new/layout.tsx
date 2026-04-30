@@ -6,7 +6,11 @@ interface LayoutProps {
 
 export const metadata: Metadata = {
   title: 'WeWrite - Create New Page',
-  description: 'Create a new collaborative writing page'
+  description: 'Create a new collaborative writing page',
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 export default function NewPageLayout({ children }: LayoutProps) {

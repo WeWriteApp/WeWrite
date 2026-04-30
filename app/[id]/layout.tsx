@@ -126,6 +126,8 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
       // Use the file-based OG image convention - Next.js generates this from opengraph-image.tsx
       const imageUrl = `${baseUrl}/${id}/opengraph-image`;
 
+      const isIndexable = metadata.isPublic !== false && metadata.visibility !== 'private' && metadata.deleted !== true;
+
       return {
         title: formattedTitle,
         description: description,
@@ -137,10 +139,10 @@ export async function generateMetadata({ params }: GenerateMetadataProps): Promi
           canonical: canonicalUrl
         },
         robots: {
-          index: metadata.isPublic !== false,
+          index: isIndexable,
           follow: true,
           googleBot: {
-            index: metadata.isPublic !== false,
+            index: isIndexable,
             follow: true,
             'max-video-preview': -1,
             'max-image-preview': 'large',

@@ -22,6 +22,7 @@ export default function robots(): MetadataRoute.Robots {
           '/featured',
           '/api/og/',
           '/api/sitemap-pages',
+          '/api/sitemap-pages-index',
           '/api/sitemap-users',
           '/api/sitemap-index'
         ],
@@ -46,6 +47,7 @@ export default function robots(): MetadataRoute.Robots {
     sitemap: [
       `${baseUrl}/sitemap.xml`,
       `${baseUrl}/api/sitemap-pages`,
+      `${baseUrl}/api/sitemap-pages-index`,
       `${baseUrl}/api/sitemap-users`,
       `${baseUrl}/api/sitemap-index`
     ]

@@ -3,6 +3,10 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Notifications',
   description: 'View your notifications and updates on WeWrite.',
+  robots: {
+    index: false,
+    follow: true,
+  },
 };
 
 export default function NotificationsLayout({

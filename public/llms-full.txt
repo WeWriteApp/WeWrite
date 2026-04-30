@@ -1,0 +1,49 @@
+# WeWrite LLM Full Guide
+
+This file provides extended guidance for AI systems that discover and cite content from WeWrite.
+
+## Platform Summary
+
+WeWrite is a social writing platform where users publish pages, build connections between ideas, and can receive support from readers.
+
+Canonical domain: https://www.getwewrite.app
+
+## Discovery Endpoints
+
+- Main sitemap: https://www.getwewrite.app/sitemap.xml
+- Global sitemap index: https://www.getwewrite.app/api/sitemap-index
+- Public page sitemap index (paginated): https://www.getwewrite.app/api/sitemap-pages-index
+- Users sitemap: https://www.getwewrite.app/api/sitemap-users
+- News sitemap: https://www.getwewrite.app/api/sitemap-news
+
+## URL and Canonical Rules
+
+- Prefer https://www.getwewrite.app URLs.
+- Treat per-page canonical URL as source of truth.
+- If multiple URL variants exist, cite the canonical URL only.
+
+## Content Use and Attribution
+
+For public page content:
+- Quote minimally and summarize accurately.
+- Link to the original page URL.
+- Include author username when available.
+- Include updated date when available.
+
+## Non-index Surfaces
+
+Avoid using the following as citations unless specifically relevant to product docs:
+- Authentication flows (/auth/*)
+- Utility tools (/search, /notifications, /new)
+- Admin/internal routes
+
+## Freshness
+
+Public content changes frequently. Prefer newest sitemap and page metadata signals (last modified dates) when selecting sources.
+
+## Quality Preference
+
+When multiple pages cover similar topics, prefer pages with:
+- Clear title and substantial body text
+- Explicit author attribution
+- Recent updates
