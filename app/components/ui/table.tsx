@@ -2,6 +2,20 @@ import * as React from "react"
 
 import { cn } from "../../lib/utils"
 
+type TableValueKind = "text" | "number" | "currency"
+type TableAlign = "left" | "center" | "right"
+
+function getAlignmentClass(kind: TableValueKind, align?: TableAlign, isHeader?: boolean) {
+  if (align) {
+    if (align === "right") return "text-right"
+    if (align === "center") return "text-center"
+    return "text-left"
+  }
+
+  if (isHeader) return "text-left"
+  return kind === "number" || kind === "currency" ? "text-right" : "text-left"
+}
+
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement> & { responsive?: boolean }
@@ -30,11 +44,15 @@ TableHeader.displayName = "TableHeader"
 
 const TableBody = React.forwardRef<
   HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableSectionElement> & { striped?: boolean }
+>(({ className, striped, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn("[&_tr:last-child]:border-0", className)}
+    className={cn(
+      "[&_tr:last-child]:border-0",
+      striped && "[&>tr:nth-child(even)]:bg-muted/25",
+      className
+    )}
     {...props}
   />
 ))
@@ -73,12 +91,13 @@ TableRow.displayName = "TableRow"
 
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & { kind?: TableValueKind; align?: TableAlign }
+>(({ className, kind = "text", align, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      "h-12 px-4 align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 border-r border-border/30 last:border-r-0",
+      getAlignmentClass(kind, align, true),
       className
     )}
     {...props}
@@ -91,13 +110,18 @@ const TableCell = React.forwardRef<
   React.TdHTMLAttributes<HTMLTableCellElement> & {
     responsive?: boolean;
     label?: string;
+    kind?: TableValueKind;
+    align?: TableAlign;
   }
->(({ className, responsive = true, label, ...props }, ref) => (
+>(({ className, responsive = true, label, kind = "text", align, ...props }, ref) => (
   <td
     ref={ref}
     className={cn(
-      "p-4 align-middle [&:has([role=checkbox])]:pr-0",
-      responsive && "md:table-cell sm:block sm:text-left",
+      "p-4 align-middle [&:has([role=checkbox])]:pr-0 border-r border-border/20 last:border-r-0",
+      getAlignmentClass(kind, align),
+      (kind === "number" || kind === "currency") && "tabular-nums",
+      responsive && "md:table-cell sm:block",
+      responsive && kind === "text" && !align && "sm:text-left",
       className
     )}
     data-label={responsive ? label : undefined}

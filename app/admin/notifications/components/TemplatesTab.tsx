@@ -1,12 +1,4 @@
-'use client';
-
-import React from 'react';
-import { Icon } from '@/components/ui/Icon';
-import { Badge } from '../../../components/ui/badge';
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
-import { UsernameBadge } from '../../../components/ui/UsernameBadge';
-import type { NotificationFlowItem } from '../config/notificationFlow';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../../components/ui/table';
 
 interface TemplatesTabProps {
   searchQuery: string;
@@ -97,20 +89,20 @@ export function TemplatesTab({
 
       {/* Dense Template Table - Ordered by User Journey */}
       <div className="wewrite-card p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground w-8">#</th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground">Template</th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Stage</th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden lg:table-cell">Trigger</th>
-              <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden xl:table-cell">Blocked By</th>
-              <th className="text-center px-3 py-2 font-medium text-muted-foreground w-24">Channels</th>
-              <th className="text-center px-3 py-2 font-medium text-muted-foreground w-20">Status</th>
-              <th className="text-right px-3 py-2 font-medium text-muted-foreground w-24 hidden sm:table-cell">Upcoming</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+        <Table className="w-full text-sm">
+          <TableHeader>
+            <TableRow className="border-b border-border bg-muted/30">
+              <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground w-8">#</TableHead>
+              <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Template</TableHead>
+              <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Stage</TableHead>
+              <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground hidden lg:table-cell">Trigger</TableHead>
+              <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground hidden xl:table-cell">Blocked By</TableHead>
+              <TableHead className="text-center px-3 py-2 font-medium text-muted-foreground w-24">Channels</TableHead>
+              <TableHead className="text-center px-3 py-2 font-medium text-muted-foreground w-20">Status</TableHead>
+              <TableHead className="px-3 py-2 font-medium text-muted-foreground w-24 hidden sm:table-cell">Upcoming</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-border">
             {filteredItems.map((item) => {
               const status = triggerStatus[item.id];
               const modes = notificationModes[item.id] || { email: false, inApp: false, push: false };
@@ -123,17 +115,17 @@ export function TemplatesTab({
 
               return (
                 <React.Fragment key={item.id}>
-                  <tr
+                  <TableRow
                     className={`hover:bg-muted/20 cursor-pointer transition-colors ${isExpanded ? 'bg-muted/10' : ''}`}
                     onClick={() => onTemplateDetails(item.id)}
                   >
                     {/* Order Number */}
-                    <td className="px-3 py-2 text-muted-foreground font-mono text-xs">
+                    <TableCell className="px-3 py-2 text-muted-foreground font-mono text-xs">
                       {item.order}
-                    </td>
+                    </TableCell>
 
                     {/* Template Name & Description */}
-                    <td className="px-3 py-2">
+                    <TableCell className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{item.name}</span>
                         {item.isAutomated && (
@@ -143,17 +135,17 @@ export function TemplatesTab({
                       <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                         {item.description}
                       </p>
-                    </td>
+                    </TableCell>
 
                     {/* Stage */}
-                    <td className="px-3 py-2 hidden md:table-cell">
+                    <TableCell className="px-3 py-2 hidden md:table-cell">
                       <span className={`text-xs font-medium ${config.color}`}>
                         {config.label}
                       </span>
-                    </td>
+                    </TableCell>
 
                     {/* Trigger */}
-                    <td className="px-3 py-2 text-xs text-muted-foreground hidden lg:table-cell">
+                    <TableCell className="px-3 py-2 text-xs text-muted-foreground hidden lg:table-cell">
                       {item.isAutomated ? (
                         <span className="flex items-center gap-1">
                           <Icon name="RefreshCw" size={10} />
@@ -165,10 +157,10 @@ export function TemplatesTab({
                           {item.triggerEvent}
                         </span>
                       ) : '—'}
-                    </td>
+                    </TableCell>
 
                     {/* Blocked By */}
-                    <td className="px-3 py-2 text-xs hidden xl:table-cell">
+                    <TableCell className="px-3 py-2 text-xs hidden xl:table-cell">
                       {item.blockedBy && item.blockedBy.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {item.blockedBy.map((blocker) => (
@@ -198,10 +190,10 @@ export function TemplatesTab({
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
-                    </td>
+                    </TableCell>
 
                     {/* Channels */}
-                    <td className="px-3 py-2">
+                    <TableCell className="px-3 py-2">
                       <div className="flex items-center justify-center gap-1.5">
                         <Icon
                           name="Mail"
@@ -219,10 +211,10 @@ export function TemplatesTab({
                           className={modes.push ? 'text-purple-500' : 'text-gray-300 dark:text-gray-600'}
                         />
                       </div>
-                    </td>
+                    </TableCell>
 
                     {/* Status */}
-                    <td className="px-3 py-2 text-center">
+                    <TableCell className="px-3 py-2 text-center">
                       {status?.status === 'active' && (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 text-xs">
                           Active
@@ -243,10 +235,10 @@ export function TemplatesTab({
                           Unknown
                         </Badge>
                       )}
-                    </td>
+                    </TableCell>
 
                     {/* Upcoming */}
-                    <td className="px-3 py-2 text-right hidden sm:table-cell">
+                    <TableCell kind="number" className="px-3 py-2 hidden sm:table-cell">
                       {upcomingCount > 0 && cronData ? (
                         <button
                           onClick={(e) => {
@@ -265,8 +257,8 @@ export function TemplatesTab({
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
 
                   {/* Expanded upcoming recipients sub-table */}
                   {isExpanded && upcomingRecipients.length > 0 && (() => {
@@ -276,8 +268,8 @@ export function TemplatesTab({
                     const remainingCount = upcomingRecipients.length - currentLimit;
 
                     return (
-                      <tr className="bg-muted/5">
-                        <td colSpan={8} className="px-0 py-0">
+                      <TableRow className="bg-muted/5">
+                        <TableCell colSpan={8} className="px-0 py-0">
                           <div className="border-l-4 border-orange-400 dark:border-orange-600 ml-3 my-2">
                             <div className="px-4 py-2">
                               {/* Header with schedule info and bulk actions */}
@@ -452,19 +444,19 @@ export function TemplatesTab({
 
                               {/* Recipients table */}
                               <div className="bg-background rounded border border-border overflow-hidden">
-                                <table className="w-full text-xs">
-                                  <thead>
-                                    <tr className="border-b border-border bg-muted/30">
-                                      <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">User</th>
-                                      <th className="text-left px-3 py-1.5 font-medium text-muted-foreground hidden sm:table-cell">Email</th>
-                                      <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Reason</th>
-                                      <th className="text-right px-3 py-1.5 font-medium text-muted-foreground w-20">Actions</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-border">
+                                <Table className="w-full text-xs">
+                                  <TableHeader>
+                                    <TableRow className="border-b border-border bg-muted/30">
+                                      <TableHead className="text-left px-3 py-1.5 font-medium text-muted-foreground">User</TableHead>
+                                      <TableHead className="text-left px-3 py-1.5 font-medium text-muted-foreground hidden sm:table-cell">Email</TableHead>
+                                      <TableHead className="text-left px-3 py-1.5 font-medium text-muted-foreground">Reason</TableHead>
+                                      <TableHead className="px-3 py-1.5 font-medium text-muted-foreground w-20">Actions</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody className="divide-y divide-border">
                                     {displayedRecipients.map((recipient: any, idx: number) => (
-                                      <tr key={recipient.userId || recipient.email || idx} className="hover:bg-muted/20">
-                                        <td className="px-3 py-1.5">
+                                      <TableRow key={recipient.userId || recipient.email || idx} className="hover:bg-muted/20">
+                                        <TableCell className="px-3 py-1.5">
                                           {recipient.userId && recipient.username ? (
                                             <UsernameBadge
                                               userId={recipient.userId}
@@ -489,14 +481,14 @@ export function TemplatesTab({
                                           ) : (
                                             <span className="text-muted-foreground">—</span>
                                           )}
-                                        </td>
-                                        <td className="px-3 py-1.5 text-muted-foreground truncate max-w-[180px] hidden sm:table-cell">
+                                        </TableCell>
+                                        <TableCell className="px-3 py-1.5 text-muted-foreground truncate max-w-[180px] hidden sm:table-cell">
                                           {recipient.email}
-                                        </td>
-                                        <td className="px-3 py-1.5 text-muted-foreground max-w-[200px]">
+                                        </TableCell>
+                                        <TableCell className="px-3 py-1.5 text-muted-foreground max-w-[200px]">
                                           {recipient.reason || '—'}
-                                        </td>
-                                        <td className="px-3 py-1.5 text-right">
+                                        </TableCell>
+                                        <TableCell className="px-3 py-1.5">
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
@@ -507,11 +499,11 @@ export function TemplatesTab({
                                             <Icon name="Eye" size={12} />
                                             Preview
                                           </button>
-                                        </td>
-                                      </tr>
+                                        </TableCell>
+                                      </TableRow>
                                     ))}
-                                  </tbody>
-                                </table>
+                                  </TableBody>
+                                </Table>
 
                                 {/* Pagination / Load more */}
                                 {hasMore && (
@@ -532,15 +524,15 @@ export function TemplatesTab({
                               </div>
                             </div>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })()}
                 </React.Fragment>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {/* Empty state */}
         {filteredItems.length === 0 && (

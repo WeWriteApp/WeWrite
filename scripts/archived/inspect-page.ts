@@ -4,10 +4,8 @@
 import { config } from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables from multiple files
+// Load environment variables from the single local env file
 config({ path: path.resolve(process.cwd(), '.env.local') });
-config({ path: path.resolve(process.cwd(), '.env.development') });
-config({ path: path.resolve(process.cwd(), '.env') });
 
 import * as admin from 'firebase-admin';
 

@@ -3,7 +3,7 @@
  * End-to-end testing for creator earnings, payout processing, and Stripe Connect integration
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/jest';
+import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName } from '../utils/environmentConfig';
 import { PayoutService, payoutService } from '../services/payoutService';

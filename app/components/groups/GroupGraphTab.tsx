@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Icon } from '@/components/ui/Icon';
@@ -8,6 +8,7 @@ import EmptyState from '../ui/EmptyState';
 import { Button } from '../ui/button';
 import { PillLink } from '../utils/PillLink';
 import { Drawer, DrawerContent, DrawerClose } from '../ui/drawer';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../ui/table';
 
 const UserGraph3D = dynamic(() => import('../utils/UserGraph3D'), {
   ssr: false,
@@ -217,10 +218,10 @@ export default function GroupGraphTab({ groupId, groupName }: GroupGraphTabProps
             Pages ({nodes.length})
           </h3>
           <div className="border border-border rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50 border-b border-border">
-                  <th className="text-left px-4 py-2 font-medium">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow className="bg-muted/50 border-b border-border">
+                  <TableHead className="text-left px-4 py-2 font-medium">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleSort('title'); }}
                       className="flex items-center gap-1 hover:text-foreground transition-colors"
@@ -230,29 +231,29 @@ export default function GroupGraphTab({ groupId, groupName }: GroupGraphTabProps
                         sortDirection === 'asc' ? <Icon name="ArrowUp" size={12} /> : <Icon name="ArrowDown" size={12} />
                       )}
                     </button>
-                  </th>
-                  <th className="text-right px-4 py-2 font-medium w-20 whitespace-nowrap">
+                  </TableHead>
+                  <TableHead className="px-4 py-2 font-medium w-20 whitespace-nowrap">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleSort('links'); }}
-                      className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors whitespace-nowrap"
+                      className="flex items-center gap-1 hover:text-foreground transition-colors whitespace-nowrap"
                     >
                       Links
                       {sortField === 'links' && (
                         sortDirection === 'desc' ? <Icon name="ArrowDown" size={12} /> : <Icon name="ArrowUp" size={12} />
                       )}
                     </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sortedNodes.map((node) => (
-                  <tr
+                  <TableRow
                     key={node.id}
                     className={`border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors ${
                       node.isOrphan ? 'text-muted-foreground' : ''
                     }`}
                   >
-                    <td className="px-4 py-2">
+                    <TableCell className="px-4 py-2">
                       <PillLink
                         href={`/${node.id}`}
                         pageId={node.id}
@@ -260,19 +261,19 @@ export default function GroupGraphTab({ groupId, groupName }: GroupGraphTabProps
                       >
                         {node.title}
                       </PillLink>
-                    </td>
-                    <td className="text-right px-4 py-2 tabular-nums">
+                    </TableCell>
+                    <TableCell kind="number" className="px-4 py-2">
                       <span className={`inline-flex items-center gap-1 ${
                         node.isOrphan ? 'text-muted-foreground/50' : 'text-muted-foreground'
                       }`}>
                         <Icon name="Link2" size={12} />
                         {node.connectionCount || 0}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       </div>

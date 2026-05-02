@@ -224,8 +224,8 @@ export default function UsersPageClient() {
             <TableHeader>
               <TableRow>
                 <TableHead>Username</TableHead>
-                <TableHead className="text-right cursor-pointer" onClick={toggleSortDirection}>
-                  <div className="flex items-center justify-end gap-1">
+                <TableHead className="cursor-pointer" onClick={toggleSortDirection}>
+                  <div className="flex items-center gap-1">
                     Pages
                     {sortDirection === "desc" ? (
                       <Icon name="ChevronDown" size={16} />
@@ -264,7 +264,7 @@ export default function UsersPageClient() {
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell kind="number" className="font-medium">
                     {user.pageCount}
                   </TableCell>
                   <TableCell>

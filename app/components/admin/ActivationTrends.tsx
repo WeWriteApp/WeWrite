@@ -11,6 +11,7 @@ import {
   Cell,
 } from 'recharts';
 import { Icon } from '@/components/ui/Icon';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../ui/table';
 
 interface ActivationTrendsProps {
   users: Array<{
@@ -203,29 +204,29 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
       <div className="px-4 py-3 border-b border-border bg-muted/30">
         <h3 className="text-sm font-semibold text-foreground">Activation Aggregates</h3>
       </div>
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-border bg-muted/30">
-            <th className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <Table className="w-full">
+        <TableHeader>
+          <TableRow className="border-b border-border bg-muted/30">
+            <TableHead className="text-left p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Milestone
-            </th>
-            <th className="text-right p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">
+            </TableHead>
+            <TableHead className="p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">
               Rate
-            </th>
-            <th className="text-right p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">
+            </TableHead>
+            <TableHead className="p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">
               Users
-            </th>
-            <th className="p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-12">
+            </TableHead>
+            <TableHead className="p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-12">
               {/* Pie chart column - no header */}
-            </th>
-            <th className="p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[100px]">
+            </TableHead>
+            <TableHead className="p-3 text-xs font-medium text-muted-foreground uppercase tracking-wider w-[100px]">
               Trend
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {orderedRows.map((row) => (
-            <tr
+            <TableRow
               key={row.milestone}
               className={`border-b border-border last:border-b-0 transition-colors ${
                 row.isChild ? 'bg-muted/10' : ''
@@ -235,7 +236,7 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = row.isChild ? 'oklch(var(--muted) / 0.1)' : ''}
             >
               {/* Milestone name with icon */}
-              <td className="p-3">
+              <TableCell className="p-3">
                 <div className={`flex items-center gap-3 ${row.isChild ? 'pl-6' : ''}`}>
                   <div
                     className={`flex items-center justify-center flex-shrink-0 rounded ${
@@ -253,25 +254,25 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
                     {row.label}
                   </span>
                 </div>
-              </td>
+              </TableCell>
 
               {/* Percentage */}
-              <td className="p-3 text-right">
+              <TableCell kind="number" className="p-3">
                 <span
                   className={`font-bold ${row.isChild ? 'text-base' : 'text-lg'}`}
                   style={{ color: row.color }}
                 >
                   {row.displayPercent}%
                 </span>
-              </td>
+              </TableCell>
 
               {/* User count */}
-              <td className="p-3 text-right text-sm text-muted-foreground">
+              <TableCell kind="number" className="p-3 text-sm text-muted-foreground">
                 {row.count.toLocaleString()}
-              </td>
+              </TableCell>
 
               {/* Mini pie chart */}
-              <td className="p-2">
+              <TableCell className="p-2">
                 <div className={`mx-auto ${row.isChild ? 'w-8 h-8' : 'w-10 h-10'}`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -296,10 +297,10 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-              </td>
+              </TableCell>
 
               {/* Area chart trend */}
-              <td className="p-2">
+              <TableCell className="p-2">
                 <div className={`${row.isChild ? 'h-6' : 'h-8'}`}>
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
@@ -336,11 +337,11 @@ export function ActivationTrends({ users, milestones, milestoneLabels }: Activat
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

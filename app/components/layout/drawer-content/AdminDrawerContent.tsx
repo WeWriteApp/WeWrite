@@ -38,6 +38,7 @@ const AdminPages: Record<string, React.LazyExoticComponent<React.ComponentType<a
   'emails': lazy(() => import('../../../admin/emails/page')),
   'payout-validation': lazy(() => import('../../../admin/payout-validation/page')),
   'financial-tests': lazy(() => import('../../../admin/financial-tests/page')),
+  'writer-payouts': lazy(() => import('../../../admin/writer-payouts/page')),
   'print-preview': lazy(() => import('../../../admin/print-preview/page')),
 };
 

@@ -1,7 +1,4 @@
-import React from 'react';
-import { Icon } from '@/components/ui/Icon';
-import { formatUsdCents } from '../../../utils/formatCurrency';
-import type { MonthlyFinancialData, FinancialsResponse } from '../types';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../../components/ui/table';
 
 interface HistoricalDataProps {
   historicalData: MonthlyFinancialData[];
@@ -26,51 +23,51 @@ export function HistoricalData({ historicalData, totals, formatMonth }: Historic
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-2">Month</th>
-                  <th className="text-right py-3 px-2">Subscriptions</th>
-                  <th className="text-right py-3 px-2">Allocated</th>
-                  <th className="text-right py-3 px-2">Unallocated</th>
-                  <th className="text-right py-3 px-2">Platform Fee</th>
-                  <th className="text-right py-3 px-2">Creator Payouts</th>
-                  <th className="text-right py-3 px-2">Platform Revenue</th>
-                  <th className="text-right py-3 px-2">Allocation %</th>
-                  <th className="text-right py-3 px-2">Users</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="w-full text-xs sm:text-sm">
+              <TableHeader>
+                <TableRow className="border-b border-border">
+                  <TableHead className="text-left py-3 px-2">Month</TableHead>
+                  <TableHead className="py-3 px-2">Subscriptions</TableHead>
+                  <TableHead className="py-3 px-2">Allocated</TableHead>
+                  <TableHead className="py-3 px-2">Unallocated</TableHead>
+                  <TableHead className="py-3 px-2">Platform Fee</TableHead>
+                  <TableHead className="py-3 px-2">Creator Payouts</TableHead>
+                  <TableHead className="py-3 px-2">Platform Revenue</TableHead>
+                  <TableHead className="py-3 px-2">Allocation %</TableHead>
+                  <TableHead className="py-3 px-2">Users</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {historicalData.map((row) => (
-                  <tr key={row.month} className="border-b border-border hover:bg-muted/50">
-                    <td className="py-3 px-2 font-medium">{formatMonth(row.month)}</td>
-                    <td className={`text-right py-3 px-2 ${row.totalSubscriptionCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalSubscriptionCents)}</td>
-                    <td className={`text-right py-3 px-2 ${row.totalAllocatedCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalAllocatedCents)}</td>
-                    <td className={`text-right py-3 px-2 ${row.totalUnallocatedCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.totalUnallocatedCents)}</td>
-                    <td className={`text-right py-3 px-2 ${row.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.platformFeeCents)}</td>
-                    <td className={`text-right py-3 px-2 ${row.creatorPayoutsCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.creatorPayoutsCents)}</td>
-                    <td className={`text-right py-3 px-2 font-medium ${row.platformRevenueCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.platformRevenueCents)}</td>
-                    <td className={`text-right py-3 px-2 ${row.allocationRate === 0 ? 'opacity-30' : ''}`}>{row.allocationRate.toFixed(1)}%</td>
-                    <td className={`text-right py-3 px-2 ${row.userCount === 0 ? 'opacity-30' : ''}`}>{row.userCount}</td>
-                  </tr>
+                  <TableRow key={row.month} className="border-b border-border hover:bg-muted/50">
+                    <TableCell className="py-3 px-2 font-medium">{formatMonth(row.month)}</TableCell>
+                    <TableCell kind="currency" className={`py-3 px-2 ${row.totalSubscriptionCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalSubscriptionCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-3 px-2 ${row.totalAllocatedCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.totalAllocatedCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-3 px-2 ${row.totalUnallocatedCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.totalUnallocatedCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-3 px-2 ${row.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.platformFeeCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-3 px-2 ${row.creatorPayoutsCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(row.creatorPayoutsCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-3 px-2 font-medium ${row.platformRevenueCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>{formatUsdCents(row.platformRevenueCents)}</TableCell>
+                    <TableCell kind="number" className={`py-3 px-2 ${row.allocationRate === 0 ? 'opacity-30' : ''}`}>{row.allocationRate.toFixed(1)}%</TableCell>
+                    <TableCell kind="number" className={`py-3 px-2 ${row.userCount === 0 ? 'opacity-30' : ''}`}>{row.userCount}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
               {historicalData.length > 0 && (
-                <tfoot>
-                  <tr className="font-bold bg-muted/30">
-                    <td className="py-3 px-2">Totals</td>
-                    <td className="text-right py-3 px-2">{formatUsdCents(totals.totalSubscriptionCents)}</td>
-                    <td className="text-right py-3 px-2">{formatUsdCents(totals.totalAllocatedCents)}</td>
-                    <td className="text-right py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(totals.totalUnallocatedCents)}</td>
-                    <td className="text-right py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(totals.totalPlatformFeeCents)}</td>
-                    <td className="text-right py-3 px-2">{formatUsdCents(totals.totalCreatorPayoutsCents)}</td>
-                    <td className="text-right py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(totals.totalPlatformRevenueCents)}</td>
-                    <td className="text-right py-3 px-2">{totals.averageAllocationRate.toFixed(1)}%</td>
-                    <td className="text-right py-3 px-2">-</td>
-                  </tr>
-                </tfoot>
+                <TableFooter>
+                  <TableRow className="font-bold bg-muted/30">
+                    <TableCell className="py-3 px-2">Totals</TableCell>
+                    <TableCell kind="currency" className="py-3 px-2">{formatUsdCents(totals.totalSubscriptionCents)}</TableCell>
+                    <TableCell kind="currency" className="py-3 px-2">{formatUsdCents(totals.totalAllocatedCents)}</TableCell>
+                    <TableCell kind="currency" className="py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(totals.totalUnallocatedCents)}</TableCell>
+                    <TableCell kind="currency" className="py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(totals.totalPlatformFeeCents)}</TableCell>
+                    <TableCell kind="currency" className="py-3 px-2">{formatUsdCents(totals.totalCreatorPayoutsCents)}</TableCell>
+                    <TableCell kind="currency" className="py-3 px-2 text-green-700 dark:text-green-400">{formatUsdCents(totals.totalPlatformRevenueCents)}</TableCell>
+                    <TableCell kind="number" className="py-3 px-2">{totals.averageAllocationRate.toFixed(1)}%</TableCell>
+                    <TableCell kind="number" className="py-3 px-2">-</TableCell>
+                  </TableRow>
+                </TableFooter>
               )}
-            </table>
+            </Table>
           </div>
         )}
       </div>

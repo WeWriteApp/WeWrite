@@ -11,7 +11,7 @@
     "dev:3001": "next dev -p 3001 --webpack",
     "dev:https": "bun run scripts/start-https-dev.js",
     "dev:https:setup": "bun run scripts/setup-https-dev.js",
-    "dev:console": "concurrently \"bun run console:listen\" \"bun run dev\" --names \"CONSOLE,DEV\" --prefix-colors \"cyan,green\"",
+
     "dev:only": "next dev -p 3000",
     "dev:turbo": "./scripts/start-turbo.sh",
     "dev:safe": "./scripts/start-dev.sh",

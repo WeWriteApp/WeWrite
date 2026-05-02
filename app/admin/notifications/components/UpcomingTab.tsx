@@ -1,7 +1,4 @@
-import React from 'react';
-import { Icon } from '@/components/ui/Icon';
-import { Badge } from '../../../components/ui/badge';
-import { UsernameBadge } from '../../../components/ui/UsernameBadge';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../../components/ui/table';
 
 interface UpcomingTabProps {
   quotaLoading: boolean;
@@ -266,20 +263,20 @@ export function UpcomingTab({
           </div>
         ) : (
           <div className="wewrite-card p-0 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Type</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Username</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Email</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Trigger Reason</th>
-                  <th className="text-right px-3 py-2 font-medium text-muted-foreground">Scheduled</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-muted/30">
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Type</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Username</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Trigger Reason</TableHead>
+                  <TableHead className="px-3 py-2 font-medium text-muted-foreground">Scheduled</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-border">
                 {upcomingNotifications.slice(0, upcomingNotificationsLimit).map((notif, idx) => (
-                  <tr key={`${notif.cronId}-${notif.recipient.userId || notif.recipient.email}-${idx}`} className="hover:bg-muted/20">
-                    <td className="px-3 py-2 text-left">
+                  <TableRow key={`${notif.cronId}-${notif.recipient.userId || notif.recipient.email}-${idx}`} className="hover:bg-muted/20">
+                    <TableCell className="px-3 py-2 text-left">
                       <button
                         className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 transition-colors"
                         onClick={() => onEmailPreview(notif.cronId, notif.cronName, notif.recipient.userId, notif.recipient.username, notif.recipient.reason)}
@@ -287,8 +284,8 @@ export function UpcomingTab({
                         <Icon name="Eye" size={12} className="text-primary" />
                         {notif.cronName}
                       </button>
-                    </td>
-                    <td className="px-3 py-2">
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       {notif.recipient.userId && notif.recipient.username ? (
                         <UsernameBadge
                           userId={notif.recipient.userId}
@@ -309,20 +306,20 @@ export function UpcomingTab({
                       ) : (
                         <span className="text-muted-foreground">--</span>
                       )}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell">
                       {notif.recipient.email}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground text-xs max-w-[200px]">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground text-xs max-w-[200px]">
                       {notif.recipient.reason || '--'}
-                    </td>
-                    <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground whitespace-nowrap">
                       {formatTimeUntil(notif.nextRun)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
             {upcomingNotifications.length > upcomingNotificationsLimit && (
               <button
                 onClick={() => setUpcomingNotificationsLimit(prev => prev + 50)}
@@ -349,33 +346,33 @@ export function UpcomingTab({
             These are backend processing jobs that don't send user-facing emails directly.
           </p>
           <div className="wewrite-card p-0 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Job</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Description</th>
-                  <th className="text-right px-3 py-2 font-medium text-muted-foreground">Next Run</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-muted/30">
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Job</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Description</TableHead>
+                  <TableHead className="px-3 py-2 font-medium text-muted-foreground">Next Run</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-border">
                 {sortedSystemCrons.map((cron) => (
-                  <tr key={cron.id} className="hover:bg-muted/20">
-                    <td className="px-3 py-2">
+                  <TableRow key={cron.id} className="hover:bg-muted/20">
+                    <TableCell className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         <Icon name="Settings" size={24} className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="font-medium">{cron.name}</span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground text-xs max-w-[300px]">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground text-xs max-w-[300px]">
                       {cron.description}
-                    </td>
-                    <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="px-3 py-2 text-muted-foreground whitespace-nowrap">
                       {formatTimeUntil(cron.nextRun)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import PillLink from '../../components/utils/PillLink';
 import { UsernameBadge } from '../../components/ui/UsernameBadge';
 import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
 import { toast } from '../../components/ui/use-toast';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 export function PillLinkSection({ id }: { id: string }) {
   // Handler for disabled external link clicks - demonstrates the toast message
@@ -39,30 +40,30 @@ export function PillLinkSection({ id }: { id: string }) {
           </p>
         </div>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Style</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Page Link</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">User (no sub)</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">User (tier 3)</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">External Link</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Compound Link</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full border-collapse">
+          <TableHeader>
+            <TableRow className="border-b border-border">
+              <TableHead className="text-left p-3 text-sm font-medium text-muted-foreground">Style</TableHead>
+              <TableHead className="text-left p-3 text-sm font-medium text-muted-foreground">Page Link</TableHead>
+              <TableHead className="text-left p-3 text-sm font-medium text-muted-foreground">User (no sub)</TableHead>
+              <TableHead className="text-left p-3 text-sm font-medium text-muted-foreground">User (tier 3)</TableHead>
+              <TableHead className="text-left p-3 text-sm font-medium text-muted-foreground">External Link</TableHead>
+              <TableHead className="text-left p-3 text-sm font-medium text-muted-foreground">Compound Link</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {/* Filled Style Row */}
-            <tr className="border-b border-border/50">
-              <td className="p-3 align-middle">
+            <TableRow className="border-b border-border/50">
+              <TableCell className="p-3 align-middle">
                 <div>
                   <p className="text-sm font-medium">Filled</p>
                   <p className="text-xs text-muted-foreground mt-1">Default style</p>
                 </div>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <PillLink href="/example" pageId="ex1" clickable={false}>AI Research</PillLink>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <UsernameBadge
                   userId="user1"
                   username="alex"
@@ -70,8 +71,8 @@ export function PillLinkSection({ id }: { id: string }) {
                   variant="pill"
                   pillVariant="primary"
                 />
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <UsernameBadge
                   userId="user2"
                   username="sarah"
@@ -79,11 +80,11 @@ export function PillLinkSection({ id }: { id: string }) {
                   variant="pill"
                   pillVariant="primary"
                 />
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <PillLink href="https://example.com" clickable={false}>Documentation</PillLink>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <div className="inline-flex items-center gap-1.5">
                   <PillLink href="/page" pageId="p1" clickable={false}>Startup Guide</PillLink>
                   <span className="text-sm text-muted-foreground">by</span>
@@ -95,31 +96,31 @@ export function PillLinkSection({ id }: { id: string }) {
                     pillVariant="outline"
                   />
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
 
             {/* Outline Style Row */}
-            <tr className="border-b border-border/50">
-              <td className="p-3 align-middle">
+            <TableRow className="border-b border-border/50">
+              <TableCell className="p-3 align-middle">
                 <div>
                   <p className="text-sm font-medium">Outline</p>
                   <p className="text-xs text-muted-foreground mt-1">Bordered style</p>
                 </div>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
                   AI Research
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center gap-1 text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
                   <span>alex</span>
                   <span className="inline-flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground dark:text-white"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
                   </span>
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center gap-1 text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
                   <span>sarah</span>
                   <span className="inline-flex items-center gap-0.5">
@@ -128,14 +129,14 @@ export function PillLinkSection({ id }: { id: string }) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="rgb(250 204 21)" stroke="rgb(250 204 21)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.6))'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   </span>
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
                   <span>Documentation</span>
                   <Icon name="ExternalLink" size={14} className="ml-1.5 flex-shrink-0" />
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <div className="inline-flex items-center gap-1.5">
                   <a href="#" className="inline-flex items-center text-sm font-medium rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border border-accent-70 hover:bg-accent-10 hover:border-accent-100 active:bg-accent-15 active:border-accent-100 px-2 py-0.5" onClick={(e) => e.preventDefault()}>
                     Startup Guide
@@ -150,31 +151,31 @@ export function PillLinkSection({ id }: { id: string }) {
                     </span>
                   </a>
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
 
             {/* Text Only Style Row */}
-            <tr className="border-b border-border/50">
-              <td className="p-3 align-middle">
+            <TableRow className="border-b border-border/50">
+              <TableCell className="p-3 align-middle">
                 <div>
                   <p className="text-sm font-medium">Text Only</p>
                   <p className="text-xs text-muted-foreground mt-1">Minimal style</p>
                 </div>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   AI Research
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center gap-1 text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   <span>alex</span>
                   <span className="inline-flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground dark:text-white"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
                   </span>
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center gap-1 text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   <span>sarah</span>
                   <span className="inline-flex items-center gap-0.5">
@@ -183,14 +184,14 @@ export function PillLinkSection({ id }: { id: string }) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="rgb(250 204 21)" stroke="rgb(250 204 21)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.6))'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   </span>
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   <span>Documentation</span>
                   <Icon name="ExternalLink" size={14} className="ml-1.5 flex-shrink-0" />
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <div className="inline-flex items-center gap-1.5">
                   <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none hover:underline hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                     Startup Guide
@@ -205,31 +206,31 @@ export function PillLinkSection({ id }: { id: string }) {
                     </span>
                   </a>
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
 
             {/* Underlined Style Row */}
-            <tr>
-              <td className="p-3 align-middle">
+            <TableRow>
+              <TableCell className="p-3 align-middle">
                 <div>
                   <p className="text-sm font-medium">Underlined</p>
                   <p className="text-xs text-muted-foreground mt-1">Always underlined</p>
                 </div>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   AI Research
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center gap-1 text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   <span>alex</span>
                   <span className="inline-flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground dark:text-white"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
                   </span>
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center gap-1 text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   <span>sarah</span>
                   <span className="inline-flex items-center gap-0.5">
@@ -238,14 +239,14 @@ export function PillLinkSection({ id }: { id: string }) {
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="rgb(250 204 21)" stroke="rgb(250 204 21)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.6))'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   </span>
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                   <span>Documentation</span>
                   <Icon name="ExternalLink" size={14} className="ml-1.5 flex-shrink-0" />
                 </a>
-              </td>
-              <td className="p-3 align-middle">
+              </TableCell>
+              <TableCell className="p-3 align-middle">
                 <div className="inline-flex items-center gap-1.5">
                   <a href="#" className="inline-flex items-center text-sm font-bold rounded-lg transition-all duration-150 ease-out hover:scale-[1.05] active:scale-[0.95] my-0.5 bg-transparent text-accent-100 border-none underline hover:decoration-2 hover:bg-accent-5 active:bg-accent-10 shadow-none px-1" onClick={(e) => e.preventDefault()}>
                     Startup Guide
@@ -260,10 +261,10 @@ export function PillLinkSection({ id }: { id: string }) {
                     </span>
                   </a>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
 
       <CollapsibleDocs type="notes">

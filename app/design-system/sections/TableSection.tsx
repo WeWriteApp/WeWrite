@@ -28,7 +28,7 @@ export function TableSection({ id }: { id: string }) {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -37,27 +37,27 @@ export function TableSection({ id }: { id: string }) {
                 <TableCell>
                   <Badge variant="default">Active</Badge>
                 </TableCell>
-                <TableCell className="text-right">$250.00</TableCell>
+                <TableCell kind="currency">$250.00</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">Bob Smith</TableCell>
                 <TableCell>
                   <Badge variant="secondary">Pending</Badge>
                 </TableCell>
-                <TableCell className="text-right">$150.00</TableCell>
+                <TableCell kind="currency">$150.00</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">Carol White</TableCell>
                 <TableCell>
                   <Badge variant="outline">Inactive</Badge>
                 </TableCell>
-                <TableCell className="text-right">$350.00</TableCell>
+                <TableCell kind="currency">$350.00</TableCell>
               </TableRow>
             </TableBody>
             <TableFooter>
               <TableRow>
                 <TableCell colSpan={2}>Total</TableCell>
-                <TableCell className="text-right font-bold">$750.00</TableCell>
+                <TableCell kind="currency" className="font-bold">$750.00</TableCell>
               </TableRow>
             </TableFooter>
           </Table>

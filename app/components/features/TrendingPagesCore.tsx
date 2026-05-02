@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useEffect } from 'react';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../ui/table';
 
 import PillLink from "../utils/PillLink";
 import { Icon } from '@/components/ui/Icon';
@@ -271,28 +269,28 @@ export default function TrendingPages({ limit = 5 }) {
 
       {/* Desktop view (md and up): Table layout */}
       <div className="hidden md:block border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 dark:hover:bg-card/100 w-full">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-theme-strong">
-              <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
-              <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full">
+          <TableHeader>
+            <TableRow className="border-b border-theme-strong">
+              <TableHead className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</TableHead>
+              <TableHead className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</TableHead>
+              <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</TableHead>
+              <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {trendingPages.map((page) => (
-              <tr
+              <TableRow
                 key={page.id}
                 className="border-b border-theme-strong hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={() => window.location.href = `/${page.id}`}
               >
-                <td className="py-3 px-4">
+                <TableCell className="py-3 px-4">
                   <PillLink href={`/${page.id}`} className="">
                     {page.title || 'Untitled'}
                   </PillLink>
-                </td>
-                <td className="py-3 px-4">
+                </TableCell>
+                <TableCell className="py-3 px-4">
                   {page.userId ? (
                     <UsernameBadge
                       userId={page.userId}
@@ -304,11 +302,11 @@ export default function TrendingPages({ limit = 5 }) {
                   ) : (
                     <span className="text-muted-foreground">Anonymous</span>
                   )}
-                </td>
-                <td className="py-3 px-4 text-right font-medium">
+                </TableCell>
+                <TableCell kind="number" className="py-3 px-4 font-medium">
                   {page.views.toLocaleString()}
-                </td>
-                <td className="py-3 px-4">
+                </TableCell>
+                <TableCell className="py-3 px-4">
                   <div className="w-24 h-8 ml-auto">
                     <SimpleSparkline
                       data={page.hourlyViews}
@@ -318,11 +316,11 @@ export default function TrendingPages({ limit = 5 }) {
                       title="24h Activity"
                     />
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Mobile view (smaller than md): Card grid layout */}

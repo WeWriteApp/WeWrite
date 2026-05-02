@@ -91,12 +91,12 @@ export default function EarningsDashboard() {
 
       const earningsBreakdown = earningsResponse.ok ? await earningsResponse.json() : null;
       const bankAccountStatus = bankResponse.ok ? await bankResponse.json() : null;
-      const payouts = payoutsResponse.ok ? await payoutsResponse.json() : [];
+      const payoutsResult = payoutsResponse.ok ? await payoutsResponse.json() : { payouts: [] };
 
       // Extract earnings data from the API response (API returns { success: true, earnings: {...}, data: {...} })
       setEarnings(earningsBreakdown?.earnings || earningsBreakdown?.data || null);
       setBankStatus(bankAccountStatus);
-      setPayoutHistory(payouts);
+      setPayoutHistory(Array.isArray(payoutsResult?.payouts) ? payoutsResult.payouts : []);
 
     } catch (error) {
       console.error('[EarningsDashboard] Error loading data:', error);

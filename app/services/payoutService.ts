@@ -426,7 +426,14 @@ export class PayoutService {
       return { success: true, transferId: payoutResult.transferId };
 
     } catch (error) {
-      // ...existing error handling...
+      console.error('[Payout] Error processing payout:', {
+        payoutId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to process payout',
+      };
     }
   }
 

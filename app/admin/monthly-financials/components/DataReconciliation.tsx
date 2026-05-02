@@ -1,8 +1,4 @@
-import React from 'react';
-import { Icon } from '@/components/ui/Icon';
-import { Button } from '../../../components/ui/button';
-import { formatUsdCents } from '../../../utils/formatCurrency';
-import type { ReconciliationData } from '../types';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../../components/ui/table';
 
 interface DataReconciliationProps {
   reconciliation: ReconciliationData;
@@ -94,20 +90,20 @@ export function DataReconciliation({ reconciliation, isSyncing, onSync }: DataRe
         <div className="mt-4">
           <h3 className="text-sm font-medium text-muted-foreground mb-2">Discrepancy Details</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left py-2 px-2">Type</th>
-                  <th className="text-left py-2 px-2">Email</th>
-                  <th className="text-right py-2 px-2">Stripe Amount</th>
-                  <th className="text-right py-2 px-2">Firebase Amount</th>
-                  <th className="text-right py-2 px-2">Difference</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="w-full text-xs">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-muted/30">
+                  <TableHead className="text-left py-2 px-2">Type</TableHead>
+                  <TableHead className="text-left py-2 px-2">Email</TableHead>
+                  <TableHead className="py-2 px-2">Stripe Amount</TableHead>
+                  <TableHead className="py-2 px-2">Firebase Amount</TableHead>
+                  <TableHead className="py-2 px-2">Difference</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {reconciliation.discrepancies.map((d, idx) => (
-                  <tr key={idx} className="border-b border-border hover:bg-muted/30">
-                    <td className="py-2 px-2">
+                  <TableRow key={idx} className="border-b border-border hover:bg-muted/30">
+                    <TableCell className="py-2 px-2">
                       <span className={`px-1.5 py-0.5 rounded text-xs ${
                         d.type === 'stale_firebase' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
                         d.type === 'missing_firebase' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
@@ -116,17 +112,17 @@ export function DataReconciliation({ reconciliation, isSyncing, onSync }: DataRe
                         {d.type === 'stale_firebase' ? 'Cancelled' :
                          d.type === 'missing_firebase' ? 'Missing' : 'Mismatch'}
                       </span>
-                    </td>
-                    <td className="py-2 px-2 truncate max-w-[200px]" title={d.email}>{d.email}</td>
-                    <td className={`text-right py-2 px-2 ${d.stripeAmountCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(d.stripeAmountCents)}</td>
-                    <td className={`text-right py-2 px-2 ${d.firebaseAmountCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(d.firebaseAmountCents)}</td>
-                    <td className={`text-right py-2 px-2 ${(d.stripeAmountCents - d.firebaseAmountCents) === 0 ? 'opacity-30' : ''}`}>
+                    </TableCell>
+                    <TableCell className="py-2 px-2 truncate max-w-[200px]" title={d.email}>{d.email}</TableCell>
+                    <TableCell kind="currency" className={`py-2 px-2 ${d.stripeAmountCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(d.stripeAmountCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-2 px-2 ${d.firebaseAmountCents === 0 ? 'opacity-30' : ''}`}>{formatUsdCents(d.firebaseAmountCents)}</TableCell>
+                    <TableCell kind="currency" className={`py-2 px-2 ${(d.stripeAmountCents - d.firebaseAmountCents) === 0 ? 'opacity-30' : ''}`}>
                       {formatUsdCents(d.stripeAmountCents - d.firebaseAmountCents)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
             Click &quot;Sync with Stripe&quot; to fix stale and mismatched records. Missing records will be created when users log in.

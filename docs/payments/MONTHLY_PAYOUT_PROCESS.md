@@ -10,6 +10,7 @@ This document describes the automated monthly payout process that runs on the 1s
 |------------|--------------|
 | 8:00 AM | **Step 1:** Process writer earnings - moves `pending` → `available` |
 | 9:00 AM | **Step 2:** Automated payouts - processes available balances |
+| :30 every hour | **Recovery:** Retry queued earnings-processing failures |
 
 ## Cron Job Configuration
 
@@ -25,6 +26,10 @@ Located in `vercel.json`:
     {
       "path": "/api/cron/automated-payouts",
       "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/cron/retry-earnings-processing",
+      "schedule": "30 * * * *"
     }
   ]
 }
@@ -42,7 +47,7 @@ Located in `vercel.json`:
 
 ### Collections Affected
 - `writerUsdEarnings` - status field updated
-- `writerUsdBalances` - `availableUsdCents` recalculated
+- `writerUsdBalances` - no longer used as payout source of truth (kept for legacy compatibility only)
 
 ### Code Path
 ```
@@ -50,7 +55,7 @@ Located in `vercel.json`:
   → ServerUsdEarningsService.processMonthlyDistribution(previousMonth)
     → Query pending earnings
     → Batch update status to 'available'
-    → updateWriterBalance() for each affected writer
+    → Balances read from writerUsdEarnings on-demand by UsdEarningsService.getWriterUsdBalance()
 ```
 
 ## Step 2: Automated Payouts
@@ -83,6 +88,19 @@ export const PLATFORM_FEE_CONFIG = {
   MINIMUM_PAYOUT_CENTS: 2500, // $25
 };
 ```
+
+## Earnings Recovery Worker
+
+**Endpoint:** `/api/cron/retry-earnings-processing`  
+**Schedule:** `30 * * * *` (every hour at minute 30)
+
+### What It Does
+1. Reads `earningsProcessingFailures` records with `status = 'pending_retry'`
+2. Replays `UsdEarningsService.processUsdAllocation(...)`
+3. Marks records `resolved` on success or updates retry metadata on failure
+
+### Why It Exists
+Allocation writes and earnings writes happen in separate operations. If earnings processing fails after allocation commits, this worker ensures those earnings are retried and eventually recovered.
 
 ## Earnings Lifecycle
 

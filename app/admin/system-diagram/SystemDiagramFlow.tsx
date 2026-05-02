@@ -94,11 +94,11 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
     monitoring: [
       { tool: 'Stripe Dashboard', description: 'Payment and subscription analytics' },
       { tool: 'Webhook Logs', description: 'Event delivery monitoring' },
-      { tool: '/admin/financial-tests', description: 'Platform fee verification tests' },
+      { tool: '/admin/writer-payouts', description: 'Writer earnings and payout QA status' },
     ],
     links: [
       { label: 'Stripe Dashboard', path: 'https://dashboard.stripe.com' },
-      { label: 'Financial Tests', path: '/admin/financial-tests' },
+      { label: 'Writer Payouts', path: '/admin/writer-payouts' },
     ],
   },
   'firebase': {
@@ -228,12 +228,12 @@ const NODE_DETAILS: Record<string, NodeDetailData> = {
     monitoring: [
       { tool: '/admin/monthly-financials', description: 'Monthly financial reports' },
       { tool: '/admin/payout-validation', description: 'Payout verification dashboard' },
-      { tool: '/admin/financial-tests', description: 'Automated financial tests' },
+      { tool: '/admin/writer-payouts', description: 'Writer earnings and payout QA status' },
     ],
     links: [
       { label: 'Monthly Financials', path: '/admin/monthly-financials' },
       { label: 'Payout Validation', path: '/admin/payout-validation' },
-      { label: 'Financial Tests', path: '/admin/financial-tests' },
+      { label: 'Writer Payouts', path: '/admin/writer-payouts' },
     ],
   },
   'content-services': {

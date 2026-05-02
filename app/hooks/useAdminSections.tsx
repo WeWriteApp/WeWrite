@@ -160,11 +160,11 @@ const ADMIN_SECTIONS: AdminSection[] = [
     description: 'Architecture overview'
   },
   {
-    id: 'financial-tests',
-    title: 'Financial Tests',
+    id: 'writer-payouts',
+    title: 'Writer Payouts',
     icon: createIconComponent('DollarSign'),
-    href: '/admin/financial-tests',
-    description: 'Test earnings and payouts'
+    href: '/admin/writer-payouts',
+    description: 'QA view for earnings and payout status'
   },
   {
     id: 'onboarding-tutorial',

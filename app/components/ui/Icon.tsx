@@ -204,6 +204,7 @@ import {
   LogIn,
   Server,
   Compass,
+  Terminal,
 } from "lucide-react";
 
 // Icon weight types (kept for backwards compatibility, not used with Lucide)
@@ -282,7 +283,7 @@ export type IconName =
   | "RectangleHorizontal" | "RectangleVertical" | "Package"
   | "BarChart2" | "CalendarDays" | "Columns3" | "FileCode" | "FileQuestion"
   | "Gauge" | "GitBranch" | "LayoutTemplate" | "LogIn" | "Server"
-  | "Compass";
+  | "Compass" | "Terminal" | "LoaderGrid";
 
 // Icon props interface
 export interface IconProps {
@@ -557,6 +558,8 @@ const iconMap: Partial<Record<IconName, ComponentType<any>>> = {
   LogIn: LogIn,
   Server: Server,
   Compass: Compass,
+  Terminal: Terminal,
+  LoaderGrid: LayoutGrid,
 };
 
 /**

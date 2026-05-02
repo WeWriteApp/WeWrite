@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/platform-balance-check",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/retry-earnings-processing",
+      "schedule": "30 * * * *"
     }
   ],
   "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == \"dependabot\"* ]]; then exit 0; else exit 1; fi"

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { StatsCard, StatsCardHeader } from '@/components/ui/StatsCard';
 import { ComponentShowcase, StateDemo, CollapsibleDocs } from './shared';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 /**
  * PageStats Design System Documentation
@@ -195,78 +196,78 @@ export function PageStatsSection({ id }: { id: string }) {
       {/* Props Reference */}
       <CollapsibleDocs type="props">
         <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 px-3 font-semibold">Prop</th>
-                <th className="text-left py-2 px-3 font-semibold">Type</th>
-                <th className="text-left py-2 px-3 font-semibold">Default</th>
-                <th className="text-left py-2 px-3 font-semibold">Description</th>
-              </tr>
-            </thead>
-            <tbody className="text-muted-foreground">
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>icon</code></td>
-                <td className="py-2 px-3">IconName</td>
-                <td className="py-2 px-3">required</td>
-                <td className="py-2 px-3">Icon to display in header</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>title</code></td>
-                <td className="py-2 px-3">string</td>
-                <td className="py-2 px-3">required</td>
-                <td className="py-2 px-3">Title text for the header</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>value</code></td>
-                <td className="py-2 px-3">number | string | null</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Main value (numbers animate)</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>sparklineData</code></td>
-                <td className="py-2 px-3">number[]</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">24h trend data (24 points)</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>showSparkline</code></td>
-                <td className="py-2 px-3">boolean</td>
-                <td className="py-2 px-3">true</td>
-                <td className="py-2 px-3">Toggle sparkline visibility</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>loading</code></td>
-                <td className="py-2 px-3">boolean</td>
-                <td className="py-2 px-3">false</td>
-                <td className="py-2 px-3">Show loading spinner</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>onClick</code></td>
-                <td className="py-2 px-3">function</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Click handler (enables hover)</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>isEditable</code></td>
-                <td className="py-2 px-3">boolean</td>
-                <td className="py-2 px-3">false</td>
-                <td className="py-2 px-3">Shows dashed placeholder when empty</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>hideWhenEmpty</code></td>
-                <td className="py-2 px-3">boolean</td>
-                <td className="py-2 px-3">false</td>
-                <td className="py-2 px-3">Hide card when value is empty/0</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>children</code></td>
-                <td className="py-2 px-3">ReactNode</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Content below separator (diff preview)</td>
-              </tr>
-            </tbody>
-          </table>
+          <Table className="w-full text-sm border-collapse">
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="text-left py-2 px-3 font-semibold">Prop</TableHead>
+                <TableHead className="text-left py-2 px-3 font-semibold">Type</TableHead>
+                <TableHead className="text-left py-2 px-3 font-semibold">Default</TableHead>
+                <TableHead className="text-left py-2 px-3 font-semibold">Description</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-muted-foreground">
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>icon</code></TableCell>
+                <TableCell className="py-2 px-3">IconName</TableCell>
+                <TableCell className="py-2 px-3">required</TableCell>
+                <TableCell className="py-2 px-3">Icon to display in header</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>title</code></TableCell>
+                <TableCell className="py-2 px-3">string</TableCell>
+                <TableCell className="py-2 px-3">required</TableCell>
+                <TableCell className="py-2 px-3">Title text for the header</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>value</code></TableCell>
+                <TableCell className="py-2 px-3">number | string | null</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Main value (numbers animate)</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>sparklineData</code></TableCell>
+                <TableCell className="py-2 px-3">number[]</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">24h trend data (24 points)</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>showSparkline</code></TableCell>
+                <TableCell className="py-2 px-3">boolean</TableCell>
+                <TableCell className="py-2 px-3">true</TableCell>
+                <TableCell className="py-2 px-3">Toggle sparkline visibility</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>loading</code></TableCell>
+                <TableCell className="py-2 px-3">boolean</TableCell>
+                <TableCell className="py-2 px-3">false</TableCell>
+                <TableCell className="py-2 px-3">Show loading spinner</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>onClick</code></TableCell>
+                <TableCell className="py-2 px-3">function</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Click handler (enables hover)</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>isEditable</code></TableCell>
+                <TableCell className="py-2 px-3">boolean</TableCell>
+                <TableCell className="py-2 px-3">false</TableCell>
+                <TableCell className="py-2 px-3">Shows dashed placeholder when empty</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>hideWhenEmpty</code></TableCell>
+                <TableCell className="py-2 px-3">boolean</TableCell>
+                <TableCell className="py-2 px-3">false</TableCell>
+                <TableCell className="py-2 px-3">Hide card when value is empty/0</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>children</code></TableCell>
+                <TableCell className="py-2 px-3">ReactNode</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Content below separator (diff preview)</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </CollapsibleDocs>
 

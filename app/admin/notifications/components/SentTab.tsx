@@ -1,9 +1,4 @@
-'use client';
-
-import { EmailLogEntry } from '../types';
-import { Icon } from '@/components/ui/Icon';
-import { Badge } from '../../../components/ui/badge';
-import { UsernameBadge } from '../../../components/ui/UsernameBadge';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../../components/ui/table';
 
 interface SentTabProps {
   allEmailLogs: EmailLogEntry[];
@@ -62,22 +57,22 @@ export function SentTab({
           </div>
         ) : (
           <div className="wewrite-card p-0 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Template</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Username</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Email</th>
-                  <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Source</th>
-                  <th className="text-right px-3 py-2 font-medium text-muted-foreground">Sent</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-muted/30">
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Template</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground">Username</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Source</TableHead>
+                  <TableHead className="px-3 py-2 font-medium text-muted-foreground">Sent</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-border">
                 {allEmailLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-muted/20">
+                  <TableRow key={log.id} className="hover:bg-muted/20">
                     {/* Status cell */}
-                    <td className="px-3 py-2 text-left">
+                    <TableCell className="px-3 py-2 text-left">
                       {(() => {
                         const tooltipParts: string[] = [`Status: ${log.status}`];
                         if (log.errorMessage) tooltipParts.push(`Error: ${log.errorMessage}`);
@@ -101,10 +96,10 @@ export function SentTab({
                           </span>
                         );
                       })()}
-                    </td>
+                    </TableCell>
 
                     {/* Template cell */}
-                    <td className="px-3 py-2">
+                    <TableCell className="px-3 py-2">
                       <button
                         className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 transition-colors"
                         onClick={() => onEmailPreview(log.templateId, log.templateName || log.templateId, log.recipientUserId, log.recipientUsername, undefined, log.metadata)}
@@ -112,10 +107,10 @@ export function SentTab({
                         <Icon name="Eye" size={12} className="text-primary" />
                         {log.templateName || log.templateId}
                       </button>
-                    </td>
+                    </TableCell>
 
                     {/* Username cell */}
-                    <td className="px-3 py-2">
+                    <TableCell className="px-3 py-2">
                       {log.recipientUserId && log.recipientUsername ? (
                         <UsernameBadge
                           userId={log.recipientUserId}
@@ -136,15 +131,15 @@ export function SentTab({
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
-                    </td>
+                    </TableCell>
 
                     {/* Email cell */}
-                    <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell">
+                    <TableCell className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell">
                       {log.recipientEmail}
-                    </td>
+                    </TableCell>
 
                     {/* Source cell */}
-                    <td className="px-3 py-2 hidden md:table-cell">
+                    <TableCell className="px-3 py-2 hidden md:table-cell">
                       {(() => {
                         const source = log.triggerSource;
                         const config = source ? sourceConfig[source] : null;
@@ -160,16 +155,16 @@ export function SentTab({
                           </span>
                         );
                       })()}
-                    </td>
+                    </TableCell>
 
                     {/* Sent cell */}
-                    <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
+                    <TableCell className="px-3 py-2 text-muted-foreground whitespace-nowrap">
                       {formatRelativeTime(log.sentAt)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

@@ -15,6 +15,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 // Hook to measure container dimensions
 function useContainerSize(ref: React.RefObject<HTMLDivElement>) {
@@ -539,30 +540,30 @@ export default function SearchAdminPage() {
                 Recent Searches
               </h2>
               <div className="border border-border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left p-3 font-medium">Search Term</th>
-                      <th className="text-left p-3 font-medium">Duration</th>
-                      <th className="text-left p-3 font-medium">Results</th>
-                      <th className="text-left p-3 font-medium">Cache</th>
-                      <th className="text-left p-3 font-medium">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full text-sm">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="text-left p-3 font-medium">Search Term</TableHead>
+                      <TableHead className="text-left p-3 font-medium">Duration</TableHead>
+                      <TableHead className="text-left p-3 font-medium">Results</TableHead>
+                      <TableHead className="text-left p-3 font-medium">Cache</TableHead>
+                      <TableHead className="text-left p-3 font-medium">Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {analytics.recentSearches.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                      <TableRow>
+                        <TableCell colSpan={5} className="p-4 text-center text-muted-foreground">
                           No recent searches
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       analytics.recentSearches.map((search, i) => (
-                        <tr key={i} className="border-t border-border">
-                          <td className="p-3 font-mono text-xs">
+                        <TableRow key={i} className="border-t border-border">
+                          <TableCell className="p-3 font-mono text-xs">
                             {search.searchTerm || <span className="text-muted-foreground italic">empty</span>}
-                          </td>
-                          <td className="p-3">
+                          </TableCell>
+                          <TableCell className="p-3">
                             <span
                               className={
                                 search.duration > 1000
@@ -574,23 +575,23 @@ export default function SearchAdminPage() {
                             >
                               {search.duration}ms
                             </span>
-                          </td>
-                          <td className="p-3">{search.resultCount}</td>
-                          <td className="p-3">
+                          </TableCell>
+                          <TableCell className="p-3">{search.resultCount}</TableCell>
+                          <TableCell className="p-3">
                             {search.cacheHit ? (
                               <span className="text-green-600 dark:text-green-400">Hit</span>
                             ) : (
                               <span className="text-muted-foreground">Miss</span>
                             )}
-                          </td>
-                          <td className="p-3 text-muted-foreground text-xs">
+                          </TableCell>
+                          <TableCell className="p-3 text-muted-foreground text-xs">
                             {new Date(search.timestamp).toLocaleTimeString()}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </section>
 

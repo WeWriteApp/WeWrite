@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { AnimatedPresenceItem, AnimatedHorizontalPresence } from '@/components/ui/AnimatedStack';
 import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 /**
  * PageLinksCard Design System Documentation
@@ -171,84 +172,84 @@ export function PageLinksCardSection({ id }: { id: string }) {
       {/* Props Reference */}
       <CollapsibleDocs type="props">
         <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 px-3 font-semibold">Prop</th>
-                <th className="text-left py-2 px-3 font-semibold">Type</th>
-                <th className="text-left py-2 px-3 font-semibold">Default</th>
-                <th className="text-left py-2 px-3 font-semibold">Description</th>
-              </tr>
-            </thead>
-            <tbody className="text-muted-foreground">
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>icon</code></td>
-                <td className="py-2 px-3">IconName</td>
-                <td className="py-2 px-3">required</td>
-                <td className="py-2 px-3">Icon to display in header</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>title</code></td>
-                <td className="py-2 px-3">string</td>
-                <td className="py-2 px-3">required</td>
-                <td className="py-2 px-3">Title text for the header</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>items</code></td>
-                <td className="py-2 px-3">PageLinkItem[]</td>
-                <td className="py-2 px-3">required</td>
-                <td className="py-2 px-3">Array of page link items</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>pillCounter</code></td>
-                <td className="py-2 px-3">boolean</td>
-                <td className="py-2 px-3">false</td>
-                <td className="py-2 px-3">Show count as pill badge on right</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>headerAction</code></td>
-                <td className="py-2 px-3">ReactNode</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Action button(s) in header right</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>subheader</code></td>
-                <td className="py-2 px-3">ReactNode</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Content between header and items (filter controls)</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>initialLimit</code></td>
-                <td className="py-2 px-3">number</td>
-                <td className="py-2 px-3">8</td>
-                <td className="py-2 px-3">Items to show before "Load more"</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>hideWhenEmpty</code></td>
-                <td className="py-2 px-3">boolean</td>
-                <td className="py-2 px-3">true</td>
-                <td className="py-2 px-3">Hide card when no items</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>emptyMessage</code></td>
-                <td className="py-2 px-3">string</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Message to show when empty</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>renderItem</code></td>
-                <td className="py-2 px-3">function</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Custom item renderer</td>
-              </tr>
-              <tr className="border-b border-border/50">
-                <td className="py-2 px-3"><code>footer</code></td>
-                <td className="py-2 px-3">ReactNode</td>
-                <td className="py-2 px-3">-</td>
-                <td className="py-2 px-3">Footer content with separator</td>
-              </tr>
-            </tbody>
-          </table>
+          <Table className="w-full text-sm border-collapse">
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="text-left py-2 px-3 font-semibold">Prop</TableHead>
+                <TableHead className="text-left py-2 px-3 font-semibold">Type</TableHead>
+                <TableHead className="text-left py-2 px-3 font-semibold">Default</TableHead>
+                <TableHead className="text-left py-2 px-3 font-semibold">Description</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="text-muted-foreground">
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>icon</code></TableCell>
+                <TableCell className="py-2 px-3">IconName</TableCell>
+                <TableCell className="py-2 px-3">required</TableCell>
+                <TableCell className="py-2 px-3">Icon to display in header</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>title</code></TableCell>
+                <TableCell className="py-2 px-3">string</TableCell>
+                <TableCell className="py-2 px-3">required</TableCell>
+                <TableCell className="py-2 px-3">Title text for the header</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>items</code></TableCell>
+                <TableCell className="py-2 px-3">PageLinkItem[]</TableCell>
+                <TableCell className="py-2 px-3">required</TableCell>
+                <TableCell className="py-2 px-3">Array of page link items</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>pillCounter</code></TableCell>
+                <TableCell className="py-2 px-3">boolean</TableCell>
+                <TableCell className="py-2 px-3">false</TableCell>
+                <TableCell className="py-2 px-3">Show count as pill badge on right</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>headerAction</code></TableCell>
+                <TableCell className="py-2 px-3">ReactNode</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Action button(s) in header right</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>subheader</code></TableCell>
+                <TableCell className="py-2 px-3">ReactNode</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Content between header and items (filter controls)</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>initialLimit</code></TableCell>
+                <TableCell className="py-2 px-3">number</TableCell>
+                <TableCell className="py-2 px-3">8</TableCell>
+                <TableCell className="py-2 px-3">Items to show before "Load more"</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>hideWhenEmpty</code></TableCell>
+                <TableCell className="py-2 px-3">boolean</TableCell>
+                <TableCell className="py-2 px-3">true</TableCell>
+                <TableCell className="py-2 px-3">Hide card when no items</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>emptyMessage</code></TableCell>
+                <TableCell className="py-2 px-3">string</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Message to show when empty</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>renderItem</code></TableCell>
+                <TableCell className="py-2 px-3">function</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Custom item renderer</TableCell>
+              </TableRow>
+              <TableRow className="border-b border-border/50">
+                <TableCell className="py-2 px-3"><code>footer</code></TableCell>
+                <TableCell className="py-2 px-3">ReactNode</TableCell>
+                <TableCell className="py-2 px-3">-</TableCell>
+                <TableCell className="py-2 px-3">Footer content with separator</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
       </CollapsibleDocs>
 

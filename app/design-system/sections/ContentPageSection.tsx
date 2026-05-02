@@ -9,6 +9,7 @@ import {
   type PageState,
   type VisibilityRule
 } from '../../config/contentPageVisibility';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 /**
  * Visibility Cell Component
@@ -68,33 +69,33 @@ function VisibilityTable() {
 
   return (
     <div className="w-full overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left py-2 px-3 font-semibold">Element</th>
+      <Table className="w-full text-sm border-collapse">
+        <TableHeader>
+          <TableRow className="border-b border-border">
+            <TableHead className="text-left py-2 px-3 font-semibold">Element</TableHead>
             {pageStates.map(state => (
-              <th key={state} className="text-center py-2 px-3 font-semibold whitespace-nowrap">
+              <TableHead key={state} className="text-center py-2 px-3 font-semibold whitespace-nowrap">
                 {PAGE_STATE_LABELS[state]}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {categories.map(category => (
             <React.Fragment key={category.name}>
               {/* Category Header */}
-              <tr className="bg-muted/30">
-                <td colSpan={4} className="py-2 px-3 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+              <TableRow className="bg-muted/30">
+                <TableCell colSpan={4} className="py-2 px-3 font-semibold text-muted-foreground text-xs uppercase tracking-wider">
                   {category.name}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
               {/* Category Rules */}
               {category.rules.map((rule, idx) => (
-                <tr
+                <TableRow
                   key={rule.id}
                   className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${idx % 2 === 0 ? '' : 'bg-muted/10'}`}
                 >
-                  <td className="py-2 px-3">
+                  <TableCell className="py-2 px-3">
                     <div className="flex flex-col">
                       <span className="font-medium">{rule.label}</span>
                       <span className="text-xs text-muted-foreground">{rule.description}</span>
@@ -104,21 +105,21 @@ function VisibilityTable() {
                         </span>
                       )}
                     </div>
-                  </td>
+                  </TableCell>
                   {pageStates.map(state => (
-                    <td key={state} className="py-2 px-3">
+                    <TableCell key={state} className="py-2 px-3">
                       <VisibilityCell
                         value={rule.visibility[state]}
                         condition={rule.condition}
                       />
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
             </React.Fragment>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground">

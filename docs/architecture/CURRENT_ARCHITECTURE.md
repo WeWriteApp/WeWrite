@@ -64,12 +64,14 @@ User Subscription → USD Balance → Allocations → Creator Earnings → Payou
 - **Status Transitions**: pending → available → paid_out
 - **Platform Fees**: 10% platform fee on all earnings
 - **Balance Aggregation**: Real-time balance calculation from earnings records
+- **Recovery Queue**: Failed post-allocation earnings writes are queued and retried via cron
 
 #### 5. Payout System
 - **Stripe Connect**: Bank account management and transfers
 - **Minimum Threshold**: $25.00 minimum payout
 - **Automated Processing**: Monthly payout processing via cron
 - **Status Tracking**: Real-time payout status updates
+- **Admin QA Dashboard**: `/admin/writer-payouts` provides live earnings and payout status verification
 
 ### "Use It or Lose It" Model
 WeWrite's innovative **"Use It or Lose It"** system encourages user engagement:
@@ -99,8 +101,9 @@ WeWrite's innovative **"Use It or Lose It"** system encourages user engagement:
 #### USD System
 - `usdBalances` - User subscription balances
 - `usdAllocations` - Monthly allocations to creators
-- `writerUsdBalances` - Creator earnings summary
+- `writerUsdBalances` - Legacy compatibility (not payout source of truth)
 - `writerUsdEarnings` - Detailed monthly earnings records
+- `earningsProcessingFailures` - Retry queue for failed earnings post-processing writes
 
 #### Content System
 - `pages` - User-generated content (see [PAGE_DATA_AND_VERSIONS.md](PAGE_DATA_AND_VERSIONS.md))

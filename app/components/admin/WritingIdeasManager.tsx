@@ -1,11 +1,10 @@
-'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useToast } from '../ui/use-toast';
 import { type WritingIdea } from '../../data/writingIdeas';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../ui/table';
 import {
   Dialog,
   DialogContent,
@@ -413,18 +412,18 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
             {searchTerm ? `No ideas matching "${searchTerm}"` : 'No writing ideas yet'}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 sticky top-0">
-              <tr className="border-b">
-                <th className="w-8 p-2 text-left">
+          <Table className="w-full text-sm">
+            <TableHeader className="bg-muted/50 sticky top-0">
+              <TableRow className="border-b">
+                <TableHead className="w-8 p-2 text-left">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === filteredIdeas.length && filteredIdeas.length > 0}
                     onChange={handleSelectAll}
                     className="rounded border-border"
                   />
-                </th>
-                <th className="p-2 text-left font-medium text-muted-foreground w-1/4">
+                </TableHead>
+                <TableHead className="p-2 text-left font-medium text-muted-foreground w-1/4">
                   <button
                     onClick={() => handleSort('title')}
                     className="flex items-center gap-1 hover:text-foreground transition-colors"
@@ -432,9 +431,9 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                     Title
                     <SortIcon field="title" />
                   </button>
-                </th>
-                <th className="p-2 text-left font-medium text-muted-foreground">Placeholder</th>
-                <th className="p-2 text-center font-medium text-muted-foreground w-20">
+                </TableHead>
+                <TableHead className="p-2 text-left font-medium text-muted-foreground">Placeholder</TableHead>
+                <TableHead className="p-2 text-center font-medium text-muted-foreground w-20">
                   <button
                     onClick={() => handleSort('usageCount')}
                     className="flex items-center gap-1 hover:text-foreground transition-colors mx-auto"
@@ -442,11 +441,11 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                     Uses
                     <SortIcon field="usageCount" />
                   </button>
-                </th>
-                <th className="w-10 p-2"></th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+                <TableHead className="w-10 p-2"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredIdeas.map((idea) => (
                 <EditableRow
                   key={idea.id}
@@ -459,8 +458,8 @@ export function WritingIdeasManager({ className }: WritingIdeasManagerProps) {
                   usageCount={idea.usageCount || 0}
                 />
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </div>
 
@@ -557,8 +556,8 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, u
   const hasChanges = editingField && editValue.trim() !== idea[editingField];
 
   return (
-    <tr className={`border-b hover:bg-muted/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
-      <td className="p-2">
+    <TableRow className={`border-b hover:bg-muted/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+      <TableCell className="p-2">
         <input
           type="checkbox"
           checked={isSelected}
@@ -566,8 +565,8 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, u
           className="rounded border-border"
           disabled={isSaving}
         />
-      </td>
-      <td className="p-2">
+      </TableCell>
+      <TableCell className="p-2">
         {editingField === 'title' ? (
           <div className="flex items-center gap-1">
             <input
@@ -610,8 +609,8 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, u
             )}
           </div>
         )}
-      </td>
-      <td className="p-2">
+      </TableCell>
+      <TableCell className="p-2">
         {editingField === 'placeholder' ? (
           <div className="flex items-center gap-1">
             <input
@@ -649,8 +648,8 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, u
             {idea.placeholder}
           </div>
         )}
-      </td>
-      <td className="p-2 text-center">
+      </TableCell>
+      <TableCell className="p-2 text-center">
         <span className={`inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 text-xs font-medium rounded-full ${
           usageCount > 0
             ? 'bg-primary/10 text-primary'
@@ -658,8 +657,8 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, u
         }`}>
           {usageCount}
         </span>
-      </td>
-      <td className="p-2">
+      </TableCell>
+      <TableCell className="p-2">
         <Button
           onClick={onDelete}
           variant="ghost"
@@ -673,7 +672,7 @@ function EditableRow({ idea, isSelected, isSaving, onSelect, onSave, onDelete, u
             <Icon name="Trash2" size={14} />
           )}
         </Button>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

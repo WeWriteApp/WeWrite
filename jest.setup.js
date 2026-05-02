@@ -31,6 +31,23 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Provide fetch for modules that require it at import time.
+if (typeof global.fetch === 'undefined') {
+  global.fetch = jest.fn()
+}
+
+if (typeof global.Response === 'undefined') {
+  global.Response = class Response {}
+}
+
+if (typeof global.Request === 'undefined') {
+  global.Request = class Request {}
+}
+
+if (typeof global.Headers === 'undefined') {
+  global.Headers = class Headers {}
+}
+
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
   useRouter() {
@@ -56,6 +73,13 @@ process.env.NODE_ENV = 'test'
 process.env.NEXT_PUBLIC_FIREBASE_API_KEY = 'test-api-key'
 process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = 'test.firebaseapp.com'
 process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'test-project'
+process.env.NEXT_PUBLIC_FIREBASE_DOMAIN = 'test.firebaseapp.com'
+process.env.NEXT_PUBLIC_FIREBASE_DB_URL = 'https://test.firebaseio.com'
+process.env.NEXT_PUBLIC_FIREBASE_PID = 'test-project'
+process.env.NEXT_PUBLIC_FIREBASE_BUCKET = 'test.appspot.com'
+process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID = '1234567890'
+process.env.NEXT_PUBLIC_FIREBASE_APP_ID = '1:1234567890:web:test'
+process.env.STRIPE_SECRET_KEY = 'sk_test_1234567890'
 
 // Suppress console warnings in tests
 const originalWarn = console.warn

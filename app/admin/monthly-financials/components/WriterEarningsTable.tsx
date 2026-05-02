@@ -1,9 +1,4 @@
-import React from 'react';
-import { Icon } from '@/components/ui/Icon';
-import { formatUsdCents } from '../../../utils/formatCurrency';
-import { PLATFORM_FEE_CONFIG } from '../../../config/platformFee';
-import { InfoTooltip } from './InfoTooltip';
-import type { WriterEarningsDetail } from '../types';
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../../components/ui/table';
 
 interface WriterEarningsTableProps {
   writerEarnings: WriterEarningsDetail[] | undefined;
@@ -65,50 +60,50 @@ export function WriterEarningsTable({ writerEarnings, onUserClick }: WriterEarni
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left py-2 px-2">Writer</th>
-                  <th className="text-right py-2 px-2">
+            <Table className="w-full text-xs sm:text-sm">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-muted/30">
+                  <TableHead className="text-left py-2 px-2">Writer</TableHead>
+                  <TableHead className="py-2 px-2">
                     <div className="inline-flex items-center gap-1">
                       <span>Gross</span>
                       <InfoTooltip text="Total amount allocated to this writer before fees" />
                     </div>
-                  </th>
-                  <th className="text-right py-2 px-2">
+                  </TableHead>
+                  <TableHead className="py-2 px-2">
                     <div className="inline-flex items-center gap-1">
                       <span>Net</span>
                       <InfoTooltip text="Amount writer will receive after fee deduction" />
                     </div>
-                  </th>
-                  <th className="text-center py-2 px-2">
+                  </TableHead>
+                  <TableHead className="text-center py-2 px-2">
                     <div className="inline-flex items-center gap-1">
                       <span>Bank</span>
                       <InfoTooltip text="Whether writer has set up their Stripe account to receive payouts" />
                     </div>
-                  </th>
-                  <th className="text-right py-2 px-2">
+                  </TableHead>
+                  <TableHead className="py-2 px-2">
                     <div className="inline-flex items-center gap-1">
                       <span>Balance</span>
                       <InfoTooltip text={`Current account balance (pending + available). Writers need $${PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_DOLLARS} minimum to request a payout.`} />
                     </div>
-                  </th>
-                  <th className="text-right py-2 px-2">
+                  </TableHead>
+                  <TableHead className="py-2 px-2">
                     <div className="inline-flex items-center gap-1">
                       <span>Fee</span>
                       <InfoTooltip text="10% fee deducted from writer earnings" />
                     </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {writerEarnings.map((writer) => (
-                  <tr
+                  <TableRow
                     key={writer.userId}
                     className="border-b border-border hover:bg-muted/30 cursor-pointer"
                     onClick={() => onUserClick(writer.email)}
                   >
-                    <td className="py-2 px-2">
+                    <TableCell className="py-2 px-2">
                       <div className="font-medium truncate max-w-[150px] text-primary hover:underline" title={writer.email}>
                         {writer.name || writer.email}
                       </div>
@@ -117,14 +112,14 @@ export function WriterEarningsTable({ writerEarnings, onUserClick }: WriterEarni
                           {writer.email}
                         </div>
                       )}
-                    </td>
-                    <td className={`text-right py-2 px-2 ${writer.grossEarningsCents === 0 ? 'opacity-30' : ''}`}>
+                    </TableCell>
+                    <TableCell kind="currency" className={`py-2 px-2 ${writer.grossEarningsCents === 0 ? 'opacity-30' : ''}`}>
                       {formatUsdCents(writer.grossEarningsCents)}
-                    </td>
-                    <td className={`text-right py-2 px-2 ${writer.netPayoutCents === 0 ? 'opacity-30' : ''}`}>
+                    </TableCell>
+                    <TableCell kind="currency" className={`py-2 px-2 ${writer.netPayoutCents === 0 ? 'opacity-30' : ''}`}>
                       {formatUsdCents(writer.netPayoutCents)}
-                    </td>
-                    <td className="text-center py-2 px-2">
+                    </TableCell>
+                    <TableCell className="text-center py-2 px-2">
                       <span className={`px-1.5 py-0.5 rounded text-xs ${
                         writer.bankAccountStatus === 'verified' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
                         writer.bankAccountStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
@@ -138,8 +133,8 @@ export function WriterEarningsTable({ writerEarnings, onUserClick }: WriterEarni
                          writer.bankAccountStatus === 'rejected' ? 'Rejected' :
                          'Not Set Up'}
                       </span>
-                    </td>
-                    <td className="text-right py-2 px-2">
+                    </TableCell>
+                    <TableCell kind="currency" className="py-2 px-2">
                       {(() => {
                         const totalBalanceCents = (writer.pendingEarningsCents || 0) + (writer.availableEarningsCents || 0);
                         const minPayoutCents = PLATFORM_FEE_CONFIG.MINIMUM_PAYOUT_CENTS;
@@ -167,34 +162,34 @@ export function WriterEarningsTable({ writerEarnings, onUserClick }: WriterEarni
                           </div>
                         );
                       })()}
-                    </td>
-                    <td className={`text-right py-2 px-2 ${writer.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
+                    </TableCell>
+                    <TableCell kind="currency" className={`py-2 px-2 ${writer.platformFeeCents === 0 ? 'opacity-30' : 'text-green-700 dark:text-green-400'}`}>
                       {formatUsdCents(writer.platformFeeCents)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="font-bold bg-muted/50">
-                  <td className="py-2 px-2">Totals</td>
-                  <td className="text-right py-2 px-2">
+              </TableBody>
+              <TableFooter>
+                <TableRow className="font-bold bg-muted/50">
+                  <TableCell className="py-2 px-2">Totals</TableCell>
+                  <TableCell kind="currency" className="py-2 px-2">
                     {formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.grossEarningsCents, 0))}
-                  </td>
-                  <td className="text-right py-2 px-2">
+                  </TableCell>
+                  <TableCell kind="currency" className="py-2 px-2">
                     {formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.netPayoutCents, 0))}
-                  </td>
-                  <td className="text-center py-2 px-2">
+                  </TableCell>
+                  <TableCell className="text-center py-2 px-2">
                     {writerEarnings.filter(w => w.bankAccountStatus === 'verified').length} verified
-                  </td>
-                  <td className="text-right py-2 px-2">
+                  </TableCell>
+                  <TableCell kind="currency" className="py-2 px-2">
                     {formatUsdCents(writerEarnings.reduce((sum, w) => sum + (w.pendingEarningsCents || 0) + (w.availableEarningsCents || 0), 0))}
-                  </td>
-                  <td className="text-right py-2 px-2 text-green-700 dark:text-green-400">
+                  </TableCell>
+                  <TableCell kind="currency" className="py-2 px-2 text-green-700 dark:text-green-400">
                     {formatUsdCents(writerEarnings.reduce((sum, w) => sum + w.platformFeeCents, 0))}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
           </div>
         </>
       )}

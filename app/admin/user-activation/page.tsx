@@ -18,6 +18,7 @@ import {
 } from "../../components/ui/select";
 import { useRouter } from "next/navigation";
 import { ActivationTrends } from "../../components/admin/ActivationTrends";
+import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 // Activation milestones in order - short labels for column headers
 const MILESTONE_LABELS: Record<string, string> = {
@@ -291,17 +292,17 @@ export default function UserActivationPage() {
             <h3 className="text-sm font-semibold text-foreground">Per-User Breakdown</h3>
           </div>
           <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
+          <Table className="w-full text-sm border-collapse">
             {/* Header with diagonal labels */}
-            <thead>
-              <tr>
+            <TableHeader>
+              <TableRow>
                 {/* User column */}
-                <th className="text-left p-2 font-medium text-muted-foreground sticky left-0 bg-background z-10 min-w-[140px] border-b border-border">
+                <TableHead className="text-left p-2 font-medium text-muted-foreground sticky left-0 bg-background z-10 min-w-[140px] border-b border-border">
                   User
-                </th>
+                </TableHead>
                 {/* Milestone columns with icon headers */}
                 {milestones.map((milestone, index) => (
-                  <th
+                  <TableHead
                     key={milestone}
                     className={`text-center p-2 w-10 min-w-[40px] cursor-help border-b border-border ${
                       index > 0 ? 'border-l border-border' : ''
@@ -323,24 +324,24 @@ export default function UserActivationPage() {
                         {MILESTONE_LABELS[milestone] || milestone}
                       </span>
                     </div>
-                  </th>
+                  </TableHead>
                 ))}
                 {/* Created column */}
-                <th className="text-center p-2 font-medium text-muted-foreground w-16 border-b border-border border-l">
+                <TableHead className="text-center p-2 font-medium text-muted-foreground w-16 border-b border-border border-l">
                   <div className="flex flex-col items-center gap-1">
                     <Icon name="Calendar" size={18} className="text-muted-foreground" />
                     <span className="text-[10px] text-muted-foreground">
                       Created
                     </span>
                   </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filtered.map((user) => {
                 const isRowHovered = hoveredRow === user.uid;
                 return (
-                  <tr
+                  <TableRow
                     key={user.uid}
                     className="cursor-pointer"
                     style={{
@@ -351,7 +352,7 @@ export default function UserActivationPage() {
                     onClick={() => handleUserSelect(user)}
                   >
                     {/* User info - username only */}
-                    <td
+                    <TableCell
                       className="p-2 sticky left-0 z-10 border-b border-border"
                       style={{
                         backgroundColor: isRowHovered ? 'var(--neutral-alpha-10)' : 'var(--background)'
@@ -360,13 +361,13 @@ export default function UserActivationPage() {
                       <span className="font-medium text-foreground truncate block max-w-[130px]">
                         {user.username || 'No username'}
                       </span>
-                    </td>
+                    </TableCell>
                     {/* Milestone checkmarks */}
                     {milestones.map((milestone, colIndex) => {
                       const isColHovered = hoveredCol === milestone;
                       const isIntersection = isRowHovered && isColHovered;
                       return (
-                        <td
+                        <TableCell
                           key={milestone}
                           className={`p-1 text-center border-b border-border ${
                             colIndex > 0 ? 'border-l border-border' : ''
@@ -402,18 +403,18 @@ export default function UserActivationPage() {
                               />
                             </div>
                           )}
-                        </td>
+                        </TableCell>
                       );
                     })}
                     {/* Created date */}
-                    <td className="p-2 text-center text-xs text-muted-foreground border-b border-border border-l" title={user.createdAt}>
+                    <TableCell className="p-2 text-center text-xs text-muted-foreground border-b border-border border-l" title={user.createdAt}>
                       {formatRelativeDate(user.createdAt)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           </div>
 
           {/* Empty state */}

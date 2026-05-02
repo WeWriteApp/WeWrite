@@ -43,6 +43,136 @@ function getDb() {
 }
 
 export class UsdService {
+  private static async recordEarningsProcessingFailure(params: {
+    correlationId: string;
+    fromUserId: string;
+    recipientUserId: string;
+    resourceId: string;
+    resourceType: 'page' | 'user';
+    usdCentsChange: number;
+    month: string;
+    attempts: number;
+    error: unknown;
+  }): Promise<void> {
+    const db = getDb();
+    const failuresCollection = await getCollectionNameAsync('earningsProcessingFailures');
+
+    await db.collection(failuresCollection).add({
+      ...params,
+      errorMessage: params.error instanceof Error ? params.error.message : 'Unknown error',
+      errorStack: params.error instanceof Error ? params.error.stack : null,
+      status: 'pending_retry',
+      allocationCommitted: true,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  private static async processEarningsWithRecovery(params: {
+    correlationId: string;
+    fromUserId: string;
+    recipientUserId: string;
+    resourceId: string;
+    resourceType: 'page' | 'user';
+    usdCentsChange: number;
+    month: string;
+  }): Promise<void> {
+    const { UsdEarningsService } = await import('./usdEarningsService');
+    let lastError: unknown;
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await UsdEarningsService.processUsdAllocation(
+          params.fromUserId,
+          params.recipientUserId,
+          params.resourceId,
+          params.resourceType,
+          params.usdCentsChange,
+          params.month
+        );
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+        }
+      }
+    }
+
+    await this.recordEarningsProcessingFailure({
+      ...params,
+      attempts: maxAttempts,
+      error: lastError,
+    });
+
+    console.error(
+      `[USD ALLOCATION] [${params.correlationId}] Failed to record recipient earnings after ${maxAttempts} attempts; queued for retry.`
+    );
+  }
+
+  static async retryEarningsProcessingFailures(limit: number = 100): Promise<{
+    processed: number;
+    succeeded: number;
+    failed: number;
+  }> {
+    const db = getDb();
+    const failuresCollection = await getCollectionNameAsync('earningsProcessingFailures');
+    const failuresSnapshot = await db
+      .collection(failuresCollection)
+      .where('status', '==', 'pending_retry')
+      .limit(limit)
+      .get();
+
+    let processed = 0;
+    let succeeded = 0;
+    let failed = 0;
+    const { UsdEarningsService } = await import('./usdEarningsService');
+
+    for (const failureDoc of failuresSnapshot.docs) {
+      processed++;
+      const failure = failureDoc.data() as {
+        fromUserId: string;
+        recipientUserId: string;
+        resourceId: string;
+        resourceType: 'page' | 'user';
+        usdCentsChange: number;
+        month: string;
+        attempts?: number;
+      };
+
+      try {
+        await UsdEarningsService.processUsdAllocation(
+          failure.fromUserId,
+          failure.recipientUserId,
+          failure.resourceId,
+          failure.resourceType,
+          failure.usdCentsChange,
+          failure.month
+        );
+
+        await failureDoc.ref.update({
+          status: 'resolved',
+          resolvedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          retryCount: (failure.attempts || 0) + 1,
+        });
+        succeeded++;
+      } catch (error) {
+        await failureDoc.ref.update({
+          status: 'pending_retry',
+          lastError: error instanceof Error ? error.message : 'Unknown error',
+          updatedAt: FieldValue.serverTimestamp(),
+          lastRetryAt: FieldValue.serverTimestamp(),
+          retryCount: (failure.attempts || 0) + 1,
+        });
+        failed++;
+      }
+    }
+
+    return { processed, succeeded, failed };
+  }
+
   /**
    * Ensure the current month has active allocations by rolling forward the most recent month.
    * This prevents allocations from appearing empty when the month-end cron fails to copy data.
@@ -755,19 +885,15 @@ export class UsdService {
 
       // Process earnings for the recipient if there's a valid recipient and positive allocation
       if (recipientUserId && newPageAllocationCents > 0 && allocationDifference > 0) {
-        try {
-          const { UsdEarningsService } = await import('./usdEarningsService');
-          await UsdEarningsService.processUsdAllocation(
-            userId,
-            recipientUserId,
-            pageId,
-            'page',
-            allocationDifference,
-            currentMonth
-          );
-        } catch {
-          // Don't fail the allocation if earnings processing fails
-        }
+        await this.processEarningsWithRecovery({
+          correlationId,
+          fromUserId: userId,
+          recipientUserId,
+          resourceId: pageId,
+          resourceType: 'page',
+          usdCentsChange: allocationDifference,
+          month: currentMonth,
+        });
       }
     } catch (error) {
       // Re-throw with correlation ID for better tracking
@@ -875,19 +1001,15 @@ export class UsdService {
 
       // Process earnings for the recipient if there's a positive allocation difference
       if (newUserAllocationCents > 0 && allocationDifference > 0) {
-        try {
-          const { UsdEarningsService } = await import('./usdEarningsService');
-          await UsdEarningsService.processUsdAllocation(
-            userId,
-            recipientUserId,
-            recipientUserId,
-            'user',
-            allocationDifference,
-            currentMonth
-          );
-        } catch {
-          // Don't fail the allocation if earnings processing fails
-        }
+        await this.processEarningsWithRecovery({
+          correlationId: `user_alloc_${userId}_${recipientUserId}_${Date.now()}`,
+          fromUserId: userId,
+          recipientUserId,
+          resourceId: recipientUserId,
+          resourceType: 'user',
+          usdCentsChange: allocationDifference,
+          month: currentMonth,
+        });
       }
     } catch (error) {
       console.error('UsdService: Error allocating USD to user:', error);
