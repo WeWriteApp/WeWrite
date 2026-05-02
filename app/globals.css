@@ -2465,6 +2465,11 @@ a.username-badge-link:has(.text-muted-foreground) {
   }
 }
 
+/* Prevent bright white focus halos in dark mode when ring-offset color is not specified. */
+:where(*, *::before, *::after) {
+  --tw-ring-offset-color: oklch(var(--background));
+}
+
 /* Glass card styling - using theme variables for better light/dark mode support */
 .glass-card {
   border: 1px solid;

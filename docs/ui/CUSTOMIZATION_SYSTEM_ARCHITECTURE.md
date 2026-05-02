@@ -43,7 +43,7 @@ WeWrite provides a **professional OKLCH-based customization system** that allows
 - Real-time gradient generation reflects current slider values
 
 ### 4. **Clean Integration**
-- No `!important` modifiers anywhere in the codebase
+- Prefer token-driven styles and specificity over `!important` in component-level UI code
 - Proper CSS specificity using data attributes
 - Theme-aware application throughout UI
 - Persistent settings with OKLCH precision

@@ -37,8 +37,8 @@ WeWrite uses a **universal card system** with OKLCH color integration that provi
 - Smart limiting system prevents unusable color combinations
 
 ### 3. **Clean CSS Architecture**
-- No `!important` modifiers anywhere in the codebase
-- Proper CSS specificity using data attributes
+- Prefer CSS specificity and tokens over `!important` in component-level styling
+- Legacy global overrides may still use `!important` where interoperability requires it
 - Theme-aware borders with automatic light/dark mode support
 - Maintainable and reusable component structure
 
@@ -247,11 +247,12 @@ The desktop sidebar uses the full card system with glassmorphism:
 - ✅ Use `border-theme-*` for theme-aware borders
 - ✅ Use `border-*-only` for directional borders
 - ✅ Use OKLCH color space for all color definitions
-- ✅ Use proper CSS specificity instead of `!important`
+- ✅ Use proper CSS specificity in component styles instead of `!important`
+- ✅ For ring offsets, use `ring-offset-background` with `ring-offset-*` widths
 - ✅ Test in both light and dark modes
 
 ### **CSS Rules to Avoid**
-- ❌ Never use `!important` modifiers anywhere (use proper specificity)
+- ❌ Do not introduce new `!important` in component-level UI code
 - ❌ Never use `border-border` (use `border-theme-medium`)
 - ❌ Never create custom card CSS classes
 - ❌ Never use hardcoded border colors

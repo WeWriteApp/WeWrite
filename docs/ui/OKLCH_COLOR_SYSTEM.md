@@ -74,7 +74,7 @@ WeWrite uses a **comprehensive 5-color OKLCH system** with opacity variations th
 - Real-time gradient generation reflects current slider values
 
 ### 4. **Clean CSS Architecture**
-- No `!important` modifiers anywhere in the codebase
+- Prefer token-driven styles and specificity over `!important` in component-level UI code
 - Proper CSS specificity using data attributes
 - Theme-aware borders with automatic light/dark mode support
 - Universal card system integration

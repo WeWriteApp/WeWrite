@@ -225,7 +225,7 @@
 /* Prevent card hover transforms within modal contexts to fix positioning issues */
 [role="dialog"] .wewrite-card:hover,
 [aria-modal="true"] .wewrite-card:hover {
-  transform: none !important;
+  transform: none;
 }
 
 /* Disable hover effects on expanded toolbar - keep it solid/opaque */

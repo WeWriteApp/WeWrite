@@ -216,7 +216,7 @@
 
 [data-pill-style] .pill-text,
 [data-pill-style] span {
-  color: inherit !important;
+  color: inherit;
 }
 
 /* ============================================================================

@@ -67,6 +67,7 @@ export function useTheme() {
 - `--success` / `--success-foreground` - Success states
 - `--border` - Border colors (theme-aware)
 - `--ring` - Focus ring colors
+- `--tw-ring-offset-color` - Tailwind ring offset color (set to `oklch(var(--background))` globally)
 
 ### Accent Color System
 ```css
@@ -122,7 +123,7 @@ export function useTheme() {
 ### Interactive Elements
 ```jsx
 // ✅ CORRECT - Theme-aware interactive styling
-<button className="bg-primary text-primary-foreground hover:bg-primary/90 border-theme-strong hover-border-strong">
+<button className="bg-primary text-primary-foreground hover:bg-primary/90 border-theme-strong hover-border-strong focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
   Button
 </button>
 
@@ -138,6 +139,7 @@ export function useTheme() {
 - Use CSS variables through Tailwind classes
 - Never hardcode colors or use manual dark mode classes
 - Leverage the opacity system for consistent transparency
+- Always pair ring offset width utilities with `ring-offset-background` for dark-mode-safe focus halos
 
 ### 2. High Contrast Support
 - All components automatically support high contrast mode
