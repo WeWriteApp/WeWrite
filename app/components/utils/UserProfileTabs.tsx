@@ -8,7 +8,8 @@ import { InlineError } from '../ui/InlineError';
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useAuth } from '../../providers/AuthProvider';
 import { UnifiedPageList, PageListViewToggle } from '../pages/UnifiedPageList';
-import type { PageListView } from '../pages/UnifiedPageList';
+import { ListMetadataSelector } from '../pages/UnifiedPageList';
+import type { PageListView, ListMetadata } from '../pages/UnifiedPageList';
 import ActivityFeed from "../features/ActivityFeed";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useUserPages from "../../hooks/useUserPages";
@@ -88,12 +89,14 @@ import {
   DropdownMenuTrigger} from "../ui/dropdown-menu";
 
 // Component to display a list of pages (uses shared UnifiedPageList)
-function PageList({ pageList, emptyMessage, isCurrentUserList = false, view, onViewChange }: {
+function PageList({ pageList, emptyMessage, isCurrentUserList = false, view, onViewChange, listMetadata, onListMetadataChange }: {
   pageList: any[];
   emptyMessage: string;
   isCurrentUserList?: boolean;
   view: PageListView;
   onViewChange: (v: PageListView) => void;
+  listMetadata: ListMetadata;
+  onListMetadataChange: (metadata: ListMetadata) => void;
 }) {
   return (
     <UnifiedPageList
@@ -103,6 +106,8 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false, view, onV
       isOwned={isCurrentUserList}
       emptyTitle={emptyMessage}
       className="mt-4"
+      listMetadata={listMetadata}
+      onListMetadataChange={onListMetadataChange}
     />
   );
 }
@@ -217,6 +222,23 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
     setPageListView(v);
     if (typeof window !== 'undefined') {
       localStorage.setItem('profile-pages-view', v);
+    }
+  };
+
+  const [pageListMetadata, setPageListMetadata] = useState<ListMetadata>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('profile-pages-list-value') as ListMetadata | null;
+      const validValues: ListMetadata[] = ['none', 'author', 'last-edited', 'created', 'date', 'earnings', 'views', 'views-24h', 'sponsors', 'links', 'backlinks', 'replies'];
+      if (stored && validValues.includes(stored)) {
+        return stored === 'date' ? 'created' : stored;
+      }
+    }
+    return 'last-edited';
+  });
+  const handleListMetadataChange = (metadata: ListMetadata) => {
+    setPageListMetadata(metadata);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profile-pages-list-value', metadata);
     }
   };
 
@@ -709,11 +731,11 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
             </div>
 
             {/* Sort dropdown */}
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
               <div className="text-sm text-muted-foreground">
                 {totalPageCount || 0} page{(totalPageCount || 0) !== 1 ? 's' : ''}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {/* Automatic change detection enabled - no manual refresh needed */}
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -755,6 +777,12 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+                {pageListView === 'list' && (
+                  <ListMetadataSelector
+                    metadata={pageListMetadata}
+                    onMetadataChange={handleListMetadataChange}
+                  />
+                )}
                 <PageListViewToggle view={pageListView} onViewChange={handleViewChange} />
               </div>
             </div>
@@ -765,7 +793,15 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
               </div>
             ) : (
               <>
-                <PageList pageList={sortedPages} emptyMessage="No pages yet" isCurrentUserList={isCurrentUser} view={pageListView} onViewChange={handleViewChange} />
+                <PageList
+                  pageList={sortedPages}
+                  emptyMessage="No pages yet"
+                  isCurrentUserList={isCurrentUser}
+                  view={pageListView}
+                  onViewChange={handleViewChange}
+                  listMetadata={pageListMetadata}
+                  onListMetadataChange={handleListMetadataChange}
+                />
                 {loadingError && (
                   <InlineError
                     variant="inline"

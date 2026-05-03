@@ -4,7 +4,7 @@
  * without relying on complex event systems
  */
 
-type CacheInvalidationCallback = () => void;
+type CacheInvalidationCallback = (data?: any) => void;
 
 class GlobalCacheInvalidation {
   private callbacks: Map<string, CacheInvalidationCallback[]> = new Map();
@@ -51,7 +51,7 @@ class GlobalCacheInvalidation {
     if (callbacks && callbacks.length > 0) {
       callbacks.forEach(callback => {
         try {
-          callback();
+          callback(data);
         } catch (error) {
           console.error(`GlobalCache: Error in ${cacheType} callback:`, error);
         }

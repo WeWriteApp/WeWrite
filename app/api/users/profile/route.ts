@@ -23,15 +23,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const username = searchParams.get('username');
+    const cacheControl = request.headers.get('cache-control') || '';
+    const bypassCache = searchParams.get('fresh') === '1'
+      || cacheControl.includes('no-cache')
+      || cacheControl.includes('no-store');
 
     if (!id && !username) {
       return createErrorResponse('BAD_REQUEST', 'Either id or username parameter is required');
     }
 
-    const lookupValue = id || username;
+    const lookupValue = (id || username) as string;
 
     // Check enhanced cache first
-    const cachedProfile = userCache.get(lookupValue, 'profile');
+    const cachedProfile = bypassCache ? null : userCache.get(lookupValue, 'profile');
     if (cachedProfile) {
       const responseTime = Date.now() - startTime;
 
@@ -56,8 +60,8 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
     const usersCollection = await getCollectionNameAsync('users');
 
-    let userData = null;
-    let userId = null;
+    let userData: Record<string, any> | null = null;
+    let userId: string | null = null;
 
     // First, try to get user by ID directly
     if (id) {
@@ -92,20 +96,26 @@ export async function GET(request: NextRequest) {
     if (!userData) {
       // Only log when user is actually not found (error case)
       console.warn('User not found:', { id, username });
-      return createErrorResponse('NOT_FOUND', 'User not found');
+      const response = createErrorResponse('NOT_FOUND', 'User not found');
+      if (bypassCache) {
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      }
+      return response;
     }
+
+    const resolvedUserId = userId || lookupValue;
 
     // Only use username field - displayName is fully deprecated
     const safeUsername = sanitizeUsername(
-      userData.username || `user_${userId?.slice(0, 8)}`,
+      userData.username || `user_${resolvedUserId.slice(0, 8)}`,
       'User',
-      `user_${userId?.slice(0, 8)}`
+      `user_${resolvedUserId.slice(0, 8)}`
     );
 
     // Prepare user profile data (username only - displayName removed)
     const profileData = {
-      uid: userId,
-      id: userId,
+      uid: resolvedUserId,
+      id: resolvedUserId,
       username: safeUsername,
       bio: userData.bio || '',
       createdAt: userData.createdAt,
@@ -121,14 +131,20 @@ export async function GET(request: NextRequest) {
     // Track database read for cost monitoring
     trackFirebaseRead('users', 'getUserProfile', 1, 'api-user-profile');
 
-    // Cache the result in enhanced cache system
+    // Cache the result in enhanced cache system. Fresh requests still refresh the
+    // shared cache with the latest profile so subsequent normal reads converge.
     userCache.set(lookupValue, profileData, 'profile');
 
     const responseTime = Date.now() - startTime;
 
     // Return user profile data with optimized cache headers
     const response = createApiResponse(profileData);
-    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=900, stale-while-revalidate=1800'); // 10min browser, 15min CDN
+    response.headers.set(
+      'Cache-Control',
+      bypassCache
+        ? 'no-store, no-cache, must-revalidate'
+        : 'public, max-age=600, s-maxage=900, stale-while-revalidate=1800'
+    ); // 10min browser, 15min CDN unless explicitly bypassed
     response.headers.set('ETag', `"user-${lookupValue}-${Date.now()}"`);
     response.headers.set('X-Cache-Status', 'MISS');
     response.headers.set('X-Response-Time', `${responseTime}ms`);
@@ -142,7 +158,7 @@ export async function GET(request: NextRequest) {
     // Handle timeout errors specifically
     if (error.message?.includes('timeout') || error.message?.includes('timed out')) {
       console.error('🚨 User profile API timeout:', error.message);
-      return createErrorResponse('TIMEOUT', 'Request timed out - please try again');
+      return createErrorResponse('INTERNAL_ERROR', 'Request timed out - please try again');
     }
 
     return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch user profile');

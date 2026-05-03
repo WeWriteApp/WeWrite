@@ -60,6 +60,7 @@ const useUserPages = (
   // Refs for debouncing and preventing duplicate calls
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchRef = useRef<string>('');
+  const inFlightRequestsRef = useRef<Set<string>>(new Set());
 
   // Optimized fetch function with caching and deduplication
   const fetchPages = useCallback(async (customSortBy?: string, customSortDirection?: string, forceRefresh: boolean = false, append: boolean = false, cursor?: string) => {
@@ -73,6 +74,11 @@ const useUserPages = (
 
     // Create cache key
     const cacheKey = `${userId}-${effectiveSortBy}-${effectiveSortDirection}`;
+    const requestKey = `${cacheKey}-${append ? 'append' : 'replace'}-${cursor || 'initial'}`;
+
+    if (inFlightRequestsRef.current.has(requestKey)) {
+      return;
+    }
 
     // Check if this is a duplicate call
     if (lastFetchRef.current === cacheKey && loading && !forceRefresh) {
@@ -94,6 +100,7 @@ const useUserPages = (
       setError(null);
     }
     lastFetchRef.current = cacheKey;
+    inFlightRequestsRef.current.add(requestKey);
 
     try {
       const params = new URLSearchParams({
@@ -131,7 +138,11 @@ const useUserPages = (
       }
 
       if (append) {
-        setPages(prev => [...prev, ...pagesArray]);
+        setPages(prev => {
+          const existingIds = new Set(prev.map(page => page.id));
+          const newPages = pagesArray.filter(page => !existingIds.has(page.id));
+          return [...prev, ...newPages];
+        });
         setLoadingMore(false);
       } else {
         // Cache the results to reduce future queries (only for initial loads)
@@ -147,6 +158,8 @@ const useUserPages = (
       } else {
         setLoading(false);
       }
+    } finally {
+      inFlightRequestsRef.current.delete(requestKey);
     }
   }, [userId, currentSort.sortBy, currentSort.sortDirection, loading]);
 

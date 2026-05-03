@@ -4,6 +4,14 @@ import React, { useState, useMemo } from 'react';
 import { UnifiedPageList, PageListViewToggle, ListMetadataSelector } from '../../components/pages/UnifiedPageList';
 import type { PageItem, PageListView, ListMetadata } from '../../components/pages/UnifiedPageList';
 import { ComponentShowcase, StateDemo, CollapsibleDocs, DocsCodeBlock } from './shared';
+import { Button } from '../../components/ui/button';
+import { Icon } from '../../components/ui/Icon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu';
 
 const SAMPLE_PAGES: PageItem[] = [
   { id: 'p1', title: 'Getting Started with WeWrite', isPublic: true, userId: 'u1', username: 'alice', lastModified: '2026-03-28T12:00:00Z', createdAt: '2026-03-01T10:00:00Z', earnings: 1250 },
@@ -48,6 +56,10 @@ function sortPages(pages: PageItem[], field: SortField, direction: SortDirection
   });
 }
 
+function getSortFieldLabel(field: SortField): string {
+  return SORT_OPTIONS.find(option => option.value === field)?.label || 'Sort';
+}
+
 function InteractiveDemo() {
   const [view, setView] = useState<PageListView>('wrapped');
   const [listMetadata, setListMetadata] = useState<ListMetadata>('none');
@@ -68,22 +80,35 @@ function InteractiveDemo() {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-muted-foreground">Sort:</span>
-            <select
-              value={sortField}
-              onChange={(e) => setSortField(e.target.value as SortField)}
-              className="text-xs bg-transparent border border-border rounded px-1.5 py-0.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <button
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" className="h-8 gap-2">
+                  {getSortFieldLabel(sortField)}
+                  <Icon name="ChevronDown" size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {SORT_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.value}
+                    onClick={() => setSortField(opt.value)}
+                    className="flex items-center justify-between gap-2 cursor-pointer"
+                  >
+                    <span>{opt.label}</span>
+                    {sortField === opt.value && <Icon name="Check" size={14} />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setSortDirection(d => d === 'asc' ? 'desc' : 'asc')}
-              className="text-xs px-1.5 py-0.5 border border-border rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="h-8 w-8 p-0"
               title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
             >
-              {sortDirection === 'asc' ? '↑' : '↓'}
-            </button>
+              <Icon name={sortDirection === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={14} />
+            </Button>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -133,12 +158,21 @@ export function PageListSection({ id }: { id: string }) {
 
       <StateDemo label="List View — with Date">
         <p className="text-xs text-muted-foreground mb-2">List view showing created date on each pill.</p>
-        <UnifiedPageList pages={SAMPLE_PAGES} view="list" listMetadata="date" />
+        <UnifiedPageList pages={SAMPLE_PAGES} view="list" listMetadata="created" />
       </StateDemo>
 
       <StateDemo label="List View — with Earnings">
         <p className="text-xs text-muted-foreground mb-2">List view showing page earnings on each pill.</p>
         <UnifiedPageList pages={SAMPLE_PAGES} view="list" listMetadata="earnings" />
+      </StateDemo>
+
+      <StateDemo label="List View — with Custom Value">
+        <p className="text-xs text-muted-foreground mb-2">List view with a custom right-aligned value for sortable metrics.</p>
+        <UnifiedPageList
+          pages={SAMPLE_PAGES}
+          view="list"
+          renderItemValue={(page) => `${Math.round((page.earnings || 0) / 100)} pts`}
+        />
       </StateDemo>
 
       <StateDemo label="Empty State">
@@ -186,6 +220,13 @@ const [metadata, setMetadata] = useState<ListMetadata>('none');
   pages={pages}
   view="list"
   renderItemAction={(page) => <Button size="sm">Edit</Button>}
+/>
+
+// List view with a sortable key/value metric on the right
+<UnifiedPageList
+  pages={pages}
+  view="list"
+  renderItemValue={(page) => page.linkCount}
 />`}
         </DocsCodeBlock>
         <div className="mt-4 space-y-2 text-sm">
@@ -198,9 +239,15 @@ const [metadata, setMetadata] = useState<ListMetadata>('none');
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
             <li><code className="text-foreground">none</code> — No byline (default)</li>
             <li><code className="text-foreground">author</code> — Show author username</li>
-            <li><code className="text-foreground">date</code> — Show created/modified date</li>
+            <li><code className="text-foreground">last-edited</code> — Show last edited date</li>
+            <li><code className="text-foreground">created</code> — Show created date</li>
             <li><code className="text-foreground">earnings</code> — Show page earnings</li>
+            <li><code className="text-foreground">views</code>, <code className="text-foreground">views-24h</code>, <code className="text-foreground">sponsors</code>, <code className="text-foreground">links</code>, <code className="text-foreground">backlinks</code>, <code className="text-foreground">replies</code> — Show KPI values when present</li>
           </ul>
+          <p className="mt-3"><strong>Custom list values:</strong></p>
+          <p className="text-muted-foreground">
+            Use <code className="text-foreground">renderItemValue</code> to show a right-aligned value for sortable metrics like last edited time, link count, views, or other KPIs.
+          </p>
           <p className="mt-3"><strong>Used in:</strong></p>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
             <li>User profile pages tab</li>
