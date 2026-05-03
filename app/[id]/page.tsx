@@ -6,10 +6,10 @@ import { ContentPageSkeleton } from '../components/pages/ContentPageSkeleton';
 import ServerContentForSEO from '../components/seo/ServerContentForSEO';
 import { extractTextContent } from '../utils/text-extraction';
 
-// ISR: Revalidate pages every 60 seconds for better cache hit rate
-// Pages are served from cache and revalidated in background
-// Note: revalidatePath('/' + id) is called on save to bust this cache immediately
-export const revalidate = 60;
+// Page content must be fresh, especially for editors returning to pages they own.
+// Keep the route dynamic and let lower-level, non-editor data fetches opt into caching.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Allow dynamic params (page IDs)
 export const dynamicParams = true;

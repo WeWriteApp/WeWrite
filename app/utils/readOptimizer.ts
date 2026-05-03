@@ -291,37 +291,44 @@ const readOptimizer = new ReadOptimizer();
 /**
  * Optimized wrapper for page data fetching
  */
-export async function getOptimizedPageData(pageId: string, userId?: string) {
+export async function getOptimizedPageData(
+  pageId: string,
+  userId?: string,
+  options: { skipCache?: boolean } = {}
+) {
   const { cachedQuery } = await import('./serverCache');
   const key = `page:${pageId}:${userId || 'anonymous'}`;
+  const fetchPageData = async () => {
+    const url = userId
+      ? `/api/pages/${pageId}?userId=${encodeURIComponent(userId)}`
+      : `/api/pages/${pageId}`;
 
-  return cachedQuery(
-    key,
-    async () => {
-      // Use API instead of direct Firebase calls
-      const url = userId
-        ? `/api/pages/${pageId}?userId=${encodeURIComponent(userId)}`
-        : `/api/pages/${pageId}`;
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔄 [ReadOptimizer] API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText,
-          url
-        });
-        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
       }
-
-      const data = await response.json();
-      return data;
-    },
-    {
-      tags: [`page:${pageId}`, 'pages']
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[ReadOptimizer] API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+        url
+      });
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
     }
-  );
+
+    return response.json();
+  };
+
+  if (options.skipCache) {
+    return fetchPageData();
+  }
+
+  return cachedQuery(key, fetchPageData);
 }
 
 /**

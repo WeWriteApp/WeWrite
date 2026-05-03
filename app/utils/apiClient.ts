@@ -249,7 +249,12 @@ export const invalidatePageCacheAfterSave = (pageId: string, userId?: string) =>
     clearPageCaches(pageId);
   }).catch(() => {});
 
-  // 4. Clear sessionStorage optimistic page data
+  // 4. Clear read optimizer cache used by ContentPageView
+  import('./readOptimizer').then(({ clearOptimizedCache }) => {
+    clearOptimizedCache(`page:${pageId}`);
+  }).catch(() => {});
+
+  // 5. Clear sessionStorage optimistic page data
   if (typeof window !== 'undefined') {
     try {
       sessionStorage.removeItem(`wewrite:optimisticPage:${pageId}`);
@@ -328,7 +333,13 @@ export const pageApi = {
   async getPage(pageId: string, userId?: string, options?: { skipCache?: boolean }): Promise<ApiResponse> {
     const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
     return consolidatedClient.call(`/api/pages/${pageId}${params}`, {
-      skipCache: options?.skipCache
+      skipCache: options?.skipCache,
+      skipDedup: options?.skipCache,
+      cache: options?.skipCache ? 'no-store' : undefined,
+      headers: options?.skipCache ? {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      } : undefined
     });
   },
 

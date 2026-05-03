@@ -754,8 +754,8 @@ export default function ContentPageView({
     const loadOptimizedPageData = async () => {
       try {
 
-        // Use optimized page data fetching with aggressive caching
-        const data = await getOptimizedPageData(pageId, user?.uid);
+        // Logged-in users may be editors, so bypass client/server caches to avoid stale page content.
+        const data = await getOptimizedPageData(pageId, user?.uid, { skipCache: !!user?.uid });
 
         if (data.error) {
           pageLogger.warn('Optimized page load error', { error: data.error, pageId });

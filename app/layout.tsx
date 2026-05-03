@@ -236,8 +236,6 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//www.googletagmanager.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Preload critical API routes */}
-        <link rel="prefetch" href="/api/pages" />
         {/* Organization Schema for WeWrite */}
         <script
           type="application/ld+json"

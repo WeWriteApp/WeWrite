@@ -14,7 +14,7 @@ if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
 // Cache version - increment this on major changes to force cache clear
 // The service worker will also check for updates on each page load
 // IMPORTANT: Bump this version when making UI changes to force cache invalidation
-const CACHE_VERSION = '2.5';
+const CACHE_VERSION = '2.6';
 
 const CACHE_NAME = `wewrite-v${CACHE_VERSION}`;
 const STATIC_CACHE = `wewrite-static-v${CACHE_VERSION}`;
@@ -72,7 +72,6 @@ const CACHEABLE_APIS = [
   '/api/search',
   '/api/recent-pages',
   '/api/home',
-  '/api/pages',
   '/api/recent-edits',
   '/api/users',
   '/api/analytics',
@@ -87,6 +86,12 @@ const NETWORK_FIRST_PATTERNS = [
   '/api/payment',
   '/api/user-',
   '/bio',  // User bios should always be fresh
+];
+
+// Page content and page lists must stay fresh. These endpoints can affect
+// editor-visible content, so the service worker should not cache them.
+const PAGE_CONTENT_API_PATTERNS = [
+  /^\/api\/pages(?:\/|$)/,
 ];
 
 // Auth-related URL parameters that should bypass cache entirely
@@ -253,6 +258,11 @@ async function handleRequest(request) {
       return fetch(request);
     }
 
+    // Strategy 6: Never cache page content API reads.
+    if (isPageContentAPI(pathname)) {
+      return fetch(request);
+    }
+
     // Strategy 7: Network-first for dynamic APIs
     if (isNetworkFirstResource(pathname)) {
       return await networkFirstStrategy(request, API_CACHE);
@@ -322,7 +332,7 @@ async function networkFirstStrategy(request, cacheName, timeout = 3000) {
       )
     ]);
     
-    if (networkResponse.ok) {
+    if (networkResponse.ok && shouldStoreInCache(request, networkResponse)) {
       // Cache successful responses with short TTL
       try {
         const responseToCache = networkResponse.clone();
@@ -366,7 +376,7 @@ async function staleWhileRevalidateStrategy(request, cacheName) {
   
   // Always try to update cache in background
   const fetchPromise = fetch(request).then((networkResponse) => {
-    if (networkResponse.ok) {
+    if (networkResponse.ok && shouldStoreInCache(request, networkResponse)) {
       try {
         // Clone and add cache timestamp
         const headers = new Headers(networkResponse.headers);
@@ -402,7 +412,7 @@ async function networkFirstWithFallback(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
 
-    if (networkResponse.ok) {
+    if (networkResponse.ok && shouldStoreInCache(request, networkResponse)) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
@@ -528,6 +538,19 @@ function isNetworkFirstResource(pathname) {
 
 function isCacheableAPI(pathname) {
   return CACHEABLE_APIS.some(api => pathname.startsWith(api));
+}
+
+function isPageContentAPI(pathname) {
+  return PAGE_CONTENT_API_PATTERNS.some(pattern => pattern.test(pathname));
+}
+
+function shouldStoreInCache(request, response) {
+  if (request.cache === 'reload' || request.cache === 'no-store') {
+    return false;
+  }
+
+  const cacheControl = response.headers.get('Cache-Control') || '';
+  return !/no-store|no-cache|private/i.test(cacheControl);
 }
 
 function isPaymentNeverCache(url) {
