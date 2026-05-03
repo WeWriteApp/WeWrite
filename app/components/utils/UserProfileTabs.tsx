@@ -24,6 +24,7 @@ import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { useSidebarContext } from '../layout/DesktopSidebar';
 import { TAB_BAR_HEIGHT, HEADER_HEIGHTS } from '../../constants/layout';
 import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
+import { AnimatedHorizontalPresence } from '../ui/AnimatedStack';
 
 // PERFORMANCE: Lazy-load heavy tab components to reduce initial bundle size
 // These tabs are not visible on initial load, so we can defer their loading
@@ -739,7 +740,7 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
                 {/* Automatic change detection enabled - no manual refresh needed */}
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="sm" className="gap-2">
+                  <Button variant="secondary" size="sm" className="h-9 gap-2">
                     {sortDirection === "asc" ? <Icon name="ChevronUp" size={16} /> : <Icon name="ChevronDown" size={16} />}
                     {getSortLabel(sortBy, sortDirection)}
                   </Button>
@@ -777,12 +778,17 @@ export default function UserProfileTabs({ profile }: UserProfileTabsProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-                {pageListView === 'list' && (
+                <AnimatedHorizontalPresence
+                  show={pageListView === 'list'}
+                  gap={0}
+                  preset="fast"
+                  className="items-center"
+                >
                   <ListMetadataSelector
                     metadata={pageListMetadata}
                     onMetadataChange={handleListMetadataChange}
                   />
-                )}
+                </AnimatedHorizontalPresence>
                 <PageListViewToggle view={pageListView} onViewChange={handleViewChange} />
               </div>
             </div>

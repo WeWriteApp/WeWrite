@@ -364,7 +364,7 @@ export function ListMetadataSelector({
       <span className="text-xs text-muted-foreground">Show:</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="sm" className="h-8 gap-2">
+          <Button variant="secondary" size="sm" className="h-9 gap-2">
             <span className="truncate">{getMetadataLabel(metadata)}</span>
             <Icon name="ChevronDown" size={14} className="shrink-0" />
           </Button>
