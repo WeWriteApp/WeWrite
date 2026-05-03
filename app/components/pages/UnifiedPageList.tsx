@@ -271,25 +271,25 @@ function ListView({
           <motion.div
             key={page.id}
             {...itemAnimation}
-            className="flex items-center gap-2 w-full"
+            className="flex items-center gap-2 w-full min-w-0"
           >
-            <div className="min-w-0 shrink-0">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <PillLink
                 href={`/${page.id}`}
                 variant="primary"
                 isPublic={page.isPublic}
                 isOwned={isOwned}
-                className="max-w-full"
+                className="max-w-full min-w-0"
               >
                 {page.title || 'Untitled'}
               </PillLink>
             </div>
             {(itemValue !== undefined && itemValue !== null) ? (
-              <span className={`ml-auto text-xs text-muted-foreground whitespace-nowrap tabular-nums ${itemValueClassName || ''}`}>
+              <span className={`ml-auto shrink-0 text-xs text-muted-foreground whitespace-nowrap tabular-nums ${itemValueClassName || ''}`}>
                 {itemValue}
               </span>
             ) : metadataValue !== undefined && metadataValue !== null && (
-              <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
+              <span className="ml-auto shrink-0 text-xs text-muted-foreground whitespace-nowrap">
                 {metadataValue}
               </span>
             )}
